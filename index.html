@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Argus Books — AI-Powered Bookkeeping for QuickBooks Online</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #0f1923;
+      --charcoal: #1c2b3a;
+      --card: #1e2f40;
+      --gold: #c9a84c;
+      --gold-light: #e2c068;
+      --text: #e8edf2;
+      --muted: #8fa3b8;
+      --border: rgba(201,168,76,0.2);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--navy);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.2rem 2rem;
+      background: rgba(15,25,35,0.95);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+    }
+
+    .nav-logo {
+      width: 36px;
+      height: 36px;
+      background: var(--gold);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.1rem;
+      color: var(--navy);
+    }
+
+    .nav-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .nav-name span {
+      color: var(--gold);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--gold); }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 6rem 1.5rem 5rem;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(201,168,76,0.12);
+      border: 1px solid var(--border);
+      color: var(--gold);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.9rem;
+      border-radius: 50px;
+      margin-bottom: 1.6rem;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 1.2rem;
+      letter-spacing: -0.02em;
+    }
+
+    h1 span { color: var(--gold); }
+
+    .hero-sub {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto 2.5rem;
+    }
+
+    .btn-primary {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--navy);
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 0.85rem 2.2rem;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.15s;
+      box-shadow: 0 4px 20px rgba(201,168,76,0.3);
+    }
+
+    .btn-primary:hover {
+      background: var(--gold-light);
+      transform: translateY(-1px);
+    }
+
+    /* FEATURES */
+    .features {
+      padding: 5rem 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      text-align: center;
+      color: var(--gold);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+    }
+
+    .section-desc {
+      text-align: center;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 3rem;
+      font-size: 1rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .card:hover {
+      border-color: var(--gold);
+      transform: translateY(-3px);
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(201,168,76,0.12);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .card p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.65;
+    }
+
+    /* CTA STRIP */
+    .cta-strip {
+      background: var(--charcoal);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+      padding: 4.5rem 1.5rem;
+    }
+
+    .cta-strip h2 {
+      font-size: clamp(1.6rem, 3vw, 2rem);
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+    }
+
+    .cta-strip p {
+      color: var(--muted);
+      margin-bottom: 2rem;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* FOOTER */
+    footer {
+      background: var(--navy);
+      border-top: 1px solid var(--border);
+      text-align: center;
+      padding: 2rem 1.5rem;
+    }
+
+    .footer-brand {
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--gold); }
+
+    .footer-copy {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 600px) {
+      nav { padding: 1rem 1rem; }
+      .nav-links { display: none; }
+      .hero { padding: 4rem 1rem 3.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-brand" href="/">
+      <div class="nav-logo">A</div>
+      <span class="nav-name">Argus <span>Books</span></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/privacy.html">Privacy</a></li>
+      <li><a href="/terms.html">Terms</a></li>
+      <li><a href="/connect.html" style="color:var(--gold);">Connect QuickBooks →</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <div class="badge">Powered by Dark Lion AI</div>
+    <h1>AI-Powered Bookkeeping Automation for <span>QuickBooks Online</span></h1>
+    <p class="hero-sub">
+      Argus Books automatically categorizes transactions, reconciles accounts daily, and researches vendors — so your books stay clean without the manual work.
+    </p>
+    <a href="/connect.html" class="btn-primary">Connect to QuickBooks →</a>
+  </section>
+
+  <section class="features">
+    <p class="section-label">What Argus Does</p>
+    <h2 class="section-title">Bookkeeping on Autopilot</h2>
+    <p class="section-desc">Argus Books handles the repetitive work so you can focus on what matters — running your business.</p>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-icon">🏷️</div>
+        <h3>Automated Transaction Categorization</h3>
+        <p>AI reviews every transaction and assigns the correct expense or income category, learning your chart of accounts over time.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚖️</div>
+        <h3>Daily Reconciliation</h3>
+        <p>Accounts are reconciled automatically each day, flagging discrepancies before they become month-end headaches.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔍</div>
+        <h3>Vendor Research</h3>
+        <p>Unknown vendors? Argus researches each one and enriches your records with business category, location, and purpose.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <h3>QuickBooks Native</h3>
+        <p>Connects directly to your QuickBooks Online account via OAuth. No CSV exports, no double-entry — changes sync in real time.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔒</div>
+        <h3>Secure & Private</h3>
+        <p>Your financial data is processed and never sold. We don't store raw transaction data on external servers.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <h3>Always On</h3>
+        <p>Argus runs in the background 24/7, keeping your books current so your accountant always has accurate data.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-strip">
+    <h2>Ready to automate your books?</h2>
+    <p>Connect your QuickBooks Online account and let Argus handle the rest.</p>
+    <a href="/connect.html" class="btn-primary">Get Started — It's Free</a>
+  </section>
+
+  <footer>
+    <p class="footer-brand">Argus Books by Dark Lion AI</p>
+    <ul class="footer-links">
+      <li><a href="/privacy.html">Privacy Policy</a></li>
+      <li><a href="/terms.html">Terms of Service</a></li>
+      <li><a href="mailto:argus@sentineladvisors.co">Contact</a></li>
+    </ul>
+    <p class="footer-copy">&copy; 2026 Dark Lion AI. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>
