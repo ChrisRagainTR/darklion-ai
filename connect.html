@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Connect Your QuickBooks — Argus Books</title>
+  <title>Connect Your QuickBooks — DarkLion</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -41,19 +41,6 @@
       align-items: center;
       gap: 0.6rem;
       text-decoration: none;
-    }
-
-    .nav-logo {
-      width: 36px;
-      height: 36px;
-      background: var(--gold);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      font-size: 1.1rem;
-      color: var(--navy);
     }
 
     .nav-name {
@@ -201,7 +188,7 @@
     }
 
     .redirect-note::before {
-      content: '🔒';
+      content: '&#x1F512;';
       font-size: 0.75rem;
     }
 
@@ -236,8 +223,19 @@
 
   <nav>
     <a class="nav-brand" href="/">
-      <div class="nav-logo">A</div>
-      <span class="nav-name">Argus <span>Books</span></span>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="36" height="36" style="display:block;flex-shrink:0;" aria-label="DarkLion logo">
+        <polygon points="50,2 58.3,19.1 74,8.4 72.6,27.4 91.6,26 80.9,41.7 98,50 80.9,58.3 91.6,74 72.6,72.6 74,91.6 58.3,80.9 50,98 41.7,80.9 26,91.6 27.4,72.6 8.4,74 19.1,58.3 2,50 19.1,41.7 8.4,26 27.4,27.4 26,8.4 41.7,19.1" fill="#c9a84c"/>
+        <circle cx="50" cy="50" r="31" fill="#1c2b3a"/>
+        <circle cx="50" cy="51" r="27" fill="#c9a84c"/>
+        <path d="M33,44 Q39,38 46,43" stroke="#0f1923" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+        <path d="M54,43 Q61,38 67,44" stroke="#0f1923" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+        <ellipse cx="40" cy="49" rx="5.5" ry="5" fill="#0f1923"/>
+        <ellipse cx="60" cy="49" rx="5.5" ry="5" fill="#0f1923"/>
+        <rect x="48.5" y="51" width="3" height="7" rx="1.5" fill="#0f1923"/>
+        <path d="M46,58 L54,58 L52,64 Q50,67 48,64 Z" fill="#0f1923"/>
+        <path d="M40,68 Q45,74 50,71 Q55,74 60,68" stroke="#0f1923" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-name">Dark<span>Lion</span></span>
     </a>
   </nav>
 
@@ -246,22 +244,22 @@
       <div class="qb-badge">QuickBooks Online</div>
       <h1>Connect Your QuickBooks</h1>
       <p class="connect-desc">
-        Argus Books uses read/write access to your QuickBooks Online account to categorize transactions, reconcile accounts, and research vendors automatically.
+        DarkLion uses read/write access to your QuickBooks Online account to categorize transactions, reconcile accounts, and research vendors automatically.
       </p>
 
       <div class="permissions-box">
         <h3>Access Requested</h3>
         <div class="perm-item">
-          <div class="perm-icon">📖</div>
-          <div class="perm-text"><strong>Read transactions</strong> — View your existing transactions, chart of accounts, and financial data to power AI categorization.</div>
+          <div class="perm-icon">&#x1F4D6;</div>
+          <div class="perm-text"><strong>Read transactions</strong> &mdash; View your existing transactions, chart of accounts, and financial data to power AI categorization.</div>
         </div>
         <div class="perm-item">
-          <div class="perm-icon">✏️</div>
-          <div class="perm-text"><strong>Write accounting data</strong> — Update transaction categories, add memos, and post reconciliation entries on your behalf.</div>
+          <div class="perm-icon">&#x270F;&#xFE0F;</div>
+          <div class="perm-text"><strong>Write accounting data</strong> &mdash; Update transaction categories, add memos, and post reconciliation entries on your behalf.</div>
         </div>
         <div class="perm-item">
-          <div class="perm-icon">🏢</div>
-          <div class="perm-text"><strong>Vendor & account info</strong> — Read vendor names and account details to enrich and accurately categorize each transaction.</div>
+          <div class="perm-icon">&#x1F3E2;</div>
+          <div class="perm-text"><strong>Vendor &amp; account info</strong> &mdash; Read vendor names and account details to enrich and accurately categorize each transaction.</div>
         </div>
       </div>
 
@@ -274,7 +272,7 @@
     <ul class="footer-links">
       <li><a href="/privacy.html">Privacy Policy</a></li>
       <li><a href="/terms.html">Terms of Service</a></li>
-      <li><a href="/">← Back to Home</a></li>
+      <li><a href="/">&#x2190; Back to Home</a></li>
     </ul>
   </footer>
 
