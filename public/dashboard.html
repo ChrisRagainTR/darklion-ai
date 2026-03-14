@@ -612,24 +612,30 @@
     }
 
     async function reviewTxn(id, action) {
-      await fetch(`/api/companies/${currentRealm}/transactions/${id}/review`, {
+      const res = await fetch(`/api/companies/${currentRealm}/transactions/${id}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
       });
-      toast(action === 'approve' ? 'Transaction approved' : 'Transaction skipped');
+      const data = await res.json();
+      if (action === 'approve') {
+        toast(`Approved${data.applied > 1 ? ' — applied to ' + data.applied + ' transactions from this vendor' : ''}`);
+      } else {
+        toast('Transaction skipped');
+      }
       loadDashboard();
     }
 
     async function recategorizeTxn(id) {
       const select = document.getElementById('cat-' + id);
       const category = select.value;
-      await fetch(`/api/companies/${currentRealm}/transactions/${id}/review`, {
+      const res = await fetch(`/api/companies/${currentRealm}/transactions/${id}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'recategorize', category }),
       });
-      toast('Recategorized & rule saved — future transactions from this vendor will use: ' + category);
+      const data = await res.json();
+      toast(`Saved — applied "${category}" to ${data.applied || 1} transaction(s) from this vendor`);
       loadDashboard();
     }
 

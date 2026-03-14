@@ -84,26 +84,41 @@ router.post('/companies/:realmId/transactions/:id/review', async (req, res) => {
   const { realmId, id } = req.params;
   const { action, category } = req.body;
 
-  if (action === 'approve') {
-    await pool.query(
-      "UPDATE transactions SET status = 'reviewed', updated_at = NOW() WHERE id = $1 AND realm_id = $2",
-      [id, realmId]
-    );
-  } else if (action === 'recategorize' && category) {
-    // Update the transaction
+  // Get the vendor name for this transaction
+  const { rows: [txn] } = await pool.query(
+    'SELECT vendor_name, ai_category FROM transactions WHERE id = $1 AND realm_id = $2', [id, realmId]
+  );
+  if (!txn) return res.status(404).json({ error: 'Transaction not found' });
+
+  const vendorName = txn.vendor_name;
+  const resolvedCategory = (action === 'recategorize' && category) ? category : txn.ai_category;
+
+  if (action === 'approve' || (action === 'recategorize' && category)) {
+    // Update this transaction
     await pool.query(
       "UPDATE transactions SET ai_category = $1, status = 'reviewed', updated_at = NOW() WHERE id = $2 AND realm_id = $3",
-      [category, id, realmId]
+      [resolvedCategory, id, realmId]
     );
-    // Learn: save vendor→category rule for future categorization
-    const { rows } = await pool.query('SELECT vendor_name FROM transactions WHERE id = $1 AND realm_id = $2', [id, realmId]);
-    if (rows[0]?.vendor_name) {
+
+    // Apply to ALL other categorized transactions from the same vendor
+    let applied = 0;
+    if (vendorName) {
+      const { rowCount } = await pool.query(
+        "UPDATE transactions SET ai_category = $1, status = 'reviewed', updated_at = NOW() WHERE realm_id = $2 AND vendor_name = $3 AND status = 'categorized' AND id != $4",
+        [resolvedCategory, realmId, vendorName, id]
+      );
+      applied = rowCount;
+
+      // Save vendor→category rule for future categorization
       await pool.query(`
         INSERT INTO category_rules (realm_id, vendor_name, category)
         VALUES ($1, $2, $3)
         ON CONFLICT(realm_id, vendor_name) DO UPDATE SET category = EXCLUDED.category, created_at = NOW()
-      `, [realmId, rows[0].vendor_name, category]);
+      `, [realmId, vendorName, resolvedCategory]);
     }
+
+    res.json({ ok: true, applied: applied + 1 });
+    return;
   } else if (action === 'skip') {
     await pool.query(
       "UPDATE transactions SET status = 'skipped', updated_at = NOW() WHERE id = $1 AND realm_id = $2",
