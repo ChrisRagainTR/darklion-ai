@@ -280,27 +280,66 @@
     <a class="nav-brand" href="/">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="40" height="40" style="display:block;flex-shrink:0;" aria-label="DarkLion logo">
         <defs>
-          <linearGradient id="fg-nav" x1="0.5" y1="0" x2="0.5" y2="1">
-            <stop offset="0%" stop-color="#f0d488"/>
-            <stop offset="100%" stop-color="#c9a84c"/>
-          </linearGradient>
+          <linearGradient id="nf" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#f5dfa0"/><stop offset="100%" stop-color="#b8942e"/></linearGradient>
+          <filter id="ng"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
-        <polygon points="60,4 73,22 100,14 89,35 112,38 94,55 110,68 87,72 96,84 73,85 60,88 47,85 24,84 33,72 10,68 26,55 8,38 31,35 20,14 47,22" fill="#c9a84c"/>
-        <polygon points="47,22 73,22 89,35 94,55 87,72 73,85 60,88 47,85 33,72 26,55 31,35" fill="url(#fg-nav)" stroke="#9a7828" stroke-width="1"/>
-        <polygon points="60,25 65,31 60,37 55,31" fill="#0f1923" opacity="0.8"/>
-        <polygon points="28,50 32,40 55,45 52,51" fill="#0f1923"/>
-        <polygon points="92,50 88,40 65,45 68,51" fill="#0f1923"/>
-        <polygon points="33,58 42,52 52,58 42,64" fill="#0f1923"/>
-        <polygon points="38,58 42,55 46,58 42,61" fill="#e2c068"/>
-        <polygon points="68,58 78,52 87,58 78,64" fill="#0f1923"/>
-        <polygon points="74,58 78,55 82,58 78,61" fill="#e2c068"/>
-        <polygon points="54,65 66,65 60,74" fill="#0f1923"/>
-        <polyline points="49,80 60,76 71,80" stroke="#0f1923" stroke-width="2.5" fill="none" stroke-linejoin="miter" stroke-linecap="square"/>
-        <polygon points="54,83 66,83 60,88" fill="#0f1923" opacity="0.6"/>
+        <!-- Halo ring -->
+        <circle cx="60" cy="56" r="56" fill="none" stroke="#c9a84c" stroke-width="1.5" opacity="0.35"/>
+        <!-- Mane outer layer -->
+        <polygon points="60,2 54,10 48,4 44,18 52,24 60,14 68,24 76,18 72,4 66,10" fill="#6b4f1d"/>
+        <polygon points="44,18 34,8 24,20 32,30 40,24" fill="#5a421a"/>
+        <polygon points="76,18 86,8 96,20 88,30 80,24" fill="#5a421a"/>
+        <polygon points="24,20 12,26 8,44 18,48 26,36" fill="#4a3614"/>
+        <polygon points="96,20 108,26 112,44 102,48 94,36" fill="#4a3614"/>
+        <polygon points="8,44 4,60 12,72 22,62 18,50" fill="#3d2d10"/>
+        <polygon points="112,44 116,60 108,72 98,62 102,50" fill="#3d2d10"/>
+        <polygon points="12,72 16,84 28,82 24,72" fill="#3d2d10" opacity="0.7"/>
+        <polygon points="108,72 104,84 92,82 96,72" fill="#3d2d10" opacity="0.7"/>
+        <!-- Mane inner layer -->
+        <polygon points="60,8 54,16 48,10 42,24 50,28 60,20 70,28 78,24 72,10 66,16" fill="#8a6d2b"/>
+        <polygon points="42,24 32,16 24,28 34,34 40,28" fill="#7a5c22"/>
+        <polygon points="78,24 88,16 96,28 86,34 80,28" fill="#7a5c22"/>
+        <polygon points="24,28 14,34 12,52 24,50 28,38" fill="#6b4f1d"/>
+        <polygon points="96,28 106,34 108,52 96,50 92,38" fill="#6b4f1d"/>
+        <polygon points="12,52 8,66 20,68 24,56" fill="#5a421a"/>
+        <polygon points="108,52 112,66 100,68 96,56" fill="#5a421a"/>
+        <!-- Face -->
+        <polygon points="60,22 76,30 88,48 84,66 74,80 60,88 46,80 36,66 32,48 44,30" fill="url(#nf)" stroke="#9a7828" stroke-width="0.8"/>
+        <!-- Forehead diamond -->
+        <polygon points="60,26 64,33 60,40 56,33" fill="#0f1923" opacity="0.45"/>
+        <!-- Brow ridges -->
+        <polygon points="36,48 44,40 58,46 54,52" fill="#0f1923" opacity="0.8"/>
+        <polygon points="84,48 76,40 62,46 66,52" fill="#0f1923" opacity="0.8"/>
+        <!-- Eyes -->
+        <polygon points="38,56 46,50 54,56 46,62" fill="#0f1923"/>
+        <polygon points="82,56 74,50 66,56 74,62" fill="#0f1923"/>
+        <!-- Eye glow -->
+        <polygon points="42,56 46,52.5 50,56 46,59.5" fill="#ffe4a0" filter="url(#ng)"/>
+        <polygon points="78,56 74,52.5 70,56 74,59.5" fill="#ffe4a0" filter="url(#ng)"/>
+        <!-- Nose bridge + nose -->
+        <line x1="60" y1="44" x2="60" y2="62" stroke="#0f1923" stroke-width="0.8" opacity="0.3"/>
+        <polygon points="55,64 65,64 60,72" fill="#0f1923" opacity="0.7"/>
+        <!-- Mouth -->
+        <path d="M50,76 L56,73 L60,77 L64,73 L70,76" stroke="#0f1923" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Chin -->
+        <polygon points="54,82 60,86 66,82 60,79" fill="#0f1923" opacity="0.35"/>
+        <!-- Jaw contour -->
+        <line x1="36" y1="66" x2="44" y2="78" stroke="#0f1923" stroke-width="0.8" opacity="0.25"/>
+        <line x1="84" y1="66" x2="76" y2="78" stroke="#0f1923" stroke-width="0.8" opacity="0.25"/>
+        <!-- Tech circuit accents -->
+        <line x1="60" y1="90" x2="60" y2="104" stroke="#c9a84c" stroke-width="0.8" opacity="0.4"/>
+        <line x1="52" y1="88" x2="46" y2="100" stroke="#c9a84c" stroke-width="0.6" opacity="0.25"/>
+        <line x1="68" y1="88" x2="74" y2="100" stroke="#c9a84c" stroke-width="0.6" opacity="0.25"/>
+        <circle cx="60" cy="106" r="1.5" fill="#c9a84c" opacity="0.35"/>
+        <circle cx="45" cy="102" r="1" fill="#c9a84c" opacity="0.25"/>
+        <circle cx="75" cy="102" r="1" fill="#c9a84c" opacity="0.25"/>
+        <line x1="20" y1="68" x2="12" y2="76" stroke="#c9a84c" stroke-width="0.5" opacity="0.2"/>
+        <line x1="100" y1="68" x2="108" y2="76" stroke="#c9a84c" stroke-width="0.5" opacity="0.2"/>
       </svg>
       <span class="nav-name">Dark<span>Lion</span></span>
     </a>
     <ul class="nav-links">
+      <li><a href="/dashboard.html">Dashboard</a></li>
       <li><a href="/privacy.html">Privacy</a></li>
       <li><a href="/terms.html">Terms</a></li>
       <li><a href="/connect.html" style="color:var(--gold);">Connect QuickBooks &rarr;</a></li>
@@ -311,34 +350,61 @@
     <div class="hero-logo">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="80" height="80" aria-label="DarkLion">
         <defs>
-          <linearGradient id="fg-hero" x1="0.5" y1="0" x2="0.5" y2="1">
-            <stop offset="0%" stop-color="#f0d488"/>
-            <stop offset="100%" stop-color="#c9a84c"/>
-          </linearGradient>
+          <linearGradient id="hf" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#f5dfa0"/><stop offset="100%" stop-color="#b8942e"/></linearGradient>
+          <filter id="hg"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
-        <!-- MANE: solid angular spiked silhouette — 9 outward spikes, heavy top/sides like a lion mane -->
-        <polygon points="60,4 73,22 100,14 89,35 112,38 94,55 110,68 87,72 96,84 73,85 60,88 47,85 24,84 33,72 10,68 26,55 8,38 31,35 20,14 47,22" fill="#c9a84c"/>
-        <!-- FACE: angular geometric polygon, lighter gold gradient -->
-        <polygon points="47,22 73,22 89,35 94,55 87,72 73,85 60,88 47,85 33,72 26,55 31,35" fill="url(#fg-hero)" stroke="#9a7828" stroke-width="1"/>
-        <!-- FOREHEAD DIAMOND MARK — geometric tech/cyber accent -->
-        <polygon points="60,25 65,31 60,37 55,31" fill="#0f1923" opacity="0.8"/>
-        <!-- BROW RIDGES: angular wedges, high outer / low inner = fierce expression -->
-        <polygon points="28,50 32,40 55,45 52,51" fill="#0f1923"/>
-        <polygon points="92,50 88,40 65,45 68,51" fill="#0f1923"/>
-        <!-- LEFT EYE: narrow horizontal diamond slit -->
-        <polygon points="33,58 42,52 52,58 42,64" fill="#0f1923"/>
-        <!-- Left iris: inner glowing gold diamond -->
-        <polygon points="38,58 42,55 46,58 42,61" fill="#e2c068"/>
-        <!-- RIGHT EYE: narrow horizontal diamond slit -->
-        <polygon points="68,58 78,52 87,58 78,64" fill="#0f1923"/>
-        <!-- Right iris: inner glowing gold diamond -->
-        <polygon points="74,58 78,55 82,58 78,61" fill="#e2c068"/>
-        <!-- NOSE: inverted angular triangle -->
-        <polygon points="54,65 66,65 60,74" fill="#0f1923"/>
-        <!-- PHILTRUM / UPPER LIP: angular V crease -->
-        <polyline points="49,80 60,76 71,80" stroke="#0f1923" stroke-width="2.5" fill="none" stroke-linejoin="miter" stroke-linecap="square"/>
-        <!-- CHIN: angular dark accent -->
-        <polygon points="54,83 66,83 60,88" fill="#0f1923" opacity="0.6"/>
+        <!-- Halo ring -->
+        <circle cx="60" cy="56" r="56" fill="none" stroke="#c9a84c" stroke-width="1.5" opacity="0.35"/>
+        <!-- Mane outer layer -->
+        <polygon points="60,2 54,10 48,4 44,18 52,24 60,14 68,24 76,18 72,4 66,10" fill="#6b4f1d"/>
+        <polygon points="44,18 34,8 24,20 32,30 40,24" fill="#5a421a"/>
+        <polygon points="76,18 86,8 96,20 88,30 80,24" fill="#5a421a"/>
+        <polygon points="24,20 12,26 8,44 18,48 26,36" fill="#4a3614"/>
+        <polygon points="96,20 108,26 112,44 102,48 94,36" fill="#4a3614"/>
+        <polygon points="8,44 4,60 12,72 22,62 18,50" fill="#3d2d10"/>
+        <polygon points="112,44 116,60 108,72 98,62 102,50" fill="#3d2d10"/>
+        <polygon points="12,72 16,84 28,82 24,72" fill="#3d2d10" opacity="0.7"/>
+        <polygon points="108,72 104,84 92,82 96,72" fill="#3d2d10" opacity="0.7"/>
+        <!-- Mane inner layer -->
+        <polygon points="60,8 54,16 48,10 42,24 50,28 60,20 70,28 78,24 72,10 66,16" fill="#8a6d2b"/>
+        <polygon points="42,24 32,16 24,28 34,34 40,28" fill="#7a5c22"/>
+        <polygon points="78,24 88,16 96,28 86,34 80,28" fill="#7a5c22"/>
+        <polygon points="24,28 14,34 12,52 24,50 28,38" fill="#6b4f1d"/>
+        <polygon points="96,28 106,34 108,52 96,50 92,38" fill="#6b4f1d"/>
+        <polygon points="12,52 8,66 20,68 24,56" fill="#5a421a"/>
+        <polygon points="108,52 112,66 100,68 96,56" fill="#5a421a"/>
+        <!-- Face -->
+        <polygon points="60,22 76,30 88,48 84,66 74,80 60,88 46,80 36,66 32,48 44,30" fill="url(#hf)" stroke="#9a7828" stroke-width="0.8"/>
+        <!-- Forehead diamond -->
+        <polygon points="60,26 64,33 60,40 56,33" fill="#0f1923" opacity="0.45"/>
+        <!-- Brow ridges -->
+        <polygon points="36,48 44,40 58,46 54,52" fill="#0f1923" opacity="0.8"/>
+        <polygon points="84,48 76,40 62,46 66,52" fill="#0f1923" opacity="0.8"/>
+        <!-- Eyes -->
+        <polygon points="38,56 46,50 54,56 46,62" fill="#0f1923"/>
+        <polygon points="82,56 74,50 66,56 74,62" fill="#0f1923"/>
+        <!-- Eye glow -->
+        <polygon points="42,56 46,52.5 50,56 46,59.5" fill="#ffe4a0" filter="url(#hg)"/>
+        <polygon points="78,56 74,52.5 70,56 74,59.5" fill="#ffe4a0" filter="url(#hg)"/>
+        <!-- Nose bridge + nose -->
+        <line x1="60" y1="44" x2="60" y2="62" stroke="#0f1923" stroke-width="0.8" opacity="0.3"/>
+        <polygon points="55,64 65,64 60,72" fill="#0f1923" opacity="0.7"/>
+        <!-- Mouth -->
+        <path d="M50,76 L56,73 L60,77 L64,73 L70,76" stroke="#0f1923" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Chin -->
+        <polygon points="54,82 60,86 66,82 60,79" fill="#0f1923" opacity="0.35"/>
+        <!-- Jaw contour -->
+        <line x1="36" y1="66" x2="44" y2="78" stroke="#0f1923" stroke-width="0.8" opacity="0.25"/>
+        <line x1="84" y1="66" x2="76" y2="78" stroke="#0f1923" stroke-width="0.8" opacity="0.25"/>
+        <!-- Tech circuit accents -->
+        <line x1="60" y1="90" x2="60" y2="104" stroke="#c9a84c" stroke-width="0.8" opacity="0.4"/>
+        <line x1="52" y1="88" x2="46" y2="100" stroke="#c9a84c" stroke-width="0.6" opacity="0.25"/>
+        <line x1="68" y1="88" x2="74" y2="100" stroke="#c9a84c" stroke-width="0.6" opacity="0.25"/>
+        <circle cx="60" cy="106" r="1.5" fill="#c9a84c" opacity="0.35"/>
+        <circle cx="45" cy="102" r="1" fill="#c9a84c" opacity="0.25"/>
+        <circle cx="75" cy="102" r="1" fill="#c9a84c" opacity="0.25"/>
+        <line x1="20" y1="68" x2="12" y2="76" stroke="#c9a84c" stroke-width="0.5" opacity="0.2"/>
+        <line x1="100" y1="68" x2="108" y2="76" stroke="#c9a84c" stroke-width="0.5" opacity="0.2"/>
       </svg>
     </div>
     <div class="badge">Powered by Dark Lion AI</div>
@@ -399,7 +465,7 @@
     <ul class="footer-links">
       <li><a href="/privacy.html">Privacy Policy</a></li>
       <li><a href="/terms.html">Terms of Service</a></li>
-      <li><a href="mailto:argus@sentineladvisors.co">Contact</a></li>
+      <li><a href="mailto:support@darklion.ai">Contact</a></li>
     </ul>
     <p class="footer-copy">&copy; 2026 Dark Lion AI. All rights reserved.</p>
   </footer>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Disconnect QuickBooks &mdash; DarkLion</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #0f1923;
+      --charcoal: #1c2b3a;
+      --card: #1e2f40;
+      --gold: #c9a84c;
+      --text: #e8edf2;
+      --muted: #8fa3b8;
+      --border: rgba(201,168,76,0.2);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--navy);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 3rem;
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin-bottom: 2rem;
+    }
+
+    .logo-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .logo-name span { color: var(--gold); }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .warning {
+      background: rgba(28,16,5,0.8);
+      border: 1px solid rgba(201,168,76,0.27);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 2rem;
+      color: var(--gold);
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    .steps {
+      text-align: left;
+      background: rgba(15,25,35,0.6);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .steps h3 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .steps ol {
+      padding-left: 1.25rem;
+      color: var(--text);
+      font-size: 0.95rem;
+      line-height: 2;
+    }
+
+    .btn {
+      display: inline-block;
+      background: #c0392b;
+      color: white;
+      padding: 0.85rem 2rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+
+    .btn:hover { background: #e74c3c; }
+
+    .btn-secondary {
+      display: inline-block;
+      margin-top: 1rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-decoration: underline;
+    }
+
+    footer {
+      margin-top: 3rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      opacity: 0.6;
+    }
+
+    footer a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    footer a:hover { color: var(--gold); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="36" height="36" style="display:block;flex-shrink:0;" aria-label="DarkLion logo">
+        <defs>
+          <linearGradient id="dcf" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#f5dfa0"/><stop offset="100%" stop-color="#b8942e"/></linearGradient>
+          <filter id="dcg"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <!-- Halo ring -->
+        <circle cx="60" cy="56" r="56" fill="none" stroke="#c9a84c" stroke-width="1.5" opacity="0.35"/>
+        <!-- Mane outer layer -->
+        <polygon points="60,2 54,10 48,4 44,18 52,24 60,14 68,24 76,18 72,4 66,10" fill="#6b4f1d"/>
+        <polygon points="44,18 34,8 24,20 32,30 40,24" fill="#5a421a"/>
+        <polygon points="76,18 86,8 96,20 88,30 80,24" fill="#5a421a"/>
+        <polygon points="24,20 12,26 8,44 18,48 26,36" fill="#4a3614"/>
+        <polygon points="96,20 108,26 112,44 102,48 94,36" fill="#4a3614"/>
+        <polygon points="8,44 4,60 12,72 22,62 18,50" fill="#3d2d10"/>
+        <polygon points="112,44 116,60 108,72 98,62 102,50" fill="#3d2d10"/>
+        <polygon points="12,72 16,84 28,82 24,72" fill="#3d2d10" opacity="0.7"/>
+        <polygon points="108,72 104,84 92,82 96,72" fill="#3d2d10" opacity="0.7"/>
+        <!-- Mane inner layer -->
+        <polygon points="60,8 54,16 48,10 42,24 50,28 60,20 70,28 78,24 72,10 66,16" fill="#8a6d2b"/>
+        <polygon points="42,24 32,16 24,28 34,34 40,28" fill="#7a5c22"/>
+        <polygon points="78,24 88,16 96,28 86,34 80,28" fill="#7a5c22"/>
+        <polygon points="24,28 14,34 12,52 24,50 28,38" fill="#6b4f1d"/>
+        <polygon points="96,28 106,34 108,52 96,50 92,38" fill="#6b4f1d"/>
+        <polygon points="12,52 8,66 20,68 24,56" fill="#5a421a"/>
+        <polygon points="108,52 112,66 100,68 96,56" fill="#5a421a"/>
+        <!-- Face -->
+        <polygon points="60,22 76,30 88,48 84,66 74,80 60,88 46,80 36,66 32,48 44,30" fill="url(#dcf)" stroke="#9a7828" stroke-width="0.8"/>
+        <!-- Forehead diamond -->
+        <polygon points="60,26 64,33 60,40 56,33" fill="#0f1923" opacity="0.45"/>
+        <!-- Brow ridges -->
+        <polygon points="36,48 44,40 58,46 54,52" fill="#0f1923" opacity="0.8"/>
+        <polygon points="84,48 76,40 62,46 66,52" fill="#0f1923" opacity="0.8"/>
+        <!-- Eyes -->
+        <polygon points="38,56 46,50 54,56 46,62" fill="#0f1923"/>
+        <polygon points="82,56 74,50 66,56 74,62" fill="#0f1923"/>
+        <!-- Eye glow -->
+        <polygon points="42,56 46,52.5 50,56 46,59.5" fill="#ffe4a0" filter="url(#dcg)"/>
+        <polygon points="78,56 74,52.5 70,56 74,59.5" fill="#ffe4a0" filter="url(#dcg)"/>
+        <!-- Nose bridge + nose -->
+        <line x1="60" y1="44" x2="60" y2="62" stroke="#0f1923" stroke-width="0.8" opacity="0.3"/>
+        <polygon points="55,64 65,64 60,72" fill="#0f1923" opacity="0.7"/>
+        <!-- Mouth -->
+        <path d="M50,76 L56,73 L60,77 L64,73 L70,76" stroke="#0f1923" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Chin -->
+        <polygon points="54,82 60,86 66,82 60,79" fill="#0f1923" opacity="0.35"/>
+        <!-- Jaw contour -->
+        <line x1="36" y1="66" x2="44" y2="78" stroke="#0f1923" stroke-width="0.8" opacity="0.25"/>
+        <line x1="84" y1="66" x2="76" y2="78" stroke="#0f1923" stroke-width="0.8" opacity="0.25"/>
+        <!-- Tech circuit accents -->
+        <line x1="60" y1="90" x2="60" y2="104" stroke="#c9a84c" stroke-width="0.8" opacity="0.4"/>
+        <line x1="52" y1="88" x2="46" y2="100" stroke="#c9a84c" stroke-width="0.6" opacity="0.25"/>
+        <line x1="68" y1="88" x2="74" y2="100" stroke="#c9a84c" stroke-width="0.6" opacity="0.25"/>
+        <circle cx="60" cy="106" r="1.5" fill="#c9a84c" opacity="0.35"/>
+        <circle cx="45" cy="102" r="1" fill="#c9a84c" opacity="0.25"/>
+        <circle cx="75" cy="102" r="1" fill="#c9a84c" opacity="0.25"/>
+        <line x1="20" y1="68" x2="12" y2="76" stroke="#c9a84c" stroke-width="0.5" opacity="0.2"/>
+        <line x1="100" y1="68" x2="108" y2="76" stroke="#c9a84c" stroke-width="0.5" opacity="0.2"/>
+      </svg>
+      <span class="logo-name">Dark<span>Lion</span></span>
+    </div>
+
+    <h1>Disconnect QuickBooks</h1>
+    <p>You can revoke DarkLion&rsquo;s access to your QuickBooks company file at any time. Once disconnected, automated categorization will stop until you reconnect.</p>
+
+    <div class="warning">
+      &#x26A0;&#xFE0F; Disconnecting will stop all automated bookkeeping for this company file. Any rules and categorizations already applied will remain in QuickBooks.
+    </div>
+
+    <div class="steps">
+      <h3>How to disconnect</h3>
+      <ol>
+        <li>Sign in to your QuickBooks Online account</li>
+        <li>Click the <strong>Gear icon</strong> (&#x2699;&#xFE0F;) in the top right</li>
+        <li>Select <strong>Account and Settings</strong></li>
+        <li>Go to the <strong>Apps</strong> tab</li>
+        <li>Find <strong>DarkLion</strong> and click <strong>Disconnect</strong></li>
+      </ol>
+    </div>
+
+    <a href="https://app.qbo.intuit.com/app/homepage" target="_blank" class="btn">Go to QuickBooks Settings</a>
+    <br>
+    <a href="/connect.html" class="btn-secondary">Reconnect instead &rarr;</a>
+  </div>
+
+  <footer>
+    <a href="/privacy.html">Privacy Policy</a> &nbsp;&middot;&nbsp; <a href="/terms.html">Terms of Service</a> &nbsp;&middot;&nbsp; support@darklion.ai
+  </footer>
+</body>
+</html>

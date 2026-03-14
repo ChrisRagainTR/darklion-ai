@@ -1,4 +1,4 @@
-# GitHub Pages configuration for Argus Books / Dark Lion AI
+# GitHub Pages configuration for DarkLion AI
 # Custom HTML — no Jekyll theme needed
 exclude:
   - "*.md"
