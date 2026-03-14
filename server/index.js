@@ -35,12 +35,45 @@ const PORT = process.env.PORT || 8080;
 
 app.use(express.json());
 
-// Serve static files (landing pages + dashboard)
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// --- Authentication middleware ---
+// Dashboard + API require login. Public pages (landing, connect, privacy, terms) do not.
+const DASH_USER = process.env.DASH_USER || 'admin';
+const DASH_PASS = process.env.DASH_PASS;
 
-// API routes
+function requireAuth(req, res, next) {
+  if (!DASH_PASS) return next(); // no password set = no auth (dev mode)
+
+  const authHeader = req.headers.authorization;
+  if (authHeader) {
+    const encoded = authHeader.split(' ')[1];
+    if (encoded) {
+      const [user, pass] = Buffer.from(encoded, 'base64').toString().split(':');
+      if (user === DASH_USER && pass === DASH_PASS) return next();
+    }
+  }
+
+  res.set('WWW-Authenticate', 'Basic realm="DarkLion Dashboard"');
+  res.status(401).send('Authentication required');
+}
+
+// Public static files (landing page, connect, privacy, terms, callback, logo)
+const publicDir = path.join(__dirname, '..', 'public');
+const publicFiles = ['index.html', 'connect.html', 'callback.html', 'disconnect.html', 'privacy.html', 'terms.html', 'lion-logo.png', 'CNAME'];
+app.get('/', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
+for (const file of publicFiles) {
+  app.get(`/${file}`, (req, res, next) => {
+    res.sendFile(path.join(publicDir, file), err => { if (err) next(); });
+  });
+}
+
+// Protected dashboard
+app.get('/dashboard.html', requireAuth, (req, res) => {
+  res.sendFile(path.join(publicDir, 'dashboard.html'));
+});
+
+// API routes (protected)
 app.use('/auth', authRouter);
-app.use('/api', apiRouter);
+app.use('/api', requireAuth, apiRouter);
 
 // Health check
 app.get('/health', (req, res) => {
