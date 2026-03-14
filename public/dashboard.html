@@ -306,6 +306,7 @@
           <button class="btn btn-outline" onclick="runResearch()" id="btn-research">Research Vendors</button>
           <button class="btn btn-gold" onclick="runCategorize()" id="btn-categorize">Categorize with AI</button>
           <button class="btn btn-green" onclick="runWriteBack()" id="btn-writeback">Write Back to QB</button>
+          <button class="btn btn-gold" onclick="runPipeline()" id="btn-pipeline" style="background:linear-gradient(135deg,var(--gold),#e2c068);">Run Full Pipeline</button>
         </div>
       </div>
 
@@ -496,7 +497,6 @@
             <select id="cat-${t.id}" class="company-select" style="min-width:160px;font-size:0.82rem;padding:0.3rem 0.5rem;">
               ${accountOptions}
             </select>
-            <script>document.getElementById('cat-${t.id}').value = ${JSON.stringify(t.ai_category || '')};</script>
           </td>
           <td>${confidenceBar(t.ai_confidence)}</td>
           <td style="font-size:0.82rem;color:var(--muted);max-width:200px;">${esc(t.ai_memo || '')}</td>
@@ -509,6 +509,12 @@
           </td>
         </tr>
       `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">No transactions waiting for review.</td></tr>';
+
+      // Set select values after render (avoids inline script tags that break HTML)
+      txns.forEach(t => {
+        const sel = document.getElementById('cat-' + t.id);
+        if (sel) sel.value = t.ai_category || '';
+      });
     }
 
     async function loadVendors() {
@@ -578,6 +584,19 @@
         loadDashboard();
       } catch (e) { toast('Research failed: ' + e.message); }
       btn.disabled = false; btn.textContent = 'Research Vendors';
+    }
+
+    async function runPipeline() {
+      const btn = document.getElementById('btn-pipeline');
+      btn.disabled = true; btn.textContent = 'Running Pipeline...';
+      try {
+        const res = await fetch(`/api/companies/${currentRealm}/run-pipeline`, { method: 'POST' });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        toast(`Pipeline complete: ${data.synced} synced, ${data.categorized} categorized, ${data.posted} auto-posted, ${data.needsReview} need review`);
+        loadDashboard();
+      } catch (e) { toast('Pipeline failed: ' + e.message); }
+      btn.disabled = false; btn.textContent = 'Run Full Pipeline';
     }
 
     async function runWriteBack() {
