@@ -2,6 +2,7 @@ const { Router } = require('express');
 const { pool } = require('../db');
 const { syncTransactions, getChartOfAccounts, writeBackTransaction } = require('../services/quickbooks');
 const { categorizeTransactions, researchAllVendors } = require('../services/claude');
+const { runFullPipeline } = require('../scheduler');
 
 const router = Router();
 
@@ -199,6 +200,16 @@ router.post('/companies/:realmId/write-back', async (req, res) => {
       "UPDATE jobs SET status = 'failed', error_message = $1, completed_at = NOW() WHERE id = $2",
       [err.message, jobId]
     );
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Run the full overnight pipeline on demand
+router.post('/companies/:realmId/run-pipeline', async (req, res) => {
+  try {
+    const results = await runFullPipeline(req.params.realmId);
+    res.json(results);
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
