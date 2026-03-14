@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — DarkLion</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #0f1923;
+      --charcoal: #1c2b3a;
+      --card: #1e2f40;
+      --gold: #c9a84c;
+      --gold-light: #e2c068;
+      --text: #e8edf2;
+      --muted: #8fa3b8;
+      --border: rgba(201,168,76,0.2);
+      --green: #3ecf8e;
+      --red: #f56565;
+      --orange: #ed8936;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--navy);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      background: rgba(15,25,35,0.95);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+    }
+
+    .nav-name { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+    .nav-name span { color: var(--gold); }
+
+    .nav-links { display: flex; gap: 1.2rem; list-style: none; align-items: center; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.88rem; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--gold); }
+    .nav-links .active { color: var(--gold); font-weight: 600; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .page-header h1 { font-size: 1.5rem; font-weight: 800; }
+
+    .header-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.2rem;
+      border-radius: 7px;
+      border: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      text-decoration: none;
+    }
+
+    .btn:active { transform: scale(0.97); }
+    .btn-gold { background: var(--gold); color: var(--navy); }
+    .btn-gold:hover { background: var(--gold-light); }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-green { background: var(--green); color: var(--navy); }
+    .btn-green:hover { background: #4ee0a0; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Stats cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.4rem;
+    }
+
+    .stat-label { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; }
+    .stat-value { font-size: 1.8rem; font-weight: 800; }
+    .stat-value.gold { color: var(--gold); }
+    .stat-value.green { color: var(--green); }
+    .stat-value.orange { color: var(--orange); }
+
+    /* Company selector */
+    .company-select {
+      background: var(--charcoal);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 1rem;
+      border-radius: 7px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+
+    .tab {
+      padding: 0.75rem 1.5rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+    /* Table */
+    .table-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow-x: auto;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); }
+    td { padding: 0.85rem 1.2rem; font-size: 0.88rem; border-bottom: 1px solid rgba(201,168,76,0.07); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(201,168,76,0.03); }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 50px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-pending { background: rgba(237,137,54,0.12); color: var(--orange); }
+    .badge-categorized { background: rgba(201,168,76,0.12); color: var(--gold); }
+    .badge-reviewed { background: rgba(62,207,142,0.12); color: var(--green); }
+    .badge-written { background: rgba(62,207,142,0.25); color: var(--green); }
+    .badge-skipped { background: rgba(143,163,184,0.12); color: var(--muted); }
+
+    .confidence-bar {
+      width: 60px;
+      height: 6px;
+      background: rgba(201,168,76,0.15);
+      border-radius: 3px;
+      overflow: hidden;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 0.4rem;
+    }
+
+    .confidence-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    .conf-high { background: var(--green); }
+    .conf-med { background: var(--gold); }
+    .conf-low { background: var(--red); }
+
+    .action-btns { display: flex; gap: 0.4rem; }
+    .action-btn {
+      padding: 0.3rem 0.6rem;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .action-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .action-btn.approve:hover { border-color: var(--green); color: var(--green); }
+    .action-btn.skip:hover { border-color: var(--red); color: var(--red); }
+
+    /* Jobs log */
+    .jobs-list { list-style: none; }
+    .job-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 1.2rem;
+      border-bottom: 1px solid rgba(201,168,76,0.07);
+      font-size: 0.88rem;
+    }
+
+    .job-item:last-child { border-bottom: none; }
+    .job-type { font-weight: 600; min-width: 120px; }
+    .job-status { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+    .job-time { color: var(--muted); font-size: 0.8rem; margin-left: auto; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+    }
+
+    .empty-state h2 { font-size: 1.3rem; color: var(--text); margin-bottom: 0.75rem; }
+    .empty-state p { margin-bottom: 1.5rem; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--charcoal);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.8rem 1.5rem;
+      font-size: 0.88rem;
+      color: var(--text);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 200;
+    }
+
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    @media (max-width: 700px) {
+      .container { padding: 1rem; }
+      .page-header { flex-direction: column; align-items: flex-start; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-brand" href="/">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="36" height="36" style="display:block;flex-shrink:0;" aria-label="DarkLion logo">
+        <defs><linearGradient id="fg" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#f0d488"/><stop offset="100%" stop-color="#c9a84c"/></linearGradient></defs>
+        <polygon points="60,4 73,22 100,14 89,35 112,38 94,55 110,68 87,72 96,84 73,85 60,88 47,85 24,84 33,72 10,68 26,55 8,38 31,35 20,14 47,22" fill="#c9a84c"/>
+        <polygon points="47,22 73,22 89,35 94,55 87,72 73,85 60,88 47,85 33,72 26,55 31,35" fill="url(#fg)" stroke="#9a7828" stroke-width="1"/>
+        <polygon points="60,25 65,31 60,37 55,31" fill="#0f1923" opacity="0.8"/>
+        <polygon points="28,50 32,40 55,45 52,51" fill="#0f1923"/>
+        <polygon points="92,50 88,40 65,45 68,51" fill="#0f1923"/>
+        <polygon points="33,58 42,52 52,58 42,64" fill="#0f1923"/>
+        <polygon points="38,58 42,55 46,58 42,61" fill="#e2c068"/>
+        <polygon points="68,58 78,52 87,58 78,64" fill="#0f1923"/>
+        <polygon points="74,58 78,55 82,58 78,61" fill="#e2c068"/>
+        <polygon points="54,65 66,65 60,74" fill="#0f1923"/>
+        <polyline points="49,80 60,76 71,80" stroke="#0f1923" stroke-width="2.5" fill="none" stroke-linejoin="miter" stroke-linecap="square"/>
+        <polygon points="54,83 66,83 60,88" fill="#0f1923" opacity="0.6"/>
+      </svg>
+      <span class="nav-name">Dark<span>Lion</span></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/dashboard.html" class="active">Dashboard</a></li>
+      <li><a href="/connect.html">Connect</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <!-- No companies state -->
+    <div id="empty-state" class="empty-state" style="display:none;">
+      <h2>No Companies Connected</h2>
+      <p>Connect a QuickBooks Online company to get started with DarkLion.</p>
+      <a href="/connect.html" class="btn btn-gold">Connect QuickBooks</a>
+    </div>
+
+    <!-- Dashboard content -->
+    <div id="dashboard" style="display:none;">
+      <div class="page-header">
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <h1>Dashboard</h1>
+          <select class="company-select" id="company-select"></select>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-outline" onclick="runSync()" id="btn-sync">Sync Transactions</button>
+          <button class="btn btn-outline" onclick="runResearch()" id="btn-research">Research Vendors</button>
+          <button class="btn btn-gold" onclick="runCategorize()" id="btn-categorize">Categorize with AI</button>
+          <button class="btn btn-green" onclick="runWriteBack()" id="btn-writeback">Write Back to QB</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><div class="stat-label">Total Transactions</div><div class="stat-value" id="stat-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value orange" id="stat-pending">—</div></div>
+        <div class="stat-card"><div class="stat-label">Categorized</div><div class="stat-value gold" id="stat-categorized">—</div></div>
+        <div class="stat-card"><div class="stat-label">Reviewed</div><div class="stat-value green" id="stat-reviewed">—</div></div>
+        <div class="stat-card"><div class="stat-label">Written Back</div><div class="stat-value green" id="stat-written">—</div></div>
+        <div class="stat-card"><div class="stat-label">Vendors Researched</div><div class="stat-value gold" id="stat-vendors">—</div></div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" data-tab="transactions" onclick="switchTab('transactions',this)">Transactions</button>
+        <button class="tab" data-tab="review" onclick="switchTab('review',this)">Review Queue</button>
+        <button class="tab" data-tab="vendors" onclick="switchTab('vendors',this)">Vendors</button>
+        <button class="tab" data-tab="jobs" onclick="switchTab('jobs',this)">Job History</button>
+      </div>
+
+      <!-- Transactions tab -->
+      <div class="tab-content" id="tab-transactions">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Vendor</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>AI Category</th>
+                <th>Confidence</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="txn-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Review queue tab -->
+      <div class="tab-content" id="tab-review" style="display:none;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Vendor</th>
+                <th>Amount</th>
+                <th>AI Category</th>
+                <th>Confidence</th>
+                <th>AI Memo</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="review-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Vendors tab -->
+      <div class="tab-content" id="tab-vendors" style="display:none;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Vendor</th>
+                <th>Business Category</th>
+                <th>Description</th>
+                <th>Researched</th>
+              </tr>
+            </thead>
+            <tbody id="vendor-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Jobs tab -->
+      <div class="tab-content" id="tab-jobs" style="display:none;">
+        <div class="table-wrap">
+          <ul class="jobs-list" id="jobs-list"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let currentRealm = null;
+    let companies = [];
+
+    // --- Init ---
+    async function init() {
+      try {
+        const res = await fetch('/api/companies');
+        companies = await res.json();
+      } catch (e) {
+        companies = [];
+      }
+
+      if (companies.length === 0) {
+        document.getElementById('empty-state').style.display = '';
+        document.getElementById('dashboard').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('empty-state').style.display = 'none';
+      document.getElementById('dashboard').style.display = '';
+
+      const select = document.getElementById('company-select');
+      select.innerHTML = companies.map(c =>
+        `<option value="${c.realm_id}">${c.company_name || c.realm_id}</option>`
+      ).join('');
+
+      currentRealm = companies[0].realm_id;
+      select.addEventListener('change', () => { currentRealm = select.value; loadDashboard(); });
+
+      loadDashboard();
+    }
+
+    // --- Load all data ---
+    async function loadDashboard() {
+      await Promise.all([loadStats(), loadTransactions(), loadReview(), loadVendors(), loadJobs()]);
+    }
+
+    async function loadStats() {
+      const res = await fetch(`/api/companies/${currentRealm}/stats`);
+      const data = await res.json();
+      const t = data.totals;
+      document.getElementById('stat-total').textContent = t.total || 0;
+      document.getElementById('stat-pending').textContent = t.pending || 0;
+      document.getElementById('stat-categorized').textContent = t.categorized || 0;
+      document.getElementById('stat-reviewed').textContent = t.reviewed || 0;
+      document.getElementById('stat-written').textContent = t.written_back || 0;
+      document.getElementById('stat-vendors').textContent = data.vendors || 0;
+    }
+
+    async function loadTransactions() {
+      const res = await fetch(`/api/companies/${currentRealm}/transactions?limit=100`);
+      const txns = await res.json();
+      document.getElementById('txn-body').innerHTML = txns.map(t => `
+        <tr>
+          <td>${t.date}</td>
+          <td>${esc(t.vendor_name)}</td>
+          <td>${esc(t.description).substring(0, 50)}</td>
+          <td style="text-align:right;">$${Number(t.amount).toFixed(2)}</td>
+          <td>${esc(t.ai_category || '—')}</td>
+          <td>${confidenceBar(t.ai_confidence)}</td>
+          <td>${statusBadge(t.status)}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">No transactions yet. Click "Sync Transactions" to pull from QuickBooks.</td></tr>';
+    }
+
+    async function loadReview() {
+      const res = await fetch(`/api/companies/${currentRealm}/transactions?status=categorized&limit=100`);
+      const txns = await res.json();
+      document.getElementById('review-body').innerHTML = txns.map(t => `
+        <tr>
+          <td>${t.date}</td>
+          <td>${esc(t.vendor_name)}</td>
+          <td style="text-align:right;">$${Number(t.amount).toFixed(2)}</td>
+          <td>${esc(t.ai_category || '—')}</td>
+          <td>${confidenceBar(t.ai_confidence)}</td>
+          <td style="font-size:0.82rem;color:var(--muted);">${esc(t.ai_memo || '')}</td>
+          <td>
+            <div class="action-btns">
+              <button class="action-btn approve" onclick="reviewTxn(${t.id},'approve')">Approve</button>
+              <button class="action-btn skip" onclick="reviewTxn(${t.id},'skip')">Skip</button>
+            </div>
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">No transactions waiting for review.</td></tr>';
+    }
+
+    async function loadVendors() {
+      const res = await fetch(`/api/companies/${currentRealm}/vendors`);
+      const vendors = await res.json();
+      document.getElementById('vendor-body').innerHTML = vendors.map(v => `
+        <tr>
+          <td style="font-weight:600;">${esc(v.vendor_name)}</td>
+          <td>${esc(v.business_category || '—')}</td>
+          <td style="color:var(--muted);">${esc(v.description || '—')}</td>
+          <td style="color:var(--muted);font-size:0.82rem;">${v.researched_at || '—'}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:2rem;">No vendors researched yet.</td></tr>';
+    }
+
+    async function loadJobs() {
+      const res = await fetch(`/api/companies/${currentRealm}/stats`);
+      const data = await res.json();
+      const jobs = data.recentJobs || [];
+      document.getElementById('jobs-list').innerHTML = jobs.map(j => {
+        const statusColor = j.status === 'completed' ? 'var(--green)' : j.status === 'failed' ? 'var(--red)' : 'var(--gold)';
+        const typeLabel = { sync: 'Sync', categorize: 'Categorize', vendor_research: 'Vendor Research', write_back: 'Write Back' }[j.job_type] || j.job_type;
+        return `
+          <li class="job-item">
+            <span class="job-type">${typeLabel}</span>
+            <span class="job-status" style="color:${statusColor};">${j.status}</span>
+            <span style="font-size:0.82rem;">${j.items_processed}/${j.items_total} items</span>
+            ${j.error_message ? `<span style="color:var(--red);font-size:0.8rem;">${esc(j.error_message).substring(0, 60)}</span>` : ''}
+            <span class="job-time">${j.started_at}</span>
+          </li>
+        `;
+      }).join('') || '<li class="job-item" style="justify-content:center;color:var(--muted);">No jobs yet.</li>';
+    }
+
+    // --- Actions ---
+    async function runSync() {
+      const btn = document.getElementById('btn-sync');
+      btn.disabled = true; btn.textContent = 'Syncing...';
+      try {
+        const res = await fetch(`/api/companies/${currentRealm}/sync`, { method: 'POST' });
+        const data = await res.json();
+        toast(`Synced ${data.synced} transactions`);
+        loadDashboard();
+      } catch (e) { toast('Sync failed: ' + e.message); }
+      btn.disabled = false; btn.textContent = 'Sync Transactions';
+    }
+
+    async function runCategorize() {
+      const btn = document.getElementById('btn-categorize');
+      btn.disabled = true; btn.textContent = 'Categorizing...';
+      try {
+        const res = await fetch(`/api/companies/${currentRealm}/categorize`, { method: 'POST' });
+        const data = await res.json();
+        toast(`Categorized ${data.categorized} transactions`);
+        loadDashboard();
+      } catch (e) { toast('Categorization failed: ' + e.message); }
+      btn.disabled = false; btn.textContent = 'Categorize with AI';
+    }
+
+    async function runResearch() {
+      const btn = document.getElementById('btn-research');
+      btn.disabled = true; btn.textContent = 'Researching...';
+      try {
+        const res = await fetch(`/api/companies/${currentRealm}/research-vendors`, { method: 'POST' });
+        const data = await res.json();
+        toast(`Researched ${data.researched} vendors`);
+        loadDashboard();
+      } catch (e) { toast('Research failed: ' + e.message); }
+      btn.disabled = false; btn.textContent = 'Research Vendors';
+    }
+
+    async function runWriteBack() {
+      const btn = document.getElementById('btn-writeback');
+      btn.disabled = true; btn.textContent = 'Writing...';
+      try {
+        const res = await fetch(`/api/companies/${currentRealm}/write-back`, { method: 'POST' });
+        const data = await res.json();
+        toast(`Wrote ${data.written} transactions to QuickBooks`);
+        loadDashboard();
+      } catch (e) { toast('Write-back failed: ' + e.message); }
+      btn.disabled = false; btn.textContent = 'Write Back to QB';
+    }
+
+    async function reviewTxn(id, action) {
+      await fetch(`/api/companies/${currentRealm}/transactions/${id}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      toast(action === 'approve' ? 'Transaction approved' : 'Transaction skipped');
+      loadDashboard();
+    }
+
+    // --- Tabs ---
+    function switchTab(name, el) {
+      document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-' + name).style.display = '';
+      el.classList.add('active');
+    }
+
+    // --- Helpers ---
+    function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+    function statusBadge(status) {
+      const cls = { pending: 'badge-pending', categorized: 'badge-categorized', reviewed: 'badge-reviewed', written_back: 'badge-written', skipped: 'badge-skipped' }[status] || 'badge-pending';
+      const label = status === 'written_back' ? 'Written' : (status || 'pending');
+      return `<span class="badge ${cls}">${label}</span>`;
+    }
+
+    function confidenceBar(conf) {
+      if (conf == null) return '<span style="color:var(--muted);">—</span>';
+      const pct = Math.round(conf * 100);
+      const cls = conf >= 0.8 ? 'conf-high' : conf >= 0.5 ? 'conf-med' : 'conf-low';
+      return `<span class="confidence-bar"><span class="confidence-fill ${cls}" style="width:${pct}%"></span></span>${pct}%`;
+    }
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    init();
+  </script>
+
+</body>
+</html>

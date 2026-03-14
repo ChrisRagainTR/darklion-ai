@@ -286,7 +286,7 @@
       }
 
       if (error) {
-        showError('QuickBooks returned an error: ' + error + '. Please try again or contact support at argus@sentineladvisors.co.');
+        showError('QuickBooks returned an error: ' + error + '. Please try again or contact support at support@darklion.ai.');
         return;
       }
 
@@ -295,20 +295,19 @@
         return;
       }
 
-      // Try to forward to local server
-      const localUrl = new URL('http://localhost:8080/callback');
-      if (code)    localUrl.searchParams.set('code', code);
-      if (realmId) localUrl.searchParams.set('realmId', realmId);
-      if (state)   localUrl.searchParams.set('state', state);
+      // Forward to backend for token exchange
+      const backendUrl = new URL('/auth/callback', window.location.origin);
+      if (code)    backendUrl.searchParams.set('code', code);
+      if (realmId) backendUrl.searchParams.set('realmId', realmId);
+      if (state)   backendUrl.searchParams.set('state', state);
 
       let autoConnected = false;
       try {
-        const res = await fetch(localUrl.toString(), { signal: AbortSignal.timeout(6000) });
+        const res = await fetch(backendUrl.toString(), { signal: AbortSignal.timeout(15000) });
         if (res.ok) {
           autoConnected = true;
         }
       } catch (e) {
-        // Local server not running — fall through to show manual fallback
         autoConnected = false;
       }
 
