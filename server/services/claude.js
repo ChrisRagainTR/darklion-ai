@@ -1,5 +1,5 @@
 const Anthropic = require('@anthropic-ai/sdk');
-const db = require('../db');
+const { pool } = require('../db');
 
 const client = new Anthropic();
 
@@ -9,23 +9,25 @@ const MODEL_SMART = 'claude-sonnet-4-20250514';    // accurate — batch categor
 
 // Categorize a batch of transactions using Claude
 async function categorizeTransactions(realmId, chartOfAccounts) {
-  const job = db.prepare(
-    `INSERT INTO jobs (realm_id, job_type) VALUES (?, 'categorize')`
-  ).run(realmId);
-  const jobId = job.lastInsertRowid;
+  const { rows: [job] } = await pool.query(
+    "INSERT INTO jobs (realm_id, job_type) VALUES ($1, 'categorize') RETURNING id",
+    [realmId]
+  );
+  const jobId = job.id;
 
   try {
     // Get pending transactions
-    const transactions = db.prepare(`
-      SELECT * FROM transactions WHERE realm_id = ? AND status = 'pending' ORDER BY date DESC LIMIT 50
-    `).all(realmId);
+    const { rows: transactions } = await pool.query(
+      "SELECT * FROM transactions WHERE realm_id = $1 AND status = 'pending' ORDER BY date DESC LIMIT 50",
+      [realmId]
+    );
 
     if (transactions.length === 0) {
-      db.prepare(`UPDATE jobs SET status = 'completed', completed_at = datetime('now') WHERE id = ?`).run(jobId);
+      await pool.query("UPDATE jobs SET status = 'completed', completed_at = NOW() WHERE id = $1", [jobId]);
       return { categorized: 0 };
     }
 
-    db.prepare('UPDATE jobs SET items_total = ? WHERE id = ?').run(transactions.length, jobId);
+    await pool.query('UPDATE jobs SET items_total = $1 WHERE id = $2', [transactions.length, jobId]);
 
     // Build account list for context
     const accountList = chartOfAccounts
@@ -34,7 +36,9 @@ async function categorizeTransactions(realmId, chartOfAccounts) {
       .join('\n');
 
     // Get known vendor info for context
-    const vendors = db.prepare('SELECT * FROM vendors WHERE realm_id = ? AND business_category IS NOT NULL').all(realmId);
+    const { rows: vendors } = await pool.query(
+      'SELECT * FROM vendors WHERE realm_id = $1 AND business_category IS NOT NULL', [realmId]
+    );
     const vendorContext = vendors.length > 0
       ? '\nKnown vendors:\n' + vendors.map(v => `- ${v.vendor_name}: ${v.business_category} — ${v.description || ''}`).join('\n')
       : '';
@@ -78,34 +82,29 @@ Respond ONLY with the JSON array, no other text.`,
 
     const results = JSON.parse(jsonMatch[0]);
 
-    const update = db.prepare(`
-      UPDATE transactions SET ai_category = ?, ai_confidence = ?, ai_memo = ?, status = 'categorized', updated_at = datetime('now')
-      WHERE id = ?
-    `);
-
-    const applyResults = db.transaction((results) => {
-      let processed = 0;
-      for (const r of results) {
-        const txn = transactions[r.index - 1];
-        if (txn) {
-          update.run(r.category, r.confidence, r.memo, txn.id);
-          processed++;
-        }
+    let processed = 0;
+    for (const r of results) {
+      const txn = transactions[r.index - 1];
+      if (txn) {
+        await pool.query(
+          "UPDATE transactions SET ai_category = $1, ai_confidence = $2, ai_memo = $3, status = 'categorized', updated_at = NOW() WHERE id = $4",
+          [r.category, r.confidence, r.memo, txn.id]
+        );
+        processed++;
       }
-      return processed;
-    });
+    }
 
-    const processed = applyResults(results);
-
-    db.prepare(`
-      UPDATE jobs SET status = 'completed', items_processed = ?, completed_at = datetime('now') WHERE id = ?
-    `).run(processed, jobId);
+    await pool.query(
+      "UPDATE jobs SET status = 'completed', items_processed = $1, completed_at = NOW() WHERE id = $2",
+      [processed, jobId]
+    );
 
     return { categorized: processed };
   } catch (err) {
-    db.prepare(`
-      UPDATE jobs SET status = 'failed', error_message = ?, completed_at = datetime('now') WHERE id = ?
-    `).run(err.message, jobId);
+    await pool.query(
+      "UPDATE jobs SET status = 'failed', error_message = $1, completed_at = NOW() WHERE id = $2",
+      [err.message, jobId]
+    );
     throw err;
   }
 }
@@ -135,57 +134,60 @@ Respond ONLY with the JSON, no other text.`,
 
   const info = JSON.parse(jsonMatch[0]);
 
-  db.prepare(`
+  await pool.query(`
     INSERT INTO vendors (realm_id, vendor_name, business_category, description, researched_at)
-    VALUES (?, ?, ?, ?, datetime('now'))
+    VALUES ($1, $2, $3, $4, NOW())
     ON CONFLICT(realm_id, vendor_name) DO UPDATE SET
-      business_category = excluded.business_category,
-      description = excluded.description,
-      researched_at = datetime('now')
-  `).run(realmId, vendorName, info.business_category || '', info.description || '');
+      business_category = EXCLUDED.business_category,
+      description = EXCLUDED.description,
+      researched_at = NOW()
+  `, [realmId, vendorName, info.business_category || '', info.description || '']);
 
   return info;
 }
 
 // Research all unknown vendors for a company
 async function researchAllVendors(realmId) {
-  const job = db.prepare(
-    `INSERT INTO jobs (realm_id, job_type) VALUES (?, 'vendor_research')`
-  ).run(realmId);
-  const jobId = job.lastInsertRowid;
+  const { rows: [job] } = await pool.query(
+    "INSERT INTO jobs (realm_id, job_type) VALUES ($1, 'vendor_research') RETURNING id",
+    [realmId]
+  );
+  const jobId = job.id;
 
   try {
     // Find vendors in transactions that we haven't researched
-    const unknownVendors = db.prepare(`
+    const { rows: unknownVendors } = await pool.query(`
       SELECT DISTINCT t.vendor_name
       FROM transactions t
       LEFT JOIN vendors v ON v.realm_id = t.realm_id AND v.vendor_name = t.vendor_name
-      WHERE t.realm_id = ? AND t.vendor_name != '' AND v.id IS NULL
+      WHERE t.realm_id = $1 AND t.vendor_name != '' AND v.id IS NULL
       LIMIT 20
-    `).all(realmId);
+    `, [realmId]);
 
-    db.prepare('UPDATE jobs SET items_total = ? WHERE id = ?').run(unknownVendors.length, jobId);
+    await pool.query('UPDATE jobs SET items_total = $1 WHERE id = $2', [unknownVendors.length, jobId]);
 
     let processed = 0;
     for (const { vendor_name } of unknownVendors) {
       try {
         await researchVendor(realmId, vendor_name);
         processed++;
-        db.prepare('UPDATE jobs SET items_processed = ? WHERE id = ?').run(processed, jobId);
+        await pool.query('UPDATE jobs SET items_processed = $1 WHERE id = $2', [processed, jobId]);
       } catch (e) {
         console.error(`Failed to research vendor "${vendor_name}":`, e.message);
       }
     }
 
-    db.prepare(`
-      UPDATE jobs SET status = 'completed', items_processed = ?, completed_at = datetime('now') WHERE id = ?
-    `).run(processed, jobId);
+    await pool.query(
+      "UPDATE jobs SET status = 'completed', items_processed = $1, completed_at = NOW() WHERE id = $2",
+      [processed, jobId]
+    );
 
     return { researched: processed };
   } catch (err) {
-    db.prepare(`
-      UPDATE jobs SET status = 'failed', error_message = ?, completed_at = datetime('now') WHERE id = ?
-    `).run(err.message, jobId);
+    await pool.query(
+      "UPDATE jobs SET status = 'failed', error_message = $1, completed_at = NOW() WHERE id = $2",
+      [err.message, jobId]
+    );
     throw err;
   }
 }

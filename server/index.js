@@ -1,7 +1,5 @@
 const express = require('express');
 const path = require('path');
-const https = require('https');
-const http = require('http');
 
 // Load .env if present
 try {
@@ -25,7 +23,7 @@ try {
   // .env loading is optional
 }
 
-const db = require('./db');
+const { initDB } = require('./db');
 const authRouter = require('./routes/auth');
 const apiRouter = require('./routes/api');
 const { startScheduler } = require('./scheduler');
@@ -36,7 +34,6 @@ const PORT = process.env.PORT || 8080;
 app.use(express.json());
 
 // --- Authentication middleware ---
-// Dashboard + API require login. Public pages (landing, connect, privacy, terms) do not.
 const DASH_USER = process.env.DASH_USER || 'admin';
 const DASH_PASS = process.env.DASH_PASS;
 
@@ -56,7 +53,7 @@ function requireAuth(req, res, next) {
   res.status(401).send('Authentication required');
 }
 
-// Public static files (landing page, connect, privacy, terms, callback, logo)
+// Public static files
 const publicDir = path.join(__dirname, '..', 'public');
 const publicFiles = ['index.html', 'connect.html', 'callback.html', 'disconnect.html', 'privacy.html', 'terms.html', 'lion-logo.png', 'CNAME'];
 app.get('/', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
@@ -76,34 +73,24 @@ app.use('/auth', authRouter);
 app.use('/api', requireAuth, apiRouter);
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', companies: db.prepare('SELECT COUNT(*) as c FROM companies').get().c });
+app.get('/health', async (req, res) => {
+  const { pool } = require('./db');
+  const { rows } = await pool.query('SELECT COUNT(*) as c FROM companies');
+  res.json({ status: 'ok', companies: rows[0].c });
 });
 
-// SSL support: if cert files exist, serve HTTPS; otherwise HTTP
-const fs = require('fs');
-const sslCert = process.env.SSL_CERT || path.join(__dirname, '..', 'certs', 'fullchain.pem');
-const sslKey = process.env.SSL_KEY || path.join(__dirname, '..', 'certs', 'privkey.pem');
+// Start server after DB is ready
+async function start() {
+  await initDB();
+  console.log('Database initialized');
 
-if (fs.existsSync(sslCert) && fs.existsSync(sslKey)) {
-  const httpsPort = process.env.HTTPS_PORT || 443;
-  const credentials = { key: fs.readFileSync(sslKey), cert: fs.readFileSync(sslCert) };
-
-  https.createServer(credentials, app).listen(httpsPort, () => {
-    console.log(`DarkLion HTTPS server running on port ${httpsPort}`);
-    startScheduler();
-  });
-
-  // Redirect HTTP to HTTPS
-  http.createServer((req, res) => {
-    res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
-    res.end();
-  }).listen(PORT, () => {
-    console.log(`HTTP -> HTTPS redirect on port ${PORT}`);
-  });
-} else {
   app.listen(PORT, () => {
-    console.log(`DarkLion server running on port ${PORT} (no SSL certs found — set SSL_CERT/SSL_KEY or place in certs/)`);
+    console.log(`DarkLion server running on port ${PORT}`);
     startScheduler();
   });
 }
+
+start().catch(err => {
+  console.error('Failed to start:', err);
+  process.exit(1);
+});

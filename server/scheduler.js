@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const db = require('./db');
+const { pool } = require('./db');
 const { syncTransactions, getChartOfAccounts } = require('./services/quickbooks');
 const { categorizeTransactions, researchAllVendors } = require('./services/claude');
 
@@ -8,7 +8,7 @@ function startScheduler() {
   cron.schedule('0 */6 * * *', async () => {
     console.log(`[${new Date().toISOString()}] Scheduled job starting...`);
 
-    const companies = db.prepare('SELECT realm_id, company_name FROM companies').all();
+    const { rows: companies } = await pool.query('SELECT realm_id, company_name FROM companies');
 
     for (const company of companies) {
       const { realm_id, company_name } = company;

@@ -1,4 +1,4 @@
-const db = require('../db');
+const { pool } = require('../db');
 const { getAccessToken } = require('../routes/auth');
 
 const QB_BASE = 'https://quickbooks.api.intuit.com/v3/company';
@@ -26,72 +26,51 @@ async function qbFetch(realmId, endpoint, options = {}) {
 
 // Pull uncategorized purchases from QuickBooks
 async function syncTransactions(realmId) {
-  const job = db.prepare(
-    `INSERT INTO jobs (realm_id, job_type) VALUES (?, 'sync')`
-  ).run(realmId);
-  const jobId = job.lastInsertRowid;
+  const { rows: [job] } = await pool.query(
+    "INSERT INTO jobs (realm_id, job_type) VALUES ($1, 'sync') RETURNING id",
+    [realmId]
+  );
+  const jobId = job.id;
 
   try {
-    // Query for recent Purchase transactions (bills, expenses, checks)
-    const query = `SELECT * FROM Purchase WHERE MetaData.LastUpdatedTime > '${getLastSyncDate(realmId)}' MAXRESULTS 500`;
+    const lastSync = await getLastSyncDate(realmId);
+    const query = `SELECT * FROM Purchase WHERE MetaData.LastUpdatedTime > '${lastSync}' MAXRESULTS 500`;
     const data = await qbFetch(realmId, `/query?query=${encodeURIComponent(query)}`);
 
     const purchases = data.QueryResponse?.Purchase || [];
 
-    const upsert = db.prepare(`
-      INSERT INTO transactions (realm_id, qb_id, txn_type, date, amount, description, vendor_name, original_account)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(realm_id, qb_id) DO UPDATE SET
-        date = excluded.date,
-        amount = excluded.amount,
-        description = excluded.description,
-        vendor_name = excluded.vendor_name,
-        original_account = excluded.original_account,
-        updated_at = datetime('now')
-    `);
+    for (const txn of purchases) {
+      const line = txn.Line?.[0] || {};
+      const vendorRef = txn.EntityRef?.name || '';
+      const accountRef = line.AccountBasedExpenseLineDetail?.AccountRef?.name || '';
+      const desc = line.Description || txn.PrivateNote || '';
 
-    const insertMany = db.transaction((txns) => {
-      for (const txn of txns) {
-        const line = txn.Line?.[0] || {};
-        const vendorRef = txn.EntityRef?.name || '';
-        const accountRef = line.AccountBasedExpenseLineDetail?.AccountRef?.name || '';
-        const desc = line.Description || txn.PrivateNote || '';
-
-        upsert.run(
-          realmId,
-          txn.Id,
-          'Purchase',
-          txn.TxnDate || '',
-          txn.TotalAmt || 0,
-          desc,
-          vendorRef,
-          accountRef
-        );
-      }
-    });
-
-    insertMany(purchases);
-
-    // Also sync Expenses (if using the Expense entity)
-    try {
-      const expenseQuery = `SELECT * FROM Purchase WHERE PaymentType = 'Cash' MAXRESULTS 500`;
-      // Purchases with PaymentType cover expenses too in QBO
-    } catch (e) {
-      // Non-fatal
+      await pool.query(`
+        INSERT INTO transactions (realm_id, qb_id, txn_type, date, amount, description, vendor_name, original_account)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT(realm_id, qb_id) DO UPDATE SET
+          date = EXCLUDED.date,
+          amount = EXCLUDED.amount,
+          description = EXCLUDED.description,
+          vendor_name = EXCLUDED.vendor_name,
+          original_account = EXCLUDED.original_account,
+          updated_at = NOW()
+      `, [realmId, txn.Id, 'Purchase', txn.TxnDate || '', txn.TotalAmt || 0, desc, vendorRef, accountRef]);
     }
 
-    db.prepare('UPDATE companies SET last_sync_at = datetime(\'now\') WHERE realm_id = ?').run(realmId);
+    await pool.query("UPDATE companies SET last_sync_at = NOW() WHERE realm_id = $1", [realmId]);
 
-    db.prepare(`
-      UPDATE jobs SET status = 'completed', items_processed = ?, items_total = ?, completed_at = datetime('now')
-      WHERE id = ?
-    `).run(purchases.length, purchases.length, jobId);
+    await pool.query(
+      "UPDATE jobs SET status = 'completed', items_processed = $1, items_total = $2, completed_at = NOW() WHERE id = $3",
+      [purchases.length, purchases.length, jobId]
+    );
 
     return { synced: purchases.length };
   } catch (err) {
-    db.prepare(`
-      UPDATE jobs SET status = 'failed', error_message = ?, completed_at = datetime('now') WHERE id = ?
-    `).run(err.message, jobId);
+    await pool.query(
+      "UPDATE jobs SET status = 'failed', error_message = $1, completed_at = NOW() WHERE id = $2",
+      [err.message, jobId]
+    );
     throw err;
   }
 }
@@ -136,17 +115,17 @@ async function writeBackTransaction(realmId, qbId, accountName) {
   });
 
   // Update local status
-  db.prepare(`
-    UPDATE transactions SET status = 'written_back', updated_at = datetime('now')
-    WHERE realm_id = ? AND qb_id = ?
-  `).run(realmId, qbId);
+  await pool.query(
+    "UPDATE transactions SET status = 'written_back', updated_at = NOW() WHERE realm_id = $1 AND qb_id = $2",
+    [realmId, qbId]
+  );
 
   return { ok: true };
 }
 
-function getLastSyncDate(realmId) {
-  const company = db.prepare('SELECT last_sync_at FROM companies WHERE realm_id = ?').get(realmId);
-  if (company?.last_sync_at) return company.last_sync_at;
+async function getLastSyncDate(realmId) {
+  const { rows } = await pool.query('SELECT last_sync_at FROM companies WHERE realm_id = $1', [realmId]);
+  if (rows[0]?.last_sync_at) return rows[0].last_sync_at;
   // Default: 90 days ago
   const d = new Date();
   d.setDate(d.getDate() - 90);
