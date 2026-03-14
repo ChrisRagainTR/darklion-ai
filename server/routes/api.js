@@ -70,7 +70,7 @@ router.get('/companies/:realmId/accounts', async (req, res) => {
   try {
     const accounts = await getChartOfAccounts(req.params.realmId);
     const filtered = accounts
-      .filter(a => ['Expense', 'Other Expense', 'Cost of Goods Sold', 'Income', 'Other Income', 'Other Current Liability', 'Equity'].includes(a.AccountType))
+      .filter(a => ['Expense', 'Other Expense', 'Cost of Goods Sold', 'Income', 'Other Income', 'Other Current Liability', 'Other Current Asset', 'Fixed Asset', 'Other Asset', 'Long Term Liability', 'Equity', 'Bank', 'Accounts Receivable', 'Accounts Payable', 'Credit Card'].includes(a.AccountType))
       .map(a => ({ name: a.FullyQualifiedName || a.Name, type: a.AccountType }))
       .sort((a, b) => a.name.localeCompare(b.name));
     res.json(filtered);
