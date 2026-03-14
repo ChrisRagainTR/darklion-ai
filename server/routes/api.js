@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const db = require('../db');
+const { pool } = require('../db');
 const { syncTransactions, getChartOfAccounts, writeBackTransaction } = require('../services/quickbooks');
 const { categorizeTransactions, researchAllVendors } = require('../services/claude');
 
@@ -8,18 +8,18 @@ const router = Router();
 // --- Dashboard data ---
 
 // List connected companies
-router.get('/companies', (req, res) => {
-  const companies = db.prepare(`
-    SELECT realm_id, company_name, connected_at, last_sync_at FROM companies ORDER BY connected_at DESC
-  `).all();
-  res.json(companies);
+router.get('/companies', async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT realm_id, company_name, connected_at, last_sync_at FROM companies ORDER BY connected_at DESC'
+  );
+  res.json(rows);
 });
 
 // Dashboard stats for a company
-router.get('/companies/:realmId/stats', (req, res) => {
+router.get('/companies/:realmId/stats', async (req, res) => {
   const { realmId } = req.params;
 
-  const totals = db.prepare(`
+  const { rows: [totals] } = await pool.query(`
     SELECT
       COUNT(*) as total,
       SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
@@ -27,52 +27,63 @@ router.get('/companies/:realmId/stats', (req, res) => {
       SUM(CASE WHEN status = 'reviewed' THEN 1 ELSE 0 END) as reviewed,
       SUM(CASE WHEN status = 'written_back' THEN 1 ELSE 0 END) as written_back,
       SUM(CASE WHEN status = 'skipped' THEN 1 ELSE 0 END) as skipped
-    FROM transactions WHERE realm_id = ?
-  `).get(realmId);
+    FROM transactions WHERE realm_id = $1
+  `, [realmId]);
 
-  const vendorCount = db.prepare(
-    'SELECT COUNT(*) as count FROM vendors WHERE realm_id = ?'
-  ).get(realmId);
+  const { rows: [vendorCount] } = await pool.query(
+    'SELECT COUNT(*) as count FROM vendors WHERE realm_id = $1', [realmId]
+  );
 
-  const recentJobs = db.prepare(`
-    SELECT * FROM jobs WHERE realm_id = ? ORDER BY started_at DESC LIMIT 10
-  `).all(realmId);
+  const { rows: recentJobs } = await pool.query(
+    'SELECT * FROM jobs WHERE realm_id = $1 ORDER BY started_at DESC LIMIT 10', [realmId]
+  );
 
   res.json({ totals, vendors: vendorCount.count, recentJobs });
 });
 
 // List transactions for a company (with filtering)
-router.get('/companies/:realmId/transactions', (req, res) => {
+router.get('/companies/:realmId/transactions', async (req, res) => {
   const { realmId } = req.params;
   const { status, page = 1, limit = 50 } = req.query;
   const offset = (page - 1) * limit;
 
-  let query = 'SELECT * FROM transactions WHERE realm_id = ?';
+  let query = 'SELECT * FROM transactions WHERE realm_id = $1';
   const params = [realmId];
+  let paramIdx = 2;
 
   if (status) {
-    query += ' AND status = ?';
+    query += ` AND status = $${paramIdx}`;
     params.push(status);
+    paramIdx++;
   }
 
-  query += ' ORDER BY date DESC LIMIT ? OFFSET ?';
+  query += ` ORDER BY date DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
   params.push(Number(limit), Number(offset));
 
-  const transactions = db.prepare(query).all(...params);
-  res.json(transactions);
+  const { rows } = await pool.query(query, params);
+  res.json(rows);
 });
 
 // Review a transaction (approve or change category)
-router.post('/companies/:realmId/transactions/:id/review', (req, res) => {
+router.post('/companies/:realmId/transactions/:id/review', async (req, res) => {
   const { realmId, id } = req.params;
-  const { action, category } = req.body; // action: 'approve', 'recategorize', 'skip'
+  const { action, category } = req.body;
 
   if (action === 'approve') {
-    db.prepare(`UPDATE transactions SET status = 'reviewed', updated_at = datetime('now') WHERE id = ? AND realm_id = ?`).run(id, realmId);
+    await pool.query(
+      "UPDATE transactions SET status = 'reviewed', updated_at = NOW() WHERE id = $1 AND realm_id = $2",
+      [id, realmId]
+    );
   } else if (action === 'recategorize' && category) {
-    db.prepare(`UPDATE transactions SET ai_category = ?, status = 'reviewed', updated_at = datetime('now') WHERE id = ? AND realm_id = ?`).run(category, id, realmId);
+    await pool.query(
+      "UPDATE transactions SET ai_category = $1, status = 'reviewed', updated_at = NOW() WHERE id = $2 AND realm_id = $3",
+      [category, id, realmId]
+    );
   } else if (action === 'skip') {
-    db.prepare(`UPDATE transactions SET status = 'skipped', updated_at = datetime('now') WHERE id = ? AND realm_id = ?`).run(id, realmId);
+    await pool.query(
+      "UPDATE transactions SET status = 'skipped', updated_at = NOW() WHERE id = $1 AND realm_id = $2",
+      [id, realmId]
+    );
   } else {
     return res.status(400).json({ error: 'Invalid action' });
   }
@@ -81,10 +92,12 @@ router.post('/companies/:realmId/transactions/:id/review', (req, res) => {
 });
 
 // List vendors for a company
-router.get('/companies/:realmId/vendors', (req, res) => {
+router.get('/companies/:realmId/vendors', async (req, res) => {
   const { realmId } = req.params;
-  const vendors = db.prepare('SELECT * FROM vendors WHERE realm_id = ? ORDER BY vendor_name').all(realmId);
-  res.json(vendors);
+  const { rows } = await pool.query(
+    'SELECT * FROM vendors WHERE realm_id = $1 ORDER BY vendor_name', [realmId]
+  );
+  res.json(rows);
 });
 
 // --- Actions ---
@@ -124,17 +137,19 @@ router.post('/companies/:realmId/research-vendors', async (req, res) => {
 router.post('/companies/:realmId/write-back', async (req, res) => {
   const { realmId } = req.params;
 
-  const job = db.prepare(
-    `INSERT INTO jobs (realm_id, job_type) VALUES (?, 'write_back')`
-  ).run(realmId);
-  const jobId = job.lastInsertRowid;
+  const { rows: [job] } = await pool.query(
+    "INSERT INTO jobs (realm_id, job_type) VALUES ($1, 'write_back') RETURNING id",
+    [realmId]
+  );
+  const jobId = job.id;
 
   try {
-    const reviewed = db.prepare(`
-      SELECT * FROM transactions WHERE realm_id = ? AND status = 'reviewed' AND ai_category IS NOT NULL
-    `).all(realmId);
+    const { rows: reviewed } = await pool.query(
+      "SELECT * FROM transactions WHERE realm_id = $1 AND status = 'reviewed' AND ai_category IS NOT NULL",
+      [realmId]
+    );
 
-    db.prepare('UPDATE jobs SET items_total = ? WHERE id = ?').run(reviewed.length, jobId);
+    await pool.query('UPDATE jobs SET items_total = $1 WHERE id = $2', [reviewed.length, jobId]);
 
     let processed = 0;
     const errors = [];
@@ -143,21 +158,23 @@ router.post('/companies/:realmId/write-back', async (req, res) => {
       try {
         await writeBackTransaction(realmId, txn.qb_id, txn.ai_category);
         processed++;
-        db.prepare('UPDATE jobs SET items_processed = ? WHERE id = ?').run(processed, jobId);
+        await pool.query('UPDATE jobs SET items_processed = $1 WHERE id = $2', [processed, jobId]);
       } catch (e) {
         errors.push({ qb_id: txn.qb_id, error: e.message });
       }
     }
 
-    db.prepare(`
-      UPDATE jobs SET status = 'completed', items_processed = ?, completed_at = datetime('now') WHERE id = ?
-    `).run(processed, jobId);
+    await pool.query(
+      "UPDATE jobs SET status = 'completed', items_processed = $1, completed_at = NOW() WHERE id = $2",
+      [processed, jobId]
+    );
 
     res.json({ written: processed, errors });
   } catch (err) {
-    db.prepare(`
-      UPDATE jobs SET status = 'failed', error_message = ?, completed_at = datetime('now') WHERE id = ?
-    `).run(err.message, jobId);
+    await pool.query(
+      "UPDATE jobs SET status = 'failed', error_message = $1, completed_at = NOW() WHERE id = $2",
+      [err.message, jobId]
+    );
     res.status(500).json({ error: err.message });
   }
 });

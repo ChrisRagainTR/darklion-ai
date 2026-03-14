@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const db = require('../db');
+const { pool } = require('../db');
 
 const router = Router();
 
@@ -56,16 +56,16 @@ router.get('/callback', async (req, res) => {
     }
 
     // Upsert company
-    db.prepare(`
+    await pool.query(`
       INSERT INTO companies (realm_id, company_name, access_token, refresh_token, token_expires_at)
-      VALUES (?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT(realm_id) DO UPDATE SET
-        company_name = excluded.company_name,
-        access_token = excluded.access_token,
-        refresh_token = excluded.refresh_token,
-        token_expires_at = excluded.token_expires_at,
-        connected_at = datetime('now')
-    `).run(realmId, companyName, tokens.access_token, tokens.refresh_token, expiresAt);
+        company_name = EXCLUDED.company_name,
+        access_token = EXCLUDED.access_token,
+        refresh_token = EXCLUDED.refresh_token,
+        token_expires_at = EXCLUDED.token_expires_at,
+        connected_at = NOW()
+    `, [realmId, companyName, tokens.access_token, tokens.refresh_token, expiresAt]);
 
     res.json({ ok: true, company: companyName || realmId });
   } catch (err) {
@@ -76,7 +76,8 @@ router.get('/callback', async (req, res) => {
 
 // Refresh tokens for a company
 async function refreshTokens(realmId) {
-  const company = db.prepare('SELECT * FROM companies WHERE realm_id = ?').get(realmId);
+  const { rows } = await pool.query('SELECT * FROM companies WHERE realm_id = $1', [realmId]);
+  const company = rows[0];
   if (!company) throw new Error(`Company ${realmId} not found`);
 
   const clientId = process.env.QB_CLIENT_ID;
@@ -100,20 +101,22 @@ async function refreshTokens(realmId) {
   const tokens = await tokenRes.json();
   const expiresAt = Date.now() + tokens.expires_in * 1000;
 
-  db.prepare(`
-    UPDATE companies SET access_token = ?, refresh_token = ?, token_expires_at = ? WHERE realm_id = ?
-  `).run(tokens.access_token, tokens.refresh_token, expiresAt, realmId);
+  await pool.query(
+    'UPDATE companies SET access_token = $1, refresh_token = $2, token_expires_at = $3 WHERE realm_id = $4',
+    [tokens.access_token, tokens.refresh_token, expiresAt, realmId]
+  );
 
   return tokens.access_token;
 }
 
 // Get a valid access token, refreshing if needed
 async function getAccessToken(realmId) {
-  const company = db.prepare('SELECT * FROM companies WHERE realm_id = ?').get(realmId);
+  const { rows } = await pool.query('SELECT * FROM companies WHERE realm_id = $1', [realmId]);
+  const company = rows[0];
   if (!company) throw new Error(`Company ${realmId} not found`);
 
   // Refresh if token expires within 5 minutes
-  if (Date.now() > company.token_expires_at - 300000) {
+  if (Date.now() > Number(company.token_expires_at) - 300000) {
     return refreshTokens(realmId);
   }
 
