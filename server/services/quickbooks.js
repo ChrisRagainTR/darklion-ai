@@ -132,4 +132,4 @@ async function getLastSyncDate(realmId) {
   return d.toISOString().split('T')[0];
 }
 
-module.exports = { syncTransactions, getChartOfAccounts, getVendors, writeBackTransaction };
+module.exports = { syncTransactions, getChartOfAccounts, getVendors, writeBackTransaction, qbFetch };

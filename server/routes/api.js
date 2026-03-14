@@ -219,6 +219,19 @@ router.post('/companies/:realmId/write-back', async (req, res) => {
   }
 });
 
+// Debug: query QBO directly to inspect transactions
+router.get('/companies/:realmId/qb-query', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.status(400).json({ error: 'Provide ?q=SELECT...' });
+    const { qbFetch } = require('../services/quickbooks');
+    const data = await qbFetch(req.params.realmId, `/query?query=${encodeURIComponent(q)}`);
+    res.json(data.QueryResponse || data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Run the full overnight pipeline on demand
 router.post('/companies/:realmId/run-pipeline', async (req, res) => {
   try {
