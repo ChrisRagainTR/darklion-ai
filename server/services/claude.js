@@ -43,6 +43,14 @@ async function categorizeTransactions(realmId, chartOfAccounts) {
       ? '\nKnown vendors:\n' + vendors.map(v => `- ${v.vendor_name}: ${v.business_category} — ${v.description || ''}`).join('\n')
       : '';
 
+    // Get learned category rules (user corrections)
+    const { rows: rules } = await pool.query(
+      'SELECT vendor_name, category FROM category_rules WHERE realm_id = $1', [realmId]
+    );
+    const rulesContext = rules.length > 0
+      ? '\nIMPORTANT - User-confirmed category rules (always use these exact categories for these vendors):\n' + rules.map(r => `- "${r.vendor_name}" → "${r.category}"`).join('\n')
+      : '';
+
     // Build transaction list
     const txnList = transactions.map((t, i) =>
       `${i + 1}. Date: ${t.date} | Amount: $${t.amount} | Vendor: "${t.vendor_name}" | Description: "${t.description}" | Current Account: "${t.original_account}"`
@@ -58,6 +66,7 @@ async function categorizeTransactions(realmId, chartOfAccounts) {
 Chart of Accounts:
 ${accountList}
 ${vendorContext}
+${rulesContext}
 
 Transactions to categorize:
 ${txnList}
