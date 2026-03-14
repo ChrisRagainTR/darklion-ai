@@ -63,7 +63,15 @@ for (const file of publicFiles) {
   });
 }
 
-// Protected dashboard
+// Clean URL routes (no .html extension)
+app.get('/connect', (req, res) => res.sendFile(path.join(publicDir, 'connect.html')));
+app.get('/callback', (req, res) => res.sendFile(path.join(publicDir, 'callback.html')));
+app.get('/disconnect', (req, res) => res.sendFile(path.join(publicDir, 'disconnect.html')));
+app.get('/privacy', (req, res) => res.sendFile(path.join(publicDir, 'privacy.html')));
+app.get('/terms', (req, res) => res.sendFile(path.join(publicDir, 'terms.html')));
+app.get('/dashboard', requireAuth, (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
+
+// Protected dashboard (with .html)
 app.get('/dashboard.html', requireAuth, (req, res) => {
   res.sendFile(path.join(publicDir, 'dashboard.html'));
 });
