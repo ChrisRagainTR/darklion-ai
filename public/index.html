@@ -278,88 +278,44 @@
 
   <nav>
     <a class="nav-brand" href="/">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="40" height="40" style="display:block;flex-shrink:0;" aria-label="DarkLion logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="40" height="40" style="display:block;flex-shrink:0;" aria-label="DarkLion logo">
         <defs>
-          <linearGradient id="nf" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#f5dfa0"/><stop offset="100%" stop-color="#b8942e"/></linearGradient>
-          <linearGradient id="nm" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0%" stop-color="#c9a84c"/><stop offset="100%" stop-color="#4a3614"/></linearGradient>
-          <filter id="ng"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="nm" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#e2c068"/><stop offset="100%" stop-color="#7a5c22"/></linearGradient>
+          <linearGradient id="nm2" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#c9a84c"/><stop offset="100%" stop-color="#5a421a"/></linearGradient>
+          <filter id="ng"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
-        <!-- MANE outer (darkest) -->
-        <path d="M100,5 L88,18 L80,2 L72,22 L58,8 L54,30 L100,38 L146,30 L142,8 L128,22 L120,2 L112,18Z" fill="#3d2d10"/>
-        <path d="M54,30 L38,10 L26,28 L16,14 L10,42 L22,50 L38,42Z" fill="#3d2d10"/>
-        <path d="M146,30 L162,10 L174,28 L184,14 L190,42 L178,50 L162,42Z" fill="#3d2d10"/>
-        <path d="M10,42 L2,58 L0,80 L6,98 L16,88 L14,68 L18,52Z" fill="#2e220e"/>
-        <path d="M190,42 L198,58 L200,80 L194,98 L184,88 L186,68 L182,52Z" fill="#2e220e"/>
-        <path d="M6,98 L2,116 L10,136 L24,140 L22,122 L14,108Z" fill="#2e220e" opacity="0.8"/>
-        <path d="M194,98 L198,116 L190,136 L176,140 L178,122 L186,108Z" fill="#2e220e" opacity="0.8"/>
-        <path d="M24,140 L22,156 L36,168 L50,162 L44,150 L34,144Z" fill="#2e220e" opacity="0.6"/>
-        <path d="M176,140 L178,156 L164,168 L150,162 L156,150 L166,144Z" fill="#2e220e" opacity="0.6"/>
-        <!-- MANE mid layer -->
-        <path d="M100,12 L90,24 L82,10 L74,28 L62,16 L58,38 L100,44 L142,38 L138,16 L126,28 L118,10 L110,24Z" fill="#5a421a"/>
-        <path d="M58,38 L42,18 L32,36 L22,24 L16,50 L28,56 L42,48Z" fill="#5a421a"/>
-        <path d="M142,38 L158,18 L168,36 L178,24 L184,50 L172,56 L158,48Z" fill="#5a421a"/>
-        <path d="M16,50 L8,66 L6,86 L14,100 L22,90 L20,72 L24,58Z" fill="#4a3614"/>
-        <path d="M184,50 L192,66 L194,86 L186,100 L178,90 L180,72 L176,58Z" fill="#4a3614"/>
-        <path d="M14,100 L10,118 L18,134 L30,136 L28,120 L20,108Z" fill="#4a3614" opacity="0.8"/>
-        <path d="M186,100 L190,118 L182,134 L170,136 L172,120 L180,108Z" fill="#4a3614" opacity="0.8"/>
-        <!-- MANE inner layer (lightest) -->
-        <path d="M100,20 L92,30 L84,18 L76,34 L66,24 L62,44 L100,50 L138,44 L134,24 L124,34 L116,18 L108,30Z" fill="#7a5c22"/>
-        <path d="M62,44 L48,28 L38,44 L28,34 L24,56 L36,60 L48,52Z" fill="#7a5c22"/>
-        <path d="M138,44 L152,28 L162,44 L172,34 L176,56 L164,60 L152,52Z" fill="#7a5c22"/>
-        <path d="M24,56 L16,72 L16,90 L24,102 L30,92 L28,76 L30,64Z" fill="#6b4f1d"/>
-        <path d="M176,56 L184,72 L184,90 L176,102 L170,92 L172,76 L170,64Z" fill="#6b4f1d"/>
-        <path d="M24,102 L20,118 L28,132 L40,130 L36,116 L28,108Z" fill="#6b4f1d" opacity="0.8"/>
-        <path d="M176,102 L180,118 L172,132 L160,130 L164,116 L172,108Z" fill="#6b4f1d" opacity="0.8"/>
-        <!-- Topmost mane tufts -->
-        <path d="M100,24 L94,34 L88,26 L82,38 L100,46 L118,38 L112,26 L106,34Z" fill="#8a6d2b"/>
-        <path d="M82,38 L68,30 L58,44 L48,38 L42,54 L52,56 L62,48Z" fill="#8a6d2b"/>
-        <path d="M118,38 L132,30 L142,44 L152,38 L158,54 L148,56 L138,48Z" fill="#8a6d2b"/>
-        <!-- FACE -->
-        <path d="M100,40 C128,40 154,56 160,86 C164,108 156,134 142,150 C130,164 116,172 100,175 C84,172 70,164 58,150 C44,134 36,108 40,86 C46,56 72,40 100,40Z" fill="url(#nf)" stroke="#9a7828" stroke-width="1"/>
-        <!-- Forehead fur lines -->
-        <path d="M88,52 L92,64 L96,54" stroke="#b8942e" stroke-width="0.8" fill="none" opacity="0.4"/>
-        <path d="M104,52 L108,64 L112,54" stroke="#b8942e" stroke-width="0.8" fill="none" opacity="0.4"/>
-        <path d="M96,48 L100,62 L104,48" stroke="#b8942e" stroke-width="0.8" fill="none" opacity="0.4"/>
-        <!-- Brow ridges -->
-        <path d="M56,88 C64,76 82,74 94,82 L90,90 C80,80 68,82 62,92Z" fill="#0f1923" opacity="0.65"/>
-        <path d="M144,88 C136,76 118,74 106,82 L110,90 C120,80 132,82 138,92Z" fill="#0f1923" opacity="0.65"/>
-        <!-- Eyes - almond shaped -->
-        <path d="M64,96 C72,86 86,86 92,96 C86,104 72,104 64,96Z" fill="#0f1923"/>
-        <path d="M136,96 C128,86 114,86 108,96 C114,104 128,104 136,96Z" fill="#0f1923"/>
-        <!-- Iris glow -->
-        <ellipse cx="78" cy="96" rx="7" ry="6" fill="#ffe4a0" filter="url(#ng)"/>
-        <ellipse cx="122" cy="96" rx="7" ry="6" fill="#ffe4a0" filter="url(#ng)"/>
-        <!-- Pupil slit -->
-        <ellipse cx="78" cy="96" rx="2.5" ry="5" fill="#c9a84c"/>
-        <ellipse cx="122" cy="96" rx="2.5" ry="5" fill="#c9a84c"/>
-        <!-- Eye highlight -->
-        <circle cx="81" cy="93" r="1.5" fill="#fff" opacity="0.6"/>
-        <circle cx="125" cy="93" r="1.5" fill="#fff" opacity="0.6"/>
+        <!-- MANE outer - bold angular rays -->
+        <path d="M60,2 L52,20 L36,4 L34,26 L14,14 L20,36 L2,34 L14,52 L0,62 L16,68 L4,86 L24,82 L16,102 L38,94 L38,112 L60,98 L82,112 L82,94 L104,102 L96,82 L116,86 L104,68 L120,62 L106,52 L118,34 L100,36 L106,14 L86,26 L84,4 L68,20Z" fill="url(#nm2)"/>
+        <!-- MANE inner -->
+        <path d="M60,10 L54,24 L42,12 L40,30 L24,22 L26,40 L12,40 L20,54 L10,62 L22,68 L14,82 L30,78 L24,96 L40,90 L42,104 L60,94 L78,104 L80,90 L96,96 L90,78 L106,82 L98,68 L110,62 L100,54 L108,40 L94,40 L96,22 L80,30 L78,12 L66,24Z" fill="url(#nm)"/>
+        <!-- FACE - dark background, gold features -->
+        <path d="M60,26 L78,36 L88,54 L86,74 L76,88 L60,94 L44,88 L34,74 L32,54 L42,36Z" fill="#0f1923" stroke="#c9a84c" stroke-width="0.8"/>
+        <!-- Forehead accent -->
+        <path d="M60,30 L63,38 L60,46 L57,38Z" fill="#c9a84c" opacity="0.3"/>
+        <!-- Brow ridges - gold on dark -->
+        <path d="M38,52 L46,44 L56,50" stroke="#c9a84c" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M82,52 L74,44 L64,50" stroke="#c9a84c" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Eyes - fierce angular, glowing gold on dark -->
+        <polygon points="38,58 48,52 56,59 48,64" fill="#b8942e"/>
+        <polygon points="82,58 72,52 64,59 72,64" fill="#b8942e"/>
+        <!-- Eye glow center -->
+        <polygon points="42,58 48,54 52,59 48,62" fill="#ffe4a0" filter="url(#ng)"/>
+        <polygon points="78,58 72,54 68,59 72,62" fill="#ffe4a0" filter="url(#ng)"/>
+        <!-- Pupil slits -->
+        <polygon points="46,56 48,54.5 50,56 48,61" fill="#c9a84c" opacity="0.8"/>
+        <polygon points="74,56 72,54.5 70,56 72,61" fill="#c9a84c" opacity="0.8"/>
         <!-- Nose bridge -->
-        <line x1="100" y1="74" x2="100" y2="106" stroke="#0f1923" stroke-width="1" opacity="0.15"/>
+        <line x1="60" y1="50" x2="60" y2="66" stroke="#c9a84c" stroke-width="0.8" opacity="0.4"/>
         <!-- Nose -->
-        <path d="M92,110 L100,104 L108,110 L108,118 C108,124 104,128 100,128 C96,128 92,124 92,118Z" fill="#0f1923" opacity="0.7"/>
-        <ellipse cx="95" cy="120" rx="3" ry="2.2" fill="#1c2b3a" opacity="0.5"/>
-        <ellipse cx="105" cy="120" rx="3" ry="2.2" fill="#1c2b3a" opacity="0.5"/>
-        <!-- Muzzle lines -->
-        <path d="M92,128 L84,134 L78,148" stroke="#9a7828" stroke-width="1" fill="none" opacity="0.35"/>
-        <path d="M108,128 L116,134 L122,148" stroke="#9a7828" stroke-width="1" fill="none" opacity="0.35"/>
+        <path d="M55,66 L65,66 L60,74Z" fill="#c9a84c" opacity="0.5"/>
+        <path d="M55,66 L65,66 L60,74Z" fill="none" stroke="#c9a84c" stroke-width="1" stroke-linejoin="round"/>
         <!-- Mouth -->
-        <path d="M82,142 C90,136 95,138 100,144 C105,138 110,136 118,142" stroke="#0f1923" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-        <!-- Lower lip -->
-        <path d="M88,148 C94,154 106,154 112,148" stroke="#0f1923" stroke-width="1.2" fill="none" opacity="0.45" stroke-linecap="round"/>
+        <path d="M48,80 L54,76 L60,81 L66,76 L72,80" stroke="#c9a84c" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         <!-- Chin -->
-        <path d="M94,156 L100,166 L106,156" stroke="#9a7828" stroke-width="0.8" fill="none" opacity="0.3"/>
-        <!-- Whisker dots -->
-        <circle cx="70" cy="124" r="1.5" fill="#b8942e" opacity="0.3"/>
-        <circle cx="66" cy="132" r="1.5" fill="#b8942e" opacity="0.3"/>
-        <circle cx="72" cy="136" r="1.5" fill="#b8942e" opacity="0.3"/>
-        <circle cx="130" cy="124" r="1.5" fill="#b8942e" opacity="0.3"/>
-        <circle cx="134" cy="132" r="1.5" fill="#b8942e" opacity="0.3"/>
-        <circle cx="128" cy="136" r="1.5" fill="#b8942e" opacity="0.3"/>
-        <!-- Cheek fur contour -->
-        <path d="M52,100 C56,112 62,124 72,136" stroke="#9a7828" stroke-width="0.8" fill="none" opacity="0.25"/>
-        <path d="M148,100 C144,112 138,124 128,136" stroke="#9a7828" stroke-width="0.8" fill="none" opacity="0.25"/>
+        <path d="M52,86 L60,90 L68,86" stroke="#c9a84c" stroke-width="0.8" fill="none" opacity="0.4" stroke-linecap="round"/>
+        <!-- Cheek contour lines -->
+        <path d="M36,68 L42,78 L46,84" stroke="#c9a84c" stroke-width="0.6" fill="none" opacity="0.25"/>
+        <path d="M84,68 L78,78 L74,84" stroke="#c9a84c" stroke-width="0.6" fill="none" opacity="0.25"/>
       </svg>
       <span class="nav-name">Dark<span>Lion</span></span>
     </a>
@@ -373,88 +329,44 @@
 
   <section class="hero">
     <div class="hero-logo">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160" aria-label="DarkLion">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="140" height="140" aria-label="DarkLion">
         <defs>
-          <linearGradient id="hf" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#f5dfa0"/><stop offset="100%" stop-color="#b8942e"/></linearGradient>
-          <linearGradient id="hm" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0%" stop-color="#c9a84c"/><stop offset="100%" stop-color="#4a3614"/></linearGradient>
-          <filter id="hg"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="hm" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#e2c068"/><stop offset="100%" stop-color="#7a5c22"/></linearGradient>
+          <linearGradient id="hm2" x1="0.5" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#c9a84c"/><stop offset="100%" stop-color="#5a421a"/></linearGradient>
+          <filter id="hg"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
-        <!-- MANE outer (darkest) -->
-        <path d="M100,5 L88,18 L80,2 L72,22 L58,8 L54,30 L100,38 L146,30 L142,8 L128,22 L120,2 L112,18Z" fill="#3d2d10"/>
-        <path d="M54,30 L38,10 L26,28 L16,14 L10,42 L22,50 L38,42Z" fill="#3d2d10"/>
-        <path d="M146,30 L162,10 L174,28 L184,14 L190,42 L178,50 L162,42Z" fill="#3d2d10"/>
-        <path d="M10,42 L2,58 L0,80 L6,98 L16,88 L14,68 L18,52Z" fill="#2e220e"/>
-        <path d="M190,42 L198,58 L200,80 L194,98 L184,88 L186,68 L182,52Z" fill="#2e220e"/>
-        <path d="M6,98 L2,116 L10,136 L24,140 L22,122 L14,108Z" fill="#2e220e" opacity="0.8"/>
-        <path d="M194,98 L198,116 L190,136 L176,140 L178,122 L186,108Z" fill="#2e220e" opacity="0.8"/>
-        <path d="M24,140 L22,156 L36,168 L50,162 L44,150 L34,144Z" fill="#2e220e" opacity="0.6"/>
-        <path d="M176,140 L178,156 L164,168 L150,162 L156,150 L166,144Z" fill="#2e220e" opacity="0.6"/>
-        <!-- MANE mid layer -->
-        <path d="M100,12 L90,24 L82,10 L74,28 L62,16 L58,38 L100,44 L142,38 L138,16 L126,28 L118,10 L110,24Z" fill="#5a421a"/>
-        <path d="M58,38 L42,18 L32,36 L22,24 L16,50 L28,56 L42,48Z" fill="#5a421a"/>
-        <path d="M142,38 L158,18 L168,36 L178,24 L184,50 L172,56 L158,48Z" fill="#5a421a"/>
-        <path d="M16,50 L8,66 L6,86 L14,100 L22,90 L20,72 L24,58Z" fill="#4a3614"/>
-        <path d="M184,50 L192,66 L194,86 L186,100 L178,90 L180,72 L176,58Z" fill="#4a3614"/>
-        <path d="M14,100 L10,118 L18,134 L30,136 L28,120 L20,108Z" fill="#4a3614" opacity="0.8"/>
-        <path d="M186,100 L190,118 L182,134 L170,136 L172,120 L180,108Z" fill="#4a3614" opacity="0.8"/>
-        <!-- MANE inner layer (lightest) -->
-        <path d="M100,20 L92,30 L84,18 L76,34 L66,24 L62,44 L100,50 L138,44 L134,24 L124,34 L116,18 L108,30Z" fill="#7a5c22"/>
-        <path d="M62,44 L48,28 L38,44 L28,34 L24,56 L36,60 L48,52Z" fill="#7a5c22"/>
-        <path d="M138,44 L152,28 L162,44 L172,34 L176,56 L164,60 L152,52Z" fill="#7a5c22"/>
-        <path d="M24,56 L16,72 L16,90 L24,102 L30,92 L28,76 L30,64Z" fill="#6b4f1d"/>
-        <path d="M176,56 L184,72 L184,90 L176,102 L170,92 L172,76 L170,64Z" fill="#6b4f1d"/>
-        <path d="M24,102 L20,118 L28,132 L40,130 L36,116 L28,108Z" fill="#6b4f1d" opacity="0.8"/>
-        <path d="M176,102 L180,118 L172,132 L160,130 L164,116 L172,108Z" fill="#6b4f1d" opacity="0.8"/>
-        <!-- Topmost mane tufts -->
-        <path d="M100,24 L94,34 L88,26 L82,38 L100,46 L118,38 L112,26 L106,34Z" fill="#8a6d2b"/>
-        <path d="M82,38 L68,30 L58,44 L48,38 L42,54 L52,56 L62,48Z" fill="#8a6d2b"/>
-        <path d="M118,38 L132,30 L142,44 L152,38 L158,54 L148,56 L138,48Z" fill="#8a6d2b"/>
-        <!-- FACE -->
-        <path d="M100,40 C128,40 154,56 160,86 C164,108 156,134 142,150 C130,164 116,172 100,175 C84,172 70,164 58,150 C44,134 36,108 40,86 C46,56 72,40 100,40Z" fill="url(#hf)" stroke="#9a7828" stroke-width="1"/>
-        <!-- Forehead fur lines -->
-        <path d="M88,52 L92,64 L96,54" stroke="#b8942e" stroke-width="0.8" fill="none" opacity="0.4"/>
-        <path d="M104,52 L108,64 L112,54" stroke="#b8942e" stroke-width="0.8" fill="none" opacity="0.4"/>
-        <path d="M96,48 L100,62 L104,48" stroke="#b8942e" stroke-width="0.8" fill="none" opacity="0.4"/>
-        <!-- Brow ridges -->
-        <path d="M56,88 C64,76 82,74 94,82 L90,90 C80,80 68,82 62,92Z" fill="#0f1923" opacity="0.65"/>
-        <path d="M144,88 C136,76 118,74 106,82 L110,90 C120,80 132,82 138,92Z" fill="#0f1923" opacity="0.65"/>
-        <!-- Eyes - almond shaped -->
-        <path d="M64,96 C72,86 86,86 92,96 C86,104 72,104 64,96Z" fill="#0f1923"/>
-        <path d="M136,96 C128,86 114,86 108,96 C114,104 128,104 136,96Z" fill="#0f1923"/>
-        <!-- Iris glow -->
-        <ellipse cx="78" cy="96" rx="7" ry="6" fill="#ffe4a0" filter="url(#hg)"/>
-        <ellipse cx="122" cy="96" rx="7" ry="6" fill="#ffe4a0" filter="url(#hg)"/>
-        <!-- Pupil slit -->
-        <ellipse cx="78" cy="96" rx="2.5" ry="5" fill="#c9a84c"/>
-        <ellipse cx="122" cy="96" rx="2.5" ry="5" fill="#c9a84c"/>
-        <!-- Eye highlight -->
-        <circle cx="81" cy="93" r="1.5" fill="#fff" opacity="0.6"/>
-        <circle cx="125" cy="93" r="1.5" fill="#fff" opacity="0.6"/>
+        <!-- MANE outer - bold angular rays -->
+        <path d="M60,2 L52,20 L36,4 L34,26 L14,14 L20,36 L2,34 L14,52 L0,62 L16,68 L4,86 L24,82 L16,102 L38,94 L38,112 L60,98 L82,112 L82,94 L104,102 L96,82 L116,86 L104,68 L120,62 L106,52 L118,34 L100,36 L106,14 L86,26 L84,4 L68,20Z" fill="url(#hm2)"/>
+        <!-- MANE inner -->
+        <path d="M60,10 L54,24 L42,12 L40,30 L24,22 L26,40 L12,40 L20,54 L10,62 L22,68 L14,82 L30,78 L24,96 L40,90 L42,104 L60,94 L78,104 L80,90 L96,96 L90,78 L106,82 L98,68 L110,62 L100,54 L108,40 L94,40 L96,22 L80,30 L78,12 L66,24Z" fill="url(#hm)"/>
+        <!-- FACE - dark background, gold features -->
+        <path d="M60,26 L78,36 L88,54 L86,74 L76,88 L60,94 L44,88 L34,74 L32,54 L42,36Z" fill="#0f1923" stroke="#c9a84c" stroke-width="0.8"/>
+        <!-- Forehead accent -->
+        <path d="M60,30 L63,38 L60,46 L57,38Z" fill="#c9a84c" opacity="0.3"/>
+        <!-- Brow ridges - gold on dark -->
+        <path d="M38,52 L46,44 L56,50" stroke="#c9a84c" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M82,52 L74,44 L64,50" stroke="#c9a84c" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Eyes - fierce angular, glowing gold on dark -->
+        <polygon points="38,58 48,52 56,59 48,64" fill="#b8942e"/>
+        <polygon points="82,58 72,52 64,59 72,64" fill="#b8942e"/>
+        <!-- Eye glow center -->
+        <polygon points="42,58 48,54 52,59 48,62" fill="#ffe4a0" filter="url(#hg)"/>
+        <polygon points="78,58 72,54 68,59 72,62" fill="#ffe4a0" filter="url(#hg)"/>
+        <!-- Pupil slits -->
+        <polygon points="46,56 48,54.5 50,56 48,61" fill="#c9a84c" opacity="0.8"/>
+        <polygon points="74,56 72,54.5 70,56 72,61" fill="#c9a84c" opacity="0.8"/>
         <!-- Nose bridge -->
-        <line x1="100" y1="74" x2="100" y2="106" stroke="#0f1923" stroke-width="1" opacity="0.15"/>
+        <line x1="60" y1="50" x2="60" y2="66" stroke="#c9a84c" stroke-width="0.8" opacity="0.4"/>
         <!-- Nose -->
-        <path d="M92,110 L100,104 L108,110 L108,118 C108,124 104,128 100,128 C96,128 92,124 92,118Z" fill="#0f1923" opacity="0.7"/>
-        <ellipse cx="95" cy="120" rx="3" ry="2.2" fill="#1c2b3a" opacity="0.5"/>
-        <ellipse cx="105" cy="120" rx="3" ry="2.2" fill="#1c2b3a" opacity="0.5"/>
-        <!-- Muzzle lines -->
-        <path d="M92,128 L84,134 L78,148" stroke="#9a7828" stroke-width="1" fill="none" opacity="0.35"/>
-        <path d="M108,128 L116,134 L122,148" stroke="#9a7828" stroke-width="1" fill="none" opacity="0.35"/>
+        <path d="M55,66 L65,66 L60,74Z" fill="#c9a84c" opacity="0.5"/>
+        <path d="M55,66 L65,66 L60,74Z" fill="none" stroke="#c9a84c" stroke-width="1" stroke-linejoin="round"/>
         <!-- Mouth -->
-        <path d="M82,142 C90,136 95,138 100,144 C105,138 110,136 118,142" stroke="#0f1923" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-        <!-- Lower lip -->
-        <path d="M88,148 C94,154 106,154 112,148" stroke="#0f1923" stroke-width="1.2" fill="none" opacity="0.45" stroke-linecap="round"/>
+        <path d="M48,80 L54,76 L60,81 L66,76 L72,80" stroke="#c9a84c" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         <!-- Chin -->
-        <path d="M94,156 L100,166 L106,156" stroke="#9a7828" stroke-width="0.8" fill="none" opacity="0.3"/>
-        <!-- Whisker dots -->
-        <circle cx="70" cy="124" r="1.5" fill="#b8942e" opacity="0.3"/>
-        <circle cx="66" cy="132" r="1.5" fill="#b8942e" opacity="0.3"/>
-        <circle cx="72" cy="136" r="1.5" fill="#b8942e" opacity="0.3"/>
-        <circle cx="130" cy="124" r="1.5" fill="#b8942e" opacity="0.3"/>
-        <circle cx="134" cy="132" r="1.5" fill="#b8942e" opacity="0.3"/>
-        <circle cx="128" cy="136" r="1.5" fill="#b8942e" opacity="0.3"/>
-        <!-- Cheek fur contour -->
-        <path d="M52,100 C56,112 62,124 72,136" stroke="#9a7828" stroke-width="0.8" fill="none" opacity="0.25"/>
-        <path d="M148,100 C144,112 138,124 128,136" stroke="#9a7828" stroke-width="0.8" fill="none" opacity="0.25"/>
+        <path d="M52,86 L60,90 L68,86" stroke="#c9a84c" stroke-width="0.8" fill="none" opacity="0.4" stroke-linecap="round"/>
+        <!-- Cheek contour lines -->
+        <path d="M36,68 L42,78 L46,84" stroke="#c9a84c" stroke-width="0.6" fill="none" opacity="0.25"/>
+        <path d="M84,68 L78,78 L74,84" stroke="#c9a84c" stroke-width="0.6" fill="none" opacity="0.25"/>
       </svg>
     </div>
     <div class="badge">Powered by Dark Lion AI</div>

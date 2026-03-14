@@ -3,6 +3,10 @@ const db = require('../db');
 
 const client = new Anthropic();
 
+// Model selection: Haiku for simple tasks, Sonnet for complex reasoning
+const MODEL_FAST = 'claude-haiku-4-5-20251001';   // cheap — vendor lookups, simple classification
+const MODEL_SMART = 'claude-sonnet-4-20250514';    // accurate — batch categorization with context
+
 // Categorize a batch of transactions using Claude
 async function categorizeTransactions(realmId, chartOfAccounts) {
   const job = db.prepare(
@@ -41,7 +45,7 @@ async function categorizeTransactions(realmId, chartOfAccounts) {
     ).join('\n');
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: MODEL_SMART,
       max_tokens: 4096,
       messages: [{
         role: 'user',
@@ -109,8 +113,8 @@ Respond ONLY with the JSON array, no other text.`,
 // Research a vendor using Claude
 async function researchVendor(realmId, vendorName) {
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 1024,
+    model: MODEL_FAST,
+    max_tokens: 256,
     messages: [{
       role: 'user',
       content: `I need to categorize bookkeeping transactions for a vendor named "${vendorName}".
