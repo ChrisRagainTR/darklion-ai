@@ -256,7 +256,7 @@
   var state = Math.random().toString(36).substring(2,18);
   sessionStorage.setItem('oauth_state', state);
   var redirectUri = encodeURIComponent(window.location.origin + '/callback.html');
-  window.location.href = 'https://appcenter.intuit.com/connect/oauth2?client_id=ABOyre803U6i3VBNdt1vN73m4N1tbiVa5CWiV1rBHi6BZldG5b&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri=' + redirectUri + '&state=' + state;
+  window.location.href = 'https://appcenter.intuit.com/connect/oauth2?client_id=AB3RdDDHj9ybjqlto5E637DCeN84nKKz5HypgTd5cDDLXi1a6d&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri=' + redirectUri + '&state=' + state;
   return false;" class="btn-connect">Authorize QuickBooks Access</a>
       <p class="redirect-note">You will be redirected to Intuit to authorize access</p>
     </div>
