@@ -31,7 +31,20 @@ const { startScheduler } = require('./scheduler');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Trust proxy headers on Fly.io (X-Forwarded-For, X-Forwarded-Proto)
+app.set('trust proxy', true);
+
 app.use(express.json());
+
+// --- Force HTTPS in production ---
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(301, `https://${req.hostname}${req.url}`);
+    }
+    next();
+  });
+}
 
 // --- Authentication middleware ---
 const DASH_USER = process.env.DASH_USER || 'admin';
@@ -53,38 +66,54 @@ function requireAuth(req, res, next) {
   res.status(401).send('Authentication required');
 }
 
-// Public static files
-const publicDir = path.join(__dirname, '..', 'public');
-const publicFiles = ['index.html', 'connect.html', 'callback.html', 'disconnect.html', 'privacy.html', 'terms.html', 'lion-logo.png', 'CNAME'];
-app.get('/', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
-for (const file of publicFiles) {
-  app.get(`/${file}`, (req, res, next) => {
-    res.sendFile(path.join(publicDir, file), err => { if (err) next(); });
-  });
-}
+// --- Health check (must be before auth, no auth required) ---
+app.get('/health', async (req, res) => {
+  try {
+    const { pool } = require('./db');
+    const { rows } = await pool.query('SELECT 1 as ok');
+    res.json({ status: 'ok', db: 'connected' });
+  } catch (e) {
+    res.status(503).json({ status: 'unhealthy', error: e.message });
+  }
+});
 
-// Clean URL routes (no .html extension)
+// --- Public static files ---
+const publicDir = path.join(__dirname, '..', 'public');
+
+// Serve all static assets (images, etc.)
+app.use(express.static(publicDir, {
+  index: false, // We handle index.html routing manually
+  maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+}));
+
+// Public page routes
+app.get('/', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
 app.get('/connect', (req, res) => res.sendFile(path.join(publicDir, 'connect.html')));
 app.get('/callback', (req, res) => res.sendFile(path.join(publicDir, 'callback.html')));
 app.get('/disconnect', (req, res) => res.sendFile(path.join(publicDir, 'disconnect.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(publicDir, 'privacy.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(publicDir, 'terms.html')));
-app.get('/dashboard', requireAuth, (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
 
-// Protected dashboard (with .html)
-app.get('/dashboard.html', requireAuth, (req, res) => {
-  res.sendFile(path.join(publicDir, 'dashboard.html'));
+// Protected dashboard (both /dashboard and /dashboard.html)
+app.get('/dashboard', requireAuth, (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
+app.get('/dashboard.html', requireAuth, (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
+
+// Public config endpoint (non-sensitive values only)
+app.get('/api/config', (req, res) => {
+  res.json({
+    qb_client_id: process.env.QB_CLIENT_ID || '',
+    qb_redirect_uri: process.env.QB_REDIRECT_URI || `${req.protocol}://${req.hostname}/callback.html`,
+  });
 });
 
-// API routes (protected)
+// API routes
 app.use('/auth', authRouter);
 app.use('/api', requireAuth, apiRouter);
 
-// Health check
-app.get('/health', async (req, res) => {
-  const { pool } = require('./db');
-  const { rows } = await pool.query('SELECT COUNT(*) as c FROM companies');
-  res.json({ status: 'ok', companies: rows[0].c });
+// --- Global error handler ---
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // Start server after DB is ready
@@ -92,7 +121,7 @@ async function start() {
   await initDB();
   console.log('Database initialized');
 
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`DarkLion server running on port ${PORT}`);
     startScheduler();
   });

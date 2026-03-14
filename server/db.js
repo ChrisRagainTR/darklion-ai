@@ -1,10 +1,15 @@
 const { Pool } = require('pg');
 
+// Enable SSL for any cloud Postgres (Neon, Supabase, Railway, Render, etc.)
+// Disable only for local dev (localhost/127.0.0.1) or when explicitly set
+const dbUrl = process.env.DATABASE_URL || '';
+const isLocal = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1');
+const sslOff = process.env.DB_SSL === 'false';
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('render.com') || process.env.DATABASE_URL?.includes('neon.tech')
-    ? { rejectUnauthorized: false }
-    : false,
+  connectionString: dbUrl,
+  ssl: (isLocal || sslOff) ? false : { rejectUnauthorized: false },
+  connectionTimeoutMillis: 10000,
 });
 
 // Initialize tables
