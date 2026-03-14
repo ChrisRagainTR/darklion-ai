@@ -64,7 +64,21 @@ router.get('/companies/:realmId/transactions', async (req, res) => {
   res.json(rows);
 });
 
-// Review a transaction (approve or change category)
+// Get chart of accounts for dropdown
+router.get('/companies/:realmId/accounts', async (req, res) => {
+  try {
+    const accounts = await getChartOfAccounts(req.params.realmId);
+    const filtered = accounts
+      .filter(a => ['Expense', 'Other Expense', 'Cost of Goods Sold', 'Income', 'Other Income', 'Other Current Liability', 'Equity'].includes(a.AccountType))
+      .map(a => ({ name: a.FullyQualifiedName || a.Name, type: a.AccountType }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    res.json(filtered);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Review a transaction (approve, recategorize, or skip)
 router.post('/companies/:realmId/transactions/:id/review', async (req, res) => {
   const { realmId, id } = req.params;
   const { action, category } = req.body;
@@ -75,10 +89,20 @@ router.post('/companies/:realmId/transactions/:id/review', async (req, res) => {
       [id, realmId]
     );
   } else if (action === 'recategorize' && category) {
+    // Update the transaction
     await pool.query(
       "UPDATE transactions SET ai_category = $1, status = 'reviewed', updated_at = NOW() WHERE id = $2 AND realm_id = $3",
       [category, id, realmId]
     );
+    // Learn: save vendor→category rule for future categorization
+    const { rows } = await pool.query('SELECT vendor_name FROM transactions WHERE id = $1 AND realm_id = $2', [id, realmId]);
+    if (rows[0]?.vendor_name) {
+      await pool.query(`
+        INSERT INTO category_rules (realm_id, vendor_name, category)
+        VALUES ($1, $2, $3)
+        ON CONFLICT(realm_id, vendor_name) DO UPDATE SET category = EXCLUDED.category, created_at = NOW()
+      `, [realmId, rows[0].vendor_name, category]);
+    }
   } else if (action === 'skip') {
     await pool.query(
       "UPDATE transactions SET status = 'skipped', updated_at = NOW() WHERE id = $1 AND realm_id = $2",

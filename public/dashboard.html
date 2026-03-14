@@ -329,6 +329,17 @@
 
       <!-- Transactions tab -->
       <div class="tab-content" id="tab-transactions">
+        <div style="margin-bottom:1rem;display:flex;gap:0.75rem;align-items:center;">
+          <label style="font-size:0.82rem;color:var(--muted);">Filter:</label>
+          <select id="txn-filter" class="company-select" onchange="loadTransactions()" style="min-width:140px;">
+            <option value="">All</option>
+            <option value="pending">Pending</option>
+            <option value="categorized">Categorized</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="written_back">Written Back</option>
+            <option value="skipped">Skipped</option>
+          </select>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -398,6 +409,7 @@
   <script>
     let currentRealm = null;
     let companies = [];
+    let accountsList = [];
 
     // --- Init ---
     async function init() {
@@ -430,7 +442,15 @@
 
     // --- Load all data ---
     async function loadDashboard() {
+      await loadAccounts();
       await Promise.all([loadStats(), loadTransactions(), loadReview(), loadVendors(), loadJobs()]);
+    }
+
+    async function loadAccounts() {
+      try {
+        const res = await fetch(`/api/companies/${currentRealm}/accounts`);
+        accountsList = await res.json();
+      } catch (e) { accountsList = []; }
     }
 
     async function loadStats() {
@@ -446,7 +466,9 @@
     }
 
     async function loadTransactions() {
-      const res = await fetch(`/api/companies/${currentRealm}/transactions?limit=100`);
+      const filter = document.getElementById('txn-filter')?.value || '';
+      const statusParam = filter ? `&status=${filter}` : '';
+      const res = await fetch(`/api/companies/${currentRealm}/transactions?limit=100${statusParam}`);
       const txns = await res.json();
       document.getElementById('txn-body').innerHTML = txns.map(t => `
         <tr>
@@ -464,17 +486,24 @@
     async function loadReview() {
       const res = await fetch(`/api/companies/${currentRealm}/transactions?status=categorized&limit=100`);
       const txns = await res.json();
+      const accountOptions = accountsList.map(a => `<option value="${esc(a.name)}">${esc(a.name)}</option>`).join('');
       document.getElementById('review-body').innerHTML = txns.map(t => `
         <tr>
           <td>${t.date}</td>
           <td>${esc(t.vendor_name)}</td>
           <td style="text-align:right;">$${Number(t.amount).toFixed(2)}</td>
-          <td>${esc(t.ai_category || '—')}</td>
+          <td>
+            <select id="cat-${t.id}" class="company-select" style="min-width:160px;font-size:0.82rem;padding:0.3rem 0.5rem;">
+              ${accountOptions}
+            </select>
+            <script>document.getElementById('cat-${t.id}').value = ${JSON.stringify(t.ai_category || '')};</script>
+          </td>
           <td>${confidenceBar(t.ai_confidence)}</td>
-          <td style="font-size:0.82rem;color:var(--muted);">${esc(t.ai_memo || '')}</td>
+          <td style="font-size:0.82rem;color:var(--muted);max-width:200px;">${esc(t.ai_memo || '')}</td>
           <td>
             <div class="action-btns">
               <button class="action-btn approve" onclick="reviewTxn(${t.id},'approve')">Approve</button>
+              <button class="action-btn" onclick="recategorizeTxn(${t.id})" style="color:var(--gold);border-color:var(--gold);">Save</button>
               <button class="action-btn skip" onclick="reviewTxn(${t.id},'skip')">Skip</button>
             </div>
           </td>
@@ -570,6 +599,18 @@
         body: JSON.stringify({ action }),
       });
       toast(action === 'approve' ? 'Transaction approved' : 'Transaction skipped');
+      loadDashboard();
+    }
+
+    async function recategorizeTxn(id) {
+      const select = document.getElementById('cat-' + id);
+      const category = select.value;
+      await fetch(`/api/companies/${currentRealm}/transactions/${id}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'recategorize', category }),
+      });
+      toast('Recategorized & rule saved — future transactions from this vendor will use: ' + category);
       loadDashboard();
     }
 

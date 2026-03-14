@@ -54,6 +54,16 @@ async function initDB() {
       FOREIGN KEY (realm_id) REFERENCES companies(realm_id)
     );
 
+    CREATE TABLE IF NOT EXISTS category_rules (
+      id SERIAL PRIMARY KEY,
+      realm_id TEXT NOT NULL,
+      vendor_name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(realm_id, vendor_name),
+      FOREIGN KEY (realm_id) REFERENCES companies(realm_id)
+    );
+
     CREATE TABLE IF NOT EXISTS jobs (
       id SERIAL PRIMARY KEY,
       realm_id TEXT NOT NULL,
