@@ -3,3 +3,4 @@ node_modules/
 darklion.db
 darklion.db-shm
 darklion.db-wal
+certs/
