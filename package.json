@@ -7,6 +7,9 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "better-sqlite3": "^11.7.0",
