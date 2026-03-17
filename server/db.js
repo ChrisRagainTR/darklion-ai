@@ -1,10 +1,15 @@
 const { Pool } = require('pg');
 
+// Enable SSL for any cloud Postgres (Neon, Supabase, Railway, Render, etc.)
+// Disable only for local dev (localhost/127.0.0.1) or when explicitly set
+const dbUrl = process.env.DATABASE_URL || '';
+const isLocal = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1');
+const sslOff = process.env.DB_SSL === 'false';
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('render.com')
-    ? { rejectUnauthorized: false }
-    : false,
+  connectionString: dbUrl,
+  ssl: (isLocal || sslOff) ? false : { rejectUnauthorized: false },
+  connectionTimeoutMillis: 10000,
 });
 
 // Initialize tables
@@ -67,13 +72,54 @@ async function initDB() {
     CREATE TABLE IF NOT EXISTS jobs (
       id SERIAL PRIMARY KEY,
       realm_id TEXT NOT NULL,
-      job_type TEXT NOT NULL CHECK(job_type IN ('sync','categorize','vendor_research','write_back')),
+      job_type TEXT NOT NULL,
       status TEXT DEFAULT 'running' CHECK(status IN ('running','completed','failed')),
       items_processed INTEGER DEFAULT 0,
       items_total INTEGER DEFAULT 0,
       error_message TEXT,
       started_at TIMESTAMPTZ DEFAULT NOW(),
       completed_at TIMESTAMPTZ,
+      FOREIGN KEY (realm_id) REFERENCES companies(realm_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS scan_results (
+      id SERIAL PRIMARY KEY,
+      realm_id TEXT NOT NULL,
+      scan_type TEXT NOT NULL,
+      period TEXT NOT NULL DEFAULT '',
+      scanned_at TIMESTAMPTZ DEFAULT NOW(),
+      result_data JSONB NOT NULL DEFAULT '{}',
+      flag_count INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'new' CHECK(status IN ('new','reviewed','resolved')),
+      FOREIGN KEY (realm_id) REFERENCES companies(realm_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS close_packages (
+      id SERIAL PRIMARY KEY,
+      realm_id TEXT NOT NULL,
+      period TEXT NOT NULL,
+      generated_at TIMESTAMPTZ DEFAULT NOW(),
+      report_data JSONB NOT NULL DEFAULT '{}',
+      status TEXT DEFAULT 'draft' CHECK(status IN ('draft','reviewed','finalized')),
+      reviewer_notes TEXT DEFAULT '',
+      FOREIGN KEY (realm_id) REFERENCES companies(realm_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS statement_schedules (
+      id SERIAL PRIMARY KEY,
+      realm_id TEXT NOT NULL,
+      client_name TEXT NOT NULL DEFAULT '',
+      account_name TEXT NOT NULL DEFAULT '',
+      institution TEXT DEFAULT '',
+      access_method TEXT DEFAULT 'portal',
+      statement_day INTEGER DEFAULT 1,
+      reminder_cadence TEXT DEFAULT '1,5,10',
+      contact_email TEXT DEFAULT '',
+      status TEXT DEFAULT 'pending',
+      last_reminded_at TIMESTAMPTZ,
+      received_at TIMESTAMPTZ,
+      current_month TEXT DEFAULT '',
+      notes TEXT DEFAULT '',
       FOREIGN KEY (realm_id) REFERENCES companies(realm_id)
     );
   `);

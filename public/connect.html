@@ -252,12 +252,28 @@
         </div>
       </div>
 
-      <a href="#" id="connect-btn" onclick="
-  var state = Math.random().toString(36).substring(2,18);
-  sessionStorage.setItem('oauth_state', state);
-  var redirectUri = encodeURIComponent(window.location.origin + '/callback.html');
-  window.location.href = 'https://appcenter.intuit.com/connect/oauth2?client_id=ABOyre803U6i3VBNdt1vN73m4N1tbiVa5CWiV1rBHi6BZldG5b&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri=' + redirectUri + '&state=' + state;
-  return false;" class="btn-connect">Authorize QuickBooks Access</a>
+      <a href="#" id="connect-btn" class="btn-connect" style="pointer-events:none;opacity:0.5;">Loading&hellip;</a>
+
+      <script>
+        (async function() {
+          try {
+            const cfg = await (await fetch('/api/config')).json();
+            const btn = document.getElementById('connect-btn');
+            btn.textContent = 'Authorize QuickBooks Access';
+            btn.style.pointerEvents = '';
+            btn.style.opacity = '';
+            btn.onclick = function(e) {
+              e.preventDefault();
+              var state = Math.random().toString(36).substring(2,18);
+              sessionStorage.setItem('oauth_state', state);
+              var redirectUri = encodeURIComponent(cfg.qb_redirect_uri);
+              window.location.href = 'https://appcenter.intuit.com/connect/oauth2?client_id=' + cfg.qb_client_id + '&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri=' + redirectUri + '&state=' + state;
+            };
+          } catch(e) {
+            document.getElementById('connect-btn').textContent = 'Connection unavailable';
+          }
+        })();
+      </script>
       <p class="redirect-note">You will be redirected to Intuit to authorize access</p>
     </div>
   </main>
