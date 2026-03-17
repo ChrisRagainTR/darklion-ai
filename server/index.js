@@ -39,6 +39,7 @@ app.use(express.json());
 // --- Force HTTPS in production ---
 if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
+    if (req.path === '/health') return next(); // allow healthcheck over HTTP
     if (req.headers['x-forwarded-proto'] !== 'https') {
       return res.redirect(301, `https://${req.hostname}${req.url}`);
     }
@@ -67,14 +68,8 @@ function requireAuth(req, res, next) {
 }
 
 // --- Health check (must be before auth, no auth required) ---
-app.get('/health', async (req, res) => {
-  try {
-    const { pool } = require('./db');
-    const { rows } = await pool.query('SELECT 1 as ok');
-    res.json({ status: 'ok', db: 'connected' });
-  } catch (e) {
-    res.status(503).json({ status: 'unhealthy', error: e.message });
-  }
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
 
 // --- Public static files ---
