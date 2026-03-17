@@ -68,14 +68,8 @@ function requireAuth(req, res, next) {
 }
 
 // --- Health check (must be before auth, no auth required) ---
-app.get('/health', async (req, res) => {
-  try {
-    const { pool } = require('./db');
-    const { rows } = await pool.query('SELECT 1 as ok');
-    res.json({ status: 'ok', db: 'connected' });
-  } catch (e) {
-    res.status(503).json({ status: 'unhealthy', error: e.message });
-  }
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
 
 // --- Public static files ---
