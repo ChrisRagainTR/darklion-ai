@@ -39,6 +39,7 @@ app.use(express.json());
 // --- Force HTTPS in production ---
 if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
+    if (req.path === '/health') return next(); // allow healthcheck over HTTP
     if (req.headers['x-forwarded-proto'] !== 'https') {
       return res.redirect(301, `https://${req.hostname}${req.url}`);
     }
