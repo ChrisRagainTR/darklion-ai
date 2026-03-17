@@ -3,5 +3,5 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --production
 COPY . .
-EXPOSE 8080
+EXPOSE ${PORT:-8080}
 CMD ["node", "server/index.js"]
