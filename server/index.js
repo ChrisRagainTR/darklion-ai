@@ -26,7 +26,6 @@ try {
 const { initDB } = require('./db');
 const authRouter = require('./routes/auth');
 const apiRouter = require('./routes/api');
-const { startScheduler } = require('./scheduler');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -118,7 +117,6 @@ async function start() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`DarkLion server running on port ${PORT}`);
-    startScheduler();
   });
 }
 

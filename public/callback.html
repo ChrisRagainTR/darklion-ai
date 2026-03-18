@@ -301,6 +301,14 @@
       }
 
       showSuccess(autoConnected);
+
+      // If initiated from dashboard, redirect back after success
+      if (autoConnected && sessionStorage.getItem('connect_from') === 'dashboard') {
+        sessionStorage.removeItem('connect_from');
+        const homeBtn = document.querySelector('.btn-home');
+        if (homeBtn) { homeBtn.href = '/dashboard'; homeBtn.textContent = '\u2190 Back to Dashboard'; }
+        setTimeout(() => { window.location.href = '/dashboard'; }, 2000);
+      }
     })();
   </script>
 
