@@ -110,10 +110,62 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
+// --- Nightly scan cron (runs at 2 AM UTC) ---
+function startNightlyCron() {
+  const { pool } = require('./db');
+  const { scanUncategorized } = require('./services/scanner');
+  const { generateClosePackage } = require('./services/reports');
+
+  function msUntil2AM() {
+    const now = new Date();
+    const next = new Date(now);
+    next.setUTCHours(2, 0, 0, 0);
+    if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+    return next - now;
+  }
+
+  async function runNightlyScans() {
+    console.log('Starting nightly scans...');
+    try {
+      const { rows: companies } = await pool.query('SELECT realm_id, company_name FROM companies');
+      const now = new Date();
+      const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      for (const c of companies) {
+        try {
+          await scanUncategorized(c.realm_id);
+          console.log(`Nightly uncategorized scan complete: ${c.company_name || c.realm_id}`);
+        } catch (e) {
+          console.error(`Nightly scan failed for ${c.company_name || c.realm_id}:`, e.message);
+        }
+        try {
+          await generateClosePackage(c.realm_id, period);
+          console.log(`Nightly close package complete: ${c.company_name || c.realm_id} (${period})`);
+        } catch (e) {
+          console.error(`Nightly close package failed for ${c.company_name || c.realm_id}:`, e.message);
+        }
+      }
+      console.log('Nightly scans finished.');
+    } catch (e) {
+      console.error('Nightly scan error:', e.message);
+    }
+
+    // Schedule next run
+    setTimeout(runNightlyScans, msUntil2AM());
+  }
+
+  // Schedule first run
+  const ms = msUntil2AM();
+  console.log(`Nightly scans scheduled in ${Math.round(ms / 3600000)}h ${Math.round((ms % 3600000) / 60000)}m (2:00 AM UTC)`);
+  setTimeout(runNightlyScans, ms);
+}
+
 // Start server after DB is ready
 async function start() {
   await initDB();
   console.log('Database initialized');
+
+  startNightlyCron();
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`DarkLion server running on port ${PORT}`);

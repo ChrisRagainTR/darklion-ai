@@ -68,6 +68,9 @@ router.get('/callback', async (req, res) => {
     `, [realmId, companyName, tokens.access_token, tokens.refresh_token, expiresAt]);
 
     res.json({ ok: true, company: companyName || realmId });
+
+    // Run initial scans in background (non-blocking)
+    runInitialScans(realmId).catch(e => console.error('Initial scan error:', e));
   } catch (err) {
     console.error('OAuth callback error:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -121,6 +124,30 @@ async function getAccessToken(realmId) {
   }
 
   return company.access_token;
+}
+
+// Run scans immediately after a company connects
+async function runInitialScans(realmId) {
+  const { scanUncategorized } = require('../services/scanner');
+  const { generateClosePackage } = require('../services/reports');
+
+  console.log(`Running initial scans for ${realmId}...`);
+
+  try {
+    await scanUncategorized(realmId);
+    console.log(`Uncategorized scan complete for ${realmId}`);
+  } catch (e) {
+    console.error(`Initial uncategorized scan failed for ${realmId}:`, e.message);
+  }
+
+  try {
+    const now = new Date();
+    const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    await generateClosePackage(realmId, period);
+    console.log(`Close package generated for ${realmId} (${period})`);
+  } catch (e) {
+    console.error(`Initial close package failed for ${realmId}:`, e.message);
+  }
 }
 
 router.refreshTokens = refreshTokens;
