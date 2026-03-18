@@ -66,6 +66,7 @@
     /* Main content */
     .main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; }
     .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+    #sec-close-package .container { max-width: 100%; padding: 2rem 2rem; }
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem; }
     .page-header h1 { font-size: 1.4rem; font-weight: 800; }
     .page-header .subtitle { color: var(--muted); font-size: 0.82rem; }
@@ -126,10 +127,13 @@
     /* Report section within close package */
     .report-section { margin-top: 1.5rem; }
     .report-section h3 { font-size: 0.88rem; margin-bottom: 0.75rem; }
-    .report-section .table-wrap { margin-bottom: 1rem; }
+    .report-section .table-wrap { margin-bottom: 1rem; overflow-x: auto; }
     .report-row-header td { font-weight: 700; background: rgba(201,168,76,0.05); }
     .report-row-total td { font-weight: 700; border-top: 2px solid var(--border); }
-    td.amount { text-align: right; font-variant-numeric: tabular-nums; }
+    td.amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 0.78rem; padding: 0.5rem 0.6rem; }
+    #sec-close-package table { table-layout: auto; width: 100%; }
+    #sec-close-package th, #sec-close-package td { padding: 0.5rem 0.6rem; font-size: 0.78rem; }
+    #sec-close-package th { white-space: nowrap; }
 
     /* Period picker */
     .period-picker { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.5rem; }
@@ -345,10 +349,9 @@
             <div class="period-actions">
               <div class="selected-label">Selected: <strong id="cp-selected-label">—</strong></div>
               <div class="display-toggle">
-                <input type="checkbox" id="cp-by-month" onchange="onDisplayToggle()">
+                <input type="checkbox" id="cp-by-month" onchange="if(cpSelection.startDate) generateClosePackage()">
                 <label for="cp-by-month">Display by month</label>
               </div>
-              <button class="btn btn-gold" onclick="generateClosePackage()">Generate</button>
             </div>
           </div>
 
@@ -450,7 +453,7 @@
       // Default selection: current month
       const curVal = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
       const curBtn = document.querySelector('.month-btn[data-period="'+curVal+'"]');
-      if (curBtn) selectMonth(curBtn, curVal);
+      if (curBtn) selectMonth(curBtn, curVal, true);
     }
 
     function lastDay(year, month) {
@@ -469,7 +472,7 @@
       document.querySelectorAll('.month-btn,.quarter-btn,.year-btn').forEach(b => b.classList.remove('selected'));
     }
 
-    function selectMonth(btn, period) {
+    function selectMonth(btn, period, skipGenerate) {
       clearPeriodBtns();
       btn.classList.add('selected');
       const [y,m] = period.split('-').map(Number);
@@ -482,6 +485,7 @@
         period: period
       };
       qs('#cp-selected-label').textContent = cpSelection.label;
+      if (!skipGenerate) generateClosePackage();
     }
 
     function selectQuarter(btn, q, year, sd, ed) {
@@ -495,6 +499,7 @@
         period: year+'-Q'+q
       };
       qs('#cp-selected-label').textContent = cpSelection.label;
+      generateClosePackage();
     }
 
     function selectYear(btn, year) {
@@ -510,6 +515,7 @@
         period: String(year)
       };
       qs('#cp-selected-label').textContent = cpSelection.label;
+      generateClosePackage();
     }
 
     function applyCustomRange() {
@@ -526,7 +532,7 @@
         period: 'custom'
       };
       qs('#cp-selected-label').textContent = cpSelection.label;
-      toast('Date range applied');
+      generateClosePackage();
     }
 
     function onDisplayToggle() {
@@ -822,7 +828,7 @@
 
         // Highlight matching month button if possible
         const btn = document.querySelector('.month-btn[data-period="'+latest.period+'"]');
-        if (btn) selectMonth(btn, latest.period);
+        if (btn) selectMonth(btn, latest.period, true);
 
         qs('#cp-results').innerHTML = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(rd.period || latest.period)+'</h3>' + renderClosePackageBody(rd, latest);
       } catch(e) { console.error('loadLatestClosePackage error:', e); }
