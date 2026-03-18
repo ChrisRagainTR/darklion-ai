@@ -1160,7 +1160,7 @@
       const actionsEl = qs('#payroll-actions');
 
       if (!company || !company.gusto_connected) {
-        actionsEl.innerHTML = '<button class="btn-primary" onclick="connectGusto()">Connect Gusto</button>';
+        actionsEl.innerHTML = '<button class="btn btn-gold" onclick="connectGusto()">Connect Gusto</button>';
         qs('#payroll-stats').style.display = 'none';
         qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">'
           + '<h2 style="font-size:1.1rem;color:var(--text);margin-bottom:0.75rem;">Gusto Integration Required</h2>'
@@ -1168,7 +1168,7 @@
           + '<p style="font-size:0.78rem;color:var(--muted);max-width:500px;margin:0 auto;">This feature pulls processed payroll data from Gusto and compares totals against the corresponding journal entries in QBO. Mismatches are flagged for review.</p>'
           + '</div>';
       } else {
-        actionsEl.innerHTML = '<button class="btn-primary" onclick="runPayrollScan()">Run Payroll Check</button>';
+        actionsEl.innerHTML = '<button class="btn btn-gold" onclick="runPayrollScan()">Run Payroll Check</button>';
         loadLatestPayroll();
       }
     }
@@ -1182,7 +1182,7 @@
         }
         const state = currentRealm;
         const redirectUri = encodeURIComponent(cfg.gusto_redirect_uri);
-        window.location.href = 'https://app.gusto.com/oauth/authorize?client_id=' + cfg.gusto_client_id + '&redirect_uri=' + redirectUri + '&response_type=code&state=' + state;
+        window.open('https://app.gusto.com/oauth/authorize?client_id=' + cfg.gusto_client_id + '&redirect_uri=' + redirectUri + '&response_type=code&state=' + state, '_blank');
       } catch(e) {
         toast('Failed to start Gusto connection: ' + e.message);
       }
