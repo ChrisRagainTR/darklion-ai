@@ -7,19 +7,39 @@ const router = Router();
 
 // --- Dashboard data ---
 
-// List connected companies (with token health)
+// List connected companies (with token health, auto-refresh expired tokens)
 router.get('/companies', async (req, res) => {
   const { rows } = await pool.query(
-    'SELECT realm_id, company_name, connected_at, last_sync_at, token_expires_at FROM companies ORDER BY company_name ASC'
+    'SELECT realm_id, company_name, connected_at, last_sync_at, token_expires_at, refresh_token FROM companies ORDER BY company_name ASC'
   );
   const now = Date.now();
-  const enriched = rows.map(c => ({
-    ...c,
-    token_status: !c.token_expires_at ? 'unknown'
-      : Number(c.token_expires_at) < now ? 'expired'
-      : Number(c.token_expires_at) < now + 300000 ? 'expiring'
-      : 'healthy',
-  }));
+  const { refreshTokens } = require('./auth');
+
+  const enriched = [];
+  for (const c of rows) {
+    let tokenStatus = 'connected';
+    const expired = c.token_expires_at && Number(c.token_expires_at) < now;
+
+    if (expired && c.refresh_token) {
+      // Try to silently refresh
+      try {
+        await refreshTokens(c.realm_id);
+        tokenStatus = 'connected';
+      } catch (e) {
+        tokenStatus = 'disconnected';
+      }
+    } else if (!c.refresh_token) {
+      tokenStatus = 'disconnected';
+    }
+
+    enriched.push({
+      realm_id: c.realm_id,
+      company_name: c.company_name,
+      connected_at: c.connected_at,
+      last_sync_at: c.last_sync_at,
+      token_status: tokenStatus,
+    });
+  }
   res.json(enriched);
 });
 

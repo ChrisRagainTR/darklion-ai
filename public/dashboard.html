@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <title>Dashboard — DarkLion v2</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -312,6 +314,8 @@
       populatePeriodSelectors();
       renderCompanyList();
       loadAll();
+      loadLatestUncategorized();
+      loadLatestClosePackage();
     }
 
     function populatePeriodSelectors() {
@@ -339,16 +343,19 @@
       const sec = qs('#sec-'+name);
       if (sec) sec.classList.add('active');
       if (el) el.classList.add('active');
+      // Auto-load latest data when switching tabs
+      if (name === 'uncategorized') loadLatestUncategorized();
+      if (name === 'close-package') loadLatestClosePackage();
     }
 
     // --- Overview ---
     async function loadOverviewScans() {
       // Companies overview card
-      const healthy = companies.filter(c => c.token_status === 'healthy').length;
-      const expired = companies.filter(c => c.token_status === 'expired').length;
+      const connected = companies.filter(c => c.token_status !== 'disconnected').length;
+      const disconnected = companies.filter(c => c.token_status === 'disconnected').length;
       qs('#ov-companies').textContent = companies.length;
-      qs('#ov-companies').style.color = expired > 0 ? 'var(--orange)' : 'var(--green)';
-      qs('#ov-companies-sub').textContent = healthy + ' healthy' + (expired > 0 ? ', ' + expired + ' expired' : '');
+      qs('#ov-companies').style.color = disconnected > 0 ? 'var(--orange)' : 'var(--green)';
+      qs('#ov-companies-sub').textContent = connected + ' connected' + (disconnected > 0 ? ', ' + disconnected + ' disconnected' : '');
 
       try {
         const scans = await (await fetch('/api/companies/'+currentRealm+'/scans')).json();
@@ -553,6 +560,83 @@
       return n < 0 ? '<span style="color:var(--red);">('+formatted+')</span>' : formatted;
     }
 
+    // --- Auto-load latest results ---
+    async function loadLatestUncategorized() {
+      try {
+        const scans = await (await fetch('/api/companies/'+currentRealm+'/scans')).json();
+        const latest = Array.isArray(scans) ? scans.find(s => s.scan_type === 'uncategorized') : null;
+        if (!latest) return;
+
+        const data = typeof latest.result_data === 'string' ? JSON.parse(latest.result_data) : latest.result_data;
+        const s = data.summary;
+        if (!s) return;
+
+        qs('#uncat-stats').style.display='';
+        qs('#uncat-flagged').textContent = s.flaggedCount;
+        qs('#uncat-checked').textContent = s.checkedCount;
+        qs('#uncat-total').textContent = '$'+Number(s.totalFlaggedAmount).toLocaleString();
+        qs('#uncat-last-scan').textContent = 'Last scanned: ' + new Date(latest.scanned_at).toLocaleString();
+
+        let html = '';
+        if (data.flagged && data.flagged.length > 0) {
+          html += '<h3 style="font-size:0.88rem;margin:1rem 0 0.5rem;color:var(--red);">Flagged Accounts</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Balance</th><th>Transactions</th></tr></thead><tbody>';
+          for (const f of data.flagged) {
+            html += '<tr><td style="font-weight:600;">'+esc(f.name)+'</td><td style="color:var(--orange);">$'+Number(f.balance).toLocaleString()+'</td><td>'+f.transactionCount+'</td></tr>';
+            if (f.transactions && f.transactions.length > 0) {
+              for (const t of f.transactions) {
+                html += '<tr><td style="padding-left:2rem;color:var(--muted);font-size:0.8rem;">'+t.date+'</td><td style="font-size:0.8rem;">$'+Number(t.amount).toFixed(2)+'</td><td style="color:var(--muted);font-size:0.8rem;">'+esc(t.vendor)+' — '+esc(t.description)+'</td></tr>';
+              }
+            }
+          }
+          html += '</tbody></table></div>';
+        }
+        if (data.checked && data.checked.length > 0) {
+          html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">All Checked Accounts</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Balance</th><th>Status</th></tr></thead><tbody>';
+          for (const c of data.checked) {
+            const ok = c.balance === 0;
+            html += '<tr><td>'+esc(c.name)+'</td><td>$'+Number(c.balance).toLocaleString()+'</td><td>'+(ok?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-flag">Flagged</span>')+'</td></tr>';
+          }
+          html += '</tbody></table></div>';
+        }
+        if (html) qs('#uncat-results').innerHTML = html;
+      } catch(e) { /* ignore */ }
+    }
+
+    async function loadLatestClosePackage() {
+      try {
+        const pkgs = await (await fetch('/api/companies/'+currentRealm+'/close-packages')).json();
+        if (!Array.isArray(pkgs) || pkgs.length === 0) return;
+
+        const latest = pkgs[0];
+        const rd = typeof latest.report_data === 'string' ? JSON.parse(latest.report_data) : latest.report_data;
+        if (!rd) return;
+
+        // Set period selector to match
+        const cpSel = qs('#cp-period');
+        if (cpSel && latest.period) {
+          for (const opt of cpSel.options) {
+            if (opt.value === latest.period) { cpSel.value = latest.period; break; }
+          }
+        }
+
+        let html = '';
+        html += '<h3 style="font-size:0.88rem;margin:0.5rem 0 0.75rem;">Package Checklist</h3><div class="table-wrap"><table><thead><tr><th>Item</th><th>Status</th><th>Details</th></tr></thead><tbody>';
+        for (const item of (rd.checklist||[])) {
+          const badge = item.status==='ok'?'badge-ok':item.status==='warning'?'badge-warning':'badge-pending';
+          const label = item.status==='ok'?'OK':item.status==='warning'?'Warning':item.status==='missing'?'Missing':'Not Run';
+          html += '<tr><td style="font-weight:600;">'+esc(item.item)+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td style="color:var(--muted);">'+(item.flagCount!==undefined?item.flagCount+' flags':'')+'</td></tr>';
+        }
+        html += '</tbody></table></div>';
+
+        if (rd.pnl) { html += '<div class="report-section"><h3>Profit & Loss</h3>'+renderQBReport(rd.pnl)+'</div>'; }
+        if (rd.balanceSheet) { html += '<div class="report-section"><h3>Balance Sheet</h3>'+renderQBReport(rd.balanceSheet)+'</div>'; }
+        if (rd.trialBalance) { html += '<div class="report-section"><h3>Trial Balance</h3>'+renderQBReport(rd.trialBalance)+'</div>'; }
+
+        html += '<div style="margin-top:1rem;text-align:right;"><span class="badge badge-pending" style="font-size:0.8rem;padding:0.3rem 0.8rem;">Status: '+esc(latest.status||'draft')+'</span> <span style="color:var(--muted);font-size:0.75rem;margin-left:0.5rem;">Generated '+new Date(latest.generated_at).toLocaleString()+'</span></div>';
+        qs('#cp-results').innerHTML = html;
+      } catch(e) { /* ignore */ }
+    }
+
     // --- Company Management ---
     function renderCompanyList(target) {
       const listEl = qs(target || '#companies-list');
@@ -567,14 +651,19 @@
       } else {
         listEl.innerHTML = filtered.map(c => {
           const name = esc(c.company_name || c.realm_id);
-          const status = c.token_status || 'unknown';
+          const status = c.token_status || 'connected';
+          const isDisconnected = status === 'disconnected';
+          const dotClass = isDisconnected ? 'expired' : 'healthy';
           const syncText = c.last_sync_at ? 'Synced ' + timeAgo(c.last_sync_at) : 'Never synced';
-          const statusLabel = status === 'healthy' ? 'Connected' : status === 'expired' ? 'Token expired' : status === 'expiring' ? 'Token expiring' : 'Unknown';
+          const statusLabel = isDisconnected ? 'Disconnected' : 'Connected';
           const isActive = c.realm_id === currentRealm;
+          const actionBtn = isDisconnected
+            ? '<button class="btn-disconnect" style="border-color:var(--gold);color:var(--gold);" onclick="event.stopPropagation();connectNewCompany()">Reconnect</button>'
+            : '<button class="btn-disconnect" onclick="event.stopPropagation();disconnectCompany(\''+c.realm_id+'\',\''+name+'\')">Disconnect</button>';
           return '<div class="company-item'+(isActive?' active':'')+'" data-realm="'+c.realm_id+'" onclick="selectCompany(\''+c.realm_id+'\')">'
-            + '<div class="ci-dot '+status+'" title="'+statusLabel+'"></div>'
+            + '<div class="ci-dot '+dotClass+'" title="'+statusLabel+'"></div>'
             + '<div class="ci-info"><div class="ci-name">'+name+'</div><div class="ci-meta">'+syncText+' &middot; '+statusLabel+'</div></div>'
-            + '<div class="ci-actions"><button class="btn-disconnect" onclick="event.stopPropagation();disconnectCompany(\''+c.realm_id+'\',\''+name+'\')">Disconnect</button></div>'
+            + '<div class="ci-actions">'+actionBtn+'</div>'
             + '</div>';
         }).join('');
       }
