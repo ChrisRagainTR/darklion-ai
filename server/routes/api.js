@@ -4,6 +4,7 @@ const { scanUncategorized, getLatestScan } = require('../services/scanner');
 const { generateClosePackage } = require('../services/reports');
 const { scanVariance } = require('../services/variance');
 const { scanLiabilities } = require('../services/liability');
+const { verifyPayroll } = require('../services/payroll');
 
 const router = Router();
 
@@ -12,7 +13,7 @@ const router = Router();
 // List connected companies (with token health, auto-refresh expired tokens)
 router.get('/companies', async (req, res) => {
   const { rows } = await pool.query(
-    'SELECT realm_id, company_name, connected_at, last_sync_at, token_expires_at, refresh_token FROM companies ORDER BY company_name ASC'
+    'SELECT realm_id, company_name, connected_at, last_sync_at, token_expires_at, refresh_token, gusto_access_token, gusto_company_id FROM companies ORDER BY company_name ASC'
   );
   const now = Date.now();
   const { refreshTokens } = require('./auth');
@@ -40,6 +41,7 @@ router.get('/companies', async (req, res) => {
       connected_at: c.connected_at,
       last_sync_at: c.last_sync_at,
       token_status: tokenStatus,
+      gusto_connected: !!(c.gusto_access_token && c.gusto_company_id),
     });
   }
   res.json(enriched);
@@ -79,6 +81,17 @@ router.post('/companies/:realmId/scan/variance', async (req, res) => {
   try {
     const { year, month, thresholdPct, thresholdAmt } = req.body || {};
     const result = await scanVariance(req.params.realmId, { year, month, thresholdPct, thresholdAmt });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Payroll Verification ---
+router.post('/companies/:realmId/scan/payroll', async (req, res) => {
+  try {
+    const { year, month } = req.body || {};
+    const result = await verifyPayroll(req.params.realmId, { year, month });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <title>Gusto Authorization — DarkLion</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #0f1923;
+      --charcoal: #1c2b3a;
+      --card: #1e2f40;
+      --gold: #c9a84c;
+      --text: #e8edf2;
+      --muted: #8fa3b8;
+      --border: rgba(201,168,76,0.2);
+      --green: #3ecf8e;
+      --red: #f56565;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--navy);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      padding: 1.2rem 2rem;
+      background: rgba(15,25,35,0.95);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+    }
+
+    .nav-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .nav-name span { color: var(--gold); }
+
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1.5rem;
+    }
+
+    .callback-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem;
+      max-width: 560px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .status-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      margin: 0 auto 1.5rem;
+    }
+
+    .status-icon.loading {
+      background: rgba(201,168,76,0.12);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .status-icon.success { background: rgba(62,207,142,0.12); }
+    .status-icon.error   { background: rgba(245,101,101,0.12); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+    }
+
+    h1.success { color: var(--green); }
+    h1.error   { color: var(--red); }
+
+    .status-msg {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.65;
+    }
+
+    .btn-home {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--navy);
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 0.75rem 1.8rem;
+      border-radius: 8px;
+      text-decoration: none;
+      margin-top: 1.5rem;
+      transition: background 0.2s;
+    }
+
+    .btn-home:hover { background: #e2c068; }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.82rem;
+    }
+
+    .footer-links a:hover { color: var(--gold); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-brand" href="/">
+      <img src="/lion-logo.png" alt="DarkLion" width="36" height="36" style="display:block;flex-shrink:0;">
+      <span class="nav-name">Dark<span>Lion</span></span>
+    </a>
+  </nav>
+
+  <main>
+    <div class="callback-card">
+      <div class="status-icon loading" id="status-icon">&#x23F3;</div>
+      <h1 id="status-title">Connecting Gusto&hellip;</h1>
+      <p class="status-msg" id="status-msg">Please wait while we complete the Gusto connection.</p>
+      <div id="btn-wrap" style="display:none;">
+        <a href="/dashboard" class="btn-home">&#x2190; Go to Dashboard</a>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <ul class="footer-links">
+      <li><a href="/privacy.html">Privacy Policy</a></li>
+      <li><a href="/terms.html">Terms of Service</a></li>
+      <li><a href="/">Home</a></li>
+    </ul>
+  </footer>
+
+  <script>
+    (async function () {
+      const params  = new URLSearchParams(window.location.search);
+      const code    = params.get('code');
+      const state   = params.get('state'); // contains realmId
+      const error   = params.get('error');
+
+      const iconEl  = document.getElementById('status-icon');
+      const titleEl = document.getElementById('status-title');
+      const msgEl   = document.getElementById('status-msg');
+      const btnWrap = document.getElementById('btn-wrap');
+
+      function showSuccess() {
+        iconEl.className   = 'status-icon success';
+        iconEl.textContent = '\u2705';
+        titleEl.className  = 'success';
+        titleEl.textContent = 'Gusto Connected!';
+        msgEl.textContent   = 'Gusto is now linked. You can run payroll verification from the dashboard.';
+        btnWrap.style.display = 'block';
+      }
+
+      function showError(message) {
+        iconEl.className   = 'status-icon error';
+        iconEl.textContent = '\u274C';
+        titleEl.className  = 'error';
+        titleEl.textContent = 'Connection Failed';
+        msgEl.textContent  = message || 'An unknown error occurred. Please try again.';
+        btnWrap.style.display = 'block';
+      }
+
+      if (error) {
+        showError('Gusto returned an error: ' + error);
+        return;
+      }
+
+      if (!code || !state) {
+        showError('Missing authorization code or company reference. Please try connecting again from the dashboard.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/auth/gusto/callback?code=' + encodeURIComponent(code) + '&realmId=' + encodeURIComponent(state), {
+          signal: AbortSignal.timeout(15000),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || 'Token exchange failed');
+        }
+        showSuccess();
+        setTimeout(() => { window.location.href = '/dashboard'; }, 2000);
+      } catch (e) {
+        showError('Failed to connect Gusto: ' + e.message);
+      }
+    })();
+  </script>
+
+</body>
+</html>

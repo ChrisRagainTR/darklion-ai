@@ -421,13 +421,27 @@
         <div class="container">
           <div class="page-header">
             <div><h1>Payroll Verification</h1><div class="subtitle">Gusto payroll cross-referenced against QBO journal entries</div></div>
+            <div id="payroll-actions"></div>
+          </div>
+          <div id="payroll-stats" style="display:none;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;">
+              <div class="stat-card" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Payrolls</div>
+                <div id="pay-count" style="font-size:1.6rem;font-weight:800;color:var(--text);margin-top:0.3rem;">0</div>
+              </div>
+              <div class="stat-card" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Gross Pay Total</div>
+                <div id="pay-gross" style="font-size:1.6rem;font-weight:800;color:var(--gold);margin-top:0.3rem;">$0</div>
+              </div>
+              <div class="stat-card" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Mismatches</div>
+                <div id="pay-mismatches" style="font-size:1.6rem;font-weight:800;color:var(--green);margin-top:0.3rem;">0</div>
+              </div>
+            </div>
+            <div id="pay-period" style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;"></div>
           </div>
           <div id="payroll-results">
-            <div style="text-align:center;padding:3rem;color:var(--muted);">
-              <h2 style="font-size:1.1rem;color:var(--text);margin-bottom:0.75rem;">Gusto Integration Required</h2>
-              <p style="margin-bottom:1rem;">Connect your Gusto account to enable payroll verification.</p>
-              <p style="font-size:0.78rem;color:var(--muted);max-width:500px;margin:0 auto;">This feature pulls processed payroll data from Gusto (employee compensations, gross pay, taxes, deductions) and compares totals against the corresponding journal entries in QBO. Mismatches are flagged for supervisor review.</p>
-            </div>
+            <div style="text-align:center;padding:3rem;color:var(--muted);">Loading...</div>
           </div>
         </div>
       </div>
@@ -626,6 +640,7 @@
       if (name === 'close-package') loadLatestClosePackage();
       if (name === 'variance') loadLatestVariance();
       if (name === 'liability') loadLatestLiability();
+      if (name === 'payroll') initPayrollSection();
     }
 
     // --- Overview ---
@@ -1083,6 +1098,7 @@
         if (secName === 'close-package') loadLatestClosePackage();
         if (secName === 'variance') loadLatestVariance();
         if (secName === 'liability') loadLatestLiability();
+        if (secName === 'payroll') initPayrollSection();
       }
       toast('Switched to ' + (companies.find(c=>c.realm_id===realmId)?.company_name || realmId));
     }
@@ -1135,6 +1151,155 @@
       const days = Math.floor(hrs / 24);
       if (days < 30) return days + 'd ago';
       return Math.floor(days / 30) + 'mo ago';
+    }
+
+    // --- Payroll Verification ---
+    function initPayrollSection() {
+      if (!currentRealm) return;
+      const company = companies.find(c => c.realm_id === currentRealm);
+      const actionsEl = qs('#payroll-actions');
+
+      if (!company || !company.gusto_connected) {
+        actionsEl.innerHTML = '<button class="btn-primary" onclick="connectGusto()">Connect Gusto</button>';
+        qs('#payroll-stats').style.display = 'none';
+        qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">'
+          + '<h2 style="font-size:1.1rem;color:var(--text);margin-bottom:0.75rem;">Gusto Integration Required</h2>'
+          + '<p style="margin-bottom:1rem;">Connect your Gusto account to enable payroll verification.</p>'
+          + '<p style="font-size:0.78rem;color:var(--muted);max-width:500px;margin:0 auto;">This feature pulls processed payroll data from Gusto and compares totals against the corresponding journal entries in QBO. Mismatches are flagged for review.</p>'
+          + '</div>';
+      } else {
+        actionsEl.innerHTML = '<button class="btn-primary" onclick="runPayrollScan()">Run Payroll Check</button>';
+        loadLatestPayroll();
+      }
+    }
+
+    async function connectGusto() {
+      try {
+        const cfg = await (await fetch('/api/config')).json();
+        if (!cfg.gusto_client_id) {
+          toast('Gusto is not configured — contact your administrator');
+          return;
+        }
+        const state = currentRealm;
+        const redirectUri = encodeURIComponent(cfg.gusto_redirect_uri);
+        window.location.href = 'https://app.gusto.com/oauth/authorize?client_id=' + cfg.gusto_client_id + '&redirect_uri=' + redirectUri + '&response_type=code&state=' + state;
+      } catch(e) {
+        toast('Failed to start Gusto connection: ' + e.message);
+      }
+    }
+
+    async function runPayrollScan() {
+      const btn = qs('#payroll-actions button');
+      if (btn) { btn.disabled = true; btn.textContent = 'Scanning...'; }
+      qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Running payroll verification...</div>';
+
+      try {
+        const res = await fetch('/api/companies/' + currentRealm + '/scan/payroll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        const data = await res.json();
+
+        if (data.error && data.connected === false) {
+          // Gusto token expired or disconnected
+          const company = companies.find(c => c.realm_id === currentRealm);
+          if (company) company.gusto_connected = false;
+          initPayrollSection();
+          toast('Gusto connection lost — please reconnect');
+          return;
+        }
+
+        if (data.error) throw new Error(data.error);
+        renderPayrollResults(data);
+        toast('Payroll check complete — ' + data.summary.mismatchCount + ' mismatch(es)');
+      } catch(e) {
+        toast('Payroll check failed: ' + e.message);
+        qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: ' + esc(e.message) + '</div>';
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Run Payroll Check'; }
+      }
+    }
+
+    function renderPayrollResults(data) {
+      // Stats
+      qs('#payroll-stats').style.display = '';
+      qs('#pay-count').textContent = data.summary.payrollCount;
+      qs('#pay-gross').textContent = '$' + Number(data.summary.gustoTotal || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+      const mc = data.summary.mismatchCount || 0;
+      qs('#pay-mismatches').textContent = mc;
+      qs('#pay-mismatches').style.color = mc > 0 ? 'var(--red)' : 'var(--green)';
+      qs('#pay-period').textContent = 'Period: ' + (data.period || '');
+
+      let html = '';
+
+      // Payrolls table
+      if (data.payrolls && data.payrolls.length > 0) {
+        html += '<h3 style="font-size:0.88rem;margin:0 0 0.5rem;">Payroll Runs</h3>';
+        html += '<div class="table-wrap"><table><thead><tr><th>Check Date</th><th class="amount">Gross Pay</th><th class="amount">Net Pay</th><th class="amount">Taxes</th><th>Employees</th><th>QBO Status</th></tr></thead><tbody>';
+
+        for (const p of data.payrolls) {
+          const mismatch = (data.mismatches || []).find(m => m.gustoDate === p.checkDate);
+          const rowStyle = mismatch ? ' style="background:rgba(245,101,101,0.06);"' : '';
+          const statusBadge = mismatch
+            ? '<span class="badge badge-flag">' + esc(mismatch.type === 'missing_je' ? 'Missing JE' : 'Amount Mismatch') + '</span>'
+            : '<span class="badge badge-ok">Matched</span>';
+
+          html += '<tr' + rowStyle + '>'
+            + '<td style="font-weight:600;">' + esc(p.checkDate) + '</td>'
+            + '<td class="amount">$' + Number(p.grossPay || 0).toLocaleString(undefined, {minimumFractionDigits:2}) + '</td>'
+            + '<td class="amount">$' + Number(p.netPay || 0).toLocaleString(undefined, {minimumFractionDigits:2}) + '</td>'
+            + '<td class="amount">$' + Number(p.taxes || 0).toLocaleString(undefined, {minimumFractionDigits:2}) + '</td>'
+            + '<td>' + (p.employeeCount || 0) + '</td>'
+            + '<td>' + statusBadge + '</td>'
+            + '</tr>';
+        }
+        html += '</tbody></table></div>';
+      }
+
+      // Mismatches detail
+      if (data.mismatches && data.mismatches.length > 0) {
+        html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;color:var(--red);">Mismatches</h3>';
+        html += '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th class="amount">Gusto Amount</th><th class="amount">QBO Amount</th><th class="amount">Difference</th><th>Details</th></tr></thead><tbody>';
+        for (const m of data.mismatches) {
+          html += '<tr style="background:rgba(245,101,101,0.06);">'
+            + '<td style="font-weight:600;">' + esc(m.gustoDate) + '</td>'
+            + '<td><span class="badge badge-flag">' + esc(m.type === 'missing_je' ? 'Missing JE' : 'Amount Mismatch') + '</span></td>'
+            + '<td class="amount">$' + Number(m.gustoGross || 0).toLocaleString(undefined, {minimumFractionDigits:2}) + '</td>'
+            + '<td class="amount">' + (m.qboAmount !== undefined ? '$' + Number(m.qboAmount || 0).toLocaleString(undefined, {minimumFractionDigits:2}) : '—') + '</td>'
+            + '<td class="amount">' + (m.diff !== undefined ? '$' + Number(m.diff || 0).toLocaleString(undefined, {minimumFractionDigits:2}) : '—') + '</td>'
+            + '<td style="color:var(--muted);font-size:0.78rem;">' + esc(m.message) + '</td>'
+            + '</tr>';
+        }
+        html += '</tbody></table></div>';
+      }
+
+      if (!data.payrolls || data.payrolls.length === 0) {
+        html = '<div style="text-align:center;padding:2rem;color:var(--muted);">No processed payrolls found for this period.</div>';
+      }
+
+      qs('#payroll-results').innerHTML = html;
+    }
+
+    async function loadLatestPayroll() {
+      if (!currentRealm) return;
+      try {
+        const resp = await fetch('/api/companies/' + currentRealm + '/scans?type=payroll');
+        if (!resp.ok) return;
+        const scan = await resp.json();
+        if (!scan || !scan.result_data) {
+          qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No payroll scans yet. Click "Run Payroll Check" to start.</div>';
+          return;
+        }
+        const data = typeof scan.result_data === 'string' ? JSON.parse(scan.result_data) : scan.result_data;
+        if (data.error && data.connected === false) {
+          qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No payroll scans yet. Click "Run Payroll Check" to start.</div>';
+          return;
+        }
+        renderPayrollResults(data);
+      } catch(e) {
+        qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No payroll scans yet. Click "Run Payroll Check" to start.</div>';
+      }
     }
 
     // --- Helpers ---

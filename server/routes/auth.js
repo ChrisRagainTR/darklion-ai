@@ -166,7 +166,135 @@ async function runInitialScans(realmId) {
   }
 }
 
+// --- Gusto OAuth ---
+
+// Exchange Gusto authorization code for tokens
+router.get('/gusto/callback', async (req, res) => {
+  const { code, realmId } = req.query;
+
+  if (!code || !realmId) {
+    return res.status(400).json({ error: 'Missing code or realmId' });
+  }
+
+  const clientId = process.env.GUSTO_CLIENT_ID;
+  const clientSecret = process.env.GUSTO_CLIENT_SECRET;
+  const redirectUri = process.env.GUSTO_REDIRECT_URI;
+
+  try {
+    // Exchange code for tokens
+    const tokenRes = await fetch('https://api.gusto.com/oauth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        code,
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      const errBody = await tokenRes.text();
+      console.error('Gusto token exchange failed:', errBody);
+      return res.status(502).json({ error: 'Gusto token exchange failed' });
+    }
+
+    const tokens = await tokenRes.json();
+    const expiresAt = Date.now() + (tokens.expires_in || 7200) * 1000;
+
+    // Fetch Gusto company ID from /v1/me
+    let gustoCompanyId = '';
+    try {
+      const meRes = await fetch('https://api.gusto.com/v1/me', {
+        headers: { 'Authorization': `Bearer ${tokens.access_token}`, 'Accept': 'application/json' },
+      });
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        // The /v1/me endpoint returns roles with company associations
+        const companies = meData.roles?.payroll_admin?.companies || [];
+        if (companies.length > 0) {
+          gustoCompanyId = companies[0].uuid || companies[0].id || '';
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch Gusto company ID:', e.message);
+    }
+
+    // Update the company record with Gusto tokens
+    await pool.query(`
+      UPDATE companies SET
+        gusto_access_token = $1,
+        gusto_refresh_token = $2,
+        gusto_token_expires_at = $3,
+        gusto_company_id = $4
+      WHERE realm_id = $5
+    `, [tokens.access_token, tokens.refresh_token, expiresAt, gustoCompanyId, realmId]);
+
+    res.json({ ok: true, gusto_company_id: gustoCompanyId });
+  } catch (err) {
+    console.error('Gusto OAuth callback error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Refresh Gusto tokens
+async function refreshGustoTokens(realmId) {
+  const { rows } = await pool.query(
+    'SELECT gusto_refresh_token FROM companies WHERE realm_id = $1', [realmId]
+  );
+  const company = rows[0];
+  if (!company?.gusto_refresh_token) throw new Error(`Gusto not connected for ${realmId}`);
+
+  const tokenRes = await fetch('https://api.gusto.com/oauth/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+    },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: process.env.GUSTO_CLIENT_ID,
+      client_secret: process.env.GUSTO_CLIENT_SECRET,
+      refresh_token: company.gusto_refresh_token,
+    }),
+  });
+
+  if (!tokenRes.ok) throw new Error('Gusto token refresh failed');
+
+  const tokens = await tokenRes.json();
+  const expiresAt = Date.now() + (tokens.expires_in || 7200) * 1000;
+
+  await pool.query(
+    'UPDATE companies SET gusto_access_token = $1, gusto_refresh_token = $2, gusto_token_expires_at = $3 WHERE realm_id = $4',
+    [tokens.access_token, tokens.refresh_token, expiresAt, realmId]
+  );
+
+  return tokens.access_token;
+}
+
+// Get valid Gusto access token, refreshing if needed
+async function getGustoAccessToken(realmId) {
+  const { rows } = await pool.query(
+    'SELECT gusto_access_token, gusto_token_expires_at, gusto_company_id FROM companies WHERE realm_id = $1',
+    [realmId]
+  );
+  const company = rows[0];
+  if (!company?.gusto_access_token) throw new Error(`Gusto not connected for ${realmId}`);
+
+  if (Date.now() > Number(company.gusto_token_expires_at) - 300000) {
+    return refreshGustoTokens(realmId);
+  }
+
+  return company.gusto_access_token;
+}
+
 router.refreshTokens = refreshTokens;
 router.getAccessToken = getAccessToken;
+router.refreshGustoTokens = refreshGustoTokens;
+router.getGustoAccessToken = getGustoAccessToken;
 
 module.exports = router;

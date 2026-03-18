@@ -21,9 +21,13 @@ async function verifyPayroll(realmId, options = {}) {
     return { error: 'Gusto not connected', connected: false };
   }
 
+  // Get a valid token (auto-refreshes if needed)
+  const { getGustoAccessToken } = require('../routes/auth');
+  const accessToken = await getGustoAccessToken(realmId);
+
   // 1. Fetch payrolls from Gusto
   const gustoPayrolls = await fetchGustoPayrolls(
-    company.gusto_access_token,
+    accessToken,
     company.gusto_company_id,
     startDate,
     endDate
