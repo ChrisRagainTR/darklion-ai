@@ -206,37 +206,24 @@ router.get('/gusto/callback', async (req, res) => {
     const tokens = await tokenRes.json();
     const expiresAt = Date.now() + (tokens.expires_in || 7200) * 1000;
 
-    // Fetch Gusto company ID from /v1/me
+    // Fetch Gusto company ID from /v1/companies
     let gustoCompanyId = '';
     try {
-      const meRes = await fetch(`${process.env.GUSTO_API_URL || 'https://api.gusto-demo.com'}/v1/me`, {
+      const compRes = await fetch(`${process.env.GUSTO_API_URL || 'https://api.gusto-demo.com'}/v1/companies`, {
         headers: { 'Authorization': `Bearer ${tokens.access_token}`, 'Accept': 'application/json' },
       });
-      if (meRes.ok) {
-        const meData = await meRes.json();
-        console.log('Gusto /v1/me response:', JSON.stringify(meData).substring(0, 500));
-        // Try multiple paths to find company ID
-        const payrollCompanies = meData.roles?.payroll_admin?.companies || [];
-        if (payrollCompanies.length > 0) {
-          gustoCompanyId = payrollCompanies[0].uuid || payrollCompanies[0].id || '';
-        }
-        // Fallback: check other role types
-        if (!gustoCompanyId) {
-          for (const role of Object.values(meData.roles || {})) {
-            const comps = Array.isArray(role) ? role : (role?.companies || []);
-            if (comps.length > 0) {
-              gustoCompanyId = comps[0].uuid || comps[0].id || '';
-              if (gustoCompanyId) break;
-            }
-          }
+      if (compRes.ok) {
+        const compData = await compRes.json();
+        const comps = Array.isArray(compData) ? compData : [];
+        if (comps.length > 0) {
+          gustoCompanyId = comps[0].uuid || '';
         }
       } else {
-        console.error('Gusto /v1/me failed:', meRes.status, await meRes.text());
+        console.error('Gusto /v1/companies failed:', compRes.status, await compRes.text());
       }
     } catch (e) {
       console.error('Failed to fetch Gusto company ID:', e.message);
     }
-    console.log('Gusto company ID resolved:', gustoCompanyId);
 
     // Update the company record with Gusto tokens
     await pool.query(`

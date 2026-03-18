@@ -30,18 +30,14 @@ async function verifyPayroll(realmId, options = {}) {
   if (!gustoCompanyId) {
     try {
       const baseUrl = process.env.GUSTO_API_URL || 'https://api.gusto-demo.com';
-      const meRes = await fetch(`${baseUrl}/v1/me`, {
+      const compRes = await fetch(`${baseUrl}/v1/companies`, {
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
       });
-      if (meRes.ok) {
-        const meData = await meRes.json();
-        // Try all role types to find a company
-        for (const [, role] of Object.entries(meData.roles || {})) {
-          const comps = Array.isArray(role) ? role : (role?.companies || []);
-          if (comps.length > 0) {
-            gustoCompanyId = comps[0].uuid || comps[0].id || '';
-            if (gustoCompanyId) break;
-          }
+      if (compRes.ok) {
+        const compData = await compRes.json();
+        const comps = Array.isArray(compData) ? compData : [];
+        if (comps.length > 0) {
+          gustoCompanyId = comps[0].uuid || '';
         }
         if (gustoCompanyId) {
           await pool.query('UPDATE companies SET gusto_company_id = $1 WHERE realm_id = $2', [gustoCompanyId, realmId]);
