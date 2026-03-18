@@ -98,51 +98,6 @@ router.post('/companies/:realmId/scan/payroll', async (req, res) => {
   }
 });
 
-// --- Gusto debug (temporary) ---
-router.get('/companies/:realmId/gusto/debug', async (req, res) => {
-  try {
-    const { getGustoAccessToken } = require('./auth');
-    const accessToken = await getGustoAccessToken(req.params.realmId);
-    const baseUrl = process.env.GUSTO_API_URL || 'https://api.gusto-demo.com';
-    const headers = {
-      'Authorization': `Bearer ${accessToken}`,
-      'Accept': 'application/json',
-      'X-Gusto-API-Version': '2025-11-15',
-    };
-
-    const { rows: [comp] } = await pool.query('SELECT gusto_company_id FROM companies WHERE realm_id = $1', [req.params.realmId]);
-    const companyId = comp?.gusto_company_id;
-
-    // List payrolls
-    const listRes = await fetch(`${baseUrl}/v1/companies/${companyId}/payrolls?processed=true`, { headers });
-    const list = listRes.ok ? await listRes.json() : { status: listRes.status, body: await listRes.text() };
-
-    // Get first payroll detail
-    let detail = null;
-    const firstUuid = Array.isArray(list) && list[0] ? (list[0].payroll_uuid || list[0].uuid) : null;
-    if (firstUuid) {
-      const detailRes = await fetch(`${baseUrl}/v1/companies/${companyId}/payrolls/${firstUuid}`, { headers });
-      detail = detailRes.ok ? await detailRes.json() : { status: detailRes.status, body: await detailRes.text() };
-    }
-
-    // Try GL report
-    let glReport = null;
-    if (firstUuid) {
-      const glRes = await fetch(`${baseUrl}/payrolls/${firstUuid}/reports/general_ledger`, { method: 'POST', headers });
-      glReport = glRes.ok ? await glRes.json() : { status: glRes.status, body: await glRes.text() };
-    }
-
-    res.json({
-      gusto_company_id: companyId,
-      payroll_count: Array.isArray(list) ? list.length : 0,
-      first_payroll_detail: detail,
-      gl_report: glReport,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // --- Liability Account Health Check ---
 router.post('/companies/:realmId/scan/liability', async (req, res) => {
   try {
