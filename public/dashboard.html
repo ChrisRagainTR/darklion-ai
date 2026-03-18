@@ -1237,62 +1237,106 @@
       }
     }
 
+    function fmtPay(n) { return '$' + Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
     function renderPayrollResults(data) {
+      const s = data.summary || {};
       // Stats
       qs('#payroll-stats').style.display = '';
-      qs('#pay-count').textContent = data.summary.payrollCount;
-      qs('#pay-gross').textContent = '$' + Number(data.summary.gustoTotal || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
-      const mc = data.summary.mismatchCount || 0;
+      qs('#pay-count').textContent = s.payrollCount || 0;
+      qs('#pay-gross').textContent = fmtPay(s.totalGrossPay);
+      const mc = s.mismatchCount || 0;
       qs('#pay-mismatches').textContent = mc;
       qs('#pay-mismatches').style.color = mc > 0 ? 'var(--red)' : 'var(--green)';
       qs('#pay-period').textContent = 'Period: ' + (data.period || '');
 
       let html = '';
 
-      // Payrolls table
-      if (data.payrolls && data.payrolls.length > 0) {
-        html += '<h3 style="font-size:0.88rem;margin:0 0 0.5rem;">Payroll Runs</h3>';
-        html += '<div class="table-wrap"><table><thead><tr><th>Check Date</th><th class="amount">Gross Pay</th><th class="amount">Net Pay</th><th class="amount">Taxes</th><th>Employees</th><th>QBO Status</th></tr></thead><tbody>';
-
-        for (const p of data.payrolls) {
-          const mismatch = (data.mismatches || []).find(m => m.gustoDate === p.checkDate);
-          const rowStyle = mismatch ? ' style="background:rgba(245,101,101,0.06);"' : '';
-          const statusBadge = mismatch
-            ? '<span class="badge badge-flag">' + esc(mismatch.type === 'missing_je' ? 'Missing JE' : 'Amount Mismatch') + '</span>'
-            : '<span class="badge badge-ok">Matched</span>';
-
-          html += '<tr' + rowStyle + '>'
-            + '<td style="font-weight:600;">' + esc(p.checkDate) + '</td>'
-            + '<td class="amount">$' + Number(p.grossPay || 0).toLocaleString(undefined, {minimumFractionDigits:2}) + '</td>'
-            + '<td class="amount">$' + Number(p.netPay || 0).toLocaleString(undefined, {minimumFractionDigits:2}) + '</td>'
-            + '<td class="amount">$' + Number(p.taxes || 0).toLocaleString(undefined, {minimumFractionDigits:2}) + '</td>'
-            + '<td>' + (p.employeeCount || 0) + '</td>'
-            + '<td>' + statusBadge + '</td>'
-            + '</tr>';
-        }
-        html += '</tbody></table></div>';
-      }
-
-      // Mismatches detail
-      if (data.mismatches && data.mismatches.length > 0) {
-        html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;color:var(--red);">Mismatches</h3>';
-        html += '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th class="amount">Gusto Amount</th><th class="amount">QBO Amount</th><th class="amount">Difference</th><th>Details</th></tr></thead><tbody>';
-        for (const m of data.mismatches) {
-          html += '<tr style="background:rgba(245,101,101,0.06);">'
-            + '<td style="font-weight:600;">' + esc(m.gustoDate) + '</td>'
-            + '<td><span class="badge badge-flag">' + esc(m.type === 'missing_je' ? 'Missing JE' : 'Amount Mismatch') + '</span></td>'
-            + '<td class="amount">$' + Number(m.gustoGross || 0).toLocaleString(undefined, {minimumFractionDigits:2}) + '</td>'
-            + '<td class="amount">' + (m.qboAmount !== undefined ? '$' + Number(m.qboAmount || 0).toLocaleString(undefined, {minimumFractionDigits:2}) : '—') + '</td>'
-            + '<td class="amount">' + (m.diff !== undefined ? '$' + Number(m.diff || 0).toLocaleString(undefined, {minimumFractionDigits:2}) : '—') + '</td>'
-            + '<td style="color:var(--muted);font-size:0.78rem;">' + esc(m.message) + '</td>'
-            + '</tr>';
-        }
-        html += '</tbody></table></div>';
-      }
-
       if (!data.payrolls || data.payrolls.length === 0) {
-        html = '<div style="text-align:center;padding:2rem;color:var(--muted);">No processed payrolls found for this period.</div>';
+        qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No processed payrolls found for this period.</div>';
+        return;
       }
+
+      // === Gusto vs QBO Comparison ===
+      html += '<h3 style="font-size:0.88rem;margin:0 0 0.5rem;">Gusto vs QBO Comparison</h3>';
+      html += '<div class="table-wrap"><table><thead><tr><th>Category</th><th class="amount">Gusto</th><th class="amount">QBO P&L</th><th class="amount">Difference</th><th>Status</th></tr></thead><tbody>';
+
+      const qbo = data.qboComparison || {};
+      const comparisons = [
+        { label: 'Salaries & Wages', gusto: s.totalGrossPay, qbo: (qbo.salaries||0) + (qbo.officerComp||0) },
+        { label: 'Employer Payroll Taxes', gusto: s.totalEmployerTaxes, qbo: qbo.payrollTax||0 },
+        { label: 'Payroll Processing Fees', gusto: null, qbo: qbo.payrollFees||0 },
+      ];
+      if (qbo.salaries !== undefined) {
+        // Show salaries and officer comp separately if QBO has data
+        comparisons.splice(0, 1,
+          { label: 'Salaries (Non-Officer)', gusto: null, qbo: qbo.salaries||0 },
+          { label: 'Officer Compensation', gusto: null, qbo: qbo.officerComp||0 },
+          { label: 'Total Wages (Gusto Gross)', gusto: s.totalGrossPay, qbo: (qbo.salaries||0)+(qbo.officerComp||0) },
+        );
+      }
+      for (const c of comparisons) {
+        const diff = (c.gusto !== null && c.qbo !== null) ? c.gusto - c.qbo : null;
+        const ok = diff === null || Math.abs(diff) <= 1;
+        const rowStyle = !ok ? ' style="background:rgba(245,101,101,0.06);"' : '';
+        html += '<tr'+rowStyle+'>'
+          + '<td style="font-weight:600;">'+esc(c.label)+'</td>'
+          + '<td class="amount">'+(c.gusto !== null ? fmtPay(c.gusto) : '<span style="color:var(--muted);">—</span>')+'</td>'
+          + '<td class="amount">'+(c.qbo !== null ? fmtPay(c.qbo) : '<span style="color:var(--muted);">N/A</span>')+'</td>'
+          + '<td class="amount">'+(diff !== null ? fmtPay(diff) : '—')+'</td>'
+          + '<td>'+(ok ? '<span class="badge badge-ok">OK</span>' : '<span class="badge badge-flag">Mismatch</span>')+'</td>'
+          + '</tr>';
+      }
+      html += '</tbody></table></div>';
+
+      // === Payroll Summary Totals ===
+      html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Gusto Period Totals</h3>';
+      html += '<div class="table-wrap"><table><thead><tr><th>Metric</th><th class="amount">Amount</th></tr></thead><tbody>';
+      html += '<tr><td>Gross Pay</td><td class="amount" style="font-weight:600;">'+fmtPay(s.totalGrossPay)+'</td></tr>';
+      html += '<tr><td>Employer Taxes</td><td class="amount">'+fmtPay(s.totalEmployerTaxes)+'</td></tr>';
+      html += '<tr><td>Employee Taxes</td><td class="amount">'+fmtPay(s.totalEmployeeTaxes)+'</td></tr>';
+      html += '<tr><td>Benefits</td><td class="amount">'+fmtPay(s.totalBenefits)+'</td></tr>';
+      html += '<tr><td>Net Pay</td><td class="amount" style="font-weight:600;">'+fmtPay(s.totalNetPay)+'</td></tr>';
+      html += '<tr><td>Employees</td><td class="amount">'+s.employeeCount+'</td></tr>';
+      html += '</tbody></table></div>';
+
+      // === Payroll Runs ===
+      html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Payroll Runs</h3>';
+      html += '<div class="table-wrap"><table><thead><tr><th>Check Date</th><th>Pay Period</th><th class="amount">Gross Pay</th><th class="amount">Employer Taxes</th><th class="amount">Net Pay</th><th>Employees</th></tr></thead><tbody>';
+      for (const p of data.payrolls) {
+        html += '<tr>'
+          + '<td style="font-weight:600;">'+esc(p.checkDate)+'</td>'
+          + '<td style="color:var(--muted);font-size:0.78rem;">'+esc(p.payPeriodStart)+' — '+esc(p.payPeriodEnd)+'</td>'
+          + '<td class="amount">'+fmtPay(p.grossPay)+'</td>'
+          + '<td class="amount">'+fmtPay(p.employerTaxes)+'</td>'
+          + '<td class="amount">'+fmtPay(p.netPay)+'</td>'
+          + '<td>'+(p.employeeCount||0)+'</td>'
+          + '</tr>';
+      }
+      html += '</tbody></table></div>';
+
+      // === Wages by Employee ===
+      if (data.employees && data.employees.length > 0) {
+        html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Wages by Employee</h3>';
+        html += '<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Status</th><th class="amount">Hours</th><th class="amount">Gross Pay</th><th class="amount">Net Pay</th></tr></thead><tbody>';
+        for (const e of data.employees) {
+          html += '<tr>'
+            + '<td style="font-weight:600;">'+esc(e.name)+'</td>'
+            + '<td style="font-size:0.78rem;color:var(--muted);">'+esc(e.flsaStatus||'')+'</td>'
+            + '<td class="amount">'+Number(e.hours||0).toFixed(1)+'</td>'
+            + '<td class="amount">'+fmtPay(e.grossPay)+'</td>'
+            + '<td class="amount">'+fmtPay(e.netPay)+'</td>'
+            + '</tr>';
+        }
+        html += '</tbody></table></div>';
+      }
+
+      // === W-2 / Gusto Portal Link ===
+      const portalUrl = data.gustoPortalUrl || 'https://app.gusto.com';
+      html += '<div style="margin-top:1.5rem;padding:1.2rem;background:var(--card);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:space-between;">';
+      html += '<div><span style="font-weight:600;">W-2s & Tax Documents</span><br><span style="font-size:0.78rem;color:var(--muted);">Access W-2s, 1099s, and tax filings in the Gusto portal</span></div>';
+      html += '<a href="'+portalUrl+'" target="_blank" class="btn btn-gold" style="white-space:nowrap;">Open Gusto Portal</a>';
+      html += '</div>';
 
       qs('#payroll-results').innerHTML = html;
     }

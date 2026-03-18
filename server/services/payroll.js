@@ -1,8 +1,13 @@
 const { pool } = require('../db');
 const { qbFetch } = require('./quickbooks');
 
-// Verify Gusto payroll against QBO journal entries
-// Requires GUSTO_CLIENT_ID, GUSTO_CLIENT_SECRET, and a stored Gusto access token
+const GUSTO_HEADERS = (token) => ({
+  'Authorization': `Bearer ${token}`,
+  'Accept': 'application/json',
+  'X-Gusto-API-Version': '2025-11-15',
+});
+
+// Verify Gusto payroll against QBO P&L
 async function verifyPayroll(realmId, options = {}) {
   const now = new Date();
   const year = options.year || now.getFullYear();
@@ -11,7 +16,7 @@ async function verifyPayroll(realmId, options = {}) {
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
   const endDate = lastDay(year, month);
 
-  // Check if Gusto is connected for this company
+  // Check if Gusto is connected
   const { rows: [company] } = await pool.query(
     'SELECT gusto_access_token, gusto_company_id FROM companies WHERE realm_id = $1',
     [realmId]
@@ -21,76 +26,88 @@ async function verifyPayroll(realmId, options = {}) {
     return { error: 'Gusto not connected', connected: false };
   }
 
-  // Get a valid token (auto-refreshes if needed)
   const { getGustoAccessToken } = require('../routes/auth');
   const accessToken = await getGustoAccessToken(realmId);
 
-  // If we don't have a company ID yet, try to fetch it
+  // Resolve company ID if missing
   let gustoCompanyId = company.gusto_company_id;
   if (!gustoCompanyId) {
-    try {
-      const baseUrl = process.env.GUSTO_API_URL || 'https://api.gusto-demo.com';
-      const compRes = await fetch(`${baseUrl}/v1/companies`, {
-        headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
-      });
-      if (compRes.ok) {
-        const compData = await compRes.json();
-        const comps = Array.isArray(compData) ? compData : [];
-        if (comps.length > 0) {
-          gustoCompanyId = comps[0].uuid || '';
-        }
-        if (gustoCompanyId) {
-          await pool.query('UPDATE companies SET gusto_company_id = $1 WHERE realm_id = $2', [gustoCompanyId, realmId]);
-        }
-      }
-    } catch (e) {
-      console.error('Failed to fetch Gusto company ID:', e.message);
-    }
+    gustoCompanyId = await resolveGustoCompanyId(accessToken, realmId);
   }
-
   if (!gustoCompanyId) {
     return { error: 'Could not determine Gusto company ID', connected: true };
   }
 
-  // 1. Fetch payrolls from Gusto
-  const gustoPayrolls = await fetchGustoPayrolls(
-    accessToken,
-    gustoCompanyId,
-    startDate,
-    endDate
-  );
+  // 1. Fetch payroll details from Gusto
+  const payrolls = await fetchGustoPayrolls(accessToken, gustoCompanyId, startDate, endDate);
 
-  // 2. Fetch QBO General Ledger for payroll accounts
-  const glData = await qbFetch(realmId,
-    `/reports/GeneralLedger?start_date=${startDate}&end_date=${endDate}&account_type=Expense&columns=tx_date,txn_type,name,memo,subt_nat_amount&minorversion=75`
-  ).catch(() => null);
+  // 2. Aggregate totals across all payrolls in the period
+  let totalGrossPay = 0;
+  let totalEmployerTaxes = 0;
+  let totalEmployeeTaxes = 0;
+  let totalNetPay = 0;
+  let totalBenefits = 0;
+  const employeeMap = {};
 
-  // 3. Compare totals
+  for (const p of payrolls) {
+    totalGrossPay += p.totals.grossPay;
+    totalEmployerTaxes += p.totals.employerTaxes;
+    totalEmployeeTaxes += p.totals.employeeTaxes;
+    totalNetPay += p.totals.netPay;
+    totalBenefits += p.totals.benefits;
+
+    // Aggregate by employee
+    for (const emp of p.employees) {
+      const key = emp.employeeUuid;
+      if (!employeeMap[key]) {
+        employeeMap[key] = {
+          name: `${emp.firstName} ${emp.lastName}`,
+          employeeUuid: emp.employeeUuid,
+          grossPay: 0,
+          netPay: 0,
+          hours: 0,
+          flsaStatus: emp.flsaStatus,
+        };
+      }
+      employeeMap[key].grossPay += emp.grossPay;
+      employeeMap[key].netPay += emp.netPay;
+      employeeMap[key].hours += emp.hours;
+    }
+  }
+
+  const employees = Object.values(employeeMap).sort((a, b) => b.grossPay - a.grossPay);
+
+  // 3. Fetch QBO P&L for comparison
+  let qboPnl = null;
+  let qboComparison = null;
+  try {
+    qboPnl = await qbFetch(realmId,
+      `/reports/ProfitAndLoss?start_date=${startDate}&end_date=${endDate}&minorversion=75`
+    );
+    qboComparison = extractQboPayrollTotals(qboPnl);
+  } catch (e) {
+    console.error('QBO P&L fetch failed:', e.message);
+  }
+
+  // 4. Compare Gusto vs QBO
   const mismatches = [];
-  let gustoTotal = 0;
-  let qboTotal = 0;
-
-  for (const payroll of gustoPayrolls) {
-    gustoTotal += payroll.totals.grossPay || 0;
-
-    // Look for matching QBO journal entry by date
-    const qboMatch = findQboPayrollEntry(glData, payroll.checkDate, payroll.totals.grossPay);
-    if (!qboMatch.found) {
+  if (qboComparison) {
+    const gustoWages = totalGrossPay;
+    const qboWages = qboComparison.salaries + qboComparison.officerComp;
+    if (Math.abs(gustoWages - qboWages) > 1) {
       mismatches.push({
-        type: 'missing_je',
-        gustoDate: payroll.checkDate,
-        gustoGross: payroll.totals.grossPay,
-        gustoNet: payroll.totals.netPay,
-        message: `No matching QBO journal entry for ${payroll.checkDate} payroll ($${payroll.totals.grossPay.toLocaleString()})`,
+        category: 'Wages (Salaries + Officer Comp)',
+        gusto: gustoWages,
+        qbo: qboWages,
+        diff: gustoWages - qboWages,
       });
-    } else if (Math.abs(qboMatch.amount - payroll.totals.grossPay) > 1) {
+    }
+    if (Math.abs(totalEmployerTaxes - qboComparison.payrollTax) > 1) {
       mismatches.push({
-        type: 'amount_mismatch',
-        gustoDate: payroll.checkDate,
-        gustoGross: payroll.totals.grossPay,
-        qboAmount: qboMatch.amount,
-        diff: qboMatch.amount - payroll.totals.grossPay,
-        message: `Amount mismatch for ${payroll.checkDate}: Gusto $${payroll.totals.grossPay.toLocaleString()} vs QBO $${qboMatch.amount.toLocaleString()}`,
+        category: 'Payroll Taxes',
+        gusto: totalEmployerTaxes,
+        qbo: qboComparison.payrollTax,
+        diff: totalEmployerTaxes - qboComparison.payrollTax,
       });
     }
   }
@@ -99,19 +116,30 @@ async function verifyPayroll(realmId, options = {}) {
     period: `${year}-${String(month).padStart(2, '0')}`,
     connected: true,
     summary: {
-      payrollCount: gustoPayrolls.length,
-      gustoTotal,
-      qboTotal,
+      payrollCount: payrolls.length,
+      totalGrossPay,
+      totalEmployerTaxes,
+      totalEmployeeTaxes,
+      totalNetPay,
+      totalBenefits,
+      employeeCount: employees.length,
       mismatchCount: mismatches.length,
     },
-    payrolls: gustoPayrolls.map(p => ({
+    payrolls: payrolls.map(p => ({
       checkDate: p.checkDate,
+      payPeriodStart: p.payPeriodStart,
+      payPeriodEnd: p.payPeriodEnd,
+      employeeCount: p.employees.length,
       grossPay: p.totals.grossPay,
+      employerTaxes: p.totals.employerTaxes,
+      employeeTaxes: p.totals.employeeTaxes,
       netPay: p.totals.netPay,
-      taxes: p.totals.taxes,
-      employeeCount: p.employeeCount,
+      benefits: p.totals.benefits,
     })),
+    employees,
+    qboComparison,
     mismatches,
+    gustoPortalUrl: 'https://app.gusto.com',
   };
 
   // Store scan result
@@ -123,101 +151,131 @@ async function verifyPayroll(realmId, options = {}) {
   return result;
 }
 
-// Fetch payrolls from Gusto API (list + individual detail for totals)
+// Fetch payroll list + detail from Gusto
 async function fetchGustoPayrolls(accessToken, companyId, startDate, endDate) {
   const baseUrl = process.env.GUSTO_API_URL || 'https://api.gusto-demo.com';
-  const listUrl = `${baseUrl}/v1/companies/${companyId}/payrolls?start_date=${startDate}&end_date=${endDate}&processed=true`;
+  const headers = GUSTO_HEADERS(accessToken);
 
-  const res = await fetch(listUrl, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Accept': 'application/json',
-    },
-  });
+  const listRes = await fetch(
+    `${baseUrl}/v1/companies/${companyId}/payrolls?start_date=${startDate}&end_date=${endDate}&processed=true`,
+    { headers }
+  );
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Gusto API ${res.status}: ${body}`);
+  if (!listRes.ok) {
+    const body = await listRes.text();
+    throw new Error(`Gusto API ${listRes.status}: ${body}`);
   }
 
-  const payrollList = await res.json();
-
-  // Fetch each payroll individually to get totals and employee data
+  const payrollList = await listRes.json();
   const payrolls = [];
+
   for (const p of payrollList) {
-    const detailUrl = `${baseUrl}/v1/companies/${companyId}/payrolls/${p.payroll_uuid || p.uuid}`;
+    const uuid = p.payroll_uuid || p.uuid;
     try {
-      const detailRes = await fetch(detailUrl, {
-        headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
-      });
-      if (detailRes.ok) {
-        const detail = await detailRes.json();
-        const toNum = (v) => {
-          if (typeof v === 'number') return v;
-          return (String(v || '0').replace(/,/g, '') * 1) || 0;
-        };
-        payrolls.push({
-          checkDate: detail.check_date || p.check_date,
-          payPeriodStart: detail.pay_period?.start_date || p.pay_period?.start_date,
-          payPeriodEnd: detail.pay_period?.end_date || p.pay_period?.end_date,
-          employeeCount: (detail.employee_compensations || []).length,
-          totals: {
-            grossPay: toNum(detail.totals?.gross_pay),
-            netPay: toNum(detail.totals?.net_pay),
-            taxes: toNum(detail.totals?.employer_taxes),
-            deductions: toNum(detail.totals?.employee_deductions),
-          },
-        });
-      } else {
-        // Fallback to list data if detail fails
-        payrolls.push({
-          checkDate: p.check_date,
-          payPeriodStart: p.pay_period?.start_date,
-          payPeriodEnd: p.pay_period?.end_date,
-          employeeCount: 0,
-          totals: { grossPay: 0, netPay: 0, taxes: 0, deductions: 0 },
-        });
+      const detailRes = await fetch(
+        `${baseUrl}/v1/companies/${companyId}/payrolls/${uuid}`,
+        { headers }
+      );
+      if (!detailRes.ok) {
+        console.error(`Gusto payroll detail ${uuid} failed:`, detailRes.status);
+        continue;
       }
-    } catch (e) {
-      console.error(`Failed to fetch payroll detail ${p.uuid}:`, e.message);
+
+      const d = await detailRes.json();
+      const toNum = (v) => parseFloat(String(v || '0').replace(/,/g, '')) || 0;
+
       payrolls.push({
-        checkDate: p.check_date,
-        payPeriodStart: p.pay_period?.start_date,
-        payPeriodEnd: p.pay_period?.end_date,
-        employeeCount: 0,
-        totals: { grossPay: 0, netPay: 0, taxes: 0, deductions: 0 },
+        checkDate: d.check_date,
+        payPeriodStart: d.pay_period?.start_date,
+        payPeriodEnd: d.pay_period?.end_date,
+        totals: {
+          grossPay: toNum(d.totals?.gross_pay),
+          netPay: toNum(d.totals?.net_pay),
+          employerTaxes: toNum(d.totals?.employer_taxes),
+          employeeTaxes: toNum(d.totals?.employee_taxes),
+          benefits: toNum(d.totals?.benefits),
+          companyDebit: toNum(d.totals?.company_debit),
+        },
+        employees: (d.employee_compensations || []).filter(e => !e.excluded).map(e => {
+          // Sum hours from hourly compensations
+          const hours = (e.hourly_compensations || []).reduce((sum, h) => sum + parseFloat(h.hours || 0), 0);
+          // Determine FLSA status from first hourly comp
+          const flsaStatus = e.hourly_compensations?.[0]?.flsa_status || '';
+          return {
+            employeeUuid: e.employee_uuid,
+            firstName: e.preferred_first_name || e.first_name,
+            lastName: e.last_name,
+            grossPay: toNum(e.gross_pay),
+            netPay: toNum(e.net_pay),
+            hours,
+            flsaStatus,
+          };
+        }),
       });
+    } catch (e) {
+      console.error(`Failed to fetch payroll detail ${uuid}:`, e.message);
     }
   }
 
   return payrolls;
 }
 
-// Find a matching payroll journal entry in QBO General Ledger data
-function findQboPayrollEntry(glData, date, expectedAmount) {
-  if (!glData?.Rows?.Row) return { found: false, amount: 0 };
+// Extract payroll-related totals from QBO P&L report
+function extractQboPayrollTotals(pnl) {
+  if (!pnl?.Rows?.Row) return null;
 
-  // Walk through GL rows looking for payroll-related entries near the date
-  let totalForDate = 0;
-  let found = false;
+  let salaries = 0;
+  let officerComp = 0;
+  let payrollTax = 0;
+  let payrollFees = 0;
 
   function walkRows(rows) {
     for (const row of rows) {
       if (row.Rows?.Row) walkRows(row.Rows.Row);
       if (row.ColData) {
-        const txDate = row.ColData[0]?.value || '';
-        const txType = row.ColData[1]?.value || '';
-        const amount = parseFloat(row.ColData[4]?.value || '0');
-        if (txDate === date && /payroll|salary|wage/i.test(txType + ' ' + (row.ColData[3]?.value || ''))) {
-          totalForDate += Math.abs(amount);
-          found = true;
+        const name = (row.ColData[0]?.value || '').toLowerCase();
+        const amount = parseFloat(row.ColData[1]?.value || '0');
+        if (/salaries|wages/i.test(name) && !/officer/i.test(name)) {
+          salaries += amount;
+        } else if (/officer.*comp|officer.*salary/i.test(name)) {
+          officerComp += amount;
+        } else if (/payroll.*tax/i.test(name)) {
+          payrollTax += amount;
+        } else if (/payroll.*fee|payroll.*process|gusto.*fee/i.test(name)) {
+          payrollFees += amount;
         }
+      }
+      // Also check Summary rows
+      if (row.Summary?.ColData) {
+        // Skip summary rows - we want line items only
       }
     }
   }
 
-  walkRows(glData.Rows.Row);
-  return { found, amount: totalForDate };
+  walkRows(pnl.Rows.Row);
+  return { salaries, officerComp, payrollTax, payrollFees };
+}
+
+// Resolve Gusto company ID from /v1/companies
+async function resolveGustoCompanyId(accessToken, realmId) {
+  const baseUrl = process.env.GUSTO_API_URL || 'https://api.gusto-demo.com';
+  try {
+    const res = await fetch(`${baseUrl}/v1/companies`, { headers: GUSTO_HEADERS(accessToken) });
+    if (res.ok) {
+      const data = await res.json();
+      const comps = Array.isArray(data) ? data : [];
+      if (comps.length > 0) {
+        const id = comps[0].uuid || '';
+        if (id) {
+          await pool.query('UPDATE companies SET gusto_company_id = $1 WHERE realm_id = $2', [id, realmId]);
+        }
+        return id;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to resolve Gusto company ID:', e.message);
+  }
+  return '';
 }
 
 function lastDay(year, month) {
