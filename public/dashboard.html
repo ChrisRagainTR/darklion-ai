@@ -97,7 +97,7 @@
     /* Table */
     .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
-    th { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); }
+    th { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--card); z-index: 10; }
     td { padding: 0.7rem 1rem; font-size: 0.85rem; border-bottom: 1px solid rgba(201,168,76,0.07); vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: rgba(201,168,76,0.03); }
@@ -127,7 +127,7 @@
     /* Report section within close package */
     .report-section { margin-top: 1.5rem; }
     .report-section h3 { font-size: 0.88rem; margin-bottom: 0.75rem; }
-    .report-section .table-wrap { margin-bottom: 1rem; overflow-x: auto; }
+    .report-section .table-wrap { margin-bottom: 1rem; overflow-x: initial; }
     .report-row-header td { font-weight: 700; background: rgba(201,168,76,0.05); }
     .report-row-total td { font-weight: 700; border-top: 2px solid var(--border); }
     td.amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 0.78rem; padding: 0.5rem 0.6rem; }
@@ -216,6 +216,9 @@
         <li><a href="#" data-section="payroll" onclick="showSection('payroll',this)"><span>Payroll Check</span></a></li>
       </ul>
     </nav>
+    <div style="margin-top:auto;padding:1rem;border-top:1px solid var(--border);">
+      <a href="#" onclick="logout()" style="display:block;text-align:center;color:var(--muted);font-size:0.82rem;text-decoration:none;">Logout</a>
+    </div>
   </aside>
 
   <!-- Main content -->
@@ -418,13 +421,30 @@
         <div class="container">
           <div class="page-header">
             <div><h1>Payroll Verification</h1><div class="subtitle">Gusto payroll cross-referenced against QBO journal entries</div></div>
+            <div id="payroll-actions"></div>
+          </div>
+          <div id="payroll-month-picker" style="display:none;margin-bottom:1rem;">
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;" id="payroll-months"></div>
+          </div>
+          <div id="payroll-stats" style="display:none;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;">
+              <div class="stat-card" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Payrolls</div>
+                <div id="pay-count" style="font-size:1.6rem;font-weight:800;color:var(--text);margin-top:0.3rem;">0</div>
+              </div>
+              <div class="stat-card" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Gross Pay Total</div>
+                <div id="pay-gross" style="font-size:1.6rem;font-weight:800;color:var(--gold);margin-top:0.3rem;">$0</div>
+              </div>
+              <div class="stat-card" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Mismatches</div>
+                <div id="pay-mismatches" style="font-size:1.6rem;font-weight:800;color:var(--green);margin-top:0.3rem;">0</div>
+              </div>
+            </div>
+            <div id="pay-period" style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;"></div>
           </div>
           <div id="payroll-results">
-            <div style="text-align:center;padding:3rem;color:var(--muted);">
-              <h2 style="font-size:1.1rem;color:var(--text);margin-bottom:0.75rem;">Gusto Integration Required</h2>
-              <p style="margin-bottom:1rem;">Connect your Gusto account to enable payroll verification.</p>
-              <p style="font-size:0.78rem;color:var(--muted);max-width:500px;margin:0 auto;">This feature pulls processed payroll data from Gusto (employee compensations, gross pay, taxes, deductions) and compares totals against the corresponding journal entries in QBO. Mismatches are flagged for supervisor review.</p>
-            </div>
+            <div style="text-align:center;padding:3rem;color:var(--muted);">Loading...</div>
           </div>
         </div>
       </div>
@@ -454,13 +474,27 @@
       const sel = qs('#company-select');
       sel.innerHTML = companies.map(c => '<option value="'+c.realm_id+'">'+(c.company_name||c.realm_id)+'</option>').join('');
       currentRealm = companies[0].realm_id;
-      sel.addEventListener('change', () => { currentRealm = sel.value; renderCompanyList(); loadAll(); });
+      sel.addEventListener('change', () => { selectCompany(sel.value); });
 
       populatePeriodSelectors();
       renderCompanyList();
       loadAll();
       loadLatestUncategorized();
       loadLatestClosePackage();
+
+      // Refresh companies when user returns to this tab (e.g. after Gusto OAuth)
+      document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible' && currentRealm) {
+          try {
+            const updated = await (await fetch('/api/companies')).json();
+            if (Array.isArray(updated)) {
+              companies = updated;
+              const activeSection = document.querySelector('.section-page.active');
+              if (activeSection && activeSection.id === 'sec-payroll') initPayrollSection();
+            }
+          } catch(e) {}
+        }
+      });
     }
 
     // --- Period picker state ---
@@ -623,6 +657,7 @@
       if (name === 'close-package') loadLatestClosePackage();
       if (name === 'variance') loadLatestVariance();
       if (name === 'liability') loadLatestLiability();
+      if (name === 'payroll') initPayrollSection();
     }
 
     // --- Overview ---
@@ -1072,6 +1107,16 @@
       // Re-render company list to update active state
       renderCompanyList();
       loadAll();
+      // Reload the currently active section so data refreshes for the new company
+      const activeSection = document.querySelector('.section-page.active');
+      if (activeSection) {
+        const secName = activeSection.id.replace('sec-', '');
+        if (secName === 'uncategorized') loadLatestUncategorized();
+        if (secName === 'close-package') loadLatestClosePackage();
+        if (secName === 'variance') loadLatestVariance();
+        if (secName === 'liability') loadLatestLiability();
+        if (secName === 'payroll') initPayrollSection();
+      }
       toast('Switched to ' + (companies.find(c=>c.realm_id===realmId)?.company_name || realmId));
     }
 
@@ -1125,9 +1170,247 @@
       return Math.floor(days / 30) + 'mo ago';
     }
 
+    // --- Payroll Verification ---
+    let payrollSelectedMonth = null; // e.g. {year: 2026, month: 3}
+
+    function initPayrollSection() {
+      if (!currentRealm) return;
+      const company = companies.find(c => c.realm_id === currentRealm);
+      const actionsEl = qs('#payroll-actions');
+
+      if (!company || !company.gusto_connected) {
+        actionsEl.innerHTML = '<button class="btn btn-gold" onclick="connectGusto()">Connect Gusto</button>';
+        qs('#payroll-stats').style.display = 'none';
+        qs('#payroll-month-picker').style.display = 'none';
+        qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">'
+          + '<h2 style="font-size:1.1rem;color:var(--text);margin-bottom:0.75rem;">Gusto Integration Required</h2>'
+          + '<p style="margin-bottom:1rem;">Connect your Gusto account to enable payroll verification.</p>'
+          + '<p style="font-size:0.78rem;color:var(--muted);max-width:500px;margin:0 auto;">This feature pulls processed payroll data from Gusto and compares totals against the corresponding journal entries in QBO. Mismatches are flagged for review.</p>'
+          + '</div>';
+      } else {
+        actionsEl.innerHTML = '<button class="btn btn-gold" onclick="runPayrollScan()">Run Payroll Check</button>';
+        buildPayrollMonthPicker();
+        qs('#payroll-month-picker').style.display = '';
+        // Auto-run for selected month
+        loadLatestPayroll(true);
+      }
+    }
+
+    function buildPayrollMonthPicker() {
+      const now = new Date();
+      const months = [];
+      for (let i = 0; i < 24; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
+      }
+      if (!payrollSelectedMonth) payrollSelectedMonth = months[0];
+
+      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      qs('#payroll-months').innerHTML = months.map(m => {
+        const active = payrollSelectedMonth.year === m.year && payrollSelectedMonth.month === m.month;
+        return '<button class="month-btn'+(active?' active':'')+'" style="padding:0.3rem 0.7rem;font-size:0.75rem;border:1px solid var(--border);border-radius:6px;background:'+(active?'var(--gold)':'var(--charcoal)')+';color:'+(active?'var(--navy)':'var(--text)')+';cursor:pointer;font-weight:'+(active?'700':'400')+';" onclick="selectPayrollMonth('+m.year+','+m.month+')">'+monthNames[m.month-1]+' '+m.year+'</button>';
+      }).join('');
+    }
+
+    function selectPayrollMonth(year, month) {
+      payrollSelectedMonth = { year, month };
+      buildPayrollMonthPicker();
+      runPayrollScan();
+    }
+
+    async function connectGusto() {
+      try {
+        const cfg = await (await fetch('/api/config')).json();
+        if (!cfg.gusto_client_id) {
+          toast('Gusto is not configured — contact your administrator');
+          return;
+        }
+        const state = currentRealm;
+        const redirectUri = encodeURIComponent(cfg.gusto_redirect_uri);
+        const gustoAppUrl = cfg.gusto_app_url || 'https://app.gusto-demo.com';
+        window.open(gustoAppUrl + '/oauth/authorize?client_id=' + cfg.gusto_client_id + '&redirect_uri=' + redirectUri + '&response_type=code&state=' + state, '_blank');
+      } catch(e) {
+        toast('Failed to start Gusto connection: ' + e.message);
+      }
+    }
+
+    async function runPayrollScan() {
+      const btn = qs('#payroll-actions button');
+      if (btn) { btn.disabled = true; btn.textContent = 'Scanning...'; }
+      qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Running payroll verification...</div>';
+
+      try {
+        const body = payrollSelectedMonth ? { year: payrollSelectedMonth.year, month: payrollSelectedMonth.month } : {};
+        const res = await fetch('/api/companies/' + currentRealm + '/scan/payroll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (data.error && data.connected === false) {
+          // Gusto token expired or disconnected
+          const company = companies.find(c => c.realm_id === currentRealm);
+          if (company) company.gusto_connected = false;
+          initPayrollSection();
+          toast('Gusto connection lost — please reconnect');
+          return;
+        }
+
+        if (data.error) throw new Error(data.error);
+        renderPayrollResults(data);
+        toast('Payroll check complete — ' + data.summary.mismatchCount + ' mismatch(es)');
+      } catch(e) {
+        toast('Payroll check failed: ' + e.message);
+        qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: ' + esc(e.message) + '</div>';
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Run Payroll Check'; }
+      }
+    }
+
+    function fmtPay(n) { return '$' + Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+    function renderPayrollResults(data) {
+      const s = data.summary || {};
+      // Stats
+      qs('#payroll-stats').style.display = '';
+      qs('#pay-count').textContent = s.payrollCount || 0;
+      qs('#pay-gross').textContent = fmtPay(s.totalGrossPay);
+      const mc = s.mismatchCount || 0;
+      qs('#pay-mismatches').textContent = mc;
+      qs('#pay-mismatches').style.color = mc > 0 ? 'var(--red)' : 'var(--green)';
+      qs('#pay-period').textContent = 'Period: ' + (data.period || '');
+
+      let html = '';
+
+      if (!data.payrolls || data.payrolls.length === 0) {
+        qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No processed payrolls found for this period.</div>';
+        return;
+      }
+
+      // === Gusto vs QBO Comparison ===
+      html += '<h3 style="font-size:0.88rem;margin:0 0 0.5rem;">Gusto vs QBO Comparison</h3>';
+      html += '<div class="table-wrap"><table><thead><tr><th>Category</th><th class="amount">Gusto</th><th class="amount">QBO P&L</th><th class="amount">Difference</th><th>Status</th></tr></thead><tbody>';
+
+      const qbo = data.qboComparison || {};
+      const comparisons = [
+        { label: 'Salaries & Wages', gusto: s.totalGrossPay, qbo: (qbo.salaries||0) + (qbo.officerComp||0) },
+        { label: 'Employer Payroll Taxes', gusto: s.totalEmployerTaxes, qbo: qbo.payrollTax||0 },
+        { label: 'Payroll Processing Fees', gusto: null, qbo: qbo.payrollFees||0 },
+      ];
+      if (qbo.salaries !== undefined) {
+        // Show salaries and officer comp separately if QBO has data
+        comparisons.splice(0, 1,
+          { label: 'Salaries (Non-Officer)', gusto: null, qbo: qbo.salaries||0 },
+          { label: 'Officer Compensation', gusto: null, qbo: qbo.officerComp||0 },
+          { label: 'Total Wages (Gusto Gross)', gusto: s.totalGrossPay, qbo: (qbo.salaries||0)+(qbo.officerComp||0) },
+        );
+      }
+      for (const c of comparisons) {
+        const diff = (c.gusto !== null && c.qbo !== null) ? c.gusto - c.qbo : null;
+        const ok = diff === null || Math.abs(diff) <= 1;
+        const rowStyle = !ok ? ' style="background:rgba(245,101,101,0.06);"' : '';
+        html += '<tr'+rowStyle+'>'
+          + '<td style="font-weight:600;">'+esc(c.label)+'</td>'
+          + '<td class="amount">'+(c.gusto !== null ? fmtPay(c.gusto) : '<span style="color:var(--muted);">—</span>')+'</td>'
+          + '<td class="amount">'+(c.qbo !== null ? fmtPay(c.qbo) : '<span style="color:var(--muted);">N/A</span>')+'</td>'
+          + '<td class="amount">'+(diff !== null ? fmtPay(diff) : '—')+'</td>'
+          + '<td>'+(ok ? '<span class="badge badge-ok">OK</span>' : '<span class="badge badge-flag">Mismatch</span>')+'</td>'
+          + '</tr>';
+      }
+      html += '</tbody></table></div>';
+
+      // === Payroll Summary Totals ===
+      html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Gusto Period Totals</h3>';
+      html += '<div class="table-wrap"><table><thead><tr><th>Metric</th><th class="amount">Amount</th></tr></thead><tbody>';
+      html += '<tr><td>Gross Pay</td><td class="amount" style="font-weight:600;">'+fmtPay(s.totalGrossPay)+'</td></tr>';
+      html += '<tr><td>Employer Taxes</td><td class="amount">'+fmtPay(s.totalEmployerTaxes)+'</td></tr>';
+      html += '<tr><td>Employee Taxes</td><td class="amount">'+fmtPay(s.totalEmployeeTaxes)+'</td></tr>';
+      html += '<tr><td>Benefits</td><td class="amount">'+fmtPay(s.totalBenefits)+'</td></tr>';
+      html += '<tr><td>Net Pay</td><td class="amount" style="font-weight:600;">'+fmtPay(s.totalNetPay)+'</td></tr>';
+      html += '<tr><td>Employees</td><td class="amount">'+s.employeeCount+'</td></tr>';
+      html += '</tbody></table></div>';
+
+      // === Payroll Runs ===
+      html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Payroll Runs</h3>';
+      html += '<div class="table-wrap"><table><thead><tr><th>Check Date</th><th>Pay Period</th><th class="amount">Gross Pay</th><th class="amount">Employer Taxes</th><th class="amount">Net Pay</th><th>Employees</th></tr></thead><tbody>';
+      for (const p of data.payrolls) {
+        html += '<tr>'
+          + '<td style="font-weight:600;">'+esc(p.checkDate)+'</td>'
+          + '<td style="color:var(--muted);font-size:0.78rem;">'+esc(p.payPeriodStart)+' — '+esc(p.payPeriodEnd)+'</td>'
+          + '<td class="amount">'+fmtPay(p.grossPay)+'</td>'
+          + '<td class="amount">'+fmtPay(p.employerTaxes)+'</td>'
+          + '<td class="amount">'+fmtPay(p.netPay)+'</td>'
+          + '<td>'+(p.employeeCount||0)+'</td>'
+          + '</tr>';
+      }
+      html += '</tbody></table></div>';
+
+      // === Wages by Employee ===
+      if (data.employees && data.employees.length > 0) {
+        html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Wages by Employee</h3>';
+        html += '<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Status</th><th class="amount">Hours</th><th class="amount">Gross Pay</th><th class="amount">Net Pay</th></tr></thead><tbody>';
+        for (const e of data.employees) {
+          html += '<tr>'
+            + '<td style="font-weight:600;">'+esc(e.name)+'</td>'
+            + '<td style="font-size:0.78rem;color:var(--muted);">'+esc(e.flsaStatus||'')+'</td>'
+            + '<td class="amount">'+Number(e.hours||0).toFixed(1)+'</td>'
+            + '<td class="amount">'+fmtPay(e.grossPay)+'</td>'
+            + '<td class="amount">'+fmtPay(e.netPay)+'</td>'
+            + '</tr>';
+        }
+        html += '</tbody></table></div>';
+      }
+
+      // === W-2 / Gusto Portal Link ===
+      const portalUrl = data.gustoPortalUrl || 'https://app.gusto.com';
+      html += '<div style="margin-top:1.5rem;padding:1.2rem;background:var(--card);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:space-between;">';
+      html += '<div><span style="font-weight:600;">W-2s & Tax Documents</span><br><span style="font-size:0.78rem;color:var(--muted);">Access W-2s, 1099s, and tax filings in the Gusto portal</span></div>';
+      html += '<a href="'+portalUrl+'" target="_blank" class="btn btn-gold" style="white-space:nowrap;">Open Gusto Portal</a>';
+      html += '</div>';
+
+      qs('#payroll-results').innerHTML = html;
+    }
+
+    async function loadLatestPayroll(autoRun) {
+      if (!currentRealm) return;
+      try {
+        const resp = await fetch('/api/companies/' + currentRealm + '/scans?type=payroll');
+        if (!resp.ok) return;
+        const scan = await resp.json();
+        if (!scan || !scan.result_data) {
+          if (autoRun) return runPayrollScan();
+          qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No payroll scans yet. Click "Run Payroll Check" to start.</div>';
+          return;
+        }
+        const data = typeof scan.result_data === 'string' ? JSON.parse(scan.result_data) : scan.result_data;
+        if (data.error && data.connected === false) {
+          if (autoRun) return runPayrollScan();
+          qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No payroll scans yet. Click "Run Payroll Check" to start.</div>';
+          return;
+        }
+        renderPayrollResults(data);
+      } catch(e) {
+        qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No payroll scans yet. Click "Run Payroll Check" to start.</div>';
+      }
+    }
+
     // --- Helpers ---
     function esc(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
     function toast(msg) { const el=qs('#toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),3000); }
+
+    function logout() {
+      // Clear Basic Auth by sending a request with bad credentials
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', '/dashboard', true);
+      xhr.setRequestHeader('Authorization', 'Basic ' + btoa('logout:logout'));
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          window.location.href = '/';
+        }
+      };
+      xhr.send();
+    }
 
     init();
   </script>

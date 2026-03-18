@@ -85,6 +85,7 @@ app.get('/', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
 app.get('/connect', (req, res) => res.sendFile(path.join(publicDir, 'connect.html')));
 app.get('/callback', (req, res) => res.sendFile(path.join(publicDir, 'callback.html')));
 app.get('/disconnect', (req, res) => res.sendFile(path.join(publicDir, 'disconnect.html')));
+app.get('/redirect', requireAuth, (req, res) => res.sendFile(path.join(publicDir, 'redirect.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(publicDir, 'privacy.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(publicDir, 'terms.html')));
 
@@ -97,6 +98,9 @@ app.get('/api/config', (req, res) => {
   res.json({
     qb_client_id: process.env.QB_CLIENT_ID || '',
     qb_redirect_uri: process.env.QB_REDIRECT_URI || `${req.protocol}://${req.hostname}/callback.html`,
+    gusto_client_id: process.env.GUSTO_CLIENT_ID || '',
+    gusto_redirect_uri: process.env.GUSTO_REDIRECT_URI || '',
+    gusto_app_url: process.env.GUSTO_APP_URL || 'https://app.gusto-demo.com',
   });
 });
 
@@ -157,6 +161,19 @@ function startNightlyCron() {
           console.log(`Nightly liability check complete: ${c.company_name || c.realm_id}`);
         } catch (e) {
           console.error(`Nightly liability check failed for ${c.company_name || c.realm_id}:`, e.message);
+        }
+        // Payroll check (only if Gusto connected)
+        try {
+          const { rows: [comp] } = await pool.query(
+            'SELECT gusto_access_token, gusto_company_id FROM companies WHERE realm_id = $1', [c.realm_id]
+          );
+          if (comp?.gusto_access_token && comp?.gusto_company_id) {
+            const { verifyPayroll } = require('./services/payroll');
+            await verifyPayroll(c.realm_id);
+            console.log(`Nightly payroll check complete: ${c.company_name || c.realm_id}`);
+          }
+        } catch (e) {
+          console.error(`Nightly payroll check failed for ${c.company_name || c.realm_id}:`, e.message);
         }
       }
       console.log('Nightly scans finished.');
