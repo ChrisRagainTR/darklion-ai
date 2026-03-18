@@ -97,8 +97,35 @@ router.get('/companies/:realmId/scans', async (req, res) => {
 
 router.post('/companies/:realmId/close-package', async (req, res) => {
   try {
-    const period = req.body.period || currentPeriod();
-    const pkg = await generateClosePackage(req.params.realmId, period);
+    const { startDate, endDate, period, label, byMonth } = req.body;
+    const realmId = req.params.realmId;
+
+    if (byMonth && startDate && endDate) {
+      // Generate one package per month in the range
+      const results = [];
+      const start = new Date(startDate + 'T00:00:00');
+      const end = new Date(endDate + 'T00:00:00');
+      const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+      while (cur <= end) {
+        const y = cur.getFullYear();
+        const m = cur.getMonth() + 1;
+        const p = y + '-' + String(m).padStart(2, '0');
+        const pkg = await generateClosePackage(realmId, p);
+        results.push(pkg);
+        cur.setMonth(cur.getMonth() + 1);
+      }
+      return res.json(results);
+    }
+
+    if (startDate && endDate) {
+      // Range-based package
+      const pkg = await generateClosePackage(realmId, period || 'custom', startDate, endDate);
+      return res.json(pkg);
+    }
+
+    // Legacy: single period like "2026-03"
+    const p = period || currentPeriod();
+    const pkg = await generateClosePackage(realmId, p);
     res.json(pkg);
   } catch (err) {
     res.status(500).json({ error: err.message });
