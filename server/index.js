@@ -115,6 +115,8 @@ function startNightlyCron() {
   const { pool } = require('./db');
   const { scanUncategorized } = require('./services/scanner');
   const { generateClosePackage } = require('./services/reports');
+  const { scanVariance } = require('./services/variance');
+  const { scanLiabilities } = require('./services/liability');
 
   function msUntil2AM() {
     const now = new Date();
@@ -143,6 +145,18 @@ function startNightlyCron() {
           console.log(`Nightly close package complete: ${c.company_name || c.realm_id} (${period})`);
         } catch (e) {
           console.error(`Nightly close package failed for ${c.company_name || c.realm_id}:`, e.message);
+        }
+        try {
+          await scanVariance(c.realm_id);
+          console.log(`Nightly variance scan complete: ${c.company_name || c.realm_id}`);
+        } catch (e) {
+          console.error(`Nightly variance scan failed for ${c.company_name || c.realm_id}:`, e.message);
+        }
+        try {
+          await scanLiabilities(c.realm_id);
+          console.log(`Nightly liability check complete: ${c.company_name || c.realm_id}`);
+        } catch (e) {
+          console.error(`Nightly liability check failed for ${c.company_name || c.realm_id}:`, e.message);
         }
       }
       console.log('Nightly scans finished.');

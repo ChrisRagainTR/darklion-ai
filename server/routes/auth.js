@@ -130,6 +130,8 @@ async function getAccessToken(realmId) {
 async function runInitialScans(realmId) {
   const { scanUncategorized } = require('../services/scanner');
   const { generateClosePackage } = require('../services/reports');
+  const { scanVariance } = require('../services/variance');
+  const { scanLiabilities } = require('../services/liability');
 
   console.log(`Running initial scans for ${realmId}...`);
 
@@ -147,6 +149,20 @@ async function runInitialScans(realmId) {
     console.log(`Close package generated for ${realmId} (${period})`);
   } catch (e) {
     console.error(`Initial close package failed for ${realmId}:`, e.message);
+  }
+
+  try {
+    await scanVariance(realmId);
+    console.log(`Variance analysis complete for ${realmId}`);
+  } catch (e) {
+    console.error(`Initial variance scan failed for ${realmId}:`, e.message);
+  }
+
+  try {
+    await scanLiabilities(realmId);
+    console.log(`Liability check complete for ${realmId}`);
+  } catch (e) {
+    console.error(`Initial liability check failed for ${realmId}:`, e.message);
   }
 }
 
