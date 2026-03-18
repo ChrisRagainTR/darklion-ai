@@ -82,7 +82,25 @@ async function verifyPayroll(realmId, options = {}) {
     }
   }
 
-  const employees = Object.values(employeeMap).sort((a, b) => b.grossPay - a.grossPay);
+  // Load officer tags from DB
+  const { rows: metaRows } = await pool.query(
+    'SELECT employee_uuid, is_officer FROM employee_metadata WHERE realm_id = $1',
+    [realmId]
+  );
+  const officerMap = Object.fromEntries(metaRows.map(r => [r.employee_uuid, r.is_officer]));
+
+  const employees = Object.values(employeeMap).map(e => ({
+    ...e,
+    isOfficer: officerMap[e.employeeUuid] || false,
+  })).sort((a, b) => b.grossPay - a.grossPay);
+
+  // Compute officer vs non-officer wage totals
+  let officerWages = 0;
+  let salaryWages = 0;
+  for (const e of employees) {
+    if (e.isOfficer) officerWages += e.grossPay;
+    else salaryWages += e.grossPay;
+  }
 
   // 3. Fetch QBO P&L for comparison
   let qboPnl = null;
@@ -101,14 +119,20 @@ async function verifyPayroll(realmId, options = {}) {
   // 4. Compare Gusto vs QBO
   const mismatches = [];
   if (qboComparison) {
-    const gustoWages = totalGrossPay;
-    const qboWages = qboComparison.salaries + qboComparison.officerComp;
-    if (Math.abs(gustoWages - qboWages) > 1) {
+    if (Math.abs(salaryWages - qboComparison.salaries) > 1) {
       mismatches.push({
-        category: 'Wages (Salaries + Officer Comp)',
-        gusto: gustoWages,
-        qbo: qboWages,
-        diff: gustoWages - qboWages,
+        category: 'Salaries (Non-Officer)',
+        gusto: salaryWages,
+        qbo: qboComparison.salaries,
+        diff: salaryWages - qboComparison.salaries,
+      });
+    }
+    if (Math.abs(officerWages - qboComparison.officerComp) > 1) {
+      mismatches.push({
+        category: 'Officer Compensation',
+        gusto: officerWages,
+        qbo: qboComparison.officerComp,
+        diff: officerWages - qboComparison.officerComp,
       });
     }
     if (Math.abs(totalEmployerTaxes - qboComparison.payrollTax) > 1) {
@@ -127,6 +151,8 @@ async function verifyPayroll(realmId, options = {}) {
     summary: {
       payrollCount: payrolls.length,
       totalGrossPay,
+      officerWages,
+      salaryWages,
       totalEmployerTaxes,
       totalEmployeeTaxes,
       totalNetPay,
