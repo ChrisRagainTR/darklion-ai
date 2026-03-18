@@ -105,12 +105,20 @@ router.get('/companies/:realmId/gusto/debug', async (req, res) => {
     const accessToken = await getGustoAccessToken(req.params.realmId);
     const baseUrl = process.env.GUSTO_API_URL || 'https://api.gusto-demo.com';
 
-    const meRes = await fetch(`${baseUrl}/v1/me`, {
-      headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
-    });
-    const meData = meRes.ok ? await meRes.json() : { error: meRes.status, body: await meRes.text() };
+    // Try multiple endpoints to find company info
+    const results = {};
+    for (const path of ['/v1/me', '/v1/companies', '/v2/me', '/v2/companies']) {
+      try {
+        const r = await fetch(`${baseUrl}${path}`, {
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
+        });
+        results[path] = r.ok ? await r.json() : { status: r.status, body: await r.text() };
+      } catch (e) {
+        results[path] = { error: e.message };
+      }
+    }
 
-    res.json({ me: meData });
+    res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
