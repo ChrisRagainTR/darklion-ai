@@ -98,6 +98,24 @@ router.post('/companies/:realmId/scan/payroll', async (req, res) => {
   }
 });
 
+// --- Gusto debug (temporary) ---
+router.get('/companies/:realmId/gusto/debug', async (req, res) => {
+  try {
+    const { getGustoAccessToken } = require('./auth');
+    const accessToken = await getGustoAccessToken(req.params.realmId);
+    const baseUrl = process.env.GUSTO_API_URL || 'https://api.gusto-demo.com';
+
+    const meRes = await fetch(`${baseUrl}/v1/me`, {
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
+    });
+    const meData = meRes.ok ? await meRes.json() : { error: meRes.status, body: await meRes.text() };
+
+    res.json({ me: meData });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- Liability Account Health Check ---
 router.post('/companies/:realmId/scan/liability', async (req, res) => {
   try {
