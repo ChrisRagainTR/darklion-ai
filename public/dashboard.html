@@ -27,6 +27,31 @@
     .sidebar-company { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
     .sidebar-company select { width: 100%; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.82rem; }
 
+    /* Company management panel */
+    .company-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1.5rem; }
+    .company-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); }
+    .company-panel-header h3 { font-size: 0.88rem; font-weight: 700; }
+    .company-search { width: 100%; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 0.8rem; border-radius: 6px; font-size: 0.82rem; margin: 0.75rem 1.2rem; width: calc(100% - 2.4rem); }
+    .company-search::placeholder { color: var(--muted); }
+    .company-list { max-height: 480px; overflow-y: auto; padding: 0.25rem 0; }
+    .company-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.2rem; cursor: pointer; transition: background 0.12s; border-left: 3px solid transparent; }
+    .company-item:hover { background: rgba(201,168,76,0.04); }
+    .company-item.active { background: rgba(201,168,76,0.08); border-left-color: var(--gold); }
+    .company-item .ci-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .company-item .ci-dot.healthy { background: var(--green); }
+    .company-item .ci-dot.expired { background: var(--red); }
+    .company-item .ci-dot.expiring { background: var(--orange); }
+    .company-item .ci-dot.unknown { background: var(--muted); }
+    .company-item .ci-info { flex: 1; min-width: 0; }
+    .company-item .ci-name { font-size: 0.84rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .company-item .ci-meta { font-size: 0.7rem; color: var(--muted); }
+    .company-item .ci-actions { flex-shrink: 0; opacity: 0; transition: opacity 0.15s; }
+    .company-item:hover .ci-actions { opacity: 1; }
+    .btn-disconnect { background: transparent; border: 1px solid var(--red); color: var(--red); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.68rem; cursor: pointer; font-weight: 600; }
+    .btn-disconnect:hover { background: rgba(245,101,101,0.12); }
+    .company-count { font-size: 0.7rem; color: var(--muted); padding: 0.5rem 1.2rem; border-top: 1px solid var(--border); }
+    .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+
     .sidebar-section { padding: 1rem 0 0.25rem 1rem; font-size: 0.65rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
     .sidebar-nav { list-style: none; padding: 0; }
     .sidebar-nav li a {
@@ -139,6 +164,7 @@
       <div class="sidebar-section">Overview</div>
       <ul class="sidebar-nav">
         <li><a href="#" data-section="overview" class="active" onclick="showSection('overview',this)"><span>Dashboard</span></a></li>
+        <li><a href="#" data-section="companies" onclick="showSection('companies',this)"><span>Companies</span></a></li>
       </ul>
       <div class="sidebar-section">Monthly Close</div>
       <ul class="sidebar-nav">
@@ -154,7 +180,7 @@
     <div id="empty-state" class="empty-state" style="display:none;">
       <h2>No Companies Connected</h2>
       <p>Connect a QuickBooks Online company to get started with DarkLion.</p>
-      <a href="/connect.html" class="btn btn-gold">Connect QuickBooks</a>
+      <button class="btn btn-gold" onclick="connectNewCompany()">Connect QuickBooks</button>
     </div>
 
     <div id="dashboard" style="display:none;">
@@ -170,6 +196,12 @@
           </div>
 
           <div class="overview-grid" id="overview-grid">
+            <div class="overview-card" onclick="showSection('companies',qs('[data-section=companies]'))">
+              <h3>Companies</h3>
+              <div class="oc-value" id="ov-companies">--</div>
+              <div class="oc-sub" id="ov-companies-sub">Connected</div>
+              <span class="oc-link">Manage &rarr;</span>
+            </div>
             <div class="overview-card" onclick="showSection('uncategorized',qs('[data-section=uncategorized]'))">
               <h3>Uncategorized</h3>
               <div class="oc-value" id="ov-uncat">--</div>
@@ -191,6 +223,26 @@
               <thead><tr><th>Scan Type</th><th>Flags</th><th>Date</th><th>Status</th></tr></thead>
               <tbody id="overview-scans"></tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== COMPANIES ==================== -->
+      <div class="section-page" id="sec-companies">
+        <div class="container">
+          <div class="page-header">
+            <div>
+              <h1>Connected Companies</h1>
+              <div class="subtitle" id="companies-subtitle">Manage your QuickBooks connections</div>
+            </div>
+            <button class="btn btn-gold" onclick="connectNewCompany()">+ Connect Company</button>
+          </div>
+
+          <input type="text" class="company-search" id="companies-search" placeholder="Search companies..." oninput="filterCompanyList()" style="margin:0 0 1rem 0;width:100%;">
+
+          <div class="company-panel" id="companies-panel">
+            <div class="company-list" id="companies-list" style="max-height:none;"></div>
+            <div class="company-count" id="companies-count"></div>
           </div>
         </div>
       </div>
@@ -255,9 +307,10 @@
       const sel = qs('#company-select');
       sel.innerHTML = companies.map(c => '<option value="'+c.realm_id+'">'+(c.company_name||c.realm_id)+'</option>').join('');
       currentRealm = companies[0].realm_id;
-      sel.addEventListener('change', () => { currentRealm = sel.value; loadAll(); });
+      sel.addEventListener('change', () => { currentRealm = sel.value; renderCompanyList(); loadAll(); });
 
       populatePeriodSelectors();
+      renderCompanyList();
       loadAll();
     }
 
@@ -290,6 +343,13 @@
 
     // --- Overview ---
     async function loadOverviewScans() {
+      // Companies overview card
+      const healthy = companies.filter(c => c.token_status === 'healthy').length;
+      const expired = companies.filter(c => c.token_status === 'expired').length;
+      qs('#ov-companies').textContent = companies.length;
+      qs('#ov-companies').style.color = expired > 0 ? 'var(--orange)' : 'var(--green)';
+      qs('#ov-companies-sub').textContent = healthy + ' healthy' + (expired > 0 ? ', ' + expired + ' expired' : '');
+
       try {
         const scans = await (await fetch('/api/companies/'+currentRealm+'/scans')).json();
         if (!Array.isArray(scans) || scans.length === 0) {
@@ -491,6 +551,99 @@
       const abs = Math.abs(n);
       const formatted = '$' + abs.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
       return n < 0 ? '<span style="color:var(--red);">('+formatted+')</span>' : formatted;
+    }
+
+    // --- Company Management ---
+    function renderCompanyList(target) {
+      const listEl = qs(target || '#companies-list');
+      if (!listEl) return;
+      const query = (qs('#companies-search')?.value || '').toLowerCase();
+      const filtered = query ? companies.filter(c => (c.company_name || c.realm_id).toLowerCase().includes(query)) : companies;
+
+      if (filtered.length === 0 && companies.length > 0) {
+        listEl.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.85rem;">No companies match "'+esc(query)+'"</div>';
+      } else if (filtered.length === 0) {
+        listEl.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.85rem;">No companies connected yet.</div>';
+      } else {
+        listEl.innerHTML = filtered.map(c => {
+          const name = esc(c.company_name || c.realm_id);
+          const status = c.token_status || 'unknown';
+          const syncText = c.last_sync_at ? 'Synced ' + timeAgo(c.last_sync_at) : 'Never synced';
+          const statusLabel = status === 'healthy' ? 'Connected' : status === 'expired' ? 'Token expired' : status === 'expiring' ? 'Token expiring' : 'Unknown';
+          const isActive = c.realm_id === currentRealm;
+          return '<div class="company-item'+(isActive?' active':'')+'" data-realm="'+c.realm_id+'" onclick="selectCompany(\''+c.realm_id+'\')">'
+            + '<div class="ci-dot '+status+'" title="'+statusLabel+'"></div>'
+            + '<div class="ci-info"><div class="ci-name">'+name+'</div><div class="ci-meta">'+syncText+' &middot; '+statusLabel+'</div></div>'
+            + '<div class="ci-actions"><button class="btn-disconnect" onclick="event.stopPropagation();disconnectCompany(\''+c.realm_id+'\',\''+name+'\')">Disconnect</button></div>'
+            + '</div>';
+        }).join('');
+      }
+
+      const countEl = qs('#companies-count');
+      if (countEl) countEl.textContent = filtered.length + ' of ' + companies.length + ' companies';
+    }
+
+    function filterCompanyList() { renderCompanyList(); }
+
+    function selectCompany(realmId) {
+      currentRealm = realmId;
+      // Update sidebar dropdown
+      const sel = qs('#company-select');
+      if (sel) sel.value = realmId;
+      // Re-render company list to update active state
+      renderCompanyList();
+      loadAll();
+      toast('Switched to ' + (companies.find(c=>c.realm_id===realmId)?.company_name || realmId));
+    }
+
+    async function connectNewCompany() {
+      try {
+        const cfg = await (await fetch('/api/config')).json();
+        sessionStorage.setItem('connect_from', 'dashboard');
+        const state = Math.random().toString(36).substring(2,18);
+        sessionStorage.setItem('oauth_state', state);
+        const redirectUri = encodeURIComponent(cfg.qb_redirect_uri);
+        window.location.href = 'https://appcenter.intuit.com/connect/oauth2?client_id=' + cfg.qb_client_id + '&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri=' + redirectUri + '&state=' + state;
+      } catch(e) {
+        toast('Failed to start connection: ' + e.message);
+      }
+    }
+
+    async function disconnectCompany(realmId, name) {
+      if (!confirm('Disconnect "' + (name || realmId) + '"? This will remove all stored data for this company.')) return;
+      try {
+        const res = await fetch('/api/companies/' + realmId, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to disconnect');
+        toast('Disconnected ' + (name || realmId));
+        companies = companies.filter(c => c.realm_id !== realmId);
+        if (currentRealm === realmId) {
+          currentRealm = companies.length > 0 ? companies[0].realm_id : null;
+        }
+        renderCompanyList();
+        updateCompanySelector();
+        if (companies.length === 0) {
+          qs('#empty-state').style.display = '';
+          qs('#dashboard').style.display = 'none';
+        }
+      } catch(e) { toast('Disconnect failed: ' + e.message); }
+    }
+
+    function updateCompanySelector() {
+      const sel = qs('#company-select');
+      sel.innerHTML = companies.map(c => '<option value="'+c.realm_id+'">'+(c.company_name||c.realm_id)+'</option>').join('');
+      if (currentRealm) sel.value = currentRealm;
+    }
+
+    function timeAgo(dateStr) {
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return mins + 'm ago';
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + 'h ago';
+      const days = Math.floor(hrs / 24);
+      if (days < 30) return days + 'd ago';
+      return Math.floor(days / 30) + 'mo ago';
     }
 
     // --- Helpers ---
