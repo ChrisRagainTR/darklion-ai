@@ -41,7 +41,7 @@ router.get('/companies', async (req, res) => {
       connected_at: c.connected_at,
       last_sync_at: c.last_sync_at,
       token_status: tokenStatus,
-      gusto_connected: !!(c.gusto_access_token && c.gusto_company_id),
+      gusto_connected: !!c.gusto_access_token,
     });
   }
   res.json(enriched);

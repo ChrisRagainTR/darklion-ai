@@ -214,15 +214,29 @@ router.get('/gusto/callback', async (req, res) => {
       });
       if (meRes.ok) {
         const meData = await meRes.json();
-        // The /v1/me endpoint returns roles with company associations
-        const companies = meData.roles?.payroll_admin?.companies || [];
-        if (companies.length > 0) {
-          gustoCompanyId = companies[0].uuid || companies[0].id || '';
+        console.log('Gusto /v1/me response:', JSON.stringify(meData).substring(0, 500));
+        // Try multiple paths to find company ID
+        const payrollCompanies = meData.roles?.payroll_admin?.companies || [];
+        if (payrollCompanies.length > 0) {
+          gustoCompanyId = payrollCompanies[0].uuid || payrollCompanies[0].id || '';
         }
+        // Fallback: check other role types
+        if (!gustoCompanyId) {
+          for (const role of Object.values(meData.roles || {})) {
+            const comps = Array.isArray(role) ? role : (role?.companies || []);
+            if (comps.length > 0) {
+              gustoCompanyId = comps[0].uuid || comps[0].id || '';
+              if (gustoCompanyId) break;
+            }
+          }
+        }
+      } else {
+        console.error('Gusto /v1/me failed:', meRes.status, await meRes.text());
       }
     } catch (e) {
       console.error('Failed to fetch Gusto company ID:', e.message);
     }
+    console.log('Gusto company ID resolved:', gustoCompanyId);
 
     // Update the company record with Gusto tokens
     await pool.query(`
