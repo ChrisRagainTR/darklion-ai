@@ -193,8 +193,13 @@
         iconEl.textContent = '\u2705';
         titleEl.className  = 'success';
         titleEl.textContent = 'Gusto Connected!';
-        msgEl.textContent   = 'Gusto is now linked. You can run payroll verification from the dashboard.';
-        btnWrap.style.display = 'block';
+        msgEl.textContent   = 'This window will close automatically.';
+        // Try to close the tab; show button as fallback if browser blocks it
+        setTimeout(() => {
+          window.close();
+          // If still open after 500ms, show the button
+          setTimeout(() => { btnWrap.style.display = 'block'; }, 500);
+        }, 1000);
       }
 
       function showError(message) {

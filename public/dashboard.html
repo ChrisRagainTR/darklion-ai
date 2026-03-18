@@ -478,6 +478,20 @@
       loadAll();
       loadLatestUncategorized();
       loadLatestClosePackage();
+
+      // Refresh companies when user returns to this tab (e.g. after Gusto OAuth)
+      document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible' && currentRealm) {
+          try {
+            const updated = await (await fetch('/api/companies')).json();
+            if (Array.isArray(updated)) {
+              companies = updated;
+              const activeSection = document.querySelector('.section-page.active');
+              if (activeSection && activeSection.id === 'sec-payroll') initPayrollSection();
+            }
+          } catch(e) {}
+        }
+      });
     }
 
     // --- Period picker state ---
