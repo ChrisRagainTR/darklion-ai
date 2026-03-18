@@ -1270,6 +1270,19 @@
 
     function fmtPay(n) { return '$' + Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
+    async function toggleOfficer(employeeUuid, isOfficer, name) {
+      try {
+        await fetch('/api/companies/' + currentRealm + '/employees/' + employeeUuid + '/officer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_officer: isOfficer, employee_name: name }),
+        });
+        toast((isOfficer ? 'Tagged' : 'Untagged') + ' ' + name + ' as officer');
+      } catch(e) {
+        toast('Failed to update officer status');
+      }
+    }
+
     function renderPayrollResults(data) {
       const s = data.summary || {};
       // Stats
@@ -1294,18 +1307,12 @@
 
       const qbo = data.qboComparison || {};
       const comparisons = [
-        { label: 'Salaries & Wages', gusto: s.totalGrossPay, qbo: (qbo.salaries||0) + (qbo.officerComp||0) },
+        { label: 'Salaries (Non-Officer)', gusto: s.salaryWages, qbo: qbo.salaries||0 },
+        { label: 'Officer Compensation', gusto: s.officerWages, qbo: qbo.officerComp||0 },
+        { label: 'Total Gross Wages', gusto: s.totalGrossPay, qbo: (qbo.salaries||0)+(qbo.officerComp||0) },
         { label: 'Employer Payroll Taxes', gusto: s.totalEmployerTaxes, qbo: qbo.payrollTax||0 },
         { label: 'Payroll Processing Fees', gusto: null, qbo: qbo.payrollFees||0 },
       ];
-      if (qbo.salaries !== undefined) {
-        // Show salaries and officer comp separately if QBO has data
-        comparisons.splice(0, 1,
-          { label: 'Salaries (Non-Officer)', gusto: null, qbo: qbo.salaries||0 },
-          { label: 'Officer Compensation', gusto: null, qbo: qbo.officerComp||0 },
-          { label: 'Total Wages (Gusto Gross)', gusto: s.totalGrossPay, qbo: (qbo.salaries||0)+(qbo.officerComp||0) },
-        );
-      }
       for (const c of comparisons) {
         const diff = (c.gusto !== null && c.qbo !== null) ? c.gusto - c.qbo : null;
         const ok = diff === null || Math.abs(diff) <= 1;
@@ -1349,10 +1356,13 @@
       // === Wages by Employee ===
       if (data.employees && data.employees.length > 0) {
         html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Wages by Employee</h3>';
-        html += '<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Status</th><th class="amount">Hours</th><th class="amount">Gross Pay</th><th class="amount">Net Pay</th></tr></thead><tbody>';
+        html += '<p style="font-size:0.75rem;color:var(--muted);margin-bottom:0.5rem;">Click the Officer column to tag employees as officers. This splits wages into Salaries vs Officer Comp for QBO comparison.</p>';
+        html += '<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Officer</th><th>FLSA</th><th class="amount">Hours</th><th class="amount">Gross Pay</th><th class="amount">Net Pay</th></tr></thead><tbody>';
         for (const e of data.employees) {
+          const checked = e.isOfficer ? ' checked' : '';
           html += '<tr>'
             + '<td style="font-weight:600;">'+esc(e.name)+'</td>'
+            + '<td style="text-align:center;"><input type="checkbox"'+checked+' onchange="toggleOfficer(\''+esc(e.employeeUuid)+'\',this.checked,\''+esc(e.name)+'\')" style="cursor:pointer;width:16px;height:16px;accent-color:var(--gold);"></td>'
             + '<td style="font-size:0.78rem;color:var(--muted);">'+esc(e.flsaStatus||'')+'</td>'
             + '<td class="amount">'+Number(e.hours||0).toFixed(1)+'</td>'
             + '<td class="amount">'+fmtPay(e.grossPay)+'</td>'

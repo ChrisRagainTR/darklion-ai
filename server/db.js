@@ -131,6 +131,18 @@ async function initDB() {
       notes TEXT DEFAULT '',
       FOREIGN KEY (realm_id) REFERENCES companies(realm_id)
     );
+
+    CREATE TABLE IF NOT EXISTS employee_metadata (
+      id SERIAL PRIMARY KEY,
+      realm_id TEXT NOT NULL,
+      employee_uuid TEXT NOT NULL,
+      employee_name TEXT DEFAULT '',
+      is_officer BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(realm_id, employee_uuid),
+      FOREIGN KEY (realm_id) REFERENCES companies(realm_id)
+    );
   `);
 }
 

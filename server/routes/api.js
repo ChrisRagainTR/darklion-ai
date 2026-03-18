@@ -98,6 +98,37 @@ router.post('/companies/:realmId/scan/payroll', async (req, res) => {
   }
 });
 
+// --- Employee officer tagging ---
+router.get('/companies/:realmId/employees/metadata', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT employee_uuid, employee_name, is_officer FROM employee_metadata WHERE realm_id = $1',
+      [req.params.realmId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/companies/:realmId/employees/:employeeUuid/officer', async (req, res) => {
+  try {
+    const { realmId, employeeUuid } = req.params;
+    const { is_officer, employee_name } = req.body;
+    await pool.query(`
+      INSERT INTO employee_metadata (realm_id, employee_uuid, employee_name, is_officer)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (realm_id, employee_uuid) DO UPDATE SET
+        is_officer = EXCLUDED.is_officer,
+        employee_name = COALESCE(NULLIF(EXCLUDED.employee_name, ''), employee_metadata.employee_name),
+        updated_at = NOW()
+    `, [realmId, employeeUuid, employee_name || '', is_officer]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- Liability Account Health Check ---
 router.post('/companies/:realmId/scan/liability', async (req, res) => {
   try {
