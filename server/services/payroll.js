@@ -17,7 +17,7 @@ async function verifyPayroll(realmId, options = {}) {
     [realmId]
   );
 
-  if (!company?.gusto_access_token || !company?.gusto_company_id) {
+  if (!company?.gusto_access_token) {
     return { error: 'Gusto not connected', connected: false };
   }
 
@@ -25,10 +25,41 @@ async function verifyPayroll(realmId, options = {}) {
   const { getGustoAccessToken } = require('../routes/auth');
   const accessToken = await getGustoAccessToken(realmId);
 
+  // If we don't have a company ID yet, try to fetch it
+  let gustoCompanyId = company.gusto_company_id;
+  if (!gustoCompanyId) {
+    try {
+      const baseUrl = process.env.GUSTO_API_URL || 'https://api.gusto-demo.com';
+      const meRes = await fetch(`${baseUrl}/v1/me`, {
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
+      });
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        // Try all role types to find a company
+        for (const [, role] of Object.entries(meData.roles || {})) {
+          const comps = Array.isArray(role) ? role : (role?.companies || []);
+          if (comps.length > 0) {
+            gustoCompanyId = comps[0].uuid || comps[0].id || '';
+            if (gustoCompanyId) break;
+          }
+        }
+        if (gustoCompanyId) {
+          await pool.query('UPDATE companies SET gusto_company_id = $1 WHERE realm_id = $2', [gustoCompanyId, realmId]);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch Gusto company ID:', e.message);
+    }
+  }
+
+  if (!gustoCompanyId) {
+    return { error: 'Could not determine Gusto company ID', connected: true };
+  }
+
   // 1. Fetch payrolls from Gusto
   const gustoPayrolls = await fetchGustoPayrolls(
     accessToken,
-    company.gusto_company_id,
+    gustoCompanyId,
     startDate,
     endDate
   );

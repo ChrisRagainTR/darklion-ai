@@ -1183,7 +1183,8 @@
           + '</div>';
       } else {
         actionsEl.innerHTML = '<button class="btn btn-gold" onclick="runPayrollScan()">Run Payroll Check</button>';
-        loadLatestPayroll();
+        // Auto-run if no previous scan, otherwise load latest
+        loadLatestPayroll(true);
       }
     }
 
@@ -1296,18 +1297,20 @@
       qs('#payroll-results').innerHTML = html;
     }
 
-    async function loadLatestPayroll() {
+    async function loadLatestPayroll(autoRun) {
       if (!currentRealm) return;
       try {
         const resp = await fetch('/api/companies/' + currentRealm + '/scans?type=payroll');
         if (!resp.ok) return;
         const scan = await resp.json();
         if (!scan || !scan.result_data) {
+          if (autoRun) return runPayrollScan();
           qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No payroll scans yet. Click "Run Payroll Check" to start.</div>';
           return;
         }
         const data = typeof scan.result_data === 'string' ? JSON.parse(scan.result_data) : scan.result_data;
         if (data.error && data.connected === false) {
+          if (autoRun) return runPayrollScan();
           qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No payroll scans yet. Click "Run Payroll Check" to start.</div>';
           return;
         }
