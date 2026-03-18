@@ -131,6 +131,38 @@
     .report-row-total td { font-weight: 700; border-top: 2px solid var(--border); }
     td.amount { text-align: right; font-variant-numeric: tabular-nums; }
 
+    /* Period picker */
+    .period-picker { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.5rem; }
+    .period-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+    .period-tab { padding: 0.5rem 1rem; font-size: 0.78rem; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; }
+    .period-tab:hover { color: var(--text); }
+    .period-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+    .period-panel { display: none; }
+    .period-panel.active { display: block; }
+    .month-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 0.35rem; margin-bottom: 0.75rem; }
+    .month-btn { padding: 0.4rem 0.15rem; font-size: 0.72rem; font-weight: 600; background: var(--charcoal); border: 1px solid var(--border); color: var(--muted); border-radius: 5px; cursor: pointer; transition: all 0.15s; text-align: center; white-space: nowrap; }
+    .month-btn:hover { border-color: var(--gold); color: var(--text); }
+    .month-btn.selected { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+    .month-btn.current { border-color: var(--green); }
+    .quarter-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+    .quarter-btn { padding: 0.6rem 0.5rem; font-size: 0.82rem; font-weight: 700; background: var(--charcoal); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; cursor: pointer; transition: all 0.15s; text-align: center; }
+    .quarter-btn:hover { border-color: var(--gold); color: var(--text); }
+    .quarter-btn.selected { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+    .year-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+    .year-btn { padding: 0.6rem 0.5rem; font-size: 0.82rem; font-weight: 700; background: var(--charcoal); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; cursor: pointer; transition: all 0.15s; text-align: center; }
+    .year-btn:hover { border-color: var(--gold); color: var(--text); }
+    .year-btn.selected { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+    .date-range-row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+    .date-range-row label { font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+    .date-range-row input[type="date"] { background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.82rem; }
+    .period-year-label { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+    .period-actions { display: flex; gap: 0.5rem; align-items: center; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+    .period-actions .selected-label { flex: 1; font-size: 0.82rem; color: var(--muted); }
+    .period-actions .selected-label strong { color: var(--gold); }
+    .display-toggle { display: flex; align-items: center; gap: 0.5rem; margin-right: 0.5rem; }
+    .display-toggle label { font-size: 0.75rem; color: var(--muted); cursor: pointer; }
+    .display-toggle input { accent-color: var(--gold); }
+
     /* Toast */
     .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--charcoal); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem 1.5rem; font-size: 0.85rem; color: var(--text); box-shadow: 0 8px 30px rgba(0,0,0,0.4); transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 200; }
     .toast.show { transform: translateY(0); opacity: 1; }
@@ -272,14 +304,56 @@
       <div class="section-page" id="sec-close-package">
         <div class="container">
           <div class="page-header">
-            <div><h1>Monthly Close Package</h1></div>
-            <div class="header-actions">
-              <select id="cp-period" class="company-select" style="min-width:150px;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.7rem;border-radius:6px;font-size:0.82rem;"></select>
+            <div><h1>Close Package</h1></div>
+          </div>
+
+          <!-- Period Picker -->
+          <div class="period-picker">
+            <div class="period-tabs">
+              <button class="period-tab active" onclick="showPeriodTab('months',this)">Months</button>
+              <button class="period-tab" onclick="showPeriodTab('quarters',this)">Quarters</button>
+              <button class="period-tab" onclick="showPeriodTab('annual',this)">Annual</button>
+              <button class="period-tab" onclick="showPeriodTab('custom',this)">Date Range</button>
+            </div>
+
+            <!-- Months panel -->
+            <div class="period-panel active" id="pp-months">
+              <div id="month-grid-container"></div>
+            </div>
+
+            <!-- Quarters panel -->
+            <div class="period-panel" id="pp-quarters">
+              <div id="quarter-grid-container"></div>
+            </div>
+
+            <!-- Annual panel -->
+            <div class="period-panel" id="pp-annual">
+              <div class="year-grid" id="year-grid-container"></div>
+            </div>
+
+            <!-- Custom date range panel -->
+            <div class="period-panel" id="pp-custom">
+              <div class="date-range-row">
+                <label>From</label>
+                <input type="date" id="cp-date-from">
+                <label>To</label>
+                <input type="date" id="cp-date-to">
+                <button class="btn btn-outline btn-sm" onclick="applyCustomRange()">Apply</button>
+              </div>
+            </div>
+
+            <div class="period-actions">
+              <div class="selected-label">Selected: <strong id="cp-selected-label">—</strong></div>
+              <div class="display-toggle">
+                <input type="checkbox" id="cp-by-month" onchange="onDisplayToggle()">
+                <label for="cp-by-month">Display by month</label>
+              </div>
               <button class="btn btn-gold" onclick="generateClosePackage()">Generate</button>
             </div>
           </div>
+
           <div id="cp-results">
-            <div style="text-align:center;padding:3rem;color:var(--muted);">Select a period and click Generate to create a close package.</div>
+            <div style="text-align:center;padding:3rem;color:var(--muted);">Select a period above, then click Generate.</div>
           </div>
         </div>
       </div>
@@ -318,18 +392,145 @@
       loadLatestClosePackage();
     }
 
+    // --- Period picker state ---
+    let cpSelection = { type: 'month', startDate: null, endDate: null, label: '', period: '' };
+
     function populatePeriodSelectors() {
       const now = new Date();
-      const options = [];
-      for (let i = 0; i < 12; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const val = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-        const label = d.toLocaleString('default',{month:'long',year:'numeric'});
-        options.push('<option value="'+val+'">'+label+'</option>');
+      qs('#overview-period').textContent = now.toLocaleString('default',{month:'long',year:'numeric'}) + ' Close';
+
+      // Build month grid — full 12-month rows, current year + last year
+      // Show 18 months of data but display full calendar rows
+      const cutoff = new Date(now.getFullYear(), now.getMonth() - 17, 1); // 18 months back
+      let mhtml = '';
+      for (const year of [now.getFullYear(), now.getFullYear()-1]) {
+        mhtml += '<div class="period-year-label">'+year+'</div><div class="month-grid">';
+        for (let m = 1; m <= 12; m++) {
+          const d = new Date(year, m-1, 1);
+          const val = year + '-' + String(m).padStart(2,'0');
+          const short = d.toLocaleString('default',{month:'short'});
+          const isCurrent = year === now.getFullYear() && m-1 === now.getMonth();
+          const isFuture = d > now;
+          const tooOld = d < cutoff;
+          const disabled = isFuture || tooOld;
+          mhtml += '<button class="month-btn'+(isCurrent?' current':'')+'"'+(disabled?' disabled style="opacity:0.3;cursor:default;"':'')+' data-period="'+val+'" onclick="'+(disabled?'':'selectMonth(this,\''+val+'\')')+'">'+short+'</button>';
+        }
+        mhtml += '</div>';
       }
-      const html = options.join('');
-      const cp = qs('#cp-period'); if(cp) cp.innerHTML = html;
-      qs('#overview-period').textContent = new Date().toLocaleString('default',{month:'long',year:'numeric'}) + ' Close';
+      qs('#month-grid-container').innerHTML = mhtml;
+
+      // Build quarter grid — current year + last year
+      let qhtml = '';
+      for (const year of [now.getFullYear(), now.getFullYear()-1]) {
+        qhtml += '<div class="period-year-label">'+year+'</div><div class="quarter-grid">';
+        for (let q = 1; q <= 4; q++) {
+          const sm = (q-1)*3 + 1;
+          const em = q*3;
+          const sd = year+'-'+String(sm).padStart(2,'0')+'-01';
+          const ed = lastDay(year, em);
+          qhtml += '<button class="quarter-btn" onclick="selectQuarter(this,'+q+','+year+',\''+sd+'\',\''+ed+'\')">Q'+q+'</button>';
+        }
+        qhtml += '</div>';
+      }
+      qs('#quarter-grid-container').innerHTML = qhtml;
+
+      // Build annual grid
+      let yhtml = '';
+      const cy = now.getFullYear();
+      yhtml += '<button class="year-btn" onclick="selectYear(this,'+cy+')">'+cy+' YTD</button>';
+      yhtml += '<button class="year-btn" onclick="selectYear(this,'+(cy-1)+')">'+(cy-1)+'</button>';
+      yhtml += '<button class="year-btn" onclick="selectYear(this,'+(cy-2)+')">'+(cy-2)+'</button>';
+      qs('#year-grid-container').innerHTML = yhtml;
+
+      // Default date range inputs
+      const lastMonth = new Date(now.getFullYear(), now.getMonth()-1, 1);
+      qs('#cp-date-from').value = lastMonth.getFullYear()+'-'+String(lastMonth.getMonth()+1).padStart(2,'0')+'-01';
+      qs('#cp-date-to').value = lastDay(lastMonth.getFullYear(), lastMonth.getMonth()+1);
+
+      // Default selection: current month
+      const curVal = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+      const curBtn = document.querySelector('.month-btn[data-period="'+curVal+'"]');
+      if (curBtn) selectMonth(curBtn, curVal);
+    }
+
+    function lastDay(year, month) {
+      const d = new Date(year, month, 0);
+      return year+'-'+String(month).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    }
+
+    function showPeriodTab(tab, el) {
+      document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.period-panel').forEach(p => p.classList.remove('active'));
+      el.classList.add('active');
+      qs('#pp-'+tab).classList.add('active');
+    }
+
+    function clearPeriodBtns() {
+      document.querySelectorAll('.month-btn,.quarter-btn,.year-btn').forEach(b => b.classList.remove('selected'));
+    }
+
+    function selectMonth(btn, period) {
+      clearPeriodBtns();
+      btn.classList.add('selected');
+      const [y,m] = period.split('-').map(Number);
+      const d = new Date(y, m-1, 1);
+      cpSelection = {
+        type: 'month',
+        startDate: y+'-'+String(m).padStart(2,'0')+'-01',
+        endDate: lastDay(y, m),
+        label: d.toLocaleString('default',{month:'long',year:'numeric'}),
+        period: period
+      };
+      qs('#cp-selected-label').textContent = cpSelection.label;
+    }
+
+    function selectQuarter(btn, q, year, sd, ed) {
+      clearPeriodBtns();
+      btn.classList.add('selected');
+      cpSelection = {
+        type: 'quarter',
+        startDate: sd,
+        endDate: ed,
+        label: 'Q'+q+' '+year,
+        period: year+'-Q'+q
+      };
+      qs('#cp-selected-label').textContent = cpSelection.label;
+    }
+
+    function selectYear(btn, year) {
+      clearPeriodBtns();
+      btn.classList.add('selected');
+      const now = new Date();
+      const isCurrentYear = year === now.getFullYear();
+      cpSelection = {
+        type: 'annual',
+        startDate: year+'-01-01',
+        endDate: isCurrentYear ? lastDay(now.getFullYear(), now.getMonth()+1) : year+'-12-31',
+        label: isCurrentYear ? year+' YTD' : String(year),
+        period: String(year)
+      };
+      qs('#cp-selected-label').textContent = cpSelection.label;
+    }
+
+    function applyCustomRange() {
+      clearPeriodBtns();
+      const from = qs('#cp-date-from').value;
+      const to = qs('#cp-date-to').value;
+      if (!from || !to) { toast('Select both dates'); return; }
+      if (from > to) { toast('Start date must be before end date'); return; }
+      cpSelection = {
+        type: 'custom',
+        startDate: from,
+        endDate: to,
+        label: from + ' to ' + to,
+        period: 'custom'
+      };
+      qs('#cp-selected-label').textContent = cpSelection.label;
+      toast('Date range applied');
+    }
+
+    function onDisplayToggle() {
+      // Just updates state — applied on next Generate
     }
 
     async function loadAll() {
@@ -434,53 +635,58 @@
 
     // --- Close Package ---
     async function generateClosePackage() {
-      const period = qs('#cp-period').value;
-      qs('#cp-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Generating close package...</div>';
+      if (!cpSelection.startDate) { toast('Select a period first'); return; }
+      const byMonth = qs('#cp-by-month').checked;
+      qs('#cp-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);"><div class="spinner"></div>Generating close package for '+esc(cpSelection.label)+'...</div>';
+
       try {
-        const data = await (await fetch('/api/companies/'+currentRealm+'/close-package',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({period})})).json();
+        const body = {
+          startDate: cpSelection.startDate,
+          endDate: cpSelection.endDate,
+          period: cpSelection.period,
+          label: cpSelection.label,
+          byMonth: byMonth
+        };
+        const data = await (await fetch('/api/companies/'+currentRealm+'/close-package',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
         if (data.error) throw new Error(data.error);
-        const rd = typeof data.report_data === 'string' ? JSON.parse(data.report_data) : data.report_data;
 
-        let html = '';
-
-        // Checklist
-        html += '<h3 style="font-size:0.88rem;margin:0.5rem 0 0.75rem;">Package Checklist</h3><div class="table-wrap"><table><thead><tr><th>Item</th><th>Status</th><th>Details</th></tr></thead><tbody>';
-        for (const item of (rd.checklist||[])) {
-          const badge = item.status==='ok'?'badge-ok':item.status==='warning'?'badge-warning':'badge-pending';
-          const label = item.status==='ok'?'OK':item.status==='warning'?'Warning':item.status==='missing'?'Missing':'Not Run';
-          html += '<tr><td style="font-weight:600;">'+esc(item.item)+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td style="color:var(--muted);">'+(item.flagCount!==undefined?item.flagCount+' flags':'')+'</td></tr>';
+        // Could be array (byMonth) or single
+        if (Array.isArray(data)) {
+          let html = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(cpSelection.label)+' — By Month</h3>';
+          for (const pkg of data) {
+            const rd = typeof pkg.report_data === 'string' ? JSON.parse(pkg.report_data) : pkg.report_data;
+            html += '<div style="border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;margin-bottom:1rem;background:var(--card);">';
+            html += '<h3 style="font-size:0.88rem;color:var(--gold);margin-bottom:0.75rem;">'+esc(rd.period || pkg.period)+'</h3>';
+            html += renderClosePackageBody(rd, pkg);
+            html += '</div>';
+          }
+          qs('#cp-results').innerHTML = html;
+        } else {
+          const rd = typeof data.report_data === 'string' ? JSON.parse(data.report_data) : data.report_data;
+          qs('#cp-results').innerHTML = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(cpSelection.label)+'</h3>' + renderClosePackageBody(rd, data);
         }
-        html += '</tbody></table></div>';
-
-        // P&L Report
-        if (rd.pnl) {
-          html += '<div class="report-section"><h3>Profit & Loss</h3>';
-          html += renderQBReport(rd.pnl);
-          html += '</div>';
-        }
-
-        // Balance Sheet
-        if (rd.balanceSheet) {
-          html += '<div class="report-section"><h3>Balance Sheet</h3>';
-          html += renderQBReport(rd.balanceSheet);
-          html += '</div>';
-        }
-
-        // Trial Balance
-        if (rd.trialBalance) {
-          html += '<div class="report-section"><h3>Trial Balance</h3>';
-          html += renderQBReport(rd.trialBalance);
-          html += '</div>';
-        }
-
-        html += '<div style="margin-top:1rem;text-align:right;"><span class="badge badge-pending" style="font-size:0.8rem;padding:0.3rem 0.8rem;">Status: '+esc(data.status||'draft')+'</span></div>';
-        qs('#cp-results').innerHTML = html;
-        toast('Close package generated for '+period);
+        toast('Close package generated for '+cpSelection.label);
         loadOverviewScans();
       } catch(e) {
         toast('Generation failed: '+e.message);
         qs('#cp-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: '+esc(e.message)+'</div>';
       }
+    }
+
+    function renderClosePackageBody(rd, pkg) {
+      let html = '';
+      html += '<div class="table-wrap" style="margin-bottom:0.75rem;"><table><thead><tr><th>Item</th><th>Status</th><th>Details</th></tr></thead><tbody>';
+      for (const item of (rd.checklist||[])) {
+        const badge = item.status==='ok'?'badge-ok':item.status==='warning'?'badge-warning':'badge-pending';
+        const label = item.status==='ok'?'OK':item.status==='warning'?'Warning':item.status==='missing'?'Missing':'Not Run';
+        html += '<tr><td style="font-weight:600;">'+esc(item.item)+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td style="color:var(--muted);">'+(item.flagCount!==undefined?item.flagCount+' flags':'')+'</td></tr>';
+      }
+      html += '</tbody></table></div>';
+      if (rd.pnl) { html += '<div class="report-section"><h3>Profit & Loss</h3>'+renderQBReport(rd.pnl)+'</div>'; }
+      if (rd.balanceSheet) { html += '<div class="report-section"><h3>Balance Sheet</h3>'+renderQBReport(rd.balanceSheet)+'</div>'; }
+      if (rd.trialBalance) { html += '<div class="report-section"><h3>Trial Balance</h3>'+renderQBReport(rd.trialBalance)+'</div>'; }
+      html += '<div style="margin-top:0.75rem;text-align:right;"><span class="badge badge-pending" style="font-size:0.75rem;padding:0.2rem 0.6rem;">'+esc(pkg.status||'draft')+'</span></div>';
+      return html;
     }
 
     // --- QBO Report Renderer ---
@@ -606,51 +812,19 @@
       if (!currentRealm) return;
       try {
         const resp = await fetch('/api/companies/'+currentRealm+'/close-packages');
-        if (!resp.ok) { console.error('Close packages fetch failed:', resp.status); return; }
+        if (!resp.ok) return;
         const pkgs = await resp.json();
-        if (!Array.isArray(pkgs) || pkgs.length === 0) {
-          // No packages exist yet — auto-generate one for current period
-          const cpSel = qs('#cp-period');
-          const period = cpSel ? cpSel.value : new Date().toISOString().slice(0,7);
-          if (period) {
-            qs('#cp-results').innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);"><div class="spinner"></div>Generating close package for '+esc(period)+'...</div>';
-            try {
-              const genResp = await fetch('/api/companies/'+currentRealm+'/close-package', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({period}) });
-              if (genResp.ok) {
-                return loadLatestClosePackage(); // reload after generation
-              }
-            } catch(ge) { console.error('Auto-generate failed:', ge); }
-          }
-          return;
-        }
+        if (!Array.isArray(pkgs) || pkgs.length === 0) return;
 
         const latest = pkgs[0];
         const rd = typeof latest.report_data === 'string' ? JSON.parse(latest.report_data) : latest.report_data;
-        if (!rd) { console.error('No report_data in close package', latest.id); return; }
+        if (!rd) return;
 
-        // Set period selector to match
-        const cpSel = qs('#cp-period');
-        if (cpSel && latest.period) {
-          for (const opt of cpSel.options) {
-            if (opt.value === latest.period) { cpSel.value = latest.period; break; }
-          }
-        }
+        // Highlight matching month button if possible
+        const btn = document.querySelector('.month-btn[data-period="'+latest.period+'"]');
+        if (btn) selectMonth(btn, latest.period);
 
-        let html = '';
-        html += '<h3 style="font-size:0.88rem;margin:0.5rem 0 0.75rem;">Package Checklist</h3><div class="table-wrap"><table><thead><tr><th>Item</th><th>Status</th><th>Details</th></tr></thead><tbody>';
-        for (const item of (rd.checklist||[])) {
-          const badge = item.status==='ok'?'badge-ok':item.status==='warning'?'badge-warning':'badge-pending';
-          const label = item.status==='ok'?'OK':item.status==='warning'?'Warning':item.status==='missing'?'Missing':'Not Run';
-          html += '<tr><td style="font-weight:600;">'+esc(item.item)+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td style="color:var(--muted);">'+(item.flagCount!==undefined?item.flagCount+' flags':'')+'</td></tr>';
-        }
-        html += '</tbody></table></div>';
-
-        if (rd.pnl) { html += '<div class="report-section"><h3>Profit & Loss</h3>'+renderQBReport(rd.pnl)+'</div>'; }
-        if (rd.balanceSheet) { html += '<div class="report-section"><h3>Balance Sheet</h3>'+renderQBReport(rd.balanceSheet)+'</div>'; }
-        if (rd.trialBalance) { html += '<div class="report-section"><h3>Trial Balance</h3>'+renderQBReport(rd.trialBalance)+'</div>'; }
-
-        html += '<div style="margin-top:1rem;text-align:right;"><span class="badge badge-pending" style="font-size:0.8rem;padding:0.3rem 0.8rem;">Status: '+esc(latest.status||'draft')+'</span> <span style="color:var(--muted);font-size:0.75rem;margin-left:0.5rem;">Generated '+new Date(latest.generated_at).toLocaleString()+'</span></div>';
-        qs('#cp-results').innerHTML = html;
+        qs('#cp-results').innerHTML = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(rd.period || latest.period)+'</h3>' + renderClosePackageBody(rd, latest);
       } catch(e) { console.error('loadLatestClosePackage error:', e); }
     }
 

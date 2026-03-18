@@ -6,12 +6,22 @@ function lastDayOfMonth(year, month) {
   return `${year}-${String(month).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// Generate a monthly close package
-async function generateClosePackage(realmId, period) {
-  const [year, month] = period.split('-').map(Number);
-  const startDate = `${year}-01-01`;
-  const endDate = lastDayOfMonth(year, month);
-  const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+// Generate a close package for a period or custom date range
+async function generateClosePackage(realmId, period, customStart, customEnd) {
+  let startDate, endDate, monthStart;
+
+  if (customStart && customEnd) {
+    // Custom date range
+    startDate = customStart;
+    endDate = customEnd;
+    monthStart = customStart;
+  } else {
+    // Standard YYYY-MM period
+    const [year, month] = period.split('-').map(Number);
+    startDate = `${year}-01-01`;
+    endDate = lastDayOfMonth(year, month);
+    monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+  }
 
   // Fetch reports in parallel
   const [pnlData, bsData, tbData] = await Promise.all([
