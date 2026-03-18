@@ -108,7 +108,7 @@ router.post('/companies/:realmId/close-package', async (req, res) => {
 router.get('/companies/:realmId/close-packages', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, period, status, generated_at FROM close_packages WHERE realm_id = $1 ORDER BY generated_at DESC',
+      'SELECT id, period, status, report_data, generated_at FROM close_packages WHERE realm_id = $1 ORDER BY generated_at DESC',
       [req.params.realmId]
     );
     res.json(rows);
