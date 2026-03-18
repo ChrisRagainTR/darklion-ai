@@ -4,7 +4,8 @@
 - **Platform**: Railway (auto-deploys from GitHub `main` branch)
 - **Database**: PostgreSQL (hosted, via DATABASE_URL)
 - **Domain**: darklion.ai
-- **Git push restriction**: Claude can only push to `claude/` branches. GitHub Actions deploy to Railway from `claude/**` branches directly — no merge to `main` needed.
+- **Git push restriction**: Claude can only push to `claude/` branches. GitHub Actions deploy to Railway from `claude/**` branches directly.
+- **Deploy workflow**: `.github/workflows/deploy-railway.yml` uses `RAILWAY_TOKEN` secret.
 
 ## Architecture
 - Express.js server (`server/index.js`)
