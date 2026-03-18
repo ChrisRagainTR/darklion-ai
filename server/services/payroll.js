@@ -13,8 +13,13 @@ async function verifyPayroll(realmId, options = {}) {
   const year = options.year || now.getFullYear();
   const month = options.month || now.getMonth() + 1;
 
-  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  // Gusto filters by pay period dates, not check dates.
+  // Look back 1 month to catch payrolls with check dates in the target month.
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear = month === 1 ? year - 1 : year;
+  const startDate = `${prevYear}-${String(prevMonth).padStart(2, '0')}-01`;
   const endDate = lastDay(year, month);
+  const targetMonth = `${year}-${String(month).padStart(2, '0')}`;
 
   // Check if Gusto is connected
   const { rows: [company] } = await pool.query(
@@ -39,7 +44,9 @@ async function verifyPayroll(realmId, options = {}) {
   }
 
   // 1. Fetch payroll details from Gusto
-  const payrolls = await fetchGustoPayrolls(accessToken, gustoCompanyId, startDate, endDate);
+  const allPayrolls = await fetchGustoPayrolls(accessToken, gustoCompanyId, startDate, endDate);
+  // Filter to only payrolls with check dates in the target month
+  const payrolls = allPayrolls.filter(p => p.checkDate && p.checkDate.startsWith(targetMonth));
 
   // 2. Aggregate totals across all payrolls in the period
   let totalGrossPay = 0;
@@ -81,8 +88,10 @@ async function verifyPayroll(realmId, options = {}) {
   let qboPnl = null;
   let qboComparison = null;
   try {
+    const qboStart = `${year}-${String(month).padStart(2, '0')}-01`;
+    const qboEnd = lastDay(year, month);
     qboPnl = await qbFetch(realmId,
-      `/reports/ProfitAndLoss?start_date=${startDate}&end_date=${endDate}&minorversion=75`
+      `/reports/ProfitAndLoss?start_date=${qboStart}&end_date=${qboEnd}&minorversion=75`
     );
     qboComparison = extractQboPayrollTotals(qboPnl);
   } catch (e) {

@@ -423,6 +423,9 @@
             <div><h1>Payroll Verification</h1><div class="subtitle">Gusto payroll cross-referenced against QBO journal entries</div></div>
             <div id="payroll-actions"></div>
           </div>
+          <div id="payroll-month-picker" style="display:none;margin-bottom:1rem;">
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;" id="payroll-months"></div>
+          </div>
           <div id="payroll-stats" style="display:none;">
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;">
               <div class="stat-card" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
@@ -1168,6 +1171,8 @@
     }
 
     // --- Payroll Verification ---
+    let payrollSelectedMonth = null; // e.g. {year: 2026, month: 3}
+
     function initPayrollSection() {
       if (!currentRealm) return;
       const company = companies.find(c => c.realm_id === currentRealm);
@@ -1176,6 +1181,7 @@
       if (!company || !company.gusto_connected) {
         actionsEl.innerHTML = '<button class="btn btn-gold" onclick="connectGusto()">Connect Gusto</button>';
         qs('#payroll-stats').style.display = 'none';
+        qs('#payroll-month-picker').style.display = 'none';
         qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">'
           + '<h2 style="font-size:1.1rem;color:var(--text);margin-bottom:0.75rem;">Gusto Integration Required</h2>'
           + '<p style="margin-bottom:1rem;">Connect your Gusto account to enable payroll verification.</p>'
@@ -1183,9 +1189,33 @@
           + '</div>';
       } else {
         actionsEl.innerHTML = '<button class="btn btn-gold" onclick="runPayrollScan()">Run Payroll Check</button>';
-        // Auto-run if no previous scan, otherwise load latest
+        buildPayrollMonthPicker();
+        qs('#payroll-month-picker').style.display = '';
+        // Auto-run for selected month
         loadLatestPayroll(true);
       }
+    }
+
+    function buildPayrollMonthPicker() {
+      const now = new Date();
+      const months = [];
+      for (let i = 0; i < 24; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
+      }
+      if (!payrollSelectedMonth) payrollSelectedMonth = months[0];
+
+      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      qs('#payroll-months').innerHTML = months.map(m => {
+        const active = payrollSelectedMonth.year === m.year && payrollSelectedMonth.month === m.month;
+        return '<button class="month-btn'+(active?' active':'')+'" style="padding:0.3rem 0.7rem;font-size:0.75rem;border:1px solid var(--border);border-radius:6px;background:'+(active?'var(--gold)':'var(--charcoal)')+';color:'+(active?'var(--navy)':'var(--text)')+';cursor:pointer;font-weight:'+(active?'700':'400')+';" onclick="selectPayrollMonth('+m.year+','+m.month+')">'+monthNames[m.month-1]+' '+m.year+'</button>';
+      }).join('');
+    }
+
+    function selectPayrollMonth(year, month) {
+      payrollSelectedMonth = { year, month };
+      buildPayrollMonthPicker();
+      runPayrollScan();
     }
 
     async function connectGusto() {
@@ -1210,10 +1240,11 @@
       qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Running payroll verification...</div>';
 
       try {
+        const body = payrollSelectedMonth ? { year: payrollSelectedMonth.year, month: payrollSelectedMonth.month } : {};
         const res = await fetch('/api/companies/' + currentRealm + '/scan/payroll', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: '{}',
+          body: JSON.stringify(body),
         });
         const data = await res.json();
 
