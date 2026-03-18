@@ -7,12 +7,39 @@ const router = Router();
 
 // --- Dashboard data ---
 
-// List connected companies
+// List connected companies (with token health)
 router.get('/companies', async (req, res) => {
   const { rows } = await pool.query(
-    'SELECT realm_id, company_name, connected_at, last_sync_at FROM companies ORDER BY connected_at DESC'
+    'SELECT realm_id, company_name, connected_at, last_sync_at, token_expires_at FROM companies ORDER BY company_name ASC'
   );
-  res.json(rows);
+  const now = Date.now();
+  const enriched = rows.map(c => ({
+    ...c,
+    token_status: !c.token_expires_at ? 'unknown'
+      : Number(c.token_expires_at) < now ? 'expired'
+      : Number(c.token_expires_at) < now + 300000 ? 'expiring'
+      : 'healthy',
+  }));
+  res.json(enriched);
+});
+
+// Disconnect a company
+router.delete('/companies/:realmId', async (req, res) => {
+  try {
+    const { realmId } = req.params;
+    // Delete dependent records first, then the company
+    await pool.query('DELETE FROM scan_results WHERE realm_id = $1', [realmId]);
+    await pool.query('DELETE FROM close_packages WHERE realm_id = $1', [realmId]);
+    await pool.query('DELETE FROM statement_schedules WHERE realm_id = $1', [realmId]);
+    await pool.query('DELETE FROM category_rules WHERE realm_id = $1', [realmId]);
+    await pool.query('DELETE FROM jobs WHERE realm_id = $1', [realmId]);
+    await pool.query('DELETE FROM vendors WHERE realm_id = $1', [realmId]);
+    await pool.query('DELETE FROM transactions WHERE realm_id = $1', [realmId]);
+    await pool.query('DELETE FROM companies WHERE realm_id = $1', [realmId]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- Uncategorized transaction scan ---

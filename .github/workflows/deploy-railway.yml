@@ -14,7 +14,9 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Deploy
-        run: railway up --service darklion-ai
+      - name: Link and Deploy
+        run: |
+          railway link -p ${{ secrets.RAILWAY_PROJECT_ID }} -e production
+          railway up --service darklion-ai --detach
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
