@@ -123,12 +123,12 @@ async function verifyPayroll(realmId, options = {}) {
   return result;
 }
 
-// Fetch payrolls from Gusto API
+// Fetch payrolls from Gusto API (list + individual detail for totals)
 async function fetchGustoPayrolls(accessToken, companyId, startDate, endDate) {
   const baseUrl = process.env.GUSTO_API_URL || 'https://api.gusto-demo.com';
-  const url = `${baseUrl}/v1/companies/${companyId}/payrolls?start_date=${startDate}&end_date=${endDate}&processed=true`;
+  const listUrl = `${baseUrl}/v1/companies/${companyId}/payrolls?start_date=${startDate}&end_date=${endDate}&processed=true`;
 
-  const res = await fetch(url, {
+  const res = await fetch(listUrl, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Accept': 'application/json',
@@ -140,20 +140,57 @@ async function fetchGustoPayrolls(accessToken, companyId, startDate, endDate) {
     throw new Error(`Gusto API ${res.status}: ${body}`);
   }
 
-  const payrolls = await res.json();
+  const payrollList = await res.json();
 
-  return payrolls.map(p => ({
-    checkDate: p.check_date,
-    payPeriodStart: p.pay_period?.start_date,
-    payPeriodEnd: p.pay_period?.end_date,
-    employeeCount: (p.employee_compensations || []).length,
-    totals: {
-      grossPay: (p.totals?.gross_pay || '0').replace(/,/g, '') * 1,
-      netPay: (p.totals?.net_pay || '0').replace(/,/g, '') * 1,
-      taxes: (p.totals?.employer_taxes || '0').replace(/,/g, '') * 1,
-      deductions: (p.totals?.employee_deductions || '0').replace(/,/g, '') * 1,
-    },
-  }));
+  // Fetch each payroll individually to get totals and employee data
+  const payrolls = [];
+  for (const p of payrollList) {
+    const detailUrl = `${baseUrl}/v1/companies/${companyId}/payrolls/${p.payroll_uuid || p.uuid}`;
+    try {
+      const detailRes = await fetch(detailUrl, {
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
+      });
+      if (detailRes.ok) {
+        const detail = await detailRes.json();
+        const toNum = (v) => {
+          if (typeof v === 'number') return v;
+          return (String(v || '0').replace(/,/g, '') * 1) || 0;
+        };
+        payrolls.push({
+          checkDate: detail.check_date || p.check_date,
+          payPeriodStart: detail.pay_period?.start_date || p.pay_period?.start_date,
+          payPeriodEnd: detail.pay_period?.end_date || p.pay_period?.end_date,
+          employeeCount: (detail.employee_compensations || []).length,
+          totals: {
+            grossPay: toNum(detail.totals?.gross_pay),
+            netPay: toNum(detail.totals?.net_pay),
+            taxes: toNum(detail.totals?.employer_taxes),
+            deductions: toNum(detail.totals?.employee_deductions),
+          },
+        });
+      } else {
+        // Fallback to list data if detail fails
+        payrolls.push({
+          checkDate: p.check_date,
+          payPeriodStart: p.pay_period?.start_date,
+          payPeriodEnd: p.pay_period?.end_date,
+          employeeCount: 0,
+          totals: { grossPay: 0, netPay: 0, taxes: 0, deductions: 0 },
+        });
+      }
+    } catch (e) {
+      console.error(`Failed to fetch payroll detail ${p.uuid}:`, e.message);
+      payrolls.push({
+        checkDate: p.check_date,
+        payPeriodStart: p.pay_period?.start_date,
+        payPeriodEnd: p.pay_period?.end_date,
+        employeeCount: 0,
+        totals: { grossPay: 0, netPay: 0, taxes: 0, deductions: 0 },
+      });
+    }
+  }
+
+  return payrolls;
 }
 
 // Find a matching payroll journal entry in QBO General Ledger data
