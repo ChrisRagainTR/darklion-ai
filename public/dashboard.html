@@ -35,7 +35,6 @@
     }
     .sidebar-nav li a:hover { color: var(--text); background: rgba(201,168,76,0.05); }
     .sidebar-nav li a.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); font-weight: 600; }
-    .sidebar-nav li a .badge-count { margin-left: auto; background: rgba(245,101,101,0.2); color: var(--red); font-size: 0.7rem; padding: 0.1rem 0.45rem; border-radius: 10px; font-weight: 700; }
 
     /* Main content */
     .main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; }
@@ -54,9 +53,6 @@
     .btn-gold:hover { background: var(--gold-light); }
     .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
     .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
-    .btn-green { background: var(--green); color: var(--navy); }
-    .btn-green:hover { background: #4ee0a0; }
-    .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* Stats cards */
@@ -80,27 +76,9 @@
 
     .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 50px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
     .badge-pending { background: rgba(237,137,54,0.12); color: var(--orange); }
-    .badge-categorized { background: rgba(201,168,76,0.12); color: var(--gold); }
-    .badge-reviewed { background: rgba(62,207,142,0.12); color: var(--green); }
-    .badge-written { background: rgba(62,207,142,0.25); color: var(--green); }
-    .badge-skipped { background: rgba(143,163,184,0.12); color: var(--muted); }
     .badge-flag { background: rgba(245,101,101,0.12); color: var(--red); }
     .badge-ok { background: rgba(62,207,142,0.12); color: var(--green); }
-    .badge-new { background: rgba(62,207,142,0.15); color: var(--green); }
-    .badge-edit { background: rgba(201,168,76,0.15); color: var(--gold); }
     .badge-warning { background: rgba(237,137,54,0.12); color: var(--orange); }
-
-    .confidence-bar { width: 60px; height: 6px; background: rgba(201,168,76,0.15); border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 0.4rem; }
-    .confidence-fill { height: 100%; border-radius: 3px; }
-    .conf-high { background: var(--green); }
-    .conf-med { background: var(--gold); }
-    .conf-low { background: var(--red); }
-
-    .action-btns { display: flex; gap: 0.4rem; }
-    .action-btn { padding: 0.25rem 0.5rem; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 0.73rem; cursor: pointer; transition: all 0.15s; }
-    .action-btn:hover { border-color: var(--gold); color: var(--gold); }
-    .action-btn.approve:hover { border-color: var(--green); color: var(--green); }
-    .action-btn.skip:hover { border-color: var(--red); color: var(--red); }
 
     /* Overview cards */
     .overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
@@ -118,20 +96,13 @@
     .section-page { display: none; }
     .section-page.active { display: block; }
 
-    /* Filter row */
-    .filter-row { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
-    .filter-row label { font-size: 0.78rem; color: var(--muted); }
-    .filter-row select, .filter-row input {
-      background: var(--charcoal); border: 1px solid var(--border); color: var(--text);
-      padding: 0.4rem 0.7rem; border-radius: 6px; font-size: 0.82rem;
-    }
-
-    /* Jobs log */
-    .jobs-list { list-style: none; }
-    .job-item { display: flex; align-items: center; gap: 1rem; padding: 0.65rem 1rem; border-bottom: 1px solid rgba(201,168,76,0.07); font-size: 0.85rem; }
-    .job-item:last-child { border-bottom: none; }
-    .job-type { font-weight: 600; min-width: 120px; }
-    .job-time { color: var(--muted); font-size: 0.78rem; margin-left: auto; }
+    /* Report section within close package */
+    .report-section { margin-top: 1.5rem; }
+    .report-section h3 { font-size: 0.88rem; margin-bottom: 0.75rem; }
+    .report-section .table-wrap { margin-bottom: 1rem; }
+    .report-row-header td { font-weight: 700; background: rgba(201,168,76,0.05); }
+    .report-row-total td { font-weight: 700; border-top: 2px solid var(--border); }
+    td.amount { text-align: right; font-variant-numeric: tabular-nums; }
 
     /* Toast */
     .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--charcoal); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem 1.5rem; font-size: 0.85rem; color: var(--text); box-shadow: 0 8px 30px rgba(0,0,0,0.4); transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 200; }
@@ -141,19 +112,6 @@
     .empty-state { text-align: center; padding: 4rem 2rem; color: var(--muted); }
     .empty-state h2 { font-size: 1.3rem; color: var(--text); margin-bottom: 0.75rem; }
     .empty-state p { margin-bottom: 1.5rem; }
-
-    /* Progress bar */
-    .progress-bar { width: 100%; height: 8px; background: rgba(201,168,76,0.15); border-radius: 4px; overflow: hidden; margin: 0.5rem 0; }
-    .progress-fill { height: 100%; background: var(--gold); border-radius: 4px; transition: width 0.5s; }
-
-    /* Modal */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 300; display: none; align-items: center; justify-content: center; }
-    .modal-overlay.show { display: flex; }
-    .modal { background: var(--charcoal); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; min-width: 400px; max-width: 500px; }
-    .modal h2 { font-size: 1.1rem; margin-bottom: 1rem; }
-    .modal label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.25rem; margin-top: 0.75rem; }
-    .modal input, .modal select { width: 100%; background: var(--navy); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 0.7rem; border-radius: 6px; font-size: 0.85rem; }
-    .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.25rem; }
 
     /* Responsive */
     @media (max-width: 800px) {
@@ -184,29 +142,8 @@
       </ul>
       <div class="sidebar-section">Monthly Close</div>
       <ul class="sidebar-nav">
-        <li><a href="#" data-section="statements" onclick="showSection('statements',this)"><span>Statements</span></a></li>
         <li><a href="#" data-section="uncategorized" onclick="showSection('uncategorized',this)"><span>Uncategorized</span></a></li>
         <li><a href="#" data-section="close-package" onclick="showSection('close-package',this)"><span>Close Package</span></a></li>
-        <li><a href="#" data-section="reconciliation" onclick="showSection('reconciliation',this)"><span>Reconciliation</span></a></li>
-      </ul>
-      <div class="sidebar-section">Analysis</div>
-      <ul class="sidebar-nav">
-        <li><a href="#" data-section="variance" onclick="showSection('variance',this)"><span>P&L Variance</span></a></li>
-        <li><a href="#" data-section="liability" onclick="showSection('liability',this)"><span>Liability Check</span></a></li>
-        <li><a href="#" data-section="fixed-assets" onclick="showSection('fixed-assets',this)"><span>Fixed Assets</span></a></li>
-        <li><a href="#" data-section="coa-changes" onclick="showSection('coa-changes',this)"><span>CoA Changes</span></a></li>
-      </ul>
-      <div class="sidebar-section">Payroll</div>
-      <ul class="sidebar-nav">
-        <li><a href="#" data-section="payroll" onclick="showSection('payroll',this)" style="opacity:0.4;pointer-events:none;"><span>Gusto (Phase 3)</span></a></li>
-        <li><a href="#" data-section="surepayroll" onclick="showSection('surepayroll',this)" style="opacity:0.4;pointer-events:none;"><span>SurePayroll (Phase 3)</span></a></li>
-      </ul>
-      <div class="sidebar-section">Legacy</div>
-      <ul class="sidebar-nav">
-        <li><a href="#" data-section="categorizer" onclick="showSection('categorizer',this)"><span>Categorizer</span></a></li>
-        <li><a href="#" data-section="review" onclick="showSection('review',this)"><span>Review Queue</span></a></li>
-        <li><a href="#" data-section="vendors" onclick="showSection('vendors',this)"><span>Vendors</span></a></li>
-        <li><a href="#" data-section="jobs" onclick="showSection('jobs',this)"><span>Job History</span></a></li>
       </ul>
     </nav>
   </aside>
@@ -230,51 +167,24 @@
               <h1>Monthly Close Overview</h1>
               <div class="subtitle" id="overview-period"></div>
             </div>
-            <div class="header-actions">
-              <button class="btn btn-gold" onclick="runPipeline()" id="btn-pipeline">Run Full Pipeline</button>
-            </div>
           </div>
 
           <div class="overview-grid" id="overview-grid">
             <div class="overview-card" onclick="showSection('uncategorized',qs('[data-section=uncategorized]'))">
               <h3>Uncategorized</h3>
-              <div class="oc-value" id="ov-uncat">—</div>
+              <div class="oc-value" id="ov-uncat">--</div>
               <div class="oc-sub" id="ov-uncat-sub">Run scan to check</div>
               <span class="oc-link">View &rarr;</span>
             </div>
-            <div class="overview-card" onclick="showSection('liability',qs('[data-section=liability]'))">
-              <h3>Liability Check</h3>
-              <div class="oc-value" id="ov-liab">—</div>
-              <div class="oc-sub" id="ov-liab-sub">Run check to scan</div>
-              <span class="oc-link">View &rarr;</span>
-            </div>
-            <div class="overview-card" onclick="showSection('variance',qs('[data-section=variance]'))">
-              <h3>P&L Variance</h3>
-              <div class="oc-value" id="ov-var">—</div>
-              <div class="oc-sub" id="ov-var-sub">Run analysis to check</div>
-              <span class="oc-link">View &rarr;</span>
-            </div>
-            <div class="overview-card" onclick="showSection('coa-changes',qs('[data-section=coa-changes]'))">
-              <h3>CoA Changes</h3>
-              <div class="oc-value" id="ov-coa">—</div>
-              <div class="oc-sub" id="ov-coa-sub">Check for changes</div>
-              <span class="oc-link">View &rarr;</span>
-            </div>
-            <div class="overview-card" onclick="showSection('fixed-assets',qs('[data-section=fixed-assets]'))">
-              <h3>Fixed Assets</h3>
-              <div class="oc-value" id="ov-fa">—</div>
-              <div class="oc-sub" id="ov-fa-sub">Scan for misclassified</div>
-              <span class="oc-link">View &rarr;</span>
-            </div>
-            <div class="overview-card" onclick="showSection('categorizer',qs('[data-section=categorizer]'))">
-              <h3>Transaction Categorizer</h3>
-              <div class="oc-value" id="ov-txn">—</div>
-              <div class="oc-sub" id="ov-txn-sub">Transactions synced</div>
+            <div class="overview-card" onclick="showSection('close-package',qs('[data-section=close-package]'))">
+              <h3>Close Package</h3>
+              <div class="oc-value" id="ov-pkg">--</div>
+              <div class="oc-sub" id="ov-pkg-sub">Generate to review</div>
               <span class="oc-link">View &rarr;</span>
             </div>
           </div>
 
-          <!-- Recent activity -->
+          <!-- Recent scan results -->
           <h3 style="font-size:0.88rem;margin-bottom:0.75rem;">Recent Scan Results</h3>
           <div class="table-wrap">
             <table>
@@ -304,133 +214,13 @@
         </div>
       </div>
 
-      <!-- ==================== LIABILITY CHECK ==================== -->
-      <div class="section-page" id="sec-liability">
-        <div class="container">
-          <div class="page-header">
-            <div>
-              <h1>Liability Account Health Check</h1>
-              <div class="subtitle" id="liab-last-scan">Not yet checked</div>
-            </div>
-            <button class="btn btn-gold" onclick="runLiabilityScan()" id="btn-liab-scan">Run Check</button>
-          </div>
-          <div class="stats-grid" id="liab-stats" style="display:none;">
-            <div class="stat-card"><div class="stat-label">Flagged</div><div class="stat-value red" id="liab-flagged">0</div></div>
-            <div class="stat-card"><div class="stat-label">Healthy</div><div class="stat-value green" id="liab-healthy">0</div></div>
-            <div class="stat-card"><div class="stat-label">Total Accounts</div><div class="stat-value" id="liab-total">0</div></div>
-          </div>
-          <div id="liab-results"></div>
-        </div>
-      </div>
-
-      <!-- ==================== P&L VARIANCE ==================== -->
-      <div class="section-page" id="sec-variance">
-        <div class="container">
-          <div class="page-header">
-            <div>
-              <h1>P&L Variance Analysis</h1>
-              <div class="subtitle" id="var-last-scan">Not yet analyzed</div>
-            </div>
-            <div class="header-actions">
-              <div class="filter-row" style="margin:0;">
-                <select id="var-period" class="company-select" style="min-width:150px;"></select>
-                <select id="var-threshold" class="company-select">
-                  <option value="15">15% threshold</option>
-                  <option value="10">10% threshold</option>
-                  <option value="25">25% threshold</option>
-                </select>
-              </div>
-              <button class="btn btn-gold" onclick="runVarianceAnalysis()" id="btn-var">Analyze</button>
-            </div>
-          </div>
-          <div class="stats-grid" id="var-stats" style="display:none;">
-            <div class="stat-card"><div class="stat-label">Flagged Items</div><div class="stat-value red" id="var-flagged">0</div></div>
-            <div class="stat-card"><div class="stat-label">Revenue</div><div class="stat-value green" id="var-revenue">$0</div><div class="stat-sub" id="var-rev-chg"></div></div>
-            <div class="stat-card"><div class="stat-label">Expenses</div><div class="stat-value orange" id="var-expenses">$0</div><div class="stat-sub" id="var-exp-chg"></div></div>
-            <div class="stat-card"><div class="stat-label">Net Income</div><div class="stat-value gold" id="var-net">$0</div></div>
-          </div>
-          <div id="var-results"></div>
-        </div>
-      </div>
-
-      <!-- ==================== FIXED ASSETS ==================== -->
-      <div class="section-page" id="sec-fixed-assets">
-        <div class="container">
-          <div class="page-header">
-            <div>
-              <h1>Fixed Asset vs. Expense Scan</h1>
-              <div class="subtitle" id="fa-last-scan">Not yet scanned</div>
-            </div>
-            <div class="header-actions">
-              <div class="filter-row" style="margin:0;">
-                <label>Threshold: $</label>
-                <input type="number" id="fa-threshold" value="2500" style="width:100px;">
-              </div>
-              <button class="btn btn-gold" onclick="runFixedAssetScan()" id="btn-fa">Run Scan</button>
-            </div>
-          </div>
-          <div class="stats-grid" id="fa-stats" style="display:none;">
-            <div class="stat-card"><div class="stat-label">Flagged Expenses</div><div class="stat-value red" id="fa-flagged">0</div></div>
-            <div class="stat-card"><div class="stat-label">Total $ Flagged</div><div class="stat-value orange" id="fa-total">$0</div></div>
-            <div class="stat-card"><div class="stat-label">Fixed Asset Accts</div><div class="stat-value" id="fa-accts">0</div></div>
-          </div>
-          <div id="fa-results"></div>
-        </div>
-      </div>
-
-      <!-- ==================== COA CHANGES ==================== -->
-      <div class="section-page" id="sec-coa-changes">
-        <div class="container">
-          <div class="page-header">
-            <div>
-              <h1>Chart of Accounts — Changes</h1>
-              <div class="subtitle" id="coa-last-scan">Not yet checked</div>
-            </div>
-            <button class="btn btn-gold" onclick="runCoAScan()" id="btn-coa">Check Changes</button>
-          </div>
-          <div class="stats-grid" id="coa-stats" style="display:none;">
-            <div class="stat-card"><div class="stat-label">New</div><div class="stat-value green" id="coa-new">0</div></div>
-            <div class="stat-card"><div class="stat-label">Modified</div><div class="stat-value gold" id="coa-modified">0</div></div>
-            <div class="stat-card"><div class="stat-label">Deleted</div><div class="stat-value red" id="coa-deleted">0</div></div>
-          </div>
-          <div id="coa-results"></div>
-        </div>
-      </div>
-
-      <!-- ==================== STATEMENTS (placeholder) ==================== -->
-      <div class="section-page" id="sec-statements">
-        <div class="container">
-          <div class="page-header">
-            <div>
-              <h1>Statement Reminder Engine</h1>
-              <div class="subtitle" id="stmt-period"></div>
-            </div>
-            <div class="header-actions">
-              <button class="btn btn-outline" onclick="showStmtModal()">Add Schedule</button>
-            </div>
-          </div>
-          <div class="stats-grid" id="stmt-stats">
-            <div class="stat-card"><div class="stat-label">Total Schedules</div><div class="stat-value" id="stmt-total">0</div></div>
-            <div class="stat-card"><div class="stat-label">Received</div><div class="stat-value green" id="stmt-received">0</div></div>
-            <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value orange" id="stmt-pending">0</div></div>
-            <div class="stat-card"><div class="stat-label">Overdue</div><div class="stat-value red" id="stmt-overdue">0</div></div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Client</th><th>Account</th><th>Access</th><th>Due Day</th><th>Status</th><th>Actions</th></tr></thead>
-              <tbody id="stmt-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ==================== CLOSE PACKAGE (placeholder) ==================== -->
+      <!-- ==================== CLOSE PACKAGE ==================== -->
       <div class="section-page" id="sec-close-package">
         <div class="container">
           <div class="page-header">
             <div><h1>Monthly Close Package</h1></div>
             <div class="header-actions">
-              <select id="cp-period" class="company-select" style="min-width:150px;"></select>
+              <select id="cp-period" class="company-select" style="min-width:150px;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.7rem;border-radius:6px;font-size:0.82rem;"></select>
               <button class="btn btn-gold" onclick="generateClosePackage()">Generate</button>
             </div>
           </div>
@@ -440,136 +230,6 @@
         </div>
       </div>
 
-      <!-- ==================== RECONCILIATION (placeholder) ==================== -->
-      <div class="section-page" id="sec-reconciliation">
-        <div class="container">
-          <div class="page-header">
-            <div><h1>Reconciliation Status</h1></div>
-          </div>
-          <div style="text-align:center;padding:3rem;color:var(--muted);">Coming in Phase 2 — Will check uncleared transactions per bank/CC account.</div>
-        </div>
-      </div>
-
-      <!-- ==================== PAYROLL (placeholder) ==================== -->
-      <div class="section-page" id="sec-payroll">
-        <div class="container">
-          <div class="page-header"><div><h1>Gusto Payroll Verification</h1></div></div>
-          <div style="text-align:center;padding:3rem;color:var(--muted);">Coming in Phase 3 — Requires Gusto OAuth integration.</div>
-        </div>
-      </div>
-      <div class="section-page" id="sec-surepayroll">
-        <div class="container">
-          <div class="page-header"><div><h1>SurePayroll Verification</h1></div></div>
-          <div style="text-align:center;padding:3rem;color:var(--muted);">Coming in Phase 3 — File upload + comparison.</div>
-        </div>
-      </div>
-
-      <!-- ==================== LEGACY: CATEGORIZER ==================== -->
-      <div class="section-page" id="sec-categorizer">
-        <div class="container">
-          <div class="page-header">
-            <h1>Transaction Categorizer</h1>
-            <div class="header-actions">
-              <button class="btn btn-outline" onclick="runSync()" id="btn-sync">Sync Transactions</button>
-              <button class="btn btn-outline" onclick="runResearch()" id="btn-research">Research Vendors</button>
-              <button class="btn btn-gold" onclick="runCategorize()" id="btn-categorize">Categorize with AI</button>
-              <button class="btn btn-green" onclick="runWriteBack()" id="btn-writeback">Write Back to QB</button>
-            </div>
-          </div>
-          <div class="stats-grid">
-            <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="stat-total">—</div></div>
-            <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value orange" id="stat-pending">—</div></div>
-            <div class="stat-card"><div class="stat-label">Categorized</div><div class="stat-value gold" id="stat-categorized">—</div></div>
-            <div class="stat-card"><div class="stat-label">Reviewed</div><div class="stat-value green" id="stat-reviewed">—</div></div>
-            <div class="stat-card"><div class="stat-label">Written</div><div class="stat-value green" id="stat-written">—</div></div>
-            <div class="stat-card"><div class="stat-label">Vendors</div><div class="stat-value gold" id="stat-vendors">—</div></div>
-          </div>
-          <div class="filter-row">
-            <label>Filter:</label>
-            <select id="txn-filter" onchange="loadTransactions()">
-              <option value="">All</option>
-              <option value="pending">Pending</option>
-              <option value="categorized">Categorized</option>
-              <option value="reviewed">Reviewed</option>
-              <option value="written_back">Written Back</option>
-              <option value="skipped">Skipped</option>
-            </select>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>Vendor</th><th>Description</th><th>Amount</th><th>AI Category</th><th>Confidence</th><th>Status</th></tr></thead>
-              <tbody id="txn-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ==================== LEGACY: REVIEW QUEUE ==================== -->
-      <div class="section-page" id="sec-review">
-        <div class="container">
-          <div class="page-header"><h1>Review Queue</h1></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>Vendor</th><th>Amount</th><th>AI Category</th><th>Confidence</th><th>AI Memo</th><th>Actions</th></tr></thead>
-              <tbody id="review-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ==================== LEGACY: VENDORS ==================== -->
-      <div class="section-page" id="sec-vendors">
-        <div class="container">
-          <div class="page-header"><h1>Vendors</h1></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Vendor</th><th>Business Category</th><th>Description</th><th>Researched</th></tr></thead>
-              <tbody id="vendor-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ==================== LEGACY: JOBS ==================== -->
-      <div class="section-page" id="sec-jobs">
-        <div class="container">
-          <div class="page-header"><h1>Job History</h1></div>
-          <div class="table-wrap">
-            <ul class="jobs-list" id="jobs-list"></ul>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Statement modal -->
-  <div class="modal-overlay" id="stmt-modal">
-    <div class="modal">
-      <h2 id="stmt-modal-title">Add Statement Schedule</h2>
-      <label>Client Name</label>
-      <input type="text" id="stmt-client" placeholder="Jones Corp">
-      <label>Account Name</label>
-      <input type="text" id="stmt-account" placeholder="Chase Checking">
-      <label>Institution</label>
-      <input type="text" id="stmt-institution" placeholder="Chase Bank">
-      <label>Access Method</label>
-      <select id="stmt-access">
-        <option value="portal">Portal</option>
-        <option value="email">Email</option>
-        <option value="download">Download</option>
-        <option value="no_access">No Access</option>
-      </select>
-      <label>Statement Day (of month)</label>
-      <input type="number" id="stmt-day" value="1" min="1" max="31">
-      <label>Contact Email</label>
-      <input type="email" id="stmt-email" placeholder="client@company.com">
-      <label>Notes</label>
-      <input type="text" id="stmt-notes" placeholder="Optional notes">
-      <div class="modal-actions">
-        <button class="btn btn-outline" onclick="hideStmtModal()">Cancel</button>
-        <button class="btn btn-gold" onclick="saveStatement()">Save Schedule</button>
-      </div>
     </div>
   </div>
 
@@ -578,7 +238,6 @@
   <script>
     let currentRealm = null;
     let companies = [];
-    let accountsList = [];
 
     function qs(sel) { return document.querySelector(sel); }
 
@@ -612,15 +271,12 @@
         options.push('<option value="'+val+'">'+label+'</option>');
       }
       const html = options.join('');
-      const vp = qs('#var-period'); if(vp) vp.innerHTML = html;
       const cp = qs('#cp-period'); if(cp) cp.innerHTML = html;
       qs('#overview-period').textContent = new Date().toLocaleString('default',{month:'long',year:'numeric'}) + ' Close';
-      qs('#stmt-period').textContent = new Date().toLocaleString('default',{month:'long',year:'numeric'});
     }
 
     async function loadAll() {
-      await loadAccounts();
-      await Promise.all([loadStats(), loadTransactions(), loadReview(), loadVendors(), loadJobs(), loadOverviewScans(), loadStatements()]);
+      await Promise.all([loadOverviewScans()]);
     }
 
     // --- Section navigation ---
@@ -636,12 +292,17 @@
     async function loadOverviewScans() {
       try {
         const scans = await (await fetch('/api/companies/'+currentRealm+'/scans')).json();
-        if (!Array.isArray(scans)) { qs('#overview-scans').innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1.5rem;">No scans yet. Use the sidebar to run scans.</td></tr>'; return; }
-        const typeLabels = { uncategorized:'Uncategorized', liability:'Liability Check', fixed_asset:'Fixed Asset', variance:'P&L Variance', coa_changes:'CoA Changes' };
-        qs('#overview-scans').innerHTML = scans.map(s => {
-          const d = s.scanned_at ? new Date(s.scanned_at).toLocaleString() : '—';
-          return '<tr><td>'+((typeLabels[s.scan_type])||s.scan_type)+'</td><td>'+(s.flag_count||0)+' flags</td><td style="color:var(--muted);font-size:0.82rem;">'+d+'</td><td>'+(s.flag_count>0?'<span class="badge badge-flag">Needs Review</span>':'<span class="badge badge-ok">OK</span>')+'</td></tr>';
-        }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1.5rem;">No scans yet.</td></tr>';
+        if (!Array.isArray(scans) || scans.length === 0) {
+          qs('#overview-scans').innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1.5rem;">No scans yet. Use the sidebar to run scans.</td></tr>';
+          return;
+        }
+        const typeLabels = { uncategorized:'Uncategorized' };
+        qs('#overview-scans').innerHTML = scans
+          .filter(s => s.scan_type === 'uncategorized')
+          .map(s => {
+            const d = s.scanned_at ? new Date(s.scanned_at).toLocaleString() : '--';
+            return '<tr><td>'+((typeLabels[s.scan_type])||s.scan_type)+'</td><td>'+(s.flag_count||0)+' flags</td><td style="color:var(--muted);font-size:0.82rem;">'+d+'</td><td>'+(s.flag_count>0?'<span class="badge badge-flag">Needs Review</span>':'<span class="badge badge-ok">OK</span>')+'</td></tr>';
+          }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1.5rem;">No scans yet.</td></tr>';
 
         // Update overview cards from scan data
         for (const s of scans) {
@@ -651,31 +312,21 @@
             qs('#ov-uncat').style.color = data.summary.flaggedCount > 0 ? 'var(--red)' : 'var(--green)';
             qs('#ov-uncat-sub').textContent = '$'+Number(data.summary.totalFlaggedAmount||0).toLocaleString()+' total';
           }
-          if (s.scan_type === 'liability' && data.summary) {
-            qs('#ov-liab').textContent = data.summary.flaggedCount + ' flagged';
-            qs('#ov-liab').style.color = data.summary.flaggedCount > 0 ? 'var(--orange)' : 'var(--green)';
-            qs('#ov-liab-sub').textContent = data.summary.totalAccounts + ' accounts checked';
-          }
-          if (s.scan_type === 'variance' && data.summary) {
-            qs('#ov-var').textContent = data.summary.flaggedCount + ' items';
-            qs('#ov-var').style.color = data.summary.flaggedCount > 0 ? 'var(--orange)' : 'var(--green)';
-            qs('#ov-var-sub').textContent = 'Above threshold';
-          }
-          if (s.scan_type === 'coa_changes' && data.summary) {
-            qs('#ov-coa').textContent = data.summary.totalChanges + ' changes';
-            qs('#ov-coa').style.color = data.summary.totalChanges > 0 ? 'var(--gold)' : 'var(--green)';
-            qs('#ov-coa-sub').textContent = data.summary.newCount + ' new, ' + data.summary.modifiedCount + ' edited';
-          }
-          if (s.scan_type === 'fixed_asset' && data.summary) {
-            qs('#ov-fa').textContent = data.summary.flaggedCount + ' flagged';
-            qs('#ov-fa').style.color = data.summary.flaggedCount > 0 ? 'var(--orange)' : 'var(--green)';
-            qs('#ov-fa-sub').textContent = '$'+Number(data.summary.totalFlaggedAmount||0).toLocaleString()+' total';
-          }
+        }
+      } catch(e) { /* ignore */ }
+
+      // Check for close packages
+      try {
+        const pkgs = await (await fetch('/api/companies/'+currentRealm+'/close-packages')).json();
+        if (Array.isArray(pkgs) && pkgs.length > 0) {
+          qs('#ov-pkg').textContent = pkgs.length + ' generated';
+          qs('#ov-pkg').style.color = 'var(--green)';
+          qs('#ov-pkg-sub').textContent = 'Latest: ' + pkgs[0].period;
         }
       } catch(e) { /* ignore */ }
     }
 
-    // --- Scan actions ---
+    // --- Uncategorized Scanner ---
     async function runUncategorizedScan() {
       const btn = qs('#btn-uncat-scan'); btn.disabled=true; btn.textContent='Scanning...';
       try {
@@ -688,7 +339,6 @@
         qs('#uncat-total').textContent = '$'+Number(s.totalFlaggedAmount).toLocaleString();
         qs('#uncat-last-scan').textContent = 'Last scanned: ' + new Date().toLocaleString();
 
-        // Render flagged accounts
         let html = '';
         if (data.flagged.length > 0) {
           html += '<h3 style="font-size:0.88rem;margin:1rem 0 0.5rem;color:var(--red);">Flagged Accounts</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Balance</th><th>Transactions</th></tr></thead><tbody>';
@@ -702,7 +352,6 @@
           }
           html += '</tbody></table></div>';
         }
-        // All checked accounts
         html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">All Checked Accounts</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Balance</th><th>Status</th></tr></thead><tbody>';
         for (const c of data.checked) {
           const ok = c.balance === 0;
@@ -716,152 +365,6 @@
       btn.disabled=false; btn.textContent='Run Scan';
     }
 
-    async function runLiabilityScan() {
-      const btn = qs('#btn-liab-scan'); btn.disabled=true; btn.textContent='Checking...';
-      try {
-        const data = await (await fetch('/api/companies/'+currentRealm+'/scan/liability',{method:'POST'})).json();
-        if (data.error) throw new Error(data.error);
-        const s = data.summary;
-        qs('#liab-stats').style.display='';
-        qs('#liab-flagged').textContent = s.flaggedCount;
-        qs('#liab-healthy').textContent = s.healthyCount;
-        qs('#liab-total').textContent = s.totalAccounts;
-        qs('#liab-last-scan').textContent = 'Last checked: ' + new Date().toLocaleString();
-
-        let html = '';
-        if (data.flagged.length > 0) {
-          html += '<h3 style="font-size:0.88rem;margin:1rem 0 0.5rem;color:var(--red);">Issues Found</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Balance</th><th>Issue</th><th>Type</th></tr></thead><tbody>';
-          for (const f of data.flagged) {
-            html += '<tr><td style="font-weight:600;">'+esc(f.name)+'</td><td style="color:var(--orange);">$'+Number(f.balance).toLocaleString()+'</td><td style="color:var(--red);">'+f.issues.join(', ')+'</td><td style="color:var(--muted);">'+esc(f.type)+'</td></tr>';
-          }
-          html += '</tbody></table></div>';
-        }
-        html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">All Liability Accounts</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Type</th><th>Balance</th><th>Status</th></tr></thead><tbody>';
-        const all = [...data.flagged, ...data.healthy].sort((a,b) => a.name.localeCompare(b.name));
-        for (const a of all) {
-          const ok = a.issues.length === 0;
-          html += '<tr><td>'+esc(a.name)+'</td><td style="color:var(--muted);">'+esc(a.type)+'</td><td>$'+Number(a.balance).toLocaleString()+'</td><td>'+(ok?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-flag">Flagged</span>')+'</td></tr>';
-        }
-        html += '</tbody></table></div>';
-        qs('#liab-results').innerHTML = html;
-        toast('Liability check complete: '+s.flaggedCount+' flagged');
-        loadOverviewScans();
-      } catch(e) { toast('Check failed: '+e.message); }
-      btn.disabled=false; btn.textContent='Run Check';
-    }
-
-    async function runVarianceAnalysis() {
-      const btn = qs('#btn-var'); btn.disabled=true; btn.textContent='Analyzing...';
-      const period = qs('#var-period').value;
-      const thresholdPct = Number(qs('#var-threshold').value);
-      try {
-        const data = await (await fetch('/api/companies/'+currentRealm+'/analysis/variance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({period,thresholdPct})})).json();
-        if (data.error) throw new Error(data.error);
-        const s = data.summary;
-        qs('#var-stats').style.display='';
-        qs('#var-flagged').textContent = s.flaggedCount;
-        qs('#var-revenue').textContent = '$'+Number(s.revenue).toLocaleString();
-        qs('#var-expenses').textContent = '$'+Number(s.expenses).toLocaleString();
-        qs('#var-net').textContent = '$'+Number(s.netIncome).toLocaleString();
-        qs('#var-rev-chg').textContent = s.revenueChangePct ? (s.revenueChangePct>0?'+':'')+s.revenueChangePct+'% vs prior' : '';
-        qs('#var-exp-chg').textContent = s.expenseChangePct ? (s.expenseChangePct>0?'+':'')+s.expenseChangePct+'% vs prior' : '';
-        qs('#var-last-scan').textContent = 'Last analyzed: ' + new Date().toLocaleString();
-
-        let html = '';
-        if (data.monthOverMonth.length > 0) {
-          html += '<h3 style="font-size:0.88rem;margin:1rem 0 0.5rem;">Significant Variances (vs Prior Month)</h3><div class="table-wrap"><table><thead><tr><th>Line Item</th><th>Current</th><th>Prior Month</th><th>Change $</th><th>Change %</th></tr></thead><tbody>';
-          for (const v of data.monthOverMonth) {
-            const arrow = v.direction==='up'?'&#9650;':'&#9660;';
-            const color = v.section==='Expense' ? (v.direction==='up'?'var(--red)':'var(--green)') : (v.direction==='up'?'var(--green)':'var(--red)');
-            html += '<tr><td><span style="color:'+color+';">'+arrow+'</span> '+esc(v.name)+'</td><td>$'+Number(v.current).toLocaleString()+'</td><td>$'+Number(v.prior).toLocaleString()+'</td><td style="color:'+color+';">'+(v.changeAmt>0?'+':'')+('$'+Number(v.changeAmt).toLocaleString())+'</td><td style="color:'+color+';">'+(v.changePct>0?'+':'')+v.changePct+'%</td></tr>';
-          }
-          html += '</tbody></table></div>';
-        } else {
-          html += '<div style="text-align:center;padding:2rem;color:var(--muted);">No significant variances found.</div>';
-        }
-        if (data.yearOverYear && data.yearOverYear.length > 0) {
-          html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Year-over-Year Comparison</h3><div class="table-wrap"><table><thead><tr><th>Line Item</th><th>Current</th><th>Prior Year</th><th>Change $</th><th>Change %</th></tr></thead><tbody>';
-          for (const v of data.yearOverYear) {
-            const arrow = v.direction==='up'?'&#9650;':'&#9660;';
-            html += '<tr><td>'+arrow+' '+esc(v.name)+'</td><td>$'+Number(v.current).toLocaleString()+'</td><td>$'+Number(v.prior).toLocaleString()+'</td><td>'+(v.changeAmt>0?'+':'')+'$'+Number(v.changeAmt).toLocaleString()+'</td><td>'+(v.changePct>0?'+':'')+v.changePct+'%</td></tr>';
-          }
-          html += '</tbody></table></div>';
-        }
-        qs('#var-results').innerHTML = html;
-        toast('Variance analysis complete: '+s.flaggedCount+' items flagged');
-        loadOverviewScans();
-      } catch(e) { toast('Analysis failed: '+e.message); }
-      btn.disabled=false; btn.textContent='Analyze';
-    }
-
-    async function runFixedAssetScan() {
-      const btn = qs('#btn-fa'); btn.disabled=true; btn.textContent='Scanning...';
-      const threshold = Number(qs('#fa-threshold').value) || 2500;
-      try {
-        const data = await (await fetch('/api/companies/'+currentRealm+'/scan/fixed-assets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threshold})})).json();
-        if (data.error) throw new Error(data.error);
-        const s = data.summary;
-        qs('#fa-stats').style.display='';
-        qs('#fa-flagged').textContent = s.flaggedCount;
-        qs('#fa-total').textContent = '$'+Number(s.totalFlaggedAmount).toLocaleString();
-        qs('#fa-accts').textContent = s.fixedAssetAccountCount;
-        qs('#fa-last-scan').textContent = 'Last scanned: ' + new Date().toLocaleString();
-
-        let html = '';
-        if (data.flagged.length > 0) {
-          html += '<h3 style="font-size:0.88rem;margin:1rem 0 0.5rem;color:var(--orange);">Potential Misclassified Assets (>$'+threshold.toLocaleString()+')</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Expense Account</th><th>Description</th><th>Vendor</th><th>Amount</th></tr></thead><tbody>';
-          for (const f of data.flagged) {
-            html += '<tr><td>'+esc(f.date)+'</td><td>'+esc(f.expenseAccount)+'</td><td>'+esc(f.description)+'</td><td>'+esc(f.vendor)+'</td><td style="text-align:right;font-weight:600;color:var(--orange);">$'+Number(f.amount).toLocaleString()+'</td></tr>';
-          }
-          html += '</tbody></table></div>';
-        } else {
-          html += '<div style="text-align:center;padding:2rem;color:var(--muted);">No expenses above $'+threshold.toLocaleString()+' threshold found.</div>';
-        }
-        qs('#fa-results').innerHTML = html;
-        toast('Fixed asset scan complete: '+s.flaggedCount+' flagged');
-        loadOverviewScans();
-      } catch(e) { toast('Scan failed: '+e.message); }
-      btn.disabled=false; btn.textContent='Run Scan';
-    }
-
-    async function runCoAScan() {
-      const btn = qs('#btn-coa'); btn.disabled=true; btn.textContent='Checking...';
-      try {
-        const data = await (await fetch('/api/companies/'+currentRealm+'/scan/coa-changes',{method:'POST'})).json();
-        if (data.error) throw new Error(data.error);
-        const s = data.summary;
-        qs('#coa-stats').style.display='';
-        qs('#coa-new').textContent = s.newCount;
-        qs('#coa-modified').textContent = s.modifiedCount;
-        qs('#coa-deleted').textContent = s.deletedCount;
-        qs('#coa-last-scan').textContent = 'Last checked: ' + new Date().toLocaleString();
-
-        let html = '';
-        const changes = data.changes;
-        const allChanges = [
-          ...changes.created.map(c => ({...c, action:'NEW'})),
-          ...changes.updated.map(c => ({...c, action:'EDIT'})),
-          ...changes.deleted.map(c => ({...c, action:'DEL'})),
-        ];
-        if (allChanges.length > 0) {
-          html += '<div class="table-wrap"><table><thead><tr><th>Action</th><th>Account Name</th><th>Type</th><th>Date</th></tr></thead><tbody>';
-          for (const c of allChanges) {
-            const badge = c.action==='NEW'?'badge-new':c.action==='EDIT'?'badge-edit':'badge-flag';
-            const dateStr = c.action==='NEW' ? c.createdDate : c.lastUpdated;
-            const d = dateStr ? new Date(dateStr).toLocaleDateString() : '—';
-            html += '<tr><td><span class="badge '+badge+'">'+c.action+'</span></td><td style="font-weight:600;">'+esc(c.name)+'</td><td style="color:var(--muted);">'+esc(c.type)+'</td><td style="color:var(--muted);">'+d+'</td></tr>';
-          }
-          html += '</tbody></table></div>';
-        } else {
-          html += '<div style="text-align:center;padding:2rem;color:var(--green);">No changes detected in the last '+data.daysSince+' days.</div>';
-        }
-        qs('#coa-results').innerHTML = html;
-        toast('CoA check complete: '+s.totalChanges+' changes found');
-        loadOverviewScans();
-      } catch(e) { toast('Check failed: '+e.message); }
-      btn.disabled=false; btn.textContent='Check Changes';
-    }
-
     // --- Close Package ---
     async function generateClosePackage() {
       const period = qs('#cp-period').value;
@@ -870,140 +373,128 @@
         const data = await (await fetch('/api/companies/'+currentRealm+'/close-package',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({period})})).json();
         if (data.error) throw new Error(data.error);
         const rd = typeof data.report_data === 'string' ? JSON.parse(data.report_data) : data.report_data;
-        let html = '<h3 style="font-size:0.88rem;margin:0.5rem 0;">Package Checklist</h3><div class="table-wrap"><table><thead><tr><th>Item</th><th>Status</th><th>Details</th></tr></thead><tbody>';
+
+        let html = '';
+
+        // Checklist
+        html += '<h3 style="font-size:0.88rem;margin:0.5rem 0 0.75rem;">Package Checklist</h3><div class="table-wrap"><table><thead><tr><th>Item</th><th>Status</th><th>Details</th></tr></thead><tbody>';
         for (const item of (rd.checklist||[])) {
           const badge = item.status==='ok'?'badge-ok':item.status==='warning'?'badge-warning':'badge-pending';
           const label = item.status==='ok'?'OK':item.status==='warning'?'Warning':item.status==='missing'?'Missing':'Not Run';
           html += '<tr><td style="font-weight:600;">'+esc(item.item)+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td style="color:var(--muted);">'+(item.flagCount!==undefined?item.flagCount+' flags':'')+'</td></tr>';
         }
         html += '</tbody></table></div>';
+
+        // P&L Report
+        if (rd.pnl) {
+          html += '<div class="report-section"><h3>Profit & Loss</h3>';
+          html += renderQBReport(rd.pnl);
+          html += '</div>';
+        }
+
+        // Balance Sheet
+        if (rd.balanceSheet) {
+          html += '<div class="report-section"><h3>Balance Sheet</h3>';
+          html += renderQBReport(rd.balanceSheet);
+          html += '</div>';
+        }
+
+        // Trial Balance
+        if (rd.trialBalance) {
+          html += '<div class="report-section"><h3>Trial Balance</h3>';
+          html += renderQBReport(rd.trialBalance);
+          html += '</div>';
+        }
+
         html += '<div style="margin-top:1rem;text-align:right;"><span class="badge badge-pending" style="font-size:0.8rem;padding:0.3rem 0.8rem;">Status: '+esc(data.status||'draft')+'</span></div>';
         qs('#cp-results').innerHTML = html;
         toast('Close package generated for '+period);
-      } catch(e) { toast('Generation failed: '+e.message); qs('#cp-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: '+esc(e.message)+'</div>'; }
+        loadOverviewScans();
+      } catch(e) {
+        toast('Generation failed: '+e.message);
+        qs('#cp-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: '+esc(e.message)+'</div>';
+      }
     }
 
-    // --- Statements ---
-    async function loadStatements() {
-      try {
-        const stmts = await (await fetch('/api/companies/'+currentRealm+'/statements')).json();
-        if (!Array.isArray(stmts)) { qs('#stmt-body').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1.5rem;">No statement schedules yet. Click "Add Schedule" to get started.</td></tr>'; return; }
-        qs('#stmt-total').textContent = stmts.length;
-        qs('#stmt-received').textContent = stmts.filter(s=>s.status==='received').length;
-        qs('#stmt-pending').textContent = stmts.filter(s=>s.status==='pending'||s.status==='reminded').length;
-        qs('#stmt-overdue').textContent = stmts.filter(s=>s.status==='escalated').length;
-        qs('#stmt-body').innerHTML = stmts.map(s => {
-          const statusBadge = s.status==='received'?'<span class="badge badge-ok">Received</span>':s.status==='escalated'?'<span class="badge badge-flag">Overdue</span>':s.status==='reminded'?'<span class="badge badge-warning">Reminded</span>':'<span class="badge badge-pending">Pending</span>';
-          return '<tr><td style="font-weight:600;">'+esc(s.client_name)+'</td><td>'+esc(s.account_name)+'</td><td>'+esc(s.access_method)+'</td><td>'+s.statement_day+'</td><td>'+statusBadge+'</td><td><div class="action-btns"><button class="action-btn approve" onclick="markStmtReceived('+s.id+')">Received</button><button class="action-btn skip" onclick="deleteStmt('+s.id+')">Delete</button></div></td></tr>';
-        }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1.5rem;">No schedules.</td></tr>';
-      } catch(e) { /* ignore */ }
+    // --- QBO Report Renderer ---
+    // Parses QBO report JSON (P&L, Balance Sheet, Trial Balance) into HTML tables
+    function renderQBReport(report) {
+      if (!report || !report.Rows || !report.Rows.Row) {
+        return '<div style="text-align:center;padding:1.5rem;color:var(--muted);">No report data available.</div>';
+      }
+
+      // Build column headers from report metadata
+      const columns = (report.Columns?.Column || []).map(c => c.ColTitle || '');
+      let html = '<div class="table-wrap"><table>';
+
+      // Header row
+      if (columns.length > 0) {
+        html += '<thead><tr>';
+        for (let i = 0; i < columns.length; i++) {
+          const align = i === 0 ? '' : ' class="amount"';
+          html += '<th'+align+'>'+esc(columns[i] || '')+'</th>';
+        }
+        html += '</tr></thead>';
+      }
+
+      html += '<tbody>';
+      html += renderReportRows(report.Rows.Row, 0);
+      html += '</tbody></table></div>';
+      return html;
     }
 
-    function showStmtModal() { qs('#stmt-modal').classList.add('show'); }
-    function hideStmtModal() { qs('#stmt-modal').classList.remove('show'); qs('#stmt-client').value=''; qs('#stmt-account').value=''; qs('#stmt-institution').value=''; qs('#stmt-email').value=''; qs('#stmt-notes').value=''; }
-
-    async function saveStatement() {
-      const body = {
-        client_name: qs('#stmt-client').value,
-        account_name: qs('#stmt-account').value,
-        institution: qs('#stmt-institution').value,
-        access_method: qs('#stmt-access').value,
-        statement_day: Number(qs('#stmt-day').value),
-        contact_email: qs('#stmt-email').value,
-        notes: qs('#stmt-notes').value,
-      };
-      if (!body.client_name || !body.account_name) { toast('Client name and account name are required'); return; }
-      try {
-        await fetch('/api/companies/'+currentRealm+'/statements',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-        hideStmtModal();
-        toast('Statement schedule saved');
-        loadStatements();
-      } catch(e) { toast('Failed: '+e.message); }
+    function renderReportRows(rows, depth) {
+      let html = '';
+      for (const row of rows) {
+        if (row.type === 'Section' || row.group) {
+          // Section header
+          if (row.Header && row.Header.ColData) {
+            html += '<tr class="report-row-header"><td colspan="99" style="padding-left:'+((depth*1.2)+1)+'rem;font-size:0.82rem;">'+esc(row.Header.ColData[0]?.value || '')+'</td></tr>';
+          }
+          // Recurse into sub-rows
+          if (row.Rows && row.Rows.Row) {
+            html += renderReportRows(row.Rows.Row, depth + 1);
+          }
+          // Summary/total row
+          if (row.Summary && row.Summary.ColData) {
+            html += renderDataRow(row.Summary.ColData, depth, true);
+          }
+        } else if (row.ColData) {
+          // Data row
+          html += renderDataRow(row.ColData, depth, false);
+        }
+      }
+      return html;
     }
 
-    async function markStmtReceived(id) {
-      await fetch('/api/companies/'+currentRealm+'/statements/'+id+'/received',{method:'POST'});
-      toast('Marked as received');
-      loadStatements();
+    function renderDataRow(colData, depth, isTotal) {
+      const cls = isTotal ? ' class="report-row-total"' : '';
+      let html = '<tr'+cls+'>';
+      for (let i = 0; i < colData.length; i++) {
+        const val = colData[i]?.value || '';
+        if (i === 0) {
+          const pad = (depth * 1.2) + 1;
+          html += '<td style="padding-left:'+pad+'rem;'+(isTotal?'font-weight:700;':'')+'">'+esc(val)+'</td>';
+        } else {
+          // Format as currency if numeric
+          const num = parseFloat(val);
+          const display = isNaN(num) ? esc(val) : formatCurrency(num);
+          html += '<td class="amount" style="'+(isTotal?'font-weight:700;':'')+'">'+display+'</td>';
+        }
+      }
+      html += '</tr>';
+      return html;
     }
 
-    async function deleteStmt(id) {
-      await fetch('/api/companies/'+currentRealm+'/statements/'+id,{method:'DELETE'});
-      toast('Schedule deleted');
-      loadStatements();
+    function formatCurrency(n) {
+      if (n === 0) return '$0.00';
+      const abs = Math.abs(n);
+      const formatted = '$' + abs.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+      return n < 0 ? '<span style="color:var(--red);">('+formatted+')</span>' : formatted;
     }
-
-    // --- Legacy functions (from v1) ---
-    async function loadAccounts() {
-      try { accountsList = await (await fetch('/api/companies/'+currentRealm+'/accounts')).json(); } catch(e) { accountsList = []; }
-    }
-
-    async function loadStats() {
-      try {
-        const data = await (await fetch('/api/companies/'+currentRealm+'/stats')).json();
-        const t = data.totals;
-        qs('#stat-total').textContent = t.total||0;
-        qs('#stat-pending').textContent = t.pending||0;
-        qs('#stat-categorized').textContent = t.categorized||0;
-        qs('#stat-reviewed').textContent = t.reviewed||0;
-        qs('#stat-written').textContent = t.written_back||0;
-        qs('#stat-vendors').textContent = data.vendors||0;
-        qs('#ov-txn').textContent = t.total||0;
-        qs('#ov-txn-sub').textContent = (t.pending||0)+' pending, '+(t.categorized||0)+' categorized';
-      } catch(e) {}
-    }
-
-    async function loadTransactions() {
-      const filter = qs('#txn-filter')?.value || '';
-      const statusParam = filter ? '&status='+filter : '';
-      try {
-        const txns = await (await fetch('/api/companies/'+currentRealm+'/transactions?limit=100'+statusParam)).json();
-        qs('#txn-body').innerHTML = txns.map(t => '<tr><td>'+t.date+'</td><td>'+esc(t.vendor_name)+'</td><td>'+esc(t.description).substring(0,50)+'</td><td style="text-align:right;">$'+Number(t.amount).toFixed(2)+'</td><td>'+esc(t.ai_category||'—')+'</td><td>'+confidenceBar(t.ai_confidence)+'</td><td>'+statusBadge(t.status)+'</td></tr>').join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">No transactions yet. Click "Sync Transactions" to pull from QuickBooks.</td></tr>';
-      } catch(e) {}
-    }
-
-    async function loadReview() {
-      try {
-        const txns = await (await fetch('/api/companies/'+currentRealm+'/transactions?status=categorized&limit=100')).json();
-        const opts = accountsList.map(a => '<option value="'+esc(a.name)+'">'+esc(a.name)+'</option>').join('');
-        qs('#review-body').innerHTML = txns.map(t => '<tr><td>'+t.date+'</td><td>'+esc(t.vendor_name)+'</td><td style="text-align:right;">$'+Number(t.amount).toFixed(2)+'</td><td><select id="cat-'+t.id+'" class="company-select" style="min-width:150px;font-size:0.8rem;padding:0.25rem 0.4rem;">'+opts+'</select></td><td>'+confidenceBar(t.ai_confidence)+'</td><td style="font-size:0.8rem;color:var(--muted);max-width:180px;">'+esc(t.ai_memo||'')+'</td><td><div class="action-btns"><button class="action-btn approve" onclick="reviewTxn('+t.id+',\'approve\')">Approve</button><button class="action-btn" onclick="recategorizeTxn('+t.id+')" style="color:var(--gold);border-color:var(--gold);">Save</button><button class="action-btn skip" onclick="reviewTxn('+t.id+',\'skip\')">Skip</button></div></td></tr>').join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">No transactions waiting for review.</td></tr>';
-        txns.forEach(t => { const sel = qs('#cat-'+t.id); if(sel) sel.value = t.ai_category||''; });
-      } catch(e) {}
-    }
-
-    async function loadVendors() {
-      try {
-        const vendors = await (await fetch('/api/companies/'+currentRealm+'/vendors')).json();
-        qs('#vendor-body').innerHTML = vendors.map(v => '<tr><td style="font-weight:600;">'+esc(v.vendor_name)+'</td><td>'+esc(v.business_category||'—')+'</td><td style="color:var(--muted);">'+esc(v.description||'—')+'</td><td style="color:var(--muted);font-size:0.8rem;">'+(v.researched_at||'—')+'</td></tr>').join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:2rem;">No vendors researched yet.</td></tr>';
-      } catch(e) {}
-    }
-
-    async function loadJobs() {
-      try {
-        const data = await (await fetch('/api/companies/'+currentRealm+'/stats')).json();
-        const jobs = data.recentJobs || [];
-        qs('#jobs-list').innerHTML = jobs.map(j => {
-          const statusColor = j.status==='completed'?'var(--green)':j.status==='failed'?'var(--red)':'var(--gold)';
-          const typeLabel = {sync:'Sync',categorize:'Categorize',vendor_research:'Vendor Research',write_back:'Write Back'}[j.job_type]||j.job_type;
-          return '<li class="job-item"><span class="job-type">'+typeLabel+'</span><span style="color:'+statusColor+';font-size:0.75rem;font-weight:700;text-transform:uppercase;">'+j.status+'</span><span style="font-size:0.82rem;">'+j.items_processed+'/'+j.items_total+' items</span>'+(j.error_message?'<span style="color:var(--red);font-size:0.78rem;">'+esc(j.error_message).substring(0,60)+'</span>':'')+'<span class="job-time">'+j.started_at+'</span></li>';
-        }).join('') || '<li class="job-item" style="justify-content:center;color:var(--muted);">No jobs yet.</li>';
-      } catch(e) {}
-    }
-
-    // --- Actions ---
-    async function runSync() { const btn=qs('#btn-sync'); btn.disabled=true; btn.textContent='Syncing...'; try { const data=await(await fetch('/api/companies/'+currentRealm+'/sync',{method:'POST'})).json(); toast('Synced '+data.synced+' transactions'); loadAll(); } catch(e){ toast('Sync failed: '+e.message); } btn.disabled=false; btn.textContent='Sync Transactions'; }
-    async function runCategorize() { const btn=qs('#btn-categorize'); btn.disabled=true; btn.textContent='Categorizing...'; try { const data=await(await fetch('/api/companies/'+currentRealm+'/categorize',{method:'POST'})).json(); toast('Categorized '+data.categorized+' transactions'); loadAll(); } catch(e){ toast('Failed: '+e.message); } btn.disabled=false; btn.textContent='Categorize with AI'; }
-    async function runResearch() { const btn=qs('#btn-research'); btn.disabled=true; btn.textContent='Researching...'; try { const data=await(await fetch('/api/companies/'+currentRealm+'/research-vendors',{method:'POST'})).json(); toast('Researched '+data.researched+' vendors'); loadAll(); } catch(e){ toast('Failed: '+e.message); } btn.disabled=false; btn.textContent='Research Vendors'; }
-    async function runWriteBack() { const btn=qs('#btn-writeback'); btn.disabled=true; btn.textContent='Writing...'; try { const data=await(await fetch('/api/companies/'+currentRealm+'/write-back',{method:'POST'})).json(); toast('Wrote '+data.written+' transactions to QuickBooks'); loadAll(); } catch(e){ toast('Failed: '+e.message); } btn.disabled=false; btn.textContent='Write Back to QB'; }
-    async function runPipeline() { const btn=qs('#btn-pipeline'); btn.disabled=true; btn.textContent='Running Pipeline...'; try { const data=await(await fetch('/api/companies/'+currentRealm+'/run-pipeline',{method:'POST'})).json(); if(data.error) throw new Error(data.error); toast('Pipeline: '+data.synced+' synced, '+data.categorized+' categorized, '+data.posted+' posted, '+data.needsReview+' need review'); loadAll(); } catch(e){ toast('Pipeline failed: '+e.message); } btn.disabled=false; btn.textContent='Run Full Pipeline'; }
-
-    async function reviewTxn(id, action) { await fetch('/api/companies/'+currentRealm+'/transactions/'+id+'/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action})}); toast(action==='approve'?'Approved':'Skipped'); loadAll(); }
-    async function recategorizeTxn(id) { const cat=qs('#cat-'+id).value; await fetch('/api/companies/'+currentRealm+'/transactions/'+id+'/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'recategorize',category:cat})}); toast('Recategorized — rule saved for: '+cat); loadAll(); }
 
     // --- Helpers ---
     function esc(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
-    function statusBadge(status) { const cls={pending:'badge-pending',categorized:'badge-categorized',reviewed:'badge-reviewed',written_back:'badge-written',skipped:'badge-skipped'}[status]||'badge-pending'; const label=status==='written_back'?'Written':(status||'pending'); return '<span class="badge '+cls+'">'+label+'</span>'; }
-    function confidenceBar(conf) { if(conf==null) return '<span style="color:var(--muted);">—</span>'; const pct=Math.round(conf*100); const cls=conf>=0.8?'conf-high':conf>=0.5?'conf-med':'conf-low'; return '<span class="confidence-bar"><span class="confidence-fill '+cls+'" style="width:'+pct+'%"></span></span>'+pct+'%'; }
     function toast(msg) { const el=qs('#toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),3000); }
 
     init();
