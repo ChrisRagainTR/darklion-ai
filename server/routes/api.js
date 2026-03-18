@@ -105,20 +105,16 @@ router.get('/companies/:realmId/gusto/debug', async (req, res) => {
     const accessToken = await getGustoAccessToken(req.params.realmId);
     const baseUrl = process.env.GUSTO_API_URL || 'https://api.gusto-demo.com';
 
-    // Try multiple endpoints to find company info
-    const results = {};
-    for (const path of ['/v1/me', '/v1/companies', '/v2/me', '/v2/companies']) {
-      try {
-        const r = await fetch(`${baseUrl}${path}`, {
-          headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
-        });
-        results[path] = r.ok ? await r.json() : { status: r.status, body: await r.text() };
-      } catch (e) {
-        results[path] = { error: e.message };
-      }
-    }
+    const { rows: [comp] } = await pool.query('SELECT gusto_company_id FROM companies WHERE realm_id = $1', [req.params.realmId]);
+    const companyId = comp?.gusto_company_id;
 
-    res.json(results);
+    // Fetch all payrolls (no date filter) to see what exists
+    const payrollsRes = await fetch(`${baseUrl}/v1/companies/${companyId}/payrolls?processed=true`, {
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
+    });
+    const payrolls = payrollsRes.ok ? await payrollsRes.json() : { status: payrollsRes.status, body: await payrollsRes.text() };
+
+    res.json({ gusto_company_id: companyId, payrolls });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
