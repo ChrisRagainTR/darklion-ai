@@ -2,6 +2,8 @@ const { Router } = require('express');
 const { pool } = require('../db');
 const { scanUncategorized, getLatestScan } = require('../services/scanner');
 const { generateClosePackage } = require('../services/reports');
+const { scanVariance } = require('../services/variance');
+const { scanLiabilities } = require('../services/liability');
 
 const router = Router();
 
@@ -66,6 +68,27 @@ router.delete('/companies/:realmId', async (req, res) => {
 router.post('/companies/:realmId/scan/uncategorized', async (req, res) => {
   try {
     const result = await scanUncategorized(req.params.realmId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- P&L Variance Analysis ---
+router.post('/companies/:realmId/scan/variance', async (req, res) => {
+  try {
+    const { year, month, thresholdPct, thresholdAmt } = req.body || {};
+    const result = await scanVariance(req.params.realmId, { year, month, thresholdPct, thresholdAmt });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Liability Account Health Check ---
+router.post('/companies/:realmId/scan/liability', async (req, res) => {
+  try {
+    const result = await scanLiabilities(req.params.realmId);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

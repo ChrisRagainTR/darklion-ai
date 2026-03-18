@@ -26,6 +26,15 @@ async function initDB() {
       last_sync_at TIMESTAMPTZ
     );
 
+    -- Add Gusto columns if missing
+    DO $$ BEGIN
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS gusto_access_token TEXT;
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS gusto_refresh_token TEXT;
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS gusto_company_id TEXT;
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS gusto_token_expires_at BIGINT;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
     CREATE TABLE IF NOT EXISTS transactions (
       id SERIAL PRIMARY KEY,
       realm_id TEXT NOT NULL,
