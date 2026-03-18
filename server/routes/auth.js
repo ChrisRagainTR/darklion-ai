@@ -182,7 +182,7 @@ router.get('/gusto/callback', async (req, res) => {
 
   try {
     // Exchange code for tokens
-    const tokenRes = await fetch('${process.env.GUSTO_API_URL || 'https://api.gusto-demo.com'}/oauth/token', {
+    const tokenRes = await fetch(`${process.env.GUSTO_API_URL || 'https://api.gusto-demo.com'}/oauth/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -209,7 +209,7 @@ router.get('/gusto/callback', async (req, res) => {
     // Fetch Gusto company ID from /v1/me
     let gustoCompanyId = '';
     try {
-      const meRes = await fetch('${process.env.GUSTO_API_URL || 'https://api.gusto-demo.com'}/v1/me', {
+      const meRes = await fetch(`${process.env.GUSTO_API_URL || 'https://api.gusto-demo.com'}/v1/me`, {
         headers: { 'Authorization': `Bearer ${tokens.access_token}`, 'Accept': 'application/json' },
       });
       if (meRes.ok) {
@@ -249,7 +249,7 @@ async function refreshGustoTokens(realmId) {
   const company = rows[0];
   if (!company?.gusto_refresh_token) throw new Error(`Gusto not connected for ${realmId}`);
 
-  const tokenRes = await fetch('${process.env.GUSTO_API_URL || 'https://api.gusto-demo.com'}/oauth/token', {
+  const tokenRes = await fetch(`${process.env.GUSTO_API_URL || 'https://api.gusto-demo.com'}/oauth/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
