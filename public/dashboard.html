@@ -454,7 +454,7 @@
       const sel = qs('#company-select');
       sel.innerHTML = companies.map(c => '<option value="'+c.realm_id+'">'+(c.company_name||c.realm_id)+'</option>').join('');
       currentRealm = companies[0].realm_id;
-      sel.addEventListener('change', () => { currentRealm = sel.value; renderCompanyList(); loadAll(); });
+      sel.addEventListener('change', () => { selectCompany(sel.value); });
 
       populatePeriodSelectors();
       renderCompanyList();
@@ -1072,6 +1072,15 @@
       // Re-render company list to update active state
       renderCompanyList();
       loadAll();
+      // Reload the currently active section so data refreshes for the new company
+      const activeSection = document.querySelector('.section-page.active');
+      if (activeSection) {
+        const secName = activeSection.id.replace('sec-', '');
+        if (secName === 'uncategorized') loadLatestUncategorized();
+        if (secName === 'close-package') loadLatestClosePackage();
+        if (secName === 'variance') loadLatestVariance();
+        if (secName === 'liability') loadLatestLiability();
+      }
       toast('Switched to ' + (companies.find(c=>c.realm_id===realmId)?.company_name || realmId));
     }
 
