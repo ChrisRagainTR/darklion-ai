@@ -216,6 +216,9 @@
         <li><a href="#" data-section="payroll" onclick="showSection('payroll',this)"><span>Payroll Check</span></a></li>
       </ul>
     </nav>
+    <div style="margin-top:auto;padding:1rem;border-top:1px solid var(--border);">
+      <a href="#" onclick="logout()" style="display:block;text-align:center;color:var(--muted);font-size:0.82rem;text-decoration:none;">Logout</a>
+    </div>
   </aside>
 
   <!-- Main content -->
@@ -1137,6 +1140,19 @@
     // --- Helpers ---
     function esc(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
     function toast(msg) { const el=qs('#toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),3000); }
+
+    function logout() {
+      // Clear Basic Auth by sending a request with bad credentials
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', '/dashboard', true);
+      xhr.setRequestHeader('Authorization', 'Basic ' + btoa('logout:logout'));
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          window.location.href = '/';
+        }
+      };
+      xhr.send();
+    }
 
     init();
   </script>
