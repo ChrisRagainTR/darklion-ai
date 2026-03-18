@@ -1182,7 +1182,8 @@
         }
         const state = currentRealm;
         const redirectUri = encodeURIComponent(cfg.gusto_redirect_uri);
-        window.open('https://app.gusto.com/oauth/authorize?client_id=' + cfg.gusto_client_id + '&redirect_uri=' + redirectUri + '&response_type=code&state=' + state, '_blank');
+        const gustoAppUrl = cfg.gusto_app_url || 'https://app.gusto-demo.com';
+        window.open(gustoAppUrl + '/oauth/authorize?client_id=' + cfg.gusto_client_id + '&redirect_uri=' + redirectUri + '&response_type=code&state=' + state, '_blank');
       } catch(e) {
         toast('Failed to start Gusto connection: ' + e.message);
       }

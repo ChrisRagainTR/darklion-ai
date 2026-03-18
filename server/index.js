@@ -100,6 +100,7 @@ app.get('/api/config', (req, res) => {
     qb_redirect_uri: process.env.QB_REDIRECT_URI || `${req.protocol}://${req.hostname}/callback.html`,
     gusto_client_id: process.env.GUSTO_CLIENT_ID || '',
     gusto_redirect_uri: process.env.GUSTO_REDIRECT_URI || '',
+    gusto_app_url: process.env.GUSTO_APP_URL || 'https://app.gusto-demo.com',
   });
 });
 

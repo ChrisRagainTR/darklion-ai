@@ -98,7 +98,7 @@ async function verifyPayroll(realmId, options = {}) {
 
 // Fetch payrolls from Gusto API
 async function fetchGustoPayrolls(accessToken, companyId, startDate, endDate) {
-  const baseUrl = process.env.GUSTO_API_URL || 'https://api.gusto.com';
+  const baseUrl = process.env.GUSTO_API_URL || 'https://api.gusto-demo.com';
   const url = `${baseUrl}/v1/companies/${companyId}/payrolls?start_date=${startDate}&end_date=${endDate}&processed=true`;
 
   const res = await fetch(url, {
