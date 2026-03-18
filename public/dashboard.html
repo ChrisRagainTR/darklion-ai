@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <title>Dashboard — DarkLion v2</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -344,11 +346,11 @@
     // --- Overview ---
     async function loadOverviewScans() {
       // Companies overview card
-      const healthy = companies.filter(c => c.token_status === 'healthy').length;
-      const expired = companies.filter(c => c.token_status === 'expired').length;
+      const connected = companies.filter(c => c.token_status !== 'disconnected').length;
+      const disconnected = companies.filter(c => c.token_status === 'disconnected').length;
       qs('#ov-companies').textContent = companies.length;
-      qs('#ov-companies').style.color = expired > 0 ? 'var(--orange)' : 'var(--green)';
-      qs('#ov-companies-sub').textContent = healthy + ' healthy' + (expired > 0 ? ', ' + expired + ' expired' : '');
+      qs('#ov-companies').style.color = disconnected > 0 ? 'var(--orange)' : 'var(--green)';
+      qs('#ov-companies-sub').textContent = connected + ' connected' + (disconnected > 0 ? ', ' + disconnected + ' disconnected' : '');
 
       try {
         const scans = await (await fetch('/api/companies/'+currentRealm+'/scans')).json();
@@ -567,14 +569,19 @@
       } else {
         listEl.innerHTML = filtered.map(c => {
           const name = esc(c.company_name || c.realm_id);
-          const status = c.token_status || 'unknown';
+          const status = c.token_status || 'connected';
+          const isDisconnected = status === 'disconnected';
+          const dotClass = isDisconnected ? 'expired' : 'healthy';
           const syncText = c.last_sync_at ? 'Synced ' + timeAgo(c.last_sync_at) : 'Never synced';
-          const statusLabel = status === 'healthy' ? 'Connected' : status === 'expired' ? 'Token expired' : status === 'expiring' ? 'Token expiring' : 'Unknown';
+          const statusLabel = isDisconnected ? 'Disconnected' : 'Connected';
           const isActive = c.realm_id === currentRealm;
+          const actionBtn = isDisconnected
+            ? '<button class="btn-disconnect" style="border-color:var(--gold);color:var(--gold);" onclick="event.stopPropagation();connectNewCompany()">Reconnect</button>'
+            : '<button class="btn-disconnect" onclick="event.stopPropagation();disconnectCompany(\''+c.realm_id+'\',\''+name+'\')">Disconnect</button>';
           return '<div class="company-item'+(isActive?' active':'')+'" data-realm="'+c.realm_id+'" onclick="selectCompany(\''+c.realm_id+'\')">'
-            + '<div class="ci-dot '+status+'" title="'+statusLabel+'"></div>'
+            + '<div class="ci-dot '+dotClass+'" title="'+statusLabel+'"></div>'
             + '<div class="ci-info"><div class="ci-name">'+name+'</div><div class="ci-meta">'+syncText+' &middot; '+statusLabel+'</div></div>'
-            + '<div class="ci-actions"><button class="btn-disconnect" onclick="event.stopPropagation();disconnectCompany(\''+c.realm_id+'\',\''+name+'\')">Disconnect</button></div>'
+            + '<div class="ci-actions">'+actionBtn+'</div>'
             + '</div>';
         }).join('');
       }
