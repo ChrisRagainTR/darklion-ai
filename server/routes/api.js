@@ -401,7 +401,12 @@ router.get('/companies/:realmId/transactions/drilldown', async (req, res) => {
     // Requesting explicit columns so we get consistent ordering regardless of QBO defaults
     const columns = 'tx_date,txn_type,doc_num,name,memo,split_acc,subt_nat_amount';
     const endpoint = `/reports/TransactionList?start_date=${startDate}&end_date=${endDate}&account_name=${encodeURIComponent(account)}&columns=${columns}&minorversion=75`;
+    console.log('[drilldown] endpoint:', endpoint);
     const data = await qbFetch(req.params.realmId, endpoint);
+    console.log('[drilldown] colHeaders:', (data.Columns?.Column || []).map(c => c.ColTitle));
+    console.log('[drilldown] total rows (before parse):', (data.Rows?.Row || []).length);
+    // Log first raw row for debugging
+    if (data.Rows?.Row?.[0]) console.log('[drilldown] first row raw:', JSON.stringify(data.Rows.Row[0]).substring(0, 300));
 
     // Parse QBO TransactionList report — read column headers dynamically
     // so we're resilient to QBO inserting extra columns (e.g. "Posting")
