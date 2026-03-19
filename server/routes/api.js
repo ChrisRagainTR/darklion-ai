@@ -5,16 +5,40 @@ const { generateClosePackage } = require('../services/reports');
 const { scanVariance } = require('../services/variance');
 const { scanLiabilities } = require('../services/liability');
 const { verifyPayroll } = require('../services/payroll');
+const { auditLog } = require('./firms');
 
 const router = Router();
 
+// Helper: verify realm belongs to this firm
+async function assertRealmOwner(firmId, realmId, res) {
+  const { rows } = await pool.query(
+    'SELECT realm_id FROM companies WHERE realm_id = $1 AND (firm_id = $2 OR firm_id IS NULL)',
+    [realmId, firmId]
+  );
+  if (rows.length === 0) {
+    res.status(403).json({ error: 'Access denied to this company' });
+    return false;
+  }
+  return true;
+}
+
 // --- Dashboard data ---
 
-// List connected companies (with token health, auto-refresh expired tokens)
+// List connected companies scoped to this firm
 router.get('/companies', async (req, res) => {
-  const { rows } = await pool.query(
-    'SELECT realm_id, company_name, connected_at, last_sync_at, token_expires_at, refresh_token, gusto_access_token, gusto_company_id FROM companies ORDER BY company_name ASC'
-  );
+  const firmId = req.firm?.id;
+  let query, params;
+
+  if (firmId) {
+    query = 'SELECT realm_id, company_name, connected_at, last_sync_at, token_expires_at, refresh_token, gusto_access_token, gusto_company_id FROM companies WHERE firm_id = $1 ORDER BY company_name ASC';
+    params = [firmId];
+  } else {
+    // Fallback: show all (dev mode / no JWT)
+    query = 'SELECT realm_id, company_name, connected_at, last_sync_at, token_expires_at, refresh_token, gusto_access_token, gusto_company_id FROM companies ORDER BY company_name ASC';
+    params = [];
+  }
+
+  const { rows } = await pool.query(query, params);
   const now = Date.now();
   const { refreshTokens } = require('./auth');
 
@@ -24,7 +48,6 @@ router.get('/companies', async (req, res) => {
     const expired = c.token_expires_at && Number(c.token_expires_at) < now;
 
     if (expired && c.refresh_token) {
-      // Try to silently refresh
       try {
         await refreshTokens(c.realm_id);
         tokenStatus = 'connected';
@@ -47,10 +70,17 @@ router.get('/companies', async (req, res) => {
   res.json(enriched);
 });
 
-// Disconnect a company
+// Disconnect a company (firm-scoped)
 router.delete('/companies/:realmId', async (req, res) => {
   try {
     const { realmId } = req.params;
+    const firmId = req.firm?.id;
+
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res))) return;
+
+    // Get company name for audit log
+    const { rows: [comp] } = await pool.query('SELECT company_name FROM companies WHERE realm_id = $1', [realmId]);
+
     // Delete dependent records first, then the company
     await pool.query('DELETE FROM scan_results WHERE realm_id = $1', [realmId]);
     await pool.query('DELETE FROM close_packages WHERE realm_id = $1', [realmId]);
@@ -60,6 +90,8 @@ router.delete('/companies/:realmId', async (req, res) => {
     await pool.query('DELETE FROM vendors WHERE realm_id = $1', [realmId]);
     await pool.query('DELETE FROM transactions WHERE realm_id = $1', [realmId]);
     await pool.query('DELETE FROM companies WHERE realm_id = $1', [realmId]);
+
+    await auditLog(firmId, 'company_disconnect', `Disconnected: ${comp?.company_name || realmId}`, req.ip);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -69,7 +101,11 @@ router.delete('/companies/:realmId', async (req, res) => {
 // --- Uncategorized transaction scan ---
 router.post('/companies/:realmId/scan/uncategorized', async (req, res) => {
   try {
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+
     const result = await scanUncategorized(req.params.realmId);
+    await auditLog(firmId, 'scan_uncategorized', `Realm: ${req.params.realmId}, flags: ${result.summary.flaggedCount}`, req.ip);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -79,8 +115,12 @@ router.post('/companies/:realmId/scan/uncategorized', async (req, res) => {
 // --- P&L Variance Analysis ---
 router.post('/companies/:realmId/scan/variance', async (req, res) => {
   try {
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+
     const { year, month, thresholdPct, thresholdAmt } = req.body || {};
     const result = await scanVariance(req.params.realmId, { year, month, thresholdPct, thresholdAmt });
+    await auditLog(firmId, 'scan_variance', `Realm: ${req.params.realmId}, flags: ${result.summary.flaggedCount}`, req.ip);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -90,8 +130,12 @@ router.post('/companies/:realmId/scan/variance', async (req, res) => {
 // --- Payroll Verification ---
 router.post('/companies/:realmId/scan/payroll', async (req, res) => {
   try {
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+
     const { year, month } = req.body || {};
     const result = await verifyPayroll(req.params.realmId, { year, month });
+    await auditLog(firmId, 'scan_payroll', `Realm: ${req.params.realmId}`, req.ip);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -101,6 +145,9 @@ router.post('/companies/:realmId/scan/payroll', async (req, res) => {
 // --- Employee officer tagging ---
 router.get('/companies/:realmId/employees/metadata', async (req, res) => {
   try {
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+
     const { rows } = await pool.query(
       'SELECT employee_uuid, employee_name, is_officer FROM employee_metadata WHERE realm_id = $1',
       [req.params.realmId]
@@ -114,6 +161,9 @@ router.get('/companies/:realmId/employees/metadata', async (req, res) => {
 router.post('/companies/:realmId/employees/:employeeUuid/officer', async (req, res) => {
   try {
     const { realmId, employeeUuid } = req.params;
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res))) return;
+
     const { is_officer, employee_name } = req.body;
     await pool.query(`
       INSERT INTO employee_metadata (realm_id, employee_uuid, employee_name, is_officer)
@@ -132,7 +182,11 @@ router.post('/companies/:realmId/employees/:employeeUuid/officer', async (req, r
 // --- Liability Account Health Check ---
 router.post('/companies/:realmId/scan/liability', async (req, res) => {
   try {
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+
     const result = await scanLiabilities(req.params.realmId);
+    await auditLog(firmId, 'scan_liability', `Realm: ${req.params.realmId}, flags: ${result.summary?.flaggedCount || 0}`, req.ip);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -142,6 +196,9 @@ router.post('/companies/:realmId/scan/liability', async (req, res) => {
 // Get latest scan results (any type)
 router.get('/companies/:realmId/scans', async (req, res) => {
   try {
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+
     const { type } = req.query;
     if (type) {
       const result = await getLatestScan(req.params.realmId, type);
@@ -164,11 +221,13 @@ router.get('/companies/:realmId/scans', async (req, res) => {
 
 router.post('/companies/:realmId/close-package', async (req, res) => {
   try {
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+
     const { startDate, endDate, period, label, byMonth } = req.body;
     const realmId = req.params.realmId;
 
     if (byMonth && startDate && endDate) {
-      // Generate one package per month in the range
       const results = [];
       const start = new Date(startDate + 'T00:00:00');
       const end = new Date(endDate + 'T00:00:00');
@@ -185,12 +244,10 @@ router.post('/companies/:realmId/close-package', async (req, res) => {
     }
 
     if (startDate && endDate) {
-      // Range-based package
       const pkg = await generateClosePackage(realmId, period || 'custom', startDate, endDate);
       return res.json(pkg);
     }
 
-    // Legacy: single period like "2026-03"
     const p = period || currentPeriod();
     const pkg = await generateClosePackage(realmId, p);
     res.json(pkg);
@@ -201,6 +258,9 @@ router.post('/companies/:realmId/close-package', async (req, res) => {
 
 router.get('/companies/:realmId/close-packages', async (req, res) => {
   try {
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+
     const { rows } = await pool.query(
       'SELECT id, period, status, report_data, generated_at FROM close_packages WHERE realm_id = $1 ORDER BY generated_at DESC',
       [req.params.realmId]
@@ -213,6 +273,9 @@ router.get('/companies/:realmId/close-packages', async (req, res) => {
 
 router.get('/companies/:realmId/close-packages/:id', async (req, res) => {
   try {
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+
     const { rows } = await pool.query(
       'SELECT * FROM close_packages WHERE id = $1 AND realm_id = $2',
       [req.params.id, req.params.realmId]
@@ -226,6 +289,9 @@ router.get('/companies/:realmId/close-packages/:id', async (req, res) => {
 
 router.put('/companies/:realmId/close-packages/:id', async (req, res) => {
   try {
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+
     const { status, reviewer_notes } = req.body;
     const updates = [];
     const params = [req.params.id, req.params.realmId];

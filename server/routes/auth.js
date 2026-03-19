@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { pool } = require('../db');
+const { requireFirm } = require('../middleware/requireFirm');
 
 const router = Router();
 
@@ -55,17 +56,32 @@ router.get('/callback', async (req, res) => {
       // Non-fatal — we just won't have the name
     }
 
-    // Upsert company
+    // Extract firm_id from state parameter (format: "firmId:randomNonce" or just firmId)
+    let firmId = null;
+    if (state) {
+      const parts = state.split(':');
+      const parsed = parseInt(parts[0], 10);
+      if (!isNaN(parsed) && parsed > 0) firmId = parsed;
+    }
+
+    // Upsert company — associate with firm if firmId present
     await pool.query(`
-      INSERT INTO companies (realm_id, company_name, access_token, refresh_token, token_expires_at)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO companies (realm_id, company_name, access_token, refresh_token, token_expires_at, firm_id)
+      VALUES ($1, $2, $3, $4, $5, $6)
       ON CONFLICT(realm_id) DO UPDATE SET
         company_name = EXCLUDED.company_name,
         access_token = EXCLUDED.access_token,
         refresh_token = EXCLUDED.refresh_token,
         token_expires_at = EXCLUDED.token_expires_at,
-        connected_at = NOW()
-    `, [realmId, companyName, tokens.access_token, tokens.refresh_token, expiresAt]);
+        connected_at = NOW(),
+        firm_id = COALESCE(EXCLUDED.firm_id, companies.firm_id)
+    `, [realmId, companyName, tokens.access_token, tokens.refresh_token, expiresAt, firmId]);
+
+    // Audit log
+    try {
+      const { auditLog } = require('./firms');
+      await auditLog(firmId, 'company_connect', `Connected: ${companyName || realmId} (realm: ${realmId})`, req.ip);
+    } catch (e) { /* non-fatal */ }
 
     res.json({ ok: true, company: companyName || realmId });
 

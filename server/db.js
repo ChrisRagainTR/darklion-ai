@@ -15,6 +15,17 @@ const pool = new Pool({
 // Initialize tables
 async function initDB() {
   await pool.query(`
+    -- ===================== FIRMS (multi-tenant) =====================
+    CREATE TABLE IF NOT EXISTS firms (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      plan TEXT DEFAULT 'trial'
+    );
+
+    -- ===================== COMPANIES =====================
     CREATE TABLE IF NOT EXISTS companies (
       id SERIAL PRIMARY KEY,
       realm_id TEXT UNIQUE NOT NULL,
@@ -23,8 +34,15 @@ async function initDB() {
       refresh_token TEXT NOT NULL,
       token_expires_at BIGINT NOT NULL,
       connected_at TIMESTAMPTZ DEFAULT NOW(),
-      last_sync_at TIMESTAMPTZ
+      last_sync_at TIMESTAMPTZ,
+      firm_id INTEGER REFERENCES firms(id)
     );
+
+    -- Add firm_id to companies if it doesn't exist yet (migration)
+    DO $$ BEGIN
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS firm_id INTEGER REFERENCES firms(id);
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
 
     -- Add Gusto columns if missing
     DO $$ BEGIN
@@ -34,6 +52,16 @@ async function initDB() {
       ALTER TABLE companies ADD COLUMN IF NOT EXISTS gusto_token_expires_at BIGINT;
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
+
+    -- ===================== AUDIT LOG =====================
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER,
+      action TEXT NOT NULL,
+      detail TEXT,
+      ip TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
 
     CREATE TABLE IF NOT EXISTS transactions (
       id SERIAL PRIMARY KEY,

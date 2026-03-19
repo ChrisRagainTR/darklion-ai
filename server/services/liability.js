@@ -3,39 +3,86 @@ const { qbFetch } = require('./quickbooks');
 
 // Scan all liability accounts for health issues
 async function scanLiabilities(realmId) {
-  // Query all liability-type accounts
-  const query = "SELECT * FROM Account WHERE AccountType IN ('Accounts Payable', 'Credit Card', 'Long Term Liability', 'Other Current Liability') MAXRESULTS 200";
-  const data = await qbFetch(realmId, `/query?query=${encodeURIComponent(query)}`);
+  // Use Classification = 'Liability' to catch ALL liability accounts regardless of
+  // AccountType naming variations across QBO versions/regions
+  const query = "SELECT * FROM Account WHERE Classification = 'Liability' MAXRESULTS 200";
+
+  let data;
+  try {
+    data = await qbFetch(realmId, `/query?query=${encodeURIComponent(query)}`);
+  } catch (err) {
+    // Surface clear errors for auth failures
+    if (err.message && err.message.includes('401')) {
+      const result = {
+        error: 'QBO token expired — please reconnect your QuickBooks account',
+        summary: { totalAccounts: 0, flaggedCount: 0, totalLiabilityBalance: 0 },
+        flagged: [],
+        checked: [],
+      };
+      return result;
+    }
+    throw err;
+  }
+
   const accounts = data.QueryResponse?.Account || [];
+
+  // Debug: log first raw account to help verify field names
+  if (accounts.length > 0) {
+    console.log(`[liability] QBO returned ${accounts.length} liability accounts for ${realmId}`);
+    console.log(`[liability] Sample account fields:`, JSON.stringify(accounts[0], null, 2));
+  } else {
+    console.log(`[liability] No liability accounts returned from QBO for ${realmId}`);
+  }
+
+  if (accounts.length === 0) {
+    const result = {
+      message: 'No liability accounts found in QuickBooks. Make sure the company has Accounts Payable, Credit Card, or Liability accounts set up.',
+      summary: { totalAccounts: 0, flaggedCount: 0, totalLiabilityBalance: 0 },
+      flagged: [],
+      checked: [],
+    };
+    // Still store the result
+    const period = currentPeriod();
+    await pool.query(`
+      INSERT INTO scan_results (realm_id, scan_type, period, result_data, flag_count)
+      VALUES ($1, 'liability', $2, $3, $4)
+      ON CONFLICT DO NOTHING
+    `, [realmId, period, JSON.stringify(result), 0]);
+    return result;
+  }
 
   const checked = [];
   const flagged = [];
 
   for (const acct of accounts) {
-    const balance = Number(acct.CurrentBalance || 0);
-    const name = acct.Name || acct.FullyQualifiedName || '';
+    const balance = Number(acct.CurrentBalance || acct.CurrentBalanceWithSubAccounts || 0);
+    // Use FullyQualifiedName to match what QBO shows in the UI (e.g. "Liabilities:Accounts Payable")
+    const name = acct.FullyQualifiedName || acct.Name || '';
+    const displayName = acct.Name || name; // short name for display
     const subType = acct.AccountSubType || acct.AccountType || '';
+    const accountType = acct.AccountType || '';
 
     const issues = [];
 
-    // Check 1: Negative balance (unusual for liability)
+    // Check 1: Negative balance (unusual for liability — means the company is owed money)
     if (balance < 0) {
-      issues.push({ type: 'negative_balance', message: `Negative balance: $${balance.toLocaleString()}`, severity: 'warning' });
+      issues.push({ type: 'negative_balance', message: `Negative balance: $${Math.abs(balance).toLocaleString()}`, severity: 'warning' });
     }
 
     // Check 2: Zero balance on accounts that typically carry balances
-    const expectsBalance = ['Credit Card', 'Long Term Liability'].includes(acct.AccountType);
+    const expectsBalance = ['CreditCard', 'Credit Card', 'LongTermLiability', 'Long Term Liability'].includes(accountType) ||
+                           ['CreditCard', 'LongTermLiability'].includes(subType);
     if (balance === 0 && expectsBalance) {
       issues.push({ type: 'zero_balance', message: 'Zero balance — verify if expected', severity: 'info' });
     }
 
-    // Check 3: Very large balance relative to typical (> $50k on credit cards)
-    if (acct.AccountType === 'Credit Card' && balance > 50000) {
+    // Check 3: Very large balance on credit cards (> $50k)
+    if ((accountType === 'Credit Card' || accountType === 'CreditCard' || subType === 'CreditCard') && balance > 50000) {
       issues.push({ type: 'high_balance', message: `High balance: $${balance.toLocaleString()}`, severity: 'warning' });
     }
 
-    // Check 4: Stale payroll liabilities — Other Current Liability with non-zero
-    if (acct.AccountType === 'Other Current Liability' && Math.abs(balance) > 0) {
+    // Check 4: Stale payroll liabilities (Other Current Liability with payroll-related name)
+    if ((accountType === 'Other Current Liability' || accountType === 'OtherCurrentLiability') && Math.abs(balance) > 0) {
       const isPayroll = /payroll|tax|withhold|fica|futa|suta|401k|health\s*ins/i.test(name);
       if (isPayroll) {
         issues.push({ type: 'payroll_liability', message: `Payroll liability balance: $${balance.toLocaleString()} — verify cleared`, severity: 'warning' });
@@ -43,9 +90,10 @@ async function scanLiabilities(realmId) {
     }
 
     const entry = {
-      name,
+      name: name,           // FullyQualifiedName — matches QBO UI
+      displayName,          // Short name
       id: acct.Id,
-      accountType: acct.AccountType,
+      accountType,
       subType,
       balance,
       active: acct.Active !== false,
@@ -53,12 +101,12 @@ async function scanLiabilities(realmId) {
     };
 
     checked.push(entry);
-    if (issues.length > 0) {
+    if (issues.filter(i => i.severity !== 'info').length > 0) {
       flagged.push(entry);
     }
   }
 
-  // Sort flagged by severity (warnings first) then by absolute balance
+  // Sort flagged by severity then absolute balance
   flagged.sort((a, b) => {
     const aWarn = a.issues.some(i => i.severity === 'warning') ? 1 : 0;
     const bWarn = b.issues.some(i => i.severity === 'warning') ? 1 : 0;

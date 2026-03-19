@@ -23,22 +23,57 @@ try {
   // .env loading is optional
 }
 
+// === Safety check: refuse to start without JWT_SECRET ===
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
+  console.error('Add JWT_SECRET to your .env file or Railway environment variables.');
+  process.exit(1);
+}
+
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { initDB } = require('./db');
 const authRouter = require('./routes/auth');
 const apiRouter = require('./routes/api');
+const firmsRouter = require('./routes/firms');
+const { requireFirm } = require('./middleware/requireFirm');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+const IS_PROD = process.env.NODE_ENV === 'production';
 
-// Trust proxy headers on Fly.io (X-Forwarded-For, X-Forwarded-Proto)
+// Trust proxy headers (Fly.io, Railway)
 app.set('trust proxy', true);
+
+// --- Security headers (Helmet) ---
+app.use(helmet({
+  contentSecurityPolicy: false, // Disabled to not break inline scripts in existing HTML
+  crossOriginEmbedderPolicy: false,
+}));
+
+// --- CORS ---
+app.use((req, res, next) => {
+  const allowedOrigins = IS_PROD
+    ? ['https://darklion.ai', 'https://www.darklion.ai']
+    : ['http://localhost:8080', 'http://127.0.0.1:8080'];
+
+  const origin = req.headers.origin;
+  if (!origin || allowedOrigins.includes(origin)) {
+    if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 
 app.use(express.json());
 
 // --- Force HTTPS in production ---
-if (process.env.NODE_ENV === 'production') {
+if (IS_PROD) {
   app.use((req, res, next) => {
-    if (req.path === '/health') return next(); // allow healthcheck over HTTP
+    if (req.path === '/health') return next();
     if (req.headers['x-forwarded-proto'] !== 'https') {
       return res.redirect(301, `https://${req.hostname}${req.url}`);
     }
@@ -46,54 +81,85 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// --- Authentication middleware ---
+// --- Global API rate limiter ---
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down.' },
+  keyGenerator: (req) => {
+    // Rate limit by firm id if available, otherwise by IP
+    return req.firm?.id ? `firm_${req.firm.id}` : req.ip;
+  },
+  skip: (req) => req.path === '/health',
+});
+
+// --- Legacy Basic Auth (backward compat — dev mode only) ---
 const DASH_USER = process.env.DASH_USER || 'admin';
 const DASH_PASS = process.env.DASH_PASS;
 
-function requireAuth(req, res, next) {
-  if (!DASH_PASS) return next(); // no password set = no auth (dev mode)
-
+function requireBasicAuth(req, res, next) {
+  if (!DASH_PASS) return next();
   const authHeader = req.headers.authorization;
-  if (authHeader) {
+  if (authHeader && authHeader.startsWith('Basic ')) {
     const encoded = authHeader.split(' ')[1];
     if (encoded) {
       const [user, pass] = Buffer.from(encoded, 'base64').toString().split(':');
       if (user === DASH_USER && pass === DASH_PASS) return next();
     }
   }
-
   res.set('WWW-Authenticate', 'Basic realm="DarkLion Dashboard"');
   res.status(401).send('Authentication required');
 }
 
-// --- Health check (must be before auth, no auth required) ---
+// Dashboard auth: accept JWT Bearer OR legacy Basic Auth
+function dashboardAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  // Try JWT first
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return requireFirm(req, res, next);
+  }
+
+  // Fall back to Basic Auth (dev mode)
+  return requireBasicAuth(req, res, next);
+}
+
+// --- Health check (no auth) ---
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// --- Public static files ---
+// --- Static files ---
 const publicDir = path.join(__dirname, '..', 'public');
 
-// Serve all static assets (images, etc.)
 app.use(express.static(publicDir, {
-  index: false, // We handle index.html routing manually
-  maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+  index: false,
+  maxAge: IS_PROD ? '1d' : 0,
 }));
 
-// Public page routes
+// --- Public page routes ---
 app.get('/', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
 app.get('/connect', (req, res) => res.sendFile(path.join(publicDir, 'connect.html')));
 app.get('/callback', (req, res) => res.sendFile(path.join(publicDir, 'callback.html')));
 app.get('/disconnect', (req, res) => res.sendFile(path.join(publicDir, 'disconnect.html')));
-app.get('/redirect', requireAuth, (req, res) => res.sendFile(path.join(publicDir, 'redirect.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(publicDir, 'privacy.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(publicDir, 'terms.html')));
 
-// Protected dashboard (both /dashboard and /dashboard.html)
-app.get('/dashboard', requireAuth, (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
-app.get('/dashboard.html', requireAuth, (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
+// --- Auth pages (public) ---
+app.get('/login', (req, res) => res.sendFile(path.join(publicDir, 'login.html')));
+app.get('/register', (req, res) => res.sendFile(path.join(publicDir, 'register.html')));
 
-// Public config endpoint (non-sensitive values only)
+// --- Dashboard (JWT auth; falls back to Basic Auth for dev) ---
+// Note: the HTML page itself is served publicly; the page JS will redirect if no token
+app.get('/dashboard', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
+app.get('/dashboard.html', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
+
+// Redirect route (previously required Basic Auth)
+app.get('/redirect', (req, res) => res.sendFile(path.join(publicDir, 'redirect.html')));
+
+// --- Public config endpoint ---
 app.get('/api/config', (req, res) => {
   res.json({
     qb_client_id: process.env.QB_CLIENT_ID || '',
@@ -104,9 +170,21 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// API routes
+// --- Firms routes (register/login are public; /me requires JWT) ---
+// /firms/me needs requireFirm before the router
+app.get('/firms/me', requireFirm, (req, res) => {
+  const { pool } = require('./db');
+  pool.query('SELECT id, name, email, plan, created_at FROM firms WHERE id = $1', [req.firm.id])
+    .then(({ rows }) => rows[0] ? res.json(rows[0]) : res.status(404).json({ error: 'Firm not found' }))
+    .catch(() => res.status(500).json({ error: 'Failed to fetch firm info' }));
+});
+app.use('/firms', firmsRouter);
+
+// --- Auth (QBO/Gusto OAuth callbacks — public) ---
 app.use('/auth', authRouter);
-app.use('/api', requireAuth, apiRouter);
+
+// --- API routes (JWT required) ---
+app.use('/api', requireFirm, apiLimiter, apiRouter);
 
 // --- Global error handler ---
 app.use((err, req, res, next) => {
@@ -162,7 +240,6 @@ function startNightlyCron() {
         } catch (e) {
           console.error(`Nightly liability check failed for ${c.company_name || c.realm_id}:`, e.message);
         }
-        // Payroll check (only if Gusto connected)
         try {
           const { rows: [comp] } = await pool.query(
             'SELECT gusto_access_token, gusto_company_id FROM companies WHERE realm_id = $1', [c.realm_id]
@@ -180,12 +257,9 @@ function startNightlyCron() {
     } catch (e) {
       console.error('Nightly scan error:', e.message);
     }
-
-    // Schedule next run
     setTimeout(runNightlyScans, msUntil2AM());
   }
 
-  // Schedule first run
   const ms = msUntil2AM();
   console.log(`Nightly scans scheduled in ${Math.round(ms / 3600000)}h ${Math.round((ms % 3600000) / 60000)}m (2:00 AM UTC)`);
   setTimeout(runNightlyScans, ms);
