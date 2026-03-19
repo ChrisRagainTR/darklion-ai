@@ -332,7 +332,7 @@
       z-index: 200;
       backdrop-filter: blur(8px);
     }
-    .header-logo { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+    .header-logo { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; text-decoration: none; }
     .header-logo .hl-name { font-size: 1rem; font-weight: 800; color: var(--text); }
     .header-logo .hl-name span { color: var(--gold); }
 
@@ -606,6 +606,7 @@
       <div class="sidebar-section">Overview</div>
       <ul class="sidebar-nav">
         <li><a href="#" data-section="overview" class="active" onclick="showSection('overview',this)">📊 <span>Dashboard</span></a></li>
+        <li><a href="#" data-section="statements-calendar" onclick="showSection('statements-calendar',this)">📅 <span>Statement Calendar</span></a></li>
         <li><a href="#" data-section="companies" onclick="showSection('companies',this)">🏢 <span>Companies</span></a></li>
       </ul>
       <div class="sidebar-section">Client</div>
@@ -616,17 +617,13 @@
       <ul class="sidebar-nav">
         <li><a href="#" data-section="uncategorized" onclick="showSection('uncategorized',this)">🔍 <span>Uncategorized</span></a></li>
         <li><a href="#" data-section="close-package" onclick="showSection('close-package',this)">📦 <span>Close Package</span></a></li>
+        <li><a href="#" data-section="statements" onclick="showSection('statements',this)">🏦 <span>Statements</span></a></li>
       </ul>
       <div class="sidebar-section">Analysis</div>
       <ul class="sidebar-nav">
         <li><a href="#" data-section="variance" onclick="showSection('variance',this)">📈 <span>P&amp;L Variance</span></a></li>
         <li><a href="#" data-section="liability" onclick="showSection('liability',this)">⚠️ <span>Liability Health</span></a></li>
         <li><a href="#" data-section="payroll" onclick="showSection('payroll',this)">💰 <span>Payroll Check</span></a></li>
-      </ul>
-      <div class="sidebar-section">Statements</div>
-      <ul class="sidebar-nav">
-        <li><a href="#" data-section="statements" onclick="showSection('statements',this)">🏦 <span>Statements</span></a></li>
-        <li><a href="#" data-section="statements-calendar" onclick="showSection('statements-calendar',this)">📅 <span>Stmt Calendar</span></a></li>
       </ul>
       <div class="sidebar-section">Settings</div>
       <ul class="sidebar-nav">
@@ -999,34 +996,47 @@
       </div>
 
       <!-- ==================== STATEMENTS ==================== -->
+      <!-- ==================== STATEMENTS (per-client) ==================== -->
       <div class="section-page" id="sec-statements">
         <div class="container">
           <div class="page-header">
             <div>
-              <h1>Statement Tracker</h1>
-              <div class="subtitle" id="stmt-subtitle">Track bank, credit card, and loan statements by company</div>
+              <h1 id="stmt-page-title">Statements</h1>
+              <div class="subtitle" id="stmt-subtitle" style="font-family:monospace;font-size:0.9rem;"></div>
             </div>
+            <button class="btn btn-gold" onclick="showStmtAddForm()">+ Add Account</button>
           </div>
 
-          <div class="stmt-controls">
-            <div>
-              <div class="var-ctrl-label">Month</div>
-              <input type="month" id="stmt-month-picker" class="stmt-month-input">
+          <!-- Add Account inline form (hidden by default) -->
+          <div id="stmt-add-form" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:1.2rem;">
+            <div style="font-weight:600;margin-bottom:0.75rem;font-size:0.9rem;">Add Account</div>
+            <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+              <input class="stmt-input" id="stmt-new-name" placeholder="Account name *" style="width:180px;">
+              <input class="stmt-input" id="stmt-new-inst" placeholder="Institution" style="width:150px;">
+              <select class="stmt-select" id="stmt-new-method">
+                <option value="qbo_pull">QBO Pull</option>
+                <option value="portal" selected>Portal Download</option>
+                <option value="manual">Manual Download</option>
+                <option value="email">Email</option>
+                <option value="client_upload">Client Upload</option>
+              </select>
+              <input class="stmt-input stmt-day-input" type="number" id="stmt-new-day" placeholder="Day" value="1" min="1" max="31" style="width:70px;">
+              <button class="btn btn-gold btn-sm" onclick="saveNewStmtAccount()">Save</button>
+              <button class="btn btn-outline btn-sm" onclick="hideStmtAddForm()">Cancel</button>
             </div>
-            <button class="btn btn-gold" onclick="loadStatementsView()">Load</button>
           </div>
 
           <div id="stmt-summary" style="margin-bottom:1.2rem;display:none;">
             <div class="stats-grid" id="stmt-stats-grid"></div>
           </div>
 
-          <div id="stmt-companies-list">
-            <div style="text-align:center;padding:3rem;color:var(--muted);">Select a month and click Load.</div>
+          <div id="stmt-table-wrap">
+            <div style="text-align:center;padding:3rem;color:var(--muted);">Select a client to load statements.</div>
           </div>
         </div>
       </div>
 
-      <!-- ==================== STATEMENTS CALENDAR ==================== -->
+      <!-- ==================== STATEMENTS CALENDAR (firm-wide) ==================== -->
       <div class="section-page" id="sec-statements-calendar">
         <div class="container">
           <div class="page-header">
@@ -1036,16 +1046,20 @@
             </div>
           </div>
 
-          <div class="stmt-controls">
-            <div>
-              <div class="var-ctrl-label">Month</div>
-              <input type="month" id="cal-month-picker" class="stmt-month-input">
-            </div>
-            <button class="btn btn-gold" onclick="loadCalendarView()">Load</button>
+          <!-- Month selector -->
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.2rem;">
+            <button class="btn btn-outline btn-sm" onclick="calChangeMonth(-1)">&#8592;</button>
+            <span id="cal-month-display" style="font-weight:600;min-width:110px;text-align:center;"></span>
+            <button class="btn btn-outline btn-sm" onclick="calChangeMonth(1)">&#8594;</button>
+          </div>
+
+          <!-- Stats bar -->
+          <div id="cal-stats" style="display:none;margin-bottom:1.2rem;">
+            <div class="stats-grid" id="cal-stats-grid"></div>
           </div>
 
           <div id="stmt-calendar-body">
-            <div style="text-align:center;padding:3rem;color:var(--muted);">Select a month and click Load.</div>
+            <div style="text-align:center;padding:3rem;color:var(--muted);">Loading calendar…</div>
           </div>
         </div>
       </div>
@@ -1464,11 +1478,10 @@
       }
       if (name === 'team') loadTeam();
       if (name === 'statements') {
-        initStmtMonthPickers();
         loadStatementsView();
       }
       if (name === 'statements-calendar') {
-        initStmtMonthPickers();
+        initCalendarView();
       }
     }
 
@@ -2136,6 +2149,7 @@
         else if (secName === 'liability') await loadLatestLiability();
         else if (secName === 'payroll') initPayrollSection();
         else if (secName === 'client-summary') await loadClientSummary();
+        else if (secName === 'statements') await loadStatementsView();
       } catch (e) {
         if (e.name !== 'AbortError') console.error('Section reload error:', e);
       }
