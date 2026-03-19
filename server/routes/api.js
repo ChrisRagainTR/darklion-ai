@@ -397,30 +397,29 @@ router.get('/companies/:realmId/transactions/drilldown', async (req, res) => {
       return res.status(400).json({ error: 'account, startDate, and endDate are required' });
     }
 
-    // QBO TransactionList: filter by account name (exact match on account name)
-    // Requesting explicit columns so we get consistent ordering regardless of QBO defaults
-    const columns = 'tx_date,txn_type,doc_num,name,memo,split_acc,subt_nat_amount';
-    const endpoint = `/reports/TransactionList?start_date=${startDate}&end_date=${endDate}&account_name=${encodeURIComponent(account)}&columns=${columns}&minorversion=75`;
-    console.log('[drilldown] endpoint:', endpoint);
+    // Use GeneralLedger report — correctly filters by account, unlike TransactionList
+    // minorversion=3 required for GeneralLedger account_name filter to work
+    const endpoint = `/reports/GeneralLedger?start_date=${startDate}&end_date=${endDate}&account_name=${encodeURIComponent(account)}&minorversion=3`;
+    console.log('[drilldown] GL endpoint:', endpoint);
     const data = await qbFetch(req.params.realmId, endpoint);
     console.log('[drilldown] colHeaders:', (data.Columns?.Column || []).map(c => c.ColTitle));
-    console.log('[drilldown] total rows (before parse):', (data.Rows?.Row || []).length);
-    // Log first raw row for debugging
-    if (data.Rows?.Row?.[0]) console.log('[drilldown] first row raw:', JSON.stringify(data.Rows.Row[0]).substring(0, 300));
+    const totalRows = (data.Rows?.Row || []).length;
+    console.log('[drilldown] total top-level rows:', totalRows);
+    if (data.Rows?.Row?.[0]) console.log('[drilldown] first row:', JSON.stringify(data.Rows.Row[0]).substring(0, 400));
 
-    // Parse QBO TransactionList report — read column headers dynamically
-    // so we're resilient to QBO inserting extra columns (e.g. "Posting")
+    // Parse GeneralLedger report
+    // GL structure: Section rows (one per account) containing Data rows (transactions)
+    // Columns: Date, Transaction Type, Num, Name, Memo/Description, Split, Amount, Balance
     const colHeaders = (data.Columns?.Column || []).map(c => (c.ColTitle || '').toLowerCase().trim());
     const idx = {
       date:   colHeaders.findIndex(h => h === 'date'),
-      type:   colHeaders.findIndex(h => h === 'transaction type' || h === 'txntype' || h === 'type'),
-      num:    colHeaders.findIndex(h => h === 'num' || h === 'doc num' || h === 'docnum'),
+      type:   colHeaders.findIndex(h => h.includes('type')),
+      num:    colHeaders.findIndex(h => h === 'num' || h.includes('num')),
       name:   colHeaders.findIndex(h => h === 'name'),
       memo:   colHeaders.findIndex(h => h.includes('memo') || h.includes('description')),
-      split:  colHeaders.findIndex(h => h === 'split' || h.includes('account')),
+      split:  colHeaders.findIndex(h => h === 'split'),
       amount: colHeaders.findIndex(h => h === 'amount'),
     };
-    // Fallback to positional if headers not found (legacy)
     if (idx.date === -1)   idx.date   = 0;
     if (idx.type === -1)   idx.type   = 1;
     if (idx.num  === -1)   idx.num    = 2;
@@ -434,7 +433,7 @@ router.get('/companies/:realmId/transactions/drilldown', async (req, res) => {
 
     function parseRows(rowArr) {
       for (const row of rowArr) {
-        if (row.type === 'Section' && row.Rows?.Row) {
+        if ((row.type === 'Section' || row.group) && row.Rows?.Row) {
           parseRows(row.Rows.Row);
         } else if (row.ColData) {
           const cols = row.ColData;
