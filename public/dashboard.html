@@ -17,7 +17,7 @@
     }
     body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--navy); color: var(--text); line-height: 1.6; display: flex; min-height: 100vh; }
 
-    /* Sidebar */
+    /* ===== SIDEBAR ===== */
     .sidebar {
       width: var(--sidebar-w); background: rgba(15,25,35,0.98); border-right: 1px solid var(--border);
       position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; z-index: 100;
@@ -26,33 +26,51 @@
     .sidebar-brand { display: flex; align-items: center; gap: 0.6rem; padding: 1.2rem 1rem; border-bottom: 1px solid var(--border); text-decoration: none; }
     .sidebar-brand .nav-name { font-size: 1.1rem; font-weight: 700; color: var(--text); }
     .sidebar-brand .nav-name span { color: var(--gold); }
-    .sidebar-company { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
-    .sidebar-company select { width: 100%; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.82rem; }
 
-    /* Company management panel */
-    .company-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1.5rem; }
-    .company-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); }
-    .company-panel-header h3 { font-size: 0.88rem; font-weight: 700; }
-    .company-search { width: 100%; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 0.8rem; border-radius: 6px; font-size: 0.82rem; margin: 0.75rem 1.2rem; width: calc(100% - 2.4rem); }
-    .company-search::placeholder { color: var(--muted); }
-    .company-list { max-height: 480px; overflow-y: auto; padding: 0.25rem 0; }
-    .company-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.2rem; cursor: pointer; transition: background 0.12s; border-left: 3px solid transparent; }
-    .company-item:hover { background: rgba(201,168,76,0.04); }
-    .company-item.active { background: rgba(201,168,76,0.08); border-left-color: var(--gold); }
-    .company-item .ci-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .company-item .ci-dot.healthy { background: var(--green); }
-    .company-item .ci-dot.expired { background: var(--red); }
-    .company-item .ci-dot.expiring { background: var(--orange); }
-    .company-item .ci-dot.unknown { background: var(--muted); }
-    .company-item .ci-info { flex: 1; min-width: 0; }
-    .company-item .ci-name { font-size: 0.84rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .company-item .ci-meta { font-size: 0.7rem; color: var(--muted); }
-    .company-item .ci-actions { flex-shrink: 0; opacity: 0; transition: opacity 0.15s; }
-    .company-item:hover .ci-actions { opacity: 1; }
-    .btn-disconnect { background: transparent; border: 1px solid var(--red); color: var(--red); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.68rem; cursor: pointer; font-weight: 600; }
-    .btn-disconnect:hover { background: rgba(245,101,101,0.12); }
-    .company-count { font-size: 0.7rem; color: var(--muted); padding: 0.5rem 1.2rem; border-top: 1px solid var(--border); }
-    .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+    /* ===== SMART CLIENT SELECTOR ===== */
+    .client-selector-wrap { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); position: relative; }
+    .client-trigger {
+      width: 100%; background: var(--charcoal); border: 1px solid var(--border); color: var(--text);
+      padding: 0.45rem 0.7rem; border-radius: 7px; font-size: 0.82rem; cursor: pointer;
+      display: flex; align-items: center; gap: 0.5rem; transition: border-color 0.2s;
+      text-align: left;
+    }
+    .client-trigger:hover { border-color: var(--gold); }
+    .client-trigger .ct-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--muted); }
+    .client-trigger .ct-dot.healthy { background: var(--green); }
+    .client-trigger .ct-dot.expired { background: var(--red); }
+    .client-trigger .ct-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .client-trigger .ct-arrow { flex-shrink: 0; color: var(--muted); font-size: 0.65rem; transition: transform 0.2s; }
+    .client-trigger.open .ct-arrow { transform: rotate(180deg); }
+
+    .client-dropdown {
+      display: none; position: absolute; left: 0.75rem; right: 0.75rem; top: calc(100% + 2px);
+      background: #13222f; border: 1px solid var(--border); border-radius: 9px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5); z-index: 200; overflow: hidden;
+    }
+    .client-dropdown.open { display: block; }
+    .client-search-wrap { padding: 0.6rem; border-bottom: 1px solid var(--border); }
+    .client-search-input {
+      width: 100%; background: var(--charcoal); border: 1px solid var(--border); color: var(--text);
+      padding: 0.4rem 0.65rem; border-radius: 6px; font-size: 0.8rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .client-search-input:focus { border-color: var(--gold); }
+    .client-list { max-height: 280px; overflow-y: auto; }
+    .client-option {
+      display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.8rem;
+      cursor: pointer; transition: background 0.12s; font-size: 0.82rem;
+    }
+    .client-option:hover, .client-option.focused { background: rgba(201,168,76,0.07); }
+    .client-option.active { background: rgba(201,168,76,0.1); }
+    .client-option .co-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .client-option .co-dot.healthy { background: var(--green); }
+    .client-option .co-dot.expired { background: var(--red); }
+    .client-option .co-dot.unknown { background: var(--muted); }
+    .client-option .co-info { flex: 1; min-width: 0; }
+    .client-option .co-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .client-option .co-meta { font-size: 0.7rem; color: var(--muted); }
+    .client-dropdown-footer { padding: 0.4rem 0.8rem; border-top: 1px solid var(--border); font-size: 0.72rem; color: var(--muted); }
 
     .sidebar-section { padding: 1rem 0 0.25rem 1rem; font-size: 0.65rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
     .sidebar-nav { list-style: none; padding: 0; }
@@ -63,7 +81,7 @@
     .sidebar-nav li a:hover { color: var(--text); background: rgba(201,168,76,0.05); }
     .sidebar-nav li a.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); font-weight: 600; }
 
-    /* Main content */
+    /* Main */
     .main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; }
     .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
     #sec-close-package .container { max-width: 100%; padding: 2rem 2rem; }
@@ -110,30 +128,27 @@
 
     /* Overview cards */
     .overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
-    .overview-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem;
-      cursor: pointer; transition: all 0.15s;
-    }
+    .overview-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; cursor: pointer; transition: all 0.15s; }
     .overview-card:hover { border-color: var(--gold); transform: translateY(-1px); }
     .overview-card h3 { font-size: 0.82rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text); }
     .overview-card .oc-value { font-size: 1.3rem; font-weight: 800; }
     .overview-card .oc-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; }
     .overview-card .oc-link { font-size: 0.75rem; color: var(--gold); margin-top: 0.5rem; display: block; }
 
-    /* Section pages - hidden by default */
+    /* Section pages */
     .section-page { display: none; }
     .section-page.active { display: block; }
 
-    /* Report section within close package */
-    .report-section { margin-top: 1.5rem; }
-    .report-section h3 { font-size: 0.88rem; margin-bottom: 0.75rem; }
-    .report-section .table-wrap { margin-bottom: 1rem; overflow-x: initial; }
-    .report-row-header td { font-weight: 700; background: rgba(201,168,76,0.05); }
-    .report-row-total td { font-weight: 700; border-top: 2px solid var(--border); }
-    td.amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 0.78rem; padding: 0.5rem 0.6rem; }
-    #sec-close-package table { table-layout: auto; width: 100%; }
+    /* Close Package table — fixed layout to prevent column drift */
+    #sec-close-package table { table-layout: fixed; width: 100%; }
     #sec-close-package th, #sec-close-package td { padding: 0.5rem 0.6rem; font-size: 0.78rem; }
     #sec-close-package th { white-space: nowrap; }
+    .report-section { margin-top: 1.5rem; }
+    .report-section h3 { font-size: 0.88rem; margin-bottom: 0.75rem; }
+    .report-section .table-wrap { margin-bottom: 1rem; }
+    .report-row-header td { font-weight: 700; color: var(--gold); background: rgba(201,168,76,0.04); }
+    .report-row-total td { font-weight: 700; border-top: 2px solid var(--border); }
+    td.amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
     /* Period picker */
     .period-picker { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.5rem; }
@@ -176,14 +191,131 @@
     .empty-state h2 { font-size: 1.3rem; color: var(--text); margin-bottom: 0.75rem; }
     .empty-state p { margin-bottom: 1.5rem; }
 
+    /* ===== CLIENT SUMMARY ===== */
+    .cs-grid { display: grid; grid-template-columns: 60fr 40fr; gap: 1.5rem; }
+    @media (max-width: 900px) { .cs-grid { grid-template-columns: 1fr; } }
+
+    /* Alerts */
+    .alerts-section { margin-bottom: 1.5rem; }
+    .alert-card {
+      display: flex; align-items: flex-start; gap: 0.75rem;
+      padding: 0.8rem 1rem; border-radius: 9px; margin-bottom: 0.5rem;
+      border-left: 3px solid;
+    }
+    .alert-card.alert-red { background: rgba(245,101,101,0.08); border-left-color: var(--red); }
+    .alert-card.alert-orange { background: rgba(237,137,54,0.08); border-left-color: var(--orange); }
+    .alert-card.alert-green { background: rgba(62,207,142,0.08); border-left-color: var(--green); }
+    .alert-icon { font-size: 1rem; flex-shrink: 0; margin-top: 0.05rem; }
+    .alert-content { flex: 1; }
+    .alert-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+    .alert-detail { font-size: 0.75rem; color: var(--muted); margin-top: 0.1rem; }
+    .alert-action { flex-shrink: 0; }
+    .alert-action button { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.2rem 0.6rem; border-radius: 5px; font-size: 0.7rem; cursor: pointer; transition: all 0.15s; }
+    .alert-action button:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* Health Score Gauge */
+    .health-gauge-wrap { display: flex; align-items: center; gap: 1.5rem; padding: 1.2rem; background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1rem; }
+    .gauge-circle {
+      position: relative; width: 90px; height: 90px; flex-shrink: 0;
+    }
+    .gauge-svg { width: 90px; height: 90px; transform: rotate(-90deg); }
+    .gauge-bg { fill: none; stroke: rgba(201,168,76,0.12); stroke-width: 8; }
+    .gauge-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.6s ease, stroke 0.4s ease; }
+    .gauge-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .gauge-num { font-size: 1.4rem; font-weight: 900; line-height: 1; }
+    .gauge-label { font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .gauge-info { flex: 1; }
+    .gauge-info h3 { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .gauge-info p { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
+
+    /* Activity feed */
+    .activity-feed { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; }
+    .activity-feed h3 { font-size: 0.82rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
+    .activity-item { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.4rem 0; border-bottom: 1px solid rgba(201,168,76,0.06); }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-icon { font-size: 0.9rem; flex-shrink: 0; margin-top: 0.1rem; }
+    .activity-text { font-size: 0.78rem; color: var(--text); flex: 1; }
+    .activity-time { font-size: 0.7rem; color: var(--muted); flex-shrink: 0; white-space: nowrap; }
+
+    /* Quick stat cards 2x2 */
+    .quick-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 1rem; }
+    .qs-card { background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 0.85rem 1rem; }
+    .qs-label { font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem; }
+    .qs-value { font-size: 1.2rem; font-weight: 800; }
+    .qs-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.1rem; }
+
+    /* Connection status cards */
+    .conn-card { background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 0.85rem 1rem; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.75rem; }
+    .conn-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .conn-info { flex: 1; }
+    .conn-name { font-size: 0.82rem; font-weight: 700; }
+    .conn-status { font-size: 0.72rem; color: var(--muted); }
+    .conn-action { flex-shrink: 0; }
+
+    /* Mini P&L */
+    .mini-pnl { background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 1rem; }
+    .mini-pnl h3 { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
+    .mini-pnl-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; border-bottom: 1px solid rgba(201,168,76,0.06); font-size: 0.82rem; }
+    .mini-pnl-row:last-of-type { border-bottom: none; font-weight: 700; }
+    .mini-pnl-row .pnl-label { color: var(--muted); }
+    .mini-pnl-link { display: block; text-align: right; font-size: 0.75rem; color: var(--gold); text-decoration: none; margin-top: 0.5rem; }
+    .mini-pnl-link:hover { color: var(--gold-light); }
+
+    /* Skeleton shimmer */
+    .skeleton {
+      background: linear-gradient(90deg, rgba(201,168,76,0.06) 25%, rgba(201,168,76,0.12) 50%, rgba(201,168,76,0.06) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .sk-line { height: 14px; margin: 6px 0; border-radius: 4px; }
+    .sk-line.w50 { width: 50%; }
+    .sk-line.w70 { width: 70%; }
+    .sk-line.w90 { width: 90%; }
+    .sk-block { height: 80px; border-radius: 8px; margin-bottom: 0.75rem; }
+
+    /* Variance controls */
+    .variance-controls { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
+    .var-ctrl-label { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+    .var-month-scroll { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+    .var-month-btn { padding: 0.3rem 0.55rem; font-size: 0.72rem; font-weight: 600; background: var(--charcoal); border: 1px solid var(--border); color: var(--muted); border-radius: 5px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .var-month-btn:hover { border-color: var(--gold); color: var(--text); }
+    .var-month-btn.selected { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+    .var-threshold-input { width: 75px; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.82rem; }
+    .var-amt-input { width: 90px; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.82rem; }
+
+    /* Company management panel */
+    .company-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1.5rem; }
+    .company-list { max-height: 480px; overflow-y: auto; padding: 0.25rem 0; }
+    .company-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.2rem; cursor: pointer; transition: background 0.12s; border-left: 3px solid transparent; }
+    .company-item:hover { background: rgba(201,168,76,0.04); }
+    .company-item.active { background: rgba(201,168,76,0.08); border-left-color: var(--gold); }
+    .company-item .ci-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .company-item .ci-dot.healthy { background: var(--green); }
+    .company-item .ci-dot.expired { background: var(--red); }
+    .company-item .ci-info { flex: 1; min-width: 0; }
+    .company-item .ci-name { font-size: 0.84rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .company-item .ci-meta { font-size: 0.7rem; color: var(--muted); }
+    .company-item .ci-actions { flex-shrink: 0; opacity: 0; transition: opacity 0.15s; }
+    .company-item:hover .ci-actions { opacity: 1; }
+    .btn-disconnect { background: transparent; border: 1px solid var(--red); color: var(--red); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.68rem; cursor: pointer; font-weight: 600; }
+    .btn-disconnect:hover { background: rgba(245,101,101,0.12); }
+    .company-count { font-size: 0.7rem; color: var(--muted); padding: 0.5rem 1.2rem; border-top: 1px solid var(--border); }
+    .company-search { width: 100%; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 0.8rem; border-radius: 6px; font-size: 0.82rem; }
+    .company-search::placeholder { color: var(--muted); }
+    .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+
     /* Responsive */
     @media (max-width: 800px) {
       .sidebar { width: 60px; }
-      .sidebar .sidebar-section, .sidebar-nav li a span, .sidebar-brand .nav-name, .sidebar-company { display: none; }
+      .sidebar .sidebar-section, .sidebar-nav li a span, .sidebar-brand .nav-name, .client-selector-wrap { display: none; }
       .sidebar-nav li a { justify-content: center; padding: 0.75rem; }
       .main { margin-left: 60px; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .overview-grid { grid-template-columns: 1fr; }
+      .cs-grid { grid-template-columns: 1fr; }
+      .quick-stats { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
@@ -193,16 +325,34 @@
   <aside class="sidebar">
     <a class="sidebar-brand" href="/">
       <img src="/lion-logo.png" alt="DarkLion" width="32" height="32" style="display:block;flex-shrink:0;">
-      <span class="nav-name">Dark<span>Lion</span> <small style="font-size:0.65rem;color:var(--muted);font-weight:400;">v2</small></span>
+      <span class="nav-name">Dark<span>Lion</span></span>
     </a>
-    <div class="sidebar-company">
-      <select id="company-select"></select>
+
+    <!-- Smart Client Selector -->
+    <div class="client-selector-wrap" id="client-selector-wrap">
+      <button class="client-trigger" id="client-trigger" onclick="toggleClientDropdown()" type="button">
+        <span class="ct-dot" id="ct-dot"></span>
+        <span class="ct-name" id="ct-name">Select client…</span>
+        <span class="ct-arrow">▼</span>
+      </button>
+      <div class="client-dropdown" id="client-dropdown">
+        <div class="client-search-wrap">
+          <input type="text" class="client-search-input" id="client-search-input" placeholder="Search clients…" oninput="filterClientOptions(this.value)" onkeydown="handleClientKeydown(event)">
+        </div>
+        <div class="client-list" id="client-list"></div>
+        <div class="client-dropdown-footer" id="client-dropdown-footer">0 clients</div>
+      </div>
     </div>
+
     <nav>
       <div class="sidebar-section">Overview</div>
       <ul class="sidebar-nav">
         <li><a href="#" data-section="overview" class="active" onclick="showSection('overview',this)"><span>Dashboard</span></a></li>
         <li><a href="#" data-section="companies" onclick="showSection('companies',this)"><span>Companies</span></a></li>
+      </ul>
+      <div class="sidebar-section">Client</div>
+      <ul class="sidebar-nav">
+        <li><a href="#" data-section="client-summary" onclick="showSection('client-summary',this)"><span>Client Summary</span></a></li>
       </ul>
       <div class="sidebar-section">Monthly Close</div>
       <ul class="sidebar-nav">
@@ -217,6 +367,7 @@
       </ul>
     </nav>
     <div style="margin-top:auto;padding:1rem;border-top:1px solid var(--border);">
+      <div id="firm-name-display" style="font-size:0.72rem;color:var(--muted);margin-bottom:0.5rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
       <a href="#" onclick="logout()" style="display:block;text-align:center;color:var(--muted);font-size:0.82rem;text-decoration:none;">Logout</a>
     </div>
   </aside>
@@ -241,7 +392,6 @@
               <div class="subtitle" id="overview-period"></div>
             </div>
           </div>
-
           <div class="overview-grid" id="overview-grid">
             <div class="overview-card" onclick="showSection('companies',qs('[data-section=companies]'))">
               <h3>Companies</h3>
@@ -262,8 +412,6 @@
               <span class="oc-link">View &rarr;</span>
             </div>
           </div>
-
-          <!-- Recent scan results -->
           <h3 style="font-size:0.88rem;margin-bottom:0.75rem;">Recent Scan Results</h3>
           <div class="table-wrap">
             <table>
@@ -284,12 +432,93 @@
             </div>
             <button class="btn btn-gold" onclick="connectNewCompany()">+ Connect Company</button>
           </div>
-
-          <input type="text" class="company-search" id="companies-search" placeholder="Search companies..." oninput="filterCompanyList()" style="margin:0 0 1rem 0;width:100%;">
-
+          <input type="text" class="company-search" id="companies-search" placeholder="Search companies…" oninput="filterCompanyList()" style="margin:0 0 1rem 0;width:100%;">
           <div class="company-panel" id="companies-panel">
             <div class="company-list" id="companies-list" style="max-height:none;"></div>
             <div class="company-count" id="companies-count"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== CLIENT SUMMARY ==================== -->
+      <div class="section-page" id="sec-client-summary">
+        <div class="container">
+          <div class="page-header">
+            <div>
+              <h1>Client Summary</h1>
+              <div class="subtitle" id="cs-subtitle">Select a client to view their summary</div>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="loadClientSummary()" id="btn-cs-refresh" style="display:none;">↺ Refresh</button>
+          </div>
+
+          <div id="cs-no-client" style="text-align:center;padding:3rem 2rem;color:var(--muted);">
+            <div style="font-size:2rem;margin-bottom:1rem;">👆</div>
+            <div style="font-size:1rem;color:var(--text);font-weight:700;margin-bottom:0.5rem;">Select a client</div>
+            <div>Use the client selector above to view their summary.</div>
+          </div>
+
+          <div id="cs-content" style="display:none;">
+            <!-- Alerts panel (top, prominent) -->
+            <div class="alerts-section" id="cs-alerts">
+              <div class="skeleton sk-block"></div>
+            </div>
+
+            <div class="cs-grid">
+              <!-- LEFT COLUMN -->
+              <div>
+                <!-- Health Score Gauge -->
+                <div class="health-gauge-wrap" id="cs-gauge-wrap">
+                  <div class="gauge-circle">
+                    <svg class="gauge-svg" viewBox="0 0 90 90">
+                      <circle class="gauge-bg" cx="45" cy="45" r="36"/>
+                      <circle class="gauge-fill" id="gauge-fill" cx="45" cy="45" r="36"
+                        stroke-dasharray="226" stroke-dashoffset="226" stroke="var(--green)"/>
+                    </svg>
+                    <div class="gauge-text">
+                      <span class="gauge-num" id="gauge-num">--</span>
+                      <span class="gauge-label">Score</span>
+                    </div>
+                  </div>
+                  <div class="gauge-info">
+                    <h3 id="gauge-status">Loading…</h3>
+                    <p id="gauge-desc" style="font-size:0.75rem;color:var(--muted);line-height:1.5;"></p>
+                  </div>
+                </div>
+
+                <!-- Activity Feed -->
+                <div class="activity-feed">
+                  <h3>Recent Activity</h3>
+                  <div id="cs-activity">
+                    <div class="skeleton sk-line w90"></div>
+                    <div class="skeleton sk-line w70"></div>
+                    <div class="skeleton sk-line w80"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RIGHT COLUMN -->
+              <div>
+                <!-- Quick stats 2x2 -->
+                <div class="quick-stats" id="cs-quick-stats">
+                  <div class="qs-card"><div class="qs-label">Uncat. Flags</div><div class="qs-value skeleton" id="qs-uncat" style="height:28px;width:60px;border-radius:4px;"></div></div>
+                  <div class="qs-card"><div class="qs-label">Liability Issues</div><div class="qs-value skeleton" id="qs-liab" style="height:28px;width:60px;border-radius:4px;"></div></div>
+                  <div class="qs-card"><div class="qs-label">Last Close</div><div class="qs-value skeleton" id="qs-close" style="height:28px;width:80px;border-radius:4px;"></div></div>
+                  <div class="qs-card"><div class="qs-label">Payroll</div><div class="qs-value skeleton" id="qs-payroll" style="height:28px;width:80px;border-radius:4px;"></div></div>
+                </div>
+
+                <!-- Connection status -->
+                <div id="cs-connections">
+                  <div class="skeleton sk-block" style="height:60px;"></div>
+                </div>
+
+                <!-- Mini P&L -->
+                <div class="mini-pnl" id="cs-mini-pnl" style="display:none;">
+                  <h3>Latest P&amp;L</h3>
+                  <div id="cs-pnl-rows"></div>
+                  <a href="#" class="mini-pnl-link" onclick="showSection('close-package',qs('[data-section=close-package]'))">View Full Close Package &rarr;</a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -319,8 +548,6 @@
           <div class="page-header">
             <div><h1>Close Package</h1></div>
           </div>
-
-          <!-- Period Picker -->
           <div class="period-picker">
             <div class="period-tabs">
               <button class="period-tab active" onclick="showPeriodTab('months',this)">Months</button>
@@ -328,33 +555,16 @@
               <button class="period-tab" onclick="showPeriodTab('annual',this)">Annual</button>
               <button class="period-tab" onclick="showPeriodTab('custom',this)">Date Range</button>
             </div>
-
-            <!-- Months panel -->
-            <div class="period-panel active" id="pp-months">
-              <div id="month-grid-container"></div>
-            </div>
-
-            <!-- Quarters panel -->
-            <div class="period-panel" id="pp-quarters">
-              <div id="quarter-grid-container"></div>
-            </div>
-
-            <!-- Annual panel -->
-            <div class="period-panel" id="pp-annual">
-              <div class="year-grid" id="year-grid-container"></div>
-            </div>
-
-            <!-- Custom date range panel -->
+            <div class="period-panel active" id="pp-months"><div id="month-grid-container"></div></div>
+            <div class="period-panel" id="pp-quarters"><div id="quarter-grid-container"></div></div>
+            <div class="period-panel" id="pp-annual"><div class="year-grid" id="year-grid-container"></div></div>
             <div class="period-panel" id="pp-custom">
               <div class="date-range-row">
-                <label>From</label>
-                <input type="date" id="cp-date-from">
-                <label>To</label>
-                <input type="date" id="cp-date-to">
+                <label>From</label><input type="date" id="cp-date-from">
+                <label>To</label><input type="date" id="cp-date-to">
                 <button class="btn btn-outline btn-sm" onclick="applyCustomRange()">Apply</button>
               </div>
             </div>
-
             <div class="period-actions">
               <div class="selected-label">Selected: <strong id="cp-selected-label">—</strong></div>
               <div class="display-toggle">
@@ -363,7 +573,6 @@
               </div>
             </div>
           </div>
-
           <div id="cp-results">
             <div style="text-align:center;padding:3rem;color:var(--muted);">Select a period above, then click Generate.</div>
           </div>
@@ -374,11 +583,26 @@
       <div class="section-page" id="sec-variance">
         <div class="container">
           <div class="page-header">
-            <div><h1>P&amp;L Variance Analysis</h1><div class="subtitle">Compares current month vs prior month and same month last year</div></div>
-            <div class="header-actions">
-              <button class="btn btn-gold" onclick="runVarianceScan()">Run Analysis</button>
-            </div>
+            <div><h1>P&amp;L Variance Analysis</h1><div class="subtitle">Compares selected month vs prior month and same month last year</div></div>
           </div>
+
+          <!-- Variance Controls -->
+          <div class="variance-controls">
+            <div>
+              <div class="var-ctrl-label">Period</div>
+              <div class="var-month-scroll" id="var-month-btns"></div>
+            </div>
+            <div>
+              <div class="var-ctrl-label">Threshold %</div>
+              <input type="number" id="var-threshold-pct" class="var-threshold-input" value="15" min="1" max="100">
+            </div>
+            <div>
+              <div class="var-ctrl-label">Min Amount $</div>
+              <input type="number" id="var-threshold-amt" class="var-amt-input" value="500" min="0">
+            </div>
+            <button class="btn btn-gold" onclick="runVarianceScan()">Run Analysis</button>
+          </div>
+
           <div id="var-stats" style="display:none;">
             <div class="stats-grid">
               <div class="stat-card"><div class="stat-label">Accounts Checked</div><div class="stat-value" id="var-total">0</div></div>
@@ -388,7 +612,7 @@
             <div id="var-last-scan" style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;"></div>
           </div>
           <div id="var-results">
-            <div style="text-align:center;padding:3rem;color:var(--muted);">Click "Run Analysis" to compare P&amp;L periods.</div>
+            <div style="text-align:center;padding:3rem;color:var(--muted);">Select a period and click "Run Analysis".</div>
           </div>
         </div>
       </div>
@@ -398,9 +622,7 @@
         <div class="container">
           <div class="page-header">
             <div><h1>Liability Account Health Check</h1><div class="subtitle">Checks for negative balances, stale payroll liabilities, unusual balances</div></div>
-            <div class="header-actions">
-              <button class="btn btn-gold" onclick="runLiabilityScan()">Run Check</button>
-            </div>
+            <div class="header-actions"><button class="btn btn-gold" onclick="runLiabilityScan()">Run Check</button></div>
           </div>
           <div id="liab-stats" style="display:none;">
             <div class="stats-grid">
@@ -428,41 +650,174 @@
           </div>
           <div id="payroll-stats" style="display:none;">
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;">
-              <div class="stat-card" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
-                <div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Payrolls</div>
-                <div id="pay-count" style="font-size:1.6rem;font-weight:800;color:var(--text);margin-top:0.3rem;">0</div>
-              </div>
-              <div class="stat-card" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
-                <div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Gross Pay Total</div>
-                <div id="pay-gross" style="font-size:1.6rem;font-weight:800;color:var(--gold);margin-top:0.3rem;">$0</div>
-              </div>
-              <div class="stat-card" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
-                <div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Mismatches</div>
-                <div id="pay-mismatches" style="font-size:1.6rem;font-weight:800;color:var(--green);margin-top:0.3rem;">0</div>
-              </div>
+              <div class="stat-card"><div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Payrolls</div><div id="pay-count" style="font-size:1.6rem;font-weight:800;color:var(--text);margin-top:0.3rem;">0</div></div>
+              <div class="stat-card"><div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Gross Pay Total</div><div id="pay-gross" style="font-size:1.6rem;font-weight:800;color:var(--gold);margin-top:0.3rem;">$0</div></div>
+              <div class="stat-card"><div style="font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Mismatches</div><div id="pay-mismatches" style="font-size:1.6rem;font-weight:800;color:var(--green);margin-top:0.3rem;">0</div></div>
             </div>
             <div id="pay-period" style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;"></div>
           </div>
-          <div id="payroll-results">
-            <div style="text-align:center;padding:3rem;color:var(--muted);">Loading...</div>
-          </div>
+          <div id="payroll-results"><div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div></div>
         </div>
       </div>
 
-    </div>
+    </div><!-- /dashboard -->
   </div>
 
   <div class="toast" id="toast"></div>
 
   <script>
+    // ===== AUTH GUARD =====
+    const dlToken = localStorage.getItem('dl_token');
+    if (!dlToken) { window.location.replace('/login'); }
+
+    // API fetch with JWT
+    async function apiFetch(url, opts = {}) {
+      const token = localStorage.getItem('dl_token');
+      const res = await fetch(url, {
+        ...opts,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+          ...(opts.headers || {}),
+        },
+      });
+      if (res.status === 401) {
+        const data = await res.json().catch(() => ({}));
+        if (data.expired) {
+          localStorage.removeItem('dl_token');
+          localStorage.removeItem('dl_firm');
+          window.location.replace('/login?expired=1');
+        }
+        throw new Error(data.error || 'Unauthorized');
+      }
+      return res;
+    }
+
     let currentRealm = null;
     let companies = [];
 
     function qs(sel) { return document.querySelector(sel); }
 
-    // --- Init ---
+    // ===== FIRM DISPLAY =====
+    try {
+      const firm = JSON.parse(localStorage.getItem('dl_firm') || '{}');
+      if (firm.name) qs('#firm-name-display').textContent = firm.name;
+    } catch(e) {}
+
+    // ===== SMART CLIENT SELECTOR =====
+    let clientDropdownOpen = false;
+    let filteredClients = [];
+    let focusedClientIdx = -1;
+
+    function toggleClientDropdown() {
+      clientDropdownOpen = !clientDropdownOpen;
+      const trigger = qs('#client-trigger');
+      const dropdown = qs('#client-dropdown');
+      trigger.classList.toggle('open', clientDropdownOpen);
+      dropdown.classList.toggle('open', clientDropdownOpen);
+      if (clientDropdownOpen) {
+        setTimeout(() => qs('#client-search-input').focus(), 50);
+        filterClientOptions('');
+      }
+    }
+
+    function closeClientDropdown() {
+      clientDropdownOpen = false;
+      qs('#client-trigger').classList.remove('open');
+      qs('#client-dropdown').classList.remove('open');
+      focusedClientIdx = -1;
+    }
+
+    document.addEventListener('click', (e) => {
+      if (clientDropdownOpen && !qs('#client-selector-wrap').contains(e.target)) {
+        closeClientDropdown();
+      }
+    });
+
+    function filterClientOptions(query) {
+      const q = (query || '').toLowerCase();
+      filteredClients = q ? companies.filter(c => (c.company_name || c.realm_id).toLowerCase().includes(q)) : [...companies];
+      focusedClientIdx = -1;
+      renderClientOptions();
+    }
+
+    function renderClientOptions() {
+      const list = qs('#client-list');
+      if (filteredClients.length === 0) {
+        list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.8rem;">No clients found</div>';
+        return;
+      }
+      list.innerHTML = filteredClients.map((c, i) => {
+        const name = esc(c.company_name || c.realm_id);
+        const isActive = c.realm_id === currentRealm;
+        const dotCls = c.token_status === 'disconnected' ? 'expired' : 'healthy';
+        const sync = c.last_sync_at ? timeAgo(c.last_sync_at) : 'Never synced';
+        return `<div class="client-option${isActive ? ' active' : ''}" data-idx="${i}" data-realm="${c.realm_id}"
+          onclick="selectClientFromDropdown('${c.realm_id}')" onmouseenter="setFocusedClient(${i})">
+          <span class="co-dot ${dotCls}"></span>
+          <span class="co-info">
+            <span class="co-name">${name}</span>
+            <span class="co-meta">${sync}</span>
+          </span>
+        </div>`;
+      }).join('');
+      qs('#client-dropdown-footer').textContent = `${companies.length} client${companies.length !== 1 ? 's' : ''}`;
+    }
+
+    function setFocusedClient(idx) {
+      focusedClientIdx = idx;
+      document.querySelectorAll('.client-option').forEach((el, i) => {
+        el.classList.toggle('focused', i === idx);
+      });
+    }
+
+    function handleClientKeydown(e) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        focusedClientIdx = Math.min(focusedClientIdx + 1, filteredClients.length - 1);
+        setFocusedClient(focusedClientIdx);
+        // Scroll into view
+        const el = qs(`.client-option[data-idx="${focusedClientIdx}"]`);
+        if (el) el.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        focusedClientIdx = Math.max(focusedClientIdx - 1, 0);
+        setFocusedClient(focusedClientIdx);
+        const el = qs(`.client-option[data-idx="${focusedClientIdx}"]`);
+        if (el) el.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter' && focusedClientIdx >= 0 && filteredClients[focusedClientIdx]) {
+        selectClientFromDropdown(filteredClients[focusedClientIdx].realm_id);
+      } else if (e.key === 'Escape') {
+        closeClientDropdown();
+      }
+    }
+
+    function selectClientFromDropdown(realmId) {
+      closeClientDropdown();
+      qs('#client-search-input').value = '';
+      selectCompany(realmId);
+    }
+
+    function updateClientTrigger() {
+      const c = companies.find(co => co.realm_id === currentRealm);
+      const dotEl = qs('#ct-dot');
+      const nameEl = qs('#ct-name');
+      if (c) {
+        nameEl.textContent = c.company_name || c.realm_id;
+        dotEl.className = 'ct-dot ' + (c.token_status === 'disconnected' ? 'expired' : 'healthy');
+      } else {
+        nameEl.textContent = 'Select client…';
+        dotEl.className = 'ct-dot';
+      }
+    }
+
+    // ===== INIT =====
     async function init() {
-      try { companies = await (await fetch('/api/companies')).json(); } catch(e) { companies = []; }
+      try {
+        const res = await apiFetch('/api/companies');
+        companies = await res.json();
+      } catch(e) { companies = []; }
+
       if (companies.length === 0) {
         qs('#empty-state').style.display = '';
         qs('#dashboard').style.display = 'none';
@@ -471,24 +826,26 @@
       qs('#empty-state').style.display = 'none';
       qs('#dashboard').style.display = '';
 
-      const sel = qs('#company-select');
-      sel.innerHTML = companies.map(c => '<option value="'+c.realm_id+'">'+(c.company_name||c.realm_id)+'</option>').join('');
       currentRealm = companies[0].realm_id;
-      sel.addEventListener('change', () => { selectCompany(sel.value); });
+      updateClientTrigger();
 
       populatePeriodSelectors();
+      initVarianceMonthPicker();
       renderCompanyList();
       loadAll();
       loadLatestUncategorized();
       loadLatestClosePackage();
 
-      // Refresh companies when user returns to this tab (e.g. after Gusto OAuth)
+      // Show refresh btn on client summary
+      qs('#btn-cs-refresh').style.display = '';
+
       document.addEventListener('visibilitychange', async () => {
         if (document.visibilityState === 'visible' && currentRealm) {
           try {
-            const updated = await (await fetch('/api/companies')).json();
+            const updated = await (await apiFetch('/api/companies')).json();
             if (Array.isArray(updated)) {
               companies = updated;
+              updateClientTrigger();
               const activeSection = document.querySelector('.section-page.active');
               if (activeSection && activeSection.id === 'sec-payroll') initPayrollSection();
             }
@@ -497,16 +854,13 @@
       });
     }
 
-    // --- Period picker state ---
+    // ===== PERIOD PICKER =====
     let cpSelection = { type: 'month', startDate: null, endDate: null, label: '', period: '' };
 
     function populatePeriodSelectors() {
       const now = new Date();
       qs('#overview-period').textContent = now.toLocaleString('default',{month:'long',year:'numeric'}) + ' Close';
-
-      // Build month grid — full 12-month rows, current year + last year
-      // Show 18 months of data but display full calendar rows
-      const cutoff = new Date(now.getFullYear(), now.getMonth() - 17, 1); // 18 months back
+      const cutoff = new Date(now.getFullYear(), now.getMonth() - 17, 1);
       let mhtml = '';
       for (const year of [now.getFullYear(), now.getFullYear()-1]) {
         mhtml += '<div class="period-year-label">'+year+'</div><div class="month-grid">';
@@ -524,13 +878,11 @@
       }
       qs('#month-grid-container').innerHTML = mhtml;
 
-      // Build quarter grid — current year + last year
       let qhtml = '';
       for (const year of [now.getFullYear(), now.getFullYear()-1]) {
         qhtml += '<div class="period-year-label">'+year+'</div><div class="quarter-grid">';
         for (let q = 1; q <= 4; q++) {
-          const sm = (q-1)*3 + 1;
-          const em = q*3;
+          const sm = (q-1)*3 + 1; const em = q*3;
           const sd = year+'-'+String(sm).padStart(2,'0')+'-01';
           const ed = lastDay(year, em);
           qhtml += '<button class="quarter-btn" onclick="selectQuarter(this,'+q+','+year+',\''+sd+'\',\''+ed+'\')">Q'+q+'</button>';
@@ -539,7 +891,6 @@
       }
       qs('#quarter-grid-container').innerHTML = qhtml;
 
-      // Build annual grid
       let yhtml = '';
       const cy = now.getFullYear();
       yhtml += '<button class="year-btn" onclick="selectYear(this,'+cy+')">'+cy+' YTD</button>';
@@ -547,12 +898,10 @@
       yhtml += '<button class="year-btn" onclick="selectYear(this,'+(cy-2)+')">'+(cy-2)+'</button>';
       qs('#year-grid-container').innerHTML = yhtml;
 
-      // Default date range inputs
       const lastMonth = new Date(now.getFullYear(), now.getMonth()-1, 1);
       qs('#cp-date-from').value = lastMonth.getFullYear()+'-'+String(lastMonth.getMonth()+1).padStart(2,'0')+'-01';
       qs('#cp-date-to').value = lastDay(lastMonth.getFullYear(), lastMonth.getMonth()+1);
 
-      // Default selection: current month
       const curVal = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
       const curBtn = document.querySelector('.month-btn[data-period="'+curVal+'"]');
       if (curBtn) selectMonth(curBtn, curVal, true);
@@ -575,94 +924,327 @@
     }
 
     function selectMonth(btn, period, skipGenerate) {
-      clearPeriodBtns();
-      btn.classList.add('selected');
+      clearPeriodBtns(); btn.classList.add('selected');
       const [y,m] = period.split('-').map(Number);
       const d = new Date(y, m-1, 1);
-      cpSelection = {
-        type: 'month',
-        startDate: y+'-'+String(m).padStart(2,'0')+'-01',
-        endDate: lastDay(y, m),
-        label: d.toLocaleString('default',{month:'long',year:'numeric'}),
-        period: period
-      };
+      cpSelection = { type:'month', startDate:y+'-'+String(m).padStart(2,'0')+'-01', endDate:lastDay(y,m), label:d.toLocaleString('default',{month:'long',year:'numeric'}), period };
       qs('#cp-selected-label').textContent = cpSelection.label;
       if (!skipGenerate) generateClosePackage();
     }
 
     function selectQuarter(btn, q, year, sd, ed) {
-      clearPeriodBtns();
-      btn.classList.add('selected');
-      cpSelection = {
-        type: 'quarter',
-        startDate: sd,
-        endDate: ed,
-        label: 'Q'+q+' '+year,
-        period: year+'-Q'+q
-      };
+      clearPeriodBtns(); btn.classList.add('selected');
+      cpSelection = { type:'quarter', startDate:sd, endDate:ed, label:'Q'+q+' '+year, period:year+'-Q'+q };
       qs('#cp-selected-label').textContent = cpSelection.label;
       generateClosePackage();
     }
 
     function selectYear(btn, year) {
-      clearPeriodBtns();
-      btn.classList.add('selected');
+      clearPeriodBtns(); btn.classList.add('selected');
       const now = new Date();
       const isCurrentYear = year === now.getFullYear();
-      cpSelection = {
-        type: 'annual',
-        startDate: year+'-01-01',
-        endDate: isCurrentYear ? lastDay(now.getFullYear(), now.getMonth()+1) : year+'-12-31',
-        label: isCurrentYear ? year+' YTD' : String(year),
-        period: String(year)
-      };
+      cpSelection = { type:'annual', startDate:year+'-01-01', endDate:isCurrentYear?lastDay(now.getFullYear(),now.getMonth()+1):year+'-12-31', label:isCurrentYear?year+' YTD':String(year), period:String(year) };
       qs('#cp-selected-label').textContent = cpSelection.label;
       generateClosePackage();
     }
 
     function applyCustomRange() {
       clearPeriodBtns();
-      const from = qs('#cp-date-from').value;
-      const to = qs('#cp-date-to').value;
+      const from = qs('#cp-date-from').value; const to = qs('#cp-date-to').value;
       if (!from || !to) { toast('Select both dates'); return; }
       if (from > to) { toast('Start date must be before end date'); return; }
-      cpSelection = {
-        type: 'custom',
-        startDate: from,
-        endDate: to,
-        label: from + ' to ' + to,
-        period: 'custom'
-      };
+      cpSelection = { type:'custom', startDate:from, endDate:to, label:from+' to '+to, period:'custom' };
       qs('#cp-selected-label').textContent = cpSelection.label;
       generateClosePackage();
     }
 
-    function onDisplayToggle() {
-      // Just updates state — applied on next Generate
+    // ===== VARIANCE MONTH PICKER =====
+    let varSelectedMonth = null;
+
+    function initVarianceMonthPicker() {
+      const now = new Date();
+      const container = qs('#var-month-btns');
+      const months = [];
+      for (let i = 0; i < 18; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({ year: d.getFullYear(), month: d.getMonth() + 1, label: d.toLocaleString('default',{month:'short'})+' '+d.getFullYear() });
+      }
+      // Default: current month
+      if (!varSelectedMonth) varSelectedMonth = { year: months[0].year, month: months[0].month };
+
+      container.innerHTML = months.map(m => {
+        const selected = varSelectedMonth && varSelectedMonth.year === m.year && varSelectedMonth.month === m.month;
+        return `<button class="var-month-btn${selected ? ' selected' : ''}" data-year="${m.year}" data-month="${m.month}" onclick="selectVarMonth(this, ${m.year}, ${m.month})">${m.label}</button>`;
+      }).join('');
     }
 
-    async function loadAll() {
-      await Promise.all([loadOverviewScans()]);
+    function selectVarMonth(btn, year, month) {
+      document.querySelectorAll('.var-month-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      varSelectedMonth = { year, month };
+      runVarianceScan();
     }
 
-    // --- Section navigation ---
+    // ===== SECTION NAVIGATION =====
     function showSection(name, el) {
       document.querySelectorAll('.section-page').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
       const sec = qs('#sec-'+name);
       if (sec) sec.classList.add('active');
       if (el) el.classList.add('active');
-      // Auto-load latest data when switching tabs
       if (name === 'uncategorized') loadLatestUncategorized();
       if (name === 'close-package') loadLatestClosePackage();
-      if (name === 'variance') loadLatestVariance();
+      if (name === 'variance') {
+        if (!varSelectedMonth) initVarianceMonthPicker();
+        loadLatestVariance();
+      }
       if (name === 'liability') loadLatestLiability();
       if (name === 'payroll') initPayrollSection();
+      if (name === 'client-summary') {
+        if (currentRealm) loadClientSummary();
+        else showClientSummaryNoClient();
+      }
     }
 
-    // --- Overview ---
+    function showClientSummaryNoClient() {
+      qs('#cs-no-client').style.display = '';
+      qs('#cs-content').style.display = 'none';
+    }
+
+    // ===== CLIENT SUMMARY =====
+    async function loadClientSummary() {
+      if (!currentRealm) { showClientSummaryNoClient(); return; }
+      const company = companies.find(c => c.realm_id === currentRealm);
+      qs('#cs-subtitle').textContent = company?.company_name || currentRealm;
+      qs('#cs-no-client').style.display = 'none';
+      qs('#cs-content').style.display = '';
+      qs('#btn-cs-refresh').style.display = '';
+
+      // Show skeletons
+      qs('#cs-alerts').innerHTML = '<div class="skeleton sk-block" style="height:50px;"></div>';
+      qs('#cs-activity').innerHTML = '<div class="skeleton sk-line w90"></div><div class="skeleton sk-line w70"></div><div class="skeleton sk-line w80"></div>';
+      ['qs-uncat','qs-liab','qs-close','qs-payroll'].forEach(id => {
+        const el = qs('#'+id);
+        el.className = 'qs-value skeleton';
+        el.style.cssText = 'height:28px;width:60px;border-radius:4px;';
+        el.textContent = '';
+      });
+      qs('#cs-connections').innerHTML = '<div class="skeleton sk-block" style="height:60px;"></div>';
+      qs('#cs-mini-pnl').style.display = 'none';
+
+      // Load everything in parallel
+      const [scans, pkgs] = await Promise.all([
+        apiFetch('/api/companies/'+currentRealm+'/scans').then(r => r.json()).catch(() => []),
+        apiFetch('/api/companies/'+currentRealm+'/close-packages').then(r => r.json()).catch(() => []),
+      ]);
+
+      const getLatestOfType = (type) => Array.isArray(scans) ? scans.find(s => s.scan_type === type) : null;
+      const uncatScan = getLatestOfType('uncategorized');
+      const liabScan = getLatestOfType('liability');
+      const varianceScan = getLatestOfType('variance');
+      const payrollScan = getLatestOfType('payroll');
+
+      const uncatData = parseScanData(uncatScan);
+      const liabData = parseScanData(liabScan);
+      const varData = parseScanData(varianceScan);
+      const payData = parseScanData(payrollScan);
+      const latestPkg = Array.isArray(pkgs) && pkgs.length > 0 ? pkgs[0] : null;
+
+      // ---- ALERTS ----
+      const alerts = [];
+
+      // QBO connection
+      if (company && company.token_status === 'disconnected') {
+        alerts.push({ level: 'red', icon: '🔴', title: 'QBO Connection Expired', detail: 'QuickBooks token expired — reconnect required.', action: { label: 'Reconnect', fn: 'connectNewCompany()' } });
+      }
+
+      // Uncategorized
+      if (uncatData?.summary?.flaggedCount > 0) {
+        const amt = '$' + Number(uncatData.summary.totalFlaggedAmount || 0).toLocaleString();
+        alerts.push({ level: 'red', icon: '🔴', title: `${uncatData.summary.flaggedCount} Uncategorized Account${uncatData.summary.flaggedCount > 1 ? 's' : ''}`, detail: `Transactions totaling ${amt} need categorization.`, action: { label: 'View', fn: "showSection('uncategorized',qs('[data-section=uncategorized]'))" } });
+      }
+
+      // Payroll mismatch
+      if (payData?.qboComparison) {
+        const gusto = (payData.summary?.totalGrossPay || 0);
+        const qboTotal = (payData.qboComparison.salaries || 0) + (payData.qboComparison.officerComp || 0);
+        const diff = Math.abs(gusto - qboTotal);
+        if (diff > 1) {
+          alerts.push({ level: 'red', icon: '🔴', title: 'Payroll Mismatch', detail: `Gross wages: Gusto $${gusto.toLocaleString()} vs QBO $${qboTotal.toLocaleString()} (difference: $${diff.toLocaleString()})`, action: { label: 'View', fn: "showSection('payroll',qs('[data-section=payroll]'))" } });
+        }
+      } else if (company && !company.gusto_connected) {
+        alerts.push({ level: 'orange', icon: '🟠', title: 'Payroll Verification Unavailable', detail: 'Connect Gusto to enable payroll cross-referencing.', action: { label: 'Connect', fn: "showSection('payroll',qs('[data-section=payroll]'))" } });
+      }
+
+      // Variance flags
+      if (varData?.summary?.flaggedCount > 0) {
+        alerts.push({ level: 'orange', icon: '🟠', title: `P&L Variance: ${varData.summary.flaggedCount} Account${varData.summary.flaggedCount > 1 ? 's' : ''} Flagged`, detail: `Unusual variance detected in ${varData.period || 'recent period'}.`, action: { label: 'View', fn: "showSection('variance',qs('[data-section=variance]'))" } });
+      }
+
+      // Liability issues
+      if (liabData?.flagged?.length > 0) {
+        for (const f of liabData.flagged.slice(0, 3)) {
+          const firstIssue = f.issues?.[0];
+          alerts.push({ level: 'orange', icon: '🟠', title: `Liability Issue: ${f.name}`, detail: firstIssue?.message || 'Review required', action: { label: 'View', fn: "showSection('liability',qs('[data-section=liability]'))" } });
+        }
+        if (liabData.flagged.length > 3) {
+          alerts.push({ level: 'orange', icon: '🟠', title: `+${liabData.flagged.length - 3} more liability issues`, detail: 'Click to view full liability health report.', action: { label: 'View All', fn: "showSection('liability',qs('[data-section=liability]'))" } });
+        }
+      }
+
+      // Render alerts
+      if (alerts.length === 0) {
+        qs('#cs-alerts').innerHTML = `<div class="alert-card alert-green"><span class="alert-icon">✅</span><div class="alert-content"><div class="alert-title">All Clear</div><div class="alert-detail">No issues found for this client.</div></div></div>`;
+      } else {
+        qs('#cs-alerts').innerHTML = alerts.map(a => `
+          <div class="alert-card alert-${a.level}">
+            <span class="alert-icon">${a.icon}</span>
+            <div class="alert-content">
+              <div class="alert-title">${esc(a.title)}</div>
+              ${a.detail ? `<div class="alert-detail">${esc(a.detail)}</div>` : ''}
+            </div>
+            ${a.action ? `<div class="alert-action"><button onclick="${a.action.fn}">${esc(a.action.label)}</button></div>` : ''}
+          </div>
+        `).join('');
+      }
+
+      // ---- HEALTH SCORE ----
+      let score = 100;
+      const reasons = [];
+      if (uncatData?.summary?.flaggedCount > 0) {
+        const pts = Math.min(25, uncatData.summary.flaggedCount * 5);
+        score -= pts; reasons.push(`-${pts}pts: uncategorized transactions`);
+      }
+      if (!latestPkg) {
+        score -= 25; reasons.push('-25pts: no close package generated');
+      }
+      if (varData?.summary?.flaggedCount > 0) {
+        const pts = Math.min(25, varData.summary.flaggedCount * 5);
+        score -= pts; reasons.push(`-${pts}pts: variance flags`);
+      }
+      if (liabData?.flagged?.length > 0) {
+        const pts = Math.min(25, liabData.flagged.length * 5);
+        score -= pts; reasons.push(`-${pts}pts: liability issues`);
+      }
+      score = Math.max(0, score);
+
+      const circumference = 2 * Math.PI * 36;
+      const fillEl = qs('#gauge-fill');
+      const offset = circumference * (1 - score / 100);
+      fillEl.style.strokeDasharray = circumference;
+      fillEl.style.strokeDashoffset = offset;
+
+      let gaugeColor, gaugeStatus;
+      if (score >= 80) { gaugeColor = 'var(--green)'; gaugeStatus = 'Healthy'; }
+      else if (score >= 50) { gaugeColor = 'var(--orange)'; gaugeStatus = 'Needs Attention'; }
+      else { gaugeColor = 'var(--red)'; gaugeStatus = 'Action Required'; }
+      fillEl.style.stroke = gaugeColor;
+      qs('#gauge-num').textContent = score;
+      qs('#gauge-num').style.color = gaugeColor;
+      qs('#gauge-status').textContent = gaugeStatus;
+      qs('#gauge-desc').textContent = reasons.length > 0 ? reasons.slice(0, 3).join(' · ') : 'All checks passing.';
+
+      // ---- ACTIVITY FEED ----
+      const activities = [];
+      if (Array.isArray(scans)) {
+        const typeEmoji = { uncategorized: '🔍', liability: '🏦', variance: '📊', payroll: '💸' };
+        for (const s of scans.slice(0, 5)) {
+          activities.push({
+            icon: typeEmoji[s.scan_type] || '📋',
+            text: `${s.scan_type.charAt(0).toUpperCase()+s.scan_type.slice(1)} scan — ${s.flag_count || 0} flag${s.flag_count !== 1 ? 's' : ''}`,
+            time: s.scanned_at ? timeAgo(s.scanned_at) : '--',
+          });
+        }
+      }
+      if (latestPkg) activities.unshift({ icon: '📦', text: `Close package: ${latestPkg.period}`, time: latestPkg.generated_at ? timeAgo(latestPkg.generated_at) : '--' });
+
+      if (activities.length === 0) {
+        qs('#cs-activity').innerHTML = '<div style="color:var(--muted);font-size:0.8rem;padding:0.5rem 0;">No recent activity. Run scans to get started.</div>';
+      } else {
+        qs('#cs-activity').innerHTML = activities.slice(0, 6).map(a =>
+          `<div class="activity-item"><span class="activity-icon">${a.icon}</span><span class="activity-text">${esc(a.text)}</span><span class="activity-time">${esc(a.time)}</span></div>`
+        ).join('');
+      }
+
+      // ---- QUICK STATS ----
+      setQS('qs-uncat', uncatData?.summary?.flaggedCount ?? '--', uncatData?.summary?.flaggedCount > 0 ? 'red' : 'green', 'accounts');
+      setQS('qs-liab', liabData?.summary?.flaggedCount ?? '--', liabData?.summary?.flaggedCount > 0 ? 'orange' : 'green', 'issues');
+      setQS('qs-close', latestPkg ? latestPkg.period : 'None', latestPkg ? 'text' : 'muted', '');
+      const payStatus = payData?.summary ? (payData.summary.mismatchCount > 0 ? 'Mismatch' : 'OK') : (company?.gusto_connected ? '--' : 'Not set up');
+      setQS('qs-payroll', payStatus, payStatus === 'OK' ? 'green' : payStatus === 'Mismatch' ? 'red' : 'muted', '');
+
+      // ---- CONNECTIONS ----
+      const qboConnected = company?.token_status !== 'disconnected';
+      qs('#cs-connections').innerHTML = `
+        <div class="conn-card" style="margin-bottom:0.6rem;">
+          <span class="conn-icon">${qboConnected ? '🟢' : '🔴'}</span>
+          <div class="conn-info">
+            <div class="conn-name">QuickBooks Online</div>
+            <div class="conn-status">${qboConnected ? 'Connected' : 'Disconnected — reconnect required'}</div>
+          </div>
+          ${!qboConnected ? `<div class="conn-action"><button class="btn btn-gold btn-sm" onclick="connectNewCompany()">Reconnect</button></div>` : ''}
+        </div>
+        <div class="conn-card">
+          <span class="conn-icon">${company?.gusto_connected ? '🟢' : '⚪'}</span>
+          <div class="conn-info">
+            <div class="conn-name">Gusto Payroll</div>
+            <div class="conn-status">${company?.gusto_connected ? 'Connected' : 'Not connected'}</div>
+          </div>
+          ${!company?.gusto_connected ? `<div class="conn-action"><button class="btn btn-outline btn-sm" onclick="showSection('payroll',qs('[data-section=payroll]'))">Connect</button></div>` : ''}
+        </div>
+      `;
+
+      // ---- MINI P&L ----
+      if (latestPkg) {
+        const rd = typeof latestPkg.report_data === 'string' ? JSON.parse(latestPkg.report_data) : latestPkg.report_data;
+        if (rd?.pnl?.Rows?.Row) {
+          const pnlData = parsePnlForMini(rd.pnl.Rows.Row);
+          if (pnlData.revenue !== null || pnlData.expenses !== null || pnlData.net !== null) {
+            qs('#cs-mini-pnl').style.display = '';
+            qs('#cs-pnl-rows').innerHTML = `
+              <div class="mini-pnl-row"><span class="pnl-label">Revenue</span><span style="color:var(--green);">${fmtCur(pnlData.revenue || 0)}</span></div>
+              <div class="mini-pnl-row"><span class="pnl-label">Expenses</span><span style="color:var(--orange);">${fmtCur(pnlData.expenses || 0)}</span></div>
+              <div class="mini-pnl-row"><span class="pnl-label">Net Income</span><span style="color:${(pnlData.net || 0) >= 0 ? 'var(--green)' : 'var(--red)'};">${fmtCur(pnlData.net || 0)}</span></div>
+            `;
+          }
+        }
+      }
+    }
+
+    function parseScanData(scan) {
+      if (!scan || !scan.result_data) return null;
+      try { return typeof scan.result_data === 'string' ? JSON.parse(scan.result_data) : scan.result_data; }
+      catch(e) { return null; }
+    }
+
+    function setQS(id, value, color, sub) {
+      const el = qs('#' + id);
+      el.className = 'qs-value' + (color === 'green' ? ' green' : color === 'red' ? ' red' : color === 'orange' ? ' orange' : color === 'gold' ? ' gold' : '');
+      el.style.cssText = '';
+      el.textContent = value;
+      const subEl = el.nextElementSibling;
+      if (subEl && subEl.classList.contains('qs-sub')) subEl.textContent = sub;
+    }
+
+    function parsePnlForMini(rows) {
+      const result = { revenue: null, expenses: null, net: null };
+      if (!rows) return result;
+      for (const row of rows) {
+        const label = (row.Header?.ColData?.[0]?.value || row.Summary?.ColData?.[0]?.value || '').toLowerCase();
+        const val = parseFloat(row.Summary?.ColData?.[1]?.value || '0');
+        if (label.includes('income') || label.includes('revenue')) result.revenue = val;
+        if (label.includes('expense')) result.expenses = val;
+        if (label.includes('net')) result.net = val;
+      }
+      return result;
+    }
+
+    // ===== OVERVIEW =====
+    async function loadAll() {
+      await Promise.all([loadOverviewScans()]);
+    }
+
     async function loadOverviewScans() {
-      // Companies overview card
       const connected = companies.filter(c => c.token_status !== 'disconnected').length;
       const disconnected = companies.filter(c => c.token_status === 'disconnected').length;
       qs('#ov-companies').textContent = companies.length;
@@ -670,23 +1252,20 @@
       qs('#ov-companies-sub').textContent = connected + ' connected' + (disconnected > 0 ? ', ' + disconnected + ' disconnected' : '');
 
       try {
-        const scans = await (await fetch('/api/companies/'+currentRealm+'/scans')).json();
+        const scans = await (await apiFetch('/api/companies/'+currentRealm+'/scans')).json();
         if (!Array.isArray(scans) || scans.length === 0) {
-          qs('#overview-scans').innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1.5rem;">No scans yet. Use the sidebar to run scans.</td></tr>';
+          qs('#overview-scans').innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1.5rem;">No scans yet.</td></tr>';
           return;
         }
-        const typeLabels = { uncategorized:'Uncategorized' };
-        qs('#overview-scans').innerHTML = scans
-          .filter(s => s.scan_type === 'uncategorized')
-          .map(s => {
-            const d = s.scanned_at ? new Date(s.scanned_at).toLocaleString() : '--';
-            return '<tr><td>'+((typeLabels[s.scan_type])||s.scan_type)+'</td><td>'+(s.flag_count||0)+' flags</td><td style="color:var(--muted);font-size:0.82rem;">'+d+'</td><td>'+(s.flag_count>0?'<span class="badge badge-flag">Needs Review</span>':'<span class="badge badge-ok">OK</span>')+'</td></tr>';
-          }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1.5rem;">No scans yet.</td></tr>';
+        const typeLabels = { uncategorized:'Uncategorized', variance:'P&L Variance', liability:'Liability', payroll:'Payroll' };
+        qs('#overview-scans').innerHTML = scans.map(s => {
+          const d = s.scanned_at ? new Date(s.scanned_at).toLocaleString() : '--';
+          return '<tr><td>'+(typeLabels[s.scan_type]||s.scan_type)+'</td><td>'+(s.flag_count||0)+' flags</td><td style="color:var(--muted);font-size:0.82rem;">'+d+'</td><td>'+(s.flag_count>0?'<span class="badge badge-flag">Needs Review</span>':'<span class="badge badge-ok">OK</span>')+'</td></tr>';
+        }).join('');
 
-        // Update overview cards from scan data
         for (const s of scans) {
-          const data = typeof s.result_data === 'string' ? JSON.parse(s.result_data) : s.result_data;
-          if (s.scan_type === 'uncategorized' && data.summary) {
+          const data = parseScanData(s);
+          if (s.scan_type === 'uncategorized' && data?.summary) {
             qs('#ov-uncat').textContent = data.summary.flaggedCount + ' flagged';
             qs('#ov-uncat').style.color = data.summary.flaggedCount > 0 ? 'var(--red)' : 'var(--green)';
             qs('#ov-uncat-sub').textContent = '$'+Number(data.summary.totalFlaggedAmount||0).toLocaleString()+' total';
@@ -694,9 +1273,8 @@
         }
       } catch(e) { /* ignore */ }
 
-      // Check for close packages
       try {
-        const pkgs = await (await fetch('/api/companies/'+currentRealm+'/close-packages')).json();
+        const pkgs = await (await apiFetch('/api/companies/'+currentRealm+'/close-packages')).json();
         if (Array.isArray(pkgs) && pkgs.length > 0) {
           qs('#ov-pkg').textContent = pkgs.length + ' generated';
           qs('#ov-pkg').style.color = 'var(--green)';
@@ -705,11 +1283,11 @@
       } catch(e) { /* ignore */ }
     }
 
-    // --- Uncategorized Scanner ---
+    // ===== UNCATEGORIZED =====
     async function runUncategorizedScan() {
-      const btn = qs('#btn-uncat-scan'); btn.disabled=true; btn.textContent='Scanning...';
+      const btn = qs('#btn-uncat-scan'); btn.disabled=true; btn.textContent='Scanning…';
       try {
-        const data = await (await fetch('/api/companies/'+currentRealm+'/scan/uncategorized',{method:'POST'})).json();
+        const data = await (await apiFetch('/api/companies/'+currentRealm+'/scan/uncategorized',{method:'POST'})).json();
         if (data.error) throw new Error(data.error);
         const s = data.summary;
         qs('#uncat-stats').style.display='';
@@ -717,13 +1295,12 @@
         qs('#uncat-checked').textContent = s.checkedCount;
         qs('#uncat-total').textContent = '$'+Number(s.totalFlaggedAmount).toLocaleString();
         qs('#uncat-last-scan').textContent = 'Last scanned: ' + new Date().toLocaleString();
-
         let html = '';
         if (data.flagged.length > 0) {
           html += '<h3 style="font-size:0.88rem;margin:1rem 0 0.5rem;color:var(--red);">Flagged Accounts</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Balance</th><th>Transactions</th></tr></thead><tbody>';
           for (const f of data.flagged) {
             html += '<tr><td style="font-weight:600;">'+esc(f.name)+'</td><td style="color:var(--orange);">$'+Number(f.balance).toLocaleString()+'</td><td>'+f.transactionCount+'</td></tr>';
-            if (f.transactions && f.transactions.length > 0) {
+            if (f.transactions?.length > 0) {
               for (const t of f.transactions) {
                 html += '<tr><td style="padding-left:2rem;color:var(--muted);font-size:0.8rem;">'+t.date+'</td><td style="font-size:0.8rem;">$'+Number(t.amount).toFixed(2)+'</td><td style="color:var(--muted);font-size:0.8rem;">'+esc(t.vendor)+' — '+esc(t.description)+'</td></tr>';
               }
@@ -733,62 +1310,57 @@
         }
         html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">All Checked Accounts</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Balance</th><th>Status</th></tr></thead><tbody>';
         for (const c of data.checked) {
-          const ok = c.balance === 0;
-          html += '<tr><td>'+esc(c.name)+'</td><td>$'+Number(c.balance).toLocaleString()+'</td><td>'+(ok?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-flag">Flagged</span>')+'</td></tr>';
+          html += '<tr><td>'+esc(c.name)+'</td><td>$'+Number(c.balance).toLocaleString()+'</td><td>'+(c.balance===0?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-flag">Flagged</span>')+'</td></tr>';
         }
         html += '</tbody></table></div>';
         qs('#uncat-results').innerHTML = html;
-        toast('Uncategorized scan complete: '+s.flaggedCount+' flagged');
+        toast('Scan complete: '+s.flaggedCount+' flagged');
         loadOverviewScans();
       } catch(e) { toast('Scan failed: '+e.message); }
       btn.disabled=false; btn.textContent='Run Scan';
     }
 
-    // --- Close Package ---
+    // ===== CLOSE PACKAGE =====
     async function generateClosePackage() {
       if (!cpSelection.startDate) { toast('Select a period first'); return; }
       const byMonth = qs('#cp-by-month').checked;
-      qs('#cp-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);"><div class="spinner"></div>Generating close package for '+esc(cpSelection.label)+'...</div>';
-
+      qs('#cp-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Generating close package for '+esc(cpSelection.label)+'…</div>';
       try {
-        const body = {
-          startDate: cpSelection.startDate,
-          endDate: cpSelection.endDate,
-          period: cpSelection.period,
-          label: cpSelection.label,
-          byMonth: byMonth
-        };
-        const data = await (await fetch('/api/companies/'+currentRealm+'/close-package',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+        const body = { startDate:cpSelection.startDate, endDate:cpSelection.endDate, period:cpSelection.period, label:cpSelection.label, byMonth };
+        const data = await (await apiFetch('/api/companies/'+currentRealm+'/close-package',{method:'POST',body:JSON.stringify(body)})).json();
         if (data.error) throw new Error(data.error);
-
-        // Could be array (byMonth) or single
         if (Array.isArray(data)) {
           let html = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(cpSelection.label)+' — By Month</h3>';
           for (const pkg of data) {
-            const rd = typeof pkg.report_data === 'string' ? JSON.parse(pkg.report_data) : pkg.report_data;
-            html += '<div style="border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;margin-bottom:1rem;background:var(--card);">';
-            html += '<h3 style="font-size:0.88rem;color:var(--gold);margin-bottom:0.75rem;">'+esc(rd.period || pkg.period)+'</h3>';
-            html += renderClosePackageBody(rd, pkg);
+            const rd = parseScanData(pkg) || pkg.report_data;
+            html += '<div style="border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;margin-bottom:1rem;background:var(--card);"><h3 style="font-size:0.88rem;color:var(--gold);margin-bottom:0.75rem;">'+esc((typeof rd === 'object' && rd?.period) || pkg.period)+'</h3>';
+            html += renderClosePackageBody(typeof rd === 'string' ? JSON.parse(rd) : rd, pkg);
             html += '</div>';
           }
           qs('#cp-results').innerHTML = html;
         } else {
-          const rd = typeof data.report_data === 'string' ? JSON.parse(data.report_data) : data.report_data;
-          qs('#cp-results').innerHTML = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(cpSelection.label)+'</h3>' + renderClosePackageBody(rd, data);
+          const rd = parseScanData(data) || data.report_data;
+          const rdObj = typeof rd === 'string' ? JSON.parse(rd) : rd;
+          qs('#cp-results').innerHTML = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(cpSelection.label)+'</h3>' + renderClosePackageBody(rdObj, data);
         }
         toast('Close package generated for '+cpSelection.label);
-        loadOverviewScans();
       } catch(e) {
         toast('Generation failed: '+e.message);
         qs('#cp-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: '+esc(e.message)+'</div>';
       }
     }
 
-    // --- P&L Variance Analysis ---
+    // ===== VARIANCE =====
     async function runVarianceScan() {
-      qs('#var-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Running variance analysis...</div>';
+      const selectedBtn = document.querySelector('#var-month-btns .selected');
+      const year = selectedBtn ? parseInt(selectedBtn.dataset.year) : (varSelectedMonth?.year || new Date().getFullYear());
+      const month = selectedBtn ? parseInt(selectedBtn.dataset.month) : (varSelectedMonth?.month || new Date().getMonth() + 1);
+      const thresholdPct = parseInt(qs('#var-threshold-pct').value) || 15;
+      const thresholdAmt = parseInt(qs('#var-threshold-amt').value) || 500;
+
+      qs('#var-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Running variance analysis…</div>';
       try {
-        const data = await (await fetch('/api/companies/'+currentRealm+'/scan/variance', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).json();
+        const data = await (await apiFetch('/api/companies/'+currentRealm+'/scan/variance', {method:'POST',body:JSON.stringify({year,month,thresholdPct,thresholdAmt})})).json();
         if (data.error) throw new Error(data.error);
         renderVarianceResults(data);
         toast('Variance analysis complete — '+data.summary.flaggedCount+' flagged');
@@ -798,19 +1370,17 @@
       }
     }
 
-    function renderVarianceResults(data) {
+    function renderVarianceResults(data, threshPct, threshAmt) {
       qs('#var-stats').style.display='';
       qs('#var-total').textContent = data.summary.totalAccounts;
       qs('#var-flagged').textContent = data.summary.flaggedCount;
-      qs('#var-threshold').textContent = data.thresholdPct+'%';
+      const pct = threshPct || data.thresholdPct || 15;
+      const amt = threshAmt || data.thresholdAmt || 500;
+      qs('#var-threshold').textContent = pct+'%';
+      if (qs('#var-threshold-sub')) qs('#var-threshold-sub').textContent = 'and >$'+amt.toLocaleString();
       qs('#var-last-scan').textContent = 'Comparing '+data.period+' vs '+data.priorPeriod+' (MoM) and '+data.yoyPeriod+' (YoY)';
-
       const v = data.variances || [];
-      if (v.length === 0) {
-        qs('#var-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No P&L data found.</div>';
-        return;
-      }
-
+      if (v.length === 0) { qs('#var-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No P&L data found.</div>'; return; }
       let html = '<div class="table-wrap"><table><thead><tr><th>Account</th><th class="amount">Current</th><th class="amount">Prior Mo</th><th class="amount">MoM $</th><th class="amount">MoM %</th><th class="amount">Prior Yr</th><th class="amount">YoY $</th><th class="amount">YoY %</th></tr></thead><tbody>';
       for (const r of v) {
         const isTotal = r.account.startsWith('TOTAL:');
@@ -818,16 +1388,7 @@
         const name = isTotal ? '<strong>'+esc(r.account)+'</strong>' : esc(r.account);
         const momColor = r.momFlagged ? (r.momDiff > 0 ? 'color:var(--red);font-weight:700;' : 'color:var(--green);font-weight:700;') : '';
         const yoyColor = r.yoyFlagged ? (r.yoyDiff > 0 ? 'color:var(--red);font-weight:700;' : 'color:var(--green);font-weight:700;') : '';
-        html += '<tr'+rowCls+'>'
-          + '<td>'+name+'</td>'
-          + '<td class="amount">'+fmtCur(r.current)+'</td>'
-          + '<td class="amount">'+fmtCur(r.priorMonth)+'</td>'
-          + '<td class="amount" style="'+momColor+'">'+fmtCurSigned(r.momDiff)+'</td>'
-          + '<td class="amount" style="'+momColor+'">'+(r.momPct > 0?'+':'')+r.momPct+'%</td>'
-          + '<td class="amount">'+fmtCur(r.priorYearMonth)+'</td>'
-          + '<td class="amount" style="'+yoyColor+'">'+fmtCurSigned(r.yoyDiff)+'</td>'
-          + '<td class="amount" style="'+yoyColor+'">'+(r.yoyPct > 0?'+':'')+r.yoyPct+'%</td>'
-          + '</tr>';
+        html += '<tr'+rowCls+'><td>'+name+'</td><td class="amount">'+fmtCur(r.current)+'</td><td class="amount">'+fmtCur(r.priorMonth)+'</td><td class="amount" style="'+momColor+'">'+fmtCurSigned(r.momDiff)+'</td><td class="amount" style="'+momColor+'">'+(r.momPct>0?'+':'')+r.momPct+'%</td><td class="amount">'+fmtCur(r.priorYearMonth)+'</td><td class="amount" style="'+yoyColor+'">'+fmtCurSigned(r.yoyDiff)+'</td><td class="amount" style="'+yoyColor+'">'+(r.yoyPct>0?'+':'')+r.yoyPct+'%</td></tr>';
       }
       html += '</tbody></table></div>';
       qs('#var-results').innerHTML = html;
@@ -839,20 +1400,105 @@
     async function loadLatestVariance() {
       if (!currentRealm) return;
       try {
-        const resp = await fetch('/api/companies/'+currentRealm+'/scans?type=variance');
+        const resp = await apiFetch('/api/companies/'+currentRealm+'/scans?type=variance');
         if (!resp.ok) return;
         const scan = await resp.json();
-        if (!scan || !scan.result_data) return;
-        const data = typeof scan.result_data === 'string' ? JSON.parse(scan.result_data) : scan.result_data;
-        renderVarianceResults(data);
+        if (!scan?.result_data) return;
+        const data = parseScanData(scan);
+        if (data) renderVarianceResults(data);
       } catch(e) {}
     }
 
-    // --- Liability Health Check ---
-    async function runLiabilityScan() {
-      qs('#liab-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Scanning liability accounts...</div>';
+    // --- Client Summary ---
+    async function loadClientSummary() {
+      if (!currentRealm) return;
+      const company = companies.find(c => c.realm_id === currentRealm);
+      if (qs('#cs-subtitle')) qs('#cs-subtitle').textContent = (company?.company_name || currentRealm) + ' — health overview';
+
+      let uncatData = null, varData = null, liabData = null, payData = null, pkgData = null;
       try {
-        const data = await (await fetch('/api/companies/'+currentRealm+'/scan/liability', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).json();
+        const [uncatResp, varResp, liabResp, payResp, pkgResp] = await Promise.allSettled([
+          apiFetch('/api/companies/'+currentRealm+'/scans').then(r => r.ok ? r.json() : null),
+          apiFetch('/api/companies/'+currentRealm+'/scans?type=variance').then(r => r.ok ? r.json() : null),
+          apiFetch('/api/companies/'+currentRealm+'/scans?type=liability').then(r => r.ok ? r.json() : null),
+          apiFetch('/api/companies/'+currentRealm+'/scans?type=payroll').then(r => r.ok ? r.json() : null),
+          apiFetch('/api/companies/'+currentRealm+'/close-packages').then(r => r.ok ? r.json() : null),
+        ]);
+        const scans = uncatResp.value;
+        if (Array.isArray(scans)) {
+          const u = scans.find(s => s.scan_type === 'uncategorized');
+          if (u?.result_data) uncatData = typeof u.result_data === 'string' ? JSON.parse(u.result_data) : u.result_data;
+        }
+        if (varResp.value?.result_data) varData = typeof varResp.value.result_data === 'string' ? JSON.parse(varResp.value.result_data) : varResp.value.result_data;
+        if (liabResp.value?.result_data) liabData = typeof liabResp.value.result_data === 'string' ? JSON.parse(liabResp.value.result_data) : liabResp.value.result_data;
+        if (payResp.value?.result_data) payData = typeof payResp.value.result_data === 'string' ? JSON.parse(payResp.value.result_data) : payResp.value.result_data;
+        const pkgs = pkgResp.value;
+        if (Array.isArray(pkgs) && pkgs.length > 0) {
+          const rd = typeof pkgs[0].report_data === 'string' ? JSON.parse(pkgs[0].report_data) : pkgs[0].report_data;
+          pkgData = { pkg: pkgs[0], rd };
+        }
+      } catch(e) {}
+
+      // Build alerts
+      const alerts = [];
+      const uncatCount = uncatData?.summary?.flaggedCount || 0;
+      const varCount = varData?.summary?.flaggedCount || 0;
+      const liabCount = liabData?.summary?.flaggedCount || 0;
+      const payCount = payData?.summary?.mismatchCount || 0;
+      const disconnected = company?.token_status === 'disconnected';
+
+      if (disconnected) alerts.push({ icon: '🔌', text: 'QuickBooks connection is disconnected' });
+      if (uncatCount > 0) alerts.push({ icon: '🏷️', text: uncatCount + ' uncategorized transaction flag'+(uncatCount>1?'s':'') });
+      if (varCount > 0) alerts.push({ icon: '📊', text: varCount + ' P&L variance flag'+(varCount>1?'s':'') });
+      if (liabCount > 0) alerts.push({ icon: '⚠️', text: liabCount + ' liability issue'+(liabCount>1?'s':'') });
+      if (payCount > 0) alerts.push({ icon: '💰', text: payCount + ' payroll mismatch'+(payCount>1?'es':'') });
+
+      const panel = qs('#cs-alerts-panel');
+      const list = qs('#cs-alerts-list');
+      if (alerts.length === 0) {
+        panel.className = 'alert-panel all-clear';
+        panel.querySelector('.alert-panel-header').innerHTML = '<span>✓</span> All Clear — No issues found';
+        list.innerHTML = '';
+      } else {
+        panel.className = 'alert-panel has-alerts';
+        panel.querySelector('.alert-panel-header').innerHTML = '<span>⚠</span> '+alerts.length+' issue'+(alerts.length>1?'s':'')+' need attention';
+        list.innerHTML = alerts.map(a => '<div class="alert-item"><span class="alert-icon">'+a.icon+'</span><span>'+esc(a.text)+'</span></div>').join('');
+      }
+
+      // Health score
+      let score = 100;
+      if (disconnected) score -= 40;
+      score -= Math.min(uncatCount * 3, 20);
+      score -= Math.min(varCount * 3, 15);
+      score -= Math.min(liabCount * 5, 20);
+      score -= Math.min(payCount * 5, 15);
+      score = Math.max(0, Math.min(100, score));
+      const gaugeColor = score >= 80 ? 'var(--green)' : score >= 50 ? 'var(--orange)' : 'var(--red)';
+      const gaugeEl = qs('#cs-gauge');
+      if (gaugeEl) { gaugeEl.style.setProperty('--score', score); gaugeEl.style.setProperty('--gauge-color', gaugeColor); }
+      if (qs('#cs-gauge-value')) qs('#cs-gauge-value').textContent = score;
+
+      // Quick stats
+      const statColor = n => n === 0 ? 'var(--green)' : 'var(--red)';
+      if (qs('#cs-stat-uncat')) { qs('#cs-stat-uncat').textContent = uncatCount; qs('#cs-stat-uncat').style.color = statColor(uncatCount); }
+      if (qs('#cs-stat-var')) { qs('#cs-stat-var').textContent = varCount; qs('#cs-stat-var').style.color = statColor(varCount); }
+      if (qs('#cs-stat-liab')) { qs('#cs-stat-liab').textContent = liabCount; qs('#cs-stat-liab').style.color = statColor(liabCount); }
+      if (qs('#cs-stat-pay')) { qs('#cs-stat-pay').textContent = payCount === 0 && !payData ? '—' : payCount; qs('#cs-stat-pay').style.color = payCount > 0 ? 'var(--red)' : 'var(--green)'; }
+
+      // Mini P&L
+      const miniEl = qs('#cs-mini-pnl');
+      if (pkgData?.rd?.pnl) {
+        miniEl.innerHTML = '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.5rem;">Period: <strong style="color:var(--gold);">'+esc(pkgData.rd.period || pkgData.pkg.period)+'</strong></div>' + renderQBReport(pkgData.rd.pnl);
+      } else {
+        miniEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No close package data yet. Generate a close package first.</div>';
+      }
+    }
+
+    // ===== LIABILITY =====
+    async function runLiabilityScan() {
+      qs('#liab-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Scanning liability accounts…</div>';
+      try {
+        const data = await (await apiFetch('/api/companies/'+currentRealm+'/scan/liability', {method:'POST',body:'{}'})).json();
         if (data.error) throw new Error(data.error);
         renderLiabilityResults(data);
         toast('Liability check complete — '+data.summary.flaggedCount+' issues found');
@@ -863,51 +1509,55 @@
     }
 
     function renderLiabilityResults(data) {
+      if (data.error) {
+        qs('#liab-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">'+esc(data.error)+'</div>';
+        return;
+      }
+      if (data.message) {
+        qs('#liab-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">'+esc(data.message)+'</div>';
+        return;
+      }
       qs('#liab-stats').style.display='';
       qs('#liab-total').textContent = data.summary.totalAccounts;
       qs('#liab-flagged').textContent = data.summary.flaggedCount;
       qs('#liab-balance').textContent = '$'+Math.abs(data.summary.totalLiabilityBalance).toLocaleString();
-
       let html = '';
-
-      // Flagged accounts first
-      if (data.flagged && data.flagged.length > 0) {
+      if (data.flagged?.length > 0) {
         html += '<h3 style="font-size:0.88rem;margin:0 0 0.5rem;color:var(--red);">Issues Found</h3>';
-        html += '<div class="table-wrap" style="margin-bottom:1.5rem;"><table><thead><tr><th>Account</th><th>Type</th><th class="amount">Balance</th><th>Issues</th></tr></thead><tbody>';
+        html += '<div class="table-wrap" style="margin-bottom:1.5rem;"><table><thead><tr><th>Account</th><th>Type</th><th>Subtype</th><th class="amount">Balance</th><th>Issues</th></tr></thead><tbody>';
         for (const a of data.flagged) {
           const issueHtml = a.issues.map(i => '<span class="badge '+(i.severity==='warning'?'badge-flag':'badge-pending')+'">'+esc(i.message)+'</span>').join(' ');
-          html += '<tr style="background:rgba(245,101,101,0.06);"><td style="font-weight:600;">'+esc(a.name)+'</td><td style="color:var(--muted);font-size:0.78rem;">'+esc(a.accountType)+'</td><td class="amount" style="color:var(--orange);font-weight:600;">$'+Number(a.balance).toLocaleString()+'</td><td>'+issueHtml+'</td></tr>';
+          html += '<tr style="background:rgba(245,101,101,0.06);"><td style="font-weight:600;">'+esc(a.name)+'</td><td style="color:var(--muted);font-size:0.78rem;">'+esc(a.accountType)+'</td><td style="color:var(--muted);font-size:0.78rem;">'+esc(a.subType||'')+'</td><td class="amount" style="color:var(--orange);font-weight:600;">$'+Number(a.balance).toLocaleString()+'</td><td>'+issueHtml+'</td></tr>';
         }
         html += '</tbody></table></div>';
       }
-
-      // All accounts
-      if (data.checked && data.checked.length > 0) {
+      if (data.checked?.length > 0) {
         html += '<h3 style="font-size:0.88rem;margin:0 0 0.5rem;">All Liability Accounts</h3>';
-        html += '<div class="table-wrap"><table><thead><tr><th>Account</th><th>Type</th><th class="amount">Balance</th><th>Status</th></tr></thead><tbody>';
+        html += '<div class="table-wrap"><table><thead><tr><th>Account</th><th>Type</th><th>Subtype</th><th class="amount">Balance</th><th>Status</th></tr></thead><tbody>';
         for (const a of data.checked) {
-          const ok = a.issues.length === 0;
-          html += '<tr><td>'+esc(a.name)+'</td><td style="color:var(--muted);font-size:0.78rem;">'+esc(a.accountType)+'</td><td class="amount">$'+Number(a.balance).toLocaleString()+'</td><td>'+(ok?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-flag">'+a.issues.length+' issue'+(a.issues.length>1?'s':'')+'</span>')+'</td></tr>';
+          const ok = a.issues.filter(i => i.severity !== 'info').length === 0;
+          html += '<tr><td>'+esc(a.name)+'</td><td style="color:var(--muted);font-size:0.78rem;">'+esc(a.accountType)+'</td><td style="color:var(--muted);font-size:0.78rem;">'+esc(a.subType||'')+'</td><td class="amount">$'+Number(a.balance).toLocaleString()+'</td><td>'+(ok?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-flag">'+a.issues.filter(i=>i.severity!=='info').length+' issue(s)</span>')+'</td></tr>';
         }
         html += '</tbody></table></div>';
       }
-
       qs('#liab-results').innerHTML = html || '<div style="text-align:center;padding:2rem;color:var(--muted);">No liability accounts found.</div>';
     }
 
     async function loadLatestLiability() {
       if (!currentRealm) return;
       try {
-        const resp = await fetch('/api/companies/'+currentRealm+'/scans?type=liability');
+        const resp = await apiFetch('/api/companies/'+currentRealm+'/scans?type=liability');
         if (!resp.ok) return;
         const scan = await resp.json();
-        if (!scan || !scan.result_data) return;
-        const data = typeof scan.result_data === 'string' ? JSON.parse(scan.result_data) : scan.result_data;
-        renderLiabilityResults(data);
+        if (!scan?.result_data) return;
+        const data = parseScanData(scan);
+        if (data) renderLiabilityResults(data);
       } catch(e) {}
     }
 
+    // ===== CLOSE PACKAGE RENDER =====
     function renderClosePackageBody(rd, pkg) {
+      if (!rd) return '<div style="color:var(--muted);padding:1rem;">No report data available.</div>';
       let html = '';
       html += '<div class="table-wrap" style="margin-bottom:0.75rem;"><table><thead><tr><th>Item</th><th>Status</th><th>Details</th></tr></thead><tbody>';
       for (const item of (rd.checklist||[])) {
@@ -916,77 +1566,84 @@
         html += '<tr><td style="font-weight:600;">'+esc(item.item)+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td style="color:var(--muted);">'+(item.flagCount!==undefined?item.flagCount+' flags':'')+'</td></tr>';
       }
       html += '</tbody></table></div>';
-      if (rd.pnl) { html += '<div class="report-section"><h3>Profit & Loss</h3>'+renderQBReport(rd.pnl)+'</div>'; }
-      if (rd.balanceSheet) { html += '<div class="report-section"><h3>Balance Sheet</h3>'+renderQBReport(rd.balanceSheet)+'</div>'; }
-      if (rd.trialBalance) { html += '<div class="report-section"><h3>Trial Balance</h3>'+renderQBReport(rd.trialBalance)+'</div>'; }
+      if (rd.pnl) html += '<div class="report-section"><h3>Profit & Loss</h3>'+renderQBReport(rd.pnl)+'</div>';
+      if (rd.balanceSheet) html += '<div class="report-section"><h3>Balance Sheet</h3>'+renderQBReport(rd.balanceSheet)+'</div>';
+      if (rd.trialBalance) html += '<div class="report-section"><h3>Trial Balance</h3>'+renderQBReport(rd.trialBalance)+'</div>';
       html += '<div style="margin-top:0.75rem;text-align:right;"><span class="badge badge-pending" style="font-size:0.75rem;padding:0.2rem 0.6rem;">'+esc(pkg.status||'draft')+'</span></div>';
       return html;
     }
 
-    // --- QBO Report Renderer ---
-    // Parses QBO report JSON (P&L, Balance Sheet, Trial Balance) into HTML tables
+    // ===== QBO REPORT RENDERER — fixed column alignment =====
     function renderQBReport(report) {
-      if (!report || !report.Rows || !report.Rows.Row) {
+      if (!report?.Rows?.Row) {
         return '<div style="text-align:center;padding:1.5rem;color:var(--muted);">No report data available.</div>';
       }
 
-      // Build column headers from report metadata
-      const columns = (report.Columns?.Column || []).map(c => c.ColTitle || '');
-      let html = '<div class="table-wrap"><table>';
+      const columns = report.Columns?.Column || [];
+      const colCount = Math.max(columns.length, 2);
 
-      // Header row
-      if (columns.length > 0) {
-        html += '<thead><tr>';
-        for (let i = 0; i < columns.length; i++) {
-          const align = i === 0 ? '' : ' class="amount"';
-          html += '<th'+align+'>'+esc(columns[i] || '')+'</th>';
-        }
-        html += '</tr></thead>';
+      // Calculate column widths
+      const firstColPct = colCount <= 2 ? 60 : 50;
+      const restPct = (100 - firstColPct) / Math.max(colCount - 1, 1);
+
+      let html = '<div class="table-wrap"><table style="table-layout:fixed;width:100%;">';
+
+      // Colgroup for fixed widths
+      html += '<colgroup>';
+      html += `<col style="width:${firstColPct}%">`;
+      for (let i = 1; i < colCount; i++) {
+        html += `<col style="width:${restPct.toFixed(1)}%">`;
       }
+      html += '</colgroup>';
+
+      // Header row — always include blank first col if QBO leaves it blank
+      html += '<thead><tr>';
+      for (let i = 0; i < colCount; i++) {
+        const title = columns[i]?.ColTitle || '';
+        html += i === 0
+          ? `<th>${esc(title)}</th>`
+          : `<th class="amount">${esc(title)}</th>`;
+      }
+      html += '</tr></thead>';
 
       html += '<tbody>';
-      html += renderReportRows(report.Rows.Row, 0);
+      html += renderReportRows(report.Rows.Row, 0, colCount);
       html += '</tbody></table></div>';
       return html;
     }
 
-    function renderReportRows(rows, depth) {
+    function renderReportRows(rows, depth, colCount) {
       let html = '';
       for (const row of rows) {
         if (row.type === 'Section' || row.group) {
-          // Section header
-          if (row.Header && row.Header.ColData) {
-            html += '<tr class="report-row-header"><td colspan="99" style="padding-left:'+((depth*1.2)+1)+'rem;font-size:0.82rem;">'+esc(row.Header.ColData[0]?.value || '')+'</td></tr>';
+          if (row.Header?.ColData) {
+            const name = row.Header.ColData[0]?.value || '';
+            const pad = (depth * 1.2) + 1;
+            html += `<tr class="report-row-header"><td style="padding-left:${pad}rem;">${esc(name)}</td>`;
+            for (let i = 1; i < colCount; i++) html += '<td class="amount"></td>';
+            html += '</tr>';
           }
-          // Recurse into sub-rows
-          if (row.Rows && row.Rows.Row) {
-            html += renderReportRows(row.Rows.Row, depth + 1);
-          }
-          // Summary/total row
-          if (row.Summary && row.Summary.ColData) {
-            html += renderDataRow(row.Summary.ColData, depth, true);
-          }
+          if (row.Rows?.Row) html += renderReportRows(row.Rows.Row, depth + 1, colCount);
+          if (row.Summary?.ColData) html += renderDataRow(row.Summary.ColData, depth, true, colCount);
         } else if (row.ColData) {
-          // Data row
-          html += renderDataRow(row.ColData, depth, false);
+          html += renderDataRow(row.ColData, depth, false, colCount);
         }
       }
       return html;
     }
 
-    function renderDataRow(colData, depth, isTotal) {
+    function renderDataRow(colData, depth, isTotal, colCount) {
       const cls = isTotal ? ' class="report-row-total"' : '';
-      let html = '<tr'+cls+'>';
-      for (let i = 0; i < colData.length; i++) {
-        const val = colData[i]?.value || '';
+      let html = `<tr${cls}>`;
+      for (let i = 0; i < colCount; i++) {
+        const val = colData[i]?.value ?? '';
         if (i === 0) {
           const pad = (depth * 1.2) + 1;
-          html += '<td style="padding-left:'+pad+'rem;'+(isTotal?'font-weight:700;':'')+'">'+esc(val)+'</td>';
+          html += `<td style="padding-left:${pad}rem;${isTotal ? 'font-weight:700;' : ''}">${esc(val)}</td>`;
         } else {
-          // Format as currency if numeric
           const num = parseFloat(val);
           const display = isNaN(num) ? esc(val) : formatCurrency(num);
-          html += '<td class="amount" style="'+(isTotal?'font-weight:700;':'')+'">'+display+'</td>';
+          html += `<td class="amount" style="${isTotal ? 'font-weight:700;' : ''}">${display}</td>`;
         }
       }
       html += '</tr>';
@@ -997,32 +1654,29 @@
       if (n === 0) return '$0.00';
       const abs = Math.abs(n);
       const formatted = '$' + abs.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
-      return n < 0 ? '<span style="color:var(--red);">('+formatted+')</span>' : formatted;
+      return n < 0 ? `<span style="color:var(--red);">(${formatted})</span>` : formatted;
     }
 
-    // --- Auto-load latest results ---
+    // ===== AUTO-LOAD LATEST =====
     async function loadLatestUncategorized() {
       try {
-        const scans = await (await fetch('/api/companies/'+currentRealm+'/scans')).json();
+        const scans = await (await apiFetch('/api/companies/'+currentRealm+'/scans')).json();
         const latest = Array.isArray(scans) ? scans.find(s => s.scan_type === 'uncategorized') : null;
         if (!latest) return;
-
-        const data = typeof latest.result_data === 'string' ? JSON.parse(latest.result_data) : latest.result_data;
-        const s = data.summary;
+        const data = parseScanData(latest);
+        const s = data?.summary;
         if (!s) return;
-
         qs('#uncat-stats').style.display='';
         qs('#uncat-flagged').textContent = s.flaggedCount;
         qs('#uncat-checked').textContent = s.checkedCount;
         qs('#uncat-total').textContent = '$'+Number(s.totalFlaggedAmount).toLocaleString();
         qs('#uncat-last-scan').textContent = 'Last scanned: ' + new Date(latest.scanned_at).toLocaleString();
-
         let html = '';
-        if (data.flagged && data.flagged.length > 0) {
+        if (data.flagged?.length > 0) {
           html += '<h3 style="font-size:0.88rem;margin:1rem 0 0.5rem;color:var(--red);">Flagged Accounts</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Balance</th><th>Transactions</th></tr></thead><tbody>';
           for (const f of data.flagged) {
             html += '<tr><td style="font-weight:600;">'+esc(f.name)+'</td><td style="color:var(--orange);">$'+Number(f.balance).toLocaleString()+'</td><td>'+f.transactionCount+'</td></tr>';
-            if (f.transactions && f.transactions.length > 0) {
+            if (f.transactions?.length > 0) {
               for (const t of f.transactions) {
                 html += '<tr><td style="padding-left:2rem;color:var(--muted);font-size:0.8rem;">'+t.date+'</td><td style="font-size:0.8rem;">$'+Number(t.amount).toFixed(2)+'</td><td style="color:var(--muted);font-size:0.8rem;">'+esc(t.vendor)+' — '+esc(t.description)+'</td></tr>';
               }
@@ -1030,69 +1684,61 @@
           }
           html += '</tbody></table></div>';
         }
-        if (data.checked && data.checked.length > 0) {
+        if (data.checked?.length > 0) {
           html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">All Checked Accounts</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Balance</th><th>Status</th></tr></thead><tbody>';
           for (const c of data.checked) {
-            const ok = c.balance === 0;
-            html += '<tr><td>'+esc(c.name)+'</td><td>$'+Number(c.balance).toLocaleString()+'</td><td>'+(ok?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-flag">Flagged</span>')+'</td></tr>';
+            html += '<tr><td>'+esc(c.name)+'</td><td>$'+Number(c.balance).toLocaleString()+'</td><td>'+(c.balance===0?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-flag">Flagged</span>')+'</td></tr>';
           }
           html += '</tbody></table></div>';
         }
         if (html) qs('#uncat-results').innerHTML = html;
-      } catch(e) { /* ignore */ }
+      } catch(e) {}
     }
 
     async function loadLatestClosePackage() {
       if (!currentRealm) return;
       try {
-        const resp = await fetch('/api/companies/'+currentRealm+'/close-packages');
+        const resp = await apiFetch('/api/companies/'+currentRealm+'/close-packages');
         if (!resp.ok) return;
         const pkgs = await resp.json();
         if (!Array.isArray(pkgs) || pkgs.length === 0) return;
-
         const latest = pkgs[0];
-        const rd = typeof latest.report_data === 'string' ? JSON.parse(latest.report_data) : latest.report_data;
-        if (!rd) return;
-
-        // Highlight matching month button if possible
+        const rd = parseScanData(latest) || latest.report_data;
+        const rdObj = typeof rd === 'string' ? JSON.parse(rd) : rd;
+        if (!rdObj) return;
         const btn = document.querySelector('.month-btn[data-period="'+latest.period+'"]');
         if (btn) selectMonth(btn, latest.period, true);
-
-        qs('#cp-results').innerHTML = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(rd.period || latest.period)+'</h3>' + renderClosePackageBody(rd, latest);
+        qs('#cp-results').innerHTML = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(rdObj.period||latest.period)+'</h3>' + renderClosePackageBody(rdObj, latest);
       } catch(e) { console.error('loadLatestClosePackage error:', e); }
     }
 
-    // --- Company Management ---
+    // ===== COMPANY MANAGEMENT =====
     function renderCompanyList(target) {
       const listEl = qs(target || '#companies-list');
       if (!listEl) return;
       const query = (qs('#companies-search')?.value || '').toLowerCase();
-      const filtered = query ? companies.filter(c => (c.company_name || c.realm_id).toLowerCase().includes(query)) : companies;
-
+      const filtered = query ? companies.filter(c => (c.company_name||c.realm_id).toLowerCase().includes(query)) : companies;
       if (filtered.length === 0 && companies.length > 0) {
         listEl.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.85rem;">No companies match "'+esc(query)+'"</div>';
       } else if (filtered.length === 0) {
         listEl.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.85rem;">No companies connected yet.</div>';
       } else {
         listEl.innerHTML = filtered.map(c => {
-          const name = esc(c.company_name || c.realm_id);
-          const status = c.token_status || 'connected';
-          const isDisconnected = status === 'disconnected';
+          const name = esc(c.company_name||c.realm_id);
+          const isDisconnected = c.token_status === 'disconnected';
           const dotClass = isDisconnected ? 'expired' : 'healthy';
           const syncText = c.last_sync_at ? 'Synced ' + timeAgo(c.last_sync_at) : 'Never synced';
-          const statusLabel = isDisconnected ? 'Disconnected' : 'Connected';
           const isActive = c.realm_id === currentRealm;
           const actionBtn = isDisconnected
             ? '<button class="btn-disconnect" style="border-color:var(--gold);color:var(--gold);" onclick="event.stopPropagation();connectNewCompany()">Reconnect</button>'
             : '<button class="btn-disconnect" onclick="event.stopPropagation();disconnectCompany(\''+c.realm_id+'\',\''+name+'\')">Disconnect</button>';
           return '<div class="company-item'+(isActive?' active':'')+'" data-realm="'+c.realm_id+'" onclick="selectCompany(\''+c.realm_id+'\')">'
-            + '<div class="ci-dot '+dotClass+'" title="'+statusLabel+'"></div>'
-            + '<div class="ci-info"><div class="ci-name">'+name+'</div><div class="ci-meta">'+syncText+' &middot; '+statusLabel+'</div></div>'
+            + '<div class="ci-dot '+dotClass+'"></div>'
+            + '<div class="ci-info"><div class="ci-name">'+name+'</div><div class="ci-meta">'+syncText+'</div></div>'
             + '<div class="ci-actions">'+actionBtn+'</div>'
             + '</div>';
         }).join('');
       }
-
       const countEl = qs('#companies-count');
       if (countEl) countEl.textContent = filtered.length + ' of ' + companies.length + ' companies';
     }
@@ -1101,13 +1747,9 @@
 
     function selectCompany(realmId) {
       currentRealm = realmId;
-      // Update sidebar dropdown
-      const sel = qs('#company-select');
-      if (sel) sel.value = realmId;
-      // Re-render company list to update active state
+      updateClientTrigger();
       renderCompanyList();
       loadAll();
-      // Reload the currently active section so data refreshes for the new company
       const activeSection = document.querySelector('.section-page.active');
       if (activeSection) {
         const secName = activeSection.id.replace('sec-', '');
@@ -1116,6 +1758,8 @@
         if (secName === 'variance') loadLatestVariance();
         if (secName === 'liability') loadLatestLiability();
         if (secName === 'payroll') initPayrollSection();
+        // Client summary: reload data for new client but DO NOT auto-navigate there
+        if (secName === 'client-summary') loadClientSummary();
       }
       toast('Switched to ' + (companies.find(c=>c.realm_id===realmId)?.company_name || realmId));
     }
@@ -1124,38 +1768,31 @@
       try {
         const cfg = await (await fetch('/api/config')).json();
         sessionStorage.setItem('connect_from', 'dashboard');
-        const state = Math.random().toString(36).substring(2,18);
+        // Embed firm_id in state so callback can associate the company
+        const firm = JSON.parse(localStorage.getItem('dl_firm') || '{}');
+        const nonce = Math.random().toString(36).substring(2,10);
+        const state = (firm.id ? firm.id + ':' : '') + nonce;
         sessionStorage.setItem('oauth_state', state);
         const redirectUri = encodeURIComponent(cfg.qb_redirect_uri);
-        window.location.href = 'https://appcenter.intuit.com/connect/oauth2?client_id=' + cfg.qb_client_id + '&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri=' + redirectUri + '&state=' + state;
-      } catch(e) {
-        toast('Failed to start connection: ' + e.message);
-      }
+        window.location.href = 'https://appcenter.intuit.com/connect/oauth2?client_id=' + cfg.qb_client_id + '&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri=' + redirectUri + '&state=' + encodeURIComponent(state);
+      } catch(e) { toast('Failed to start connection: ' + e.message); }
     }
 
     async function disconnectCompany(realmId, name) {
       if (!confirm('Disconnect "' + (name || realmId) + '"? This will remove all stored data for this company.')) return;
       try {
-        const res = await fetch('/api/companies/' + realmId, { method: 'DELETE' });
+        const res = await apiFetch('/api/companies/' + realmId, { method: 'DELETE' });
         if (!res.ok) throw new Error('Failed to disconnect');
         toast('Disconnected ' + (name || realmId));
         companies = companies.filter(c => c.realm_id !== realmId);
-        if (currentRealm === realmId) {
-          currentRealm = companies.length > 0 ? companies[0].realm_id : null;
-        }
+        if (currentRealm === realmId) currentRealm = companies.length > 0 ? companies[0].realm_id : null;
+        updateClientTrigger();
         renderCompanyList();
-        updateCompanySelector();
         if (companies.length === 0) {
           qs('#empty-state').style.display = '';
           qs('#dashboard').style.display = 'none';
         }
       } catch(e) { toast('Disconnect failed: ' + e.message); }
-    }
-
-    function updateCompanySelector() {
-      const sel = qs('#company-select');
-      sel.innerHTML = companies.map(c => '<option value="'+c.realm_id+'">'+(c.company_name||c.realm_id)+'</option>').join('');
-      if (currentRealm) sel.value = currentRealm;
     }
 
     function timeAgo(dateStr) {
@@ -1170,28 +1807,22 @@
       return Math.floor(days / 30) + 'mo ago';
     }
 
-    // --- Payroll Verification ---
-    let payrollSelectedMonth = null; // e.g. {year: 2026, month: 3}
+    // ===== PAYROLL =====
+    let payrollSelectedMonth = null;
 
     function initPayrollSection() {
       if (!currentRealm) return;
       const company = companies.find(c => c.realm_id === currentRealm);
       const actionsEl = qs('#payroll-actions');
-
-      if (!company || !company.gusto_connected) {
+      if (!company?.gusto_connected) {
         actionsEl.innerHTML = '<button class="btn btn-gold" onclick="connectGusto()">Connect Gusto</button>';
         qs('#payroll-stats').style.display = 'none';
         qs('#payroll-month-picker').style.display = 'none';
-        qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">'
-          + '<h2 style="font-size:1.1rem;color:var(--text);margin-bottom:0.75rem;">Gusto Integration Required</h2>'
-          + '<p style="margin-bottom:1rem;">Connect your Gusto account to enable payroll verification.</p>'
-          + '<p style="font-size:0.78rem;color:var(--muted);max-width:500px;margin:0 auto;">This feature pulls processed payroll data from Gusto and compares totals against the corresponding journal entries in QBO. Mismatches are flagged for review.</p>'
-          + '</div>';
+        qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);"><h2 style="font-size:1.1rem;color:var(--text);margin-bottom:0.75rem;">Gusto Integration Required</h2><p style="margin-bottom:1rem;">Connect your Gusto account to enable payroll verification.</p></div>';
       } else {
         actionsEl.innerHTML = '<button class="btn btn-gold" onclick="runPayrollScan()">Run Payroll Check</button>';
         buildPayrollMonthPicker();
         qs('#payroll-month-picker').style.display = '';
-        // Auto-run for selected month
         loadLatestPayroll(true);
       }
     }
@@ -1204,7 +1835,6 @@
         months.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
       }
       if (!payrollSelectedMonth) payrollSelectedMonth = months[0];
-
       const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       qs('#payroll-months').innerHTML = months.map(m => {
         const active = payrollSelectedMonth.year === m.year && payrollSelectedMonth.month === m.month;
@@ -1212,51 +1842,34 @@
       }).join('');
     }
 
-    function selectPayrollMonth(year, month) {
-      payrollSelectedMonth = { year, month };
-      buildPayrollMonthPicker();
-      runPayrollScan();
-    }
+    function selectPayrollMonth(year, month) { payrollSelectedMonth = { year, month }; buildPayrollMonthPicker(); runPayrollScan(); }
 
     async function connectGusto() {
       try {
         const cfg = await (await fetch('/api/config')).json();
-        if (!cfg.gusto_client_id) {
-          toast('Gusto is not configured — contact your administrator');
-          return;
-        }
+        if (!cfg.gusto_client_id) { toast('Gusto is not configured'); return; }
         const state = currentRealm;
         const redirectUri = encodeURIComponent(cfg.gusto_redirect_uri);
         const gustoAppUrl = cfg.gusto_app_url || 'https://app.gusto-demo.com';
         window.open(gustoAppUrl + '/oauth/authorize?client_id=' + cfg.gusto_client_id + '&redirect_uri=' + redirectUri + '&response_type=code&state=' + state, '_blank');
-      } catch(e) {
-        toast('Failed to start Gusto connection: ' + e.message);
-      }
+      } catch(e) { toast('Failed to start Gusto connection: ' + e.message); }
     }
 
     async function runPayrollScan() {
       const btn = qs('#payroll-actions button');
-      if (btn) { btn.disabled = true; btn.textContent = 'Scanning...'; }
-      qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Running payroll verification...</div>';
-
+      if (btn) { btn.disabled = true; btn.textContent = 'Scanning…'; }
+      qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Running payroll verification…</div>';
       try {
         const body = payrollSelectedMonth ? { year: payrollSelectedMonth.year, month: payrollSelectedMonth.month } : {};
-        const res = await fetch('/api/companies/' + currentRealm + '/scan/payroll', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
+        const res = await apiFetch('/api/companies/' + currentRealm + '/scan/payroll', { method: 'POST', body: JSON.stringify(body) });
         const data = await res.json();
-
         if (data.error && data.connected === false) {
-          // Gusto token expired or disconnected
           const company = companies.find(c => c.realm_id === currentRealm);
           if (company) company.gusto_connected = false;
           initPayrollSection();
           toast('Gusto connection lost — please reconnect');
           return;
         }
-
         if (data.error) throw new Error(data.error);
         renderPayrollResults(data);
         toast('Payroll check complete — ' + data.summary.mismatchCount + ' mismatch(es)');
@@ -1272,20 +1885,15 @@
 
     async function toggleOfficer(employeeUuid, isOfficer, name) {
       try {
-        await fetch('/api/companies/' + currentRealm + '/employees/' + employeeUuid + '/officer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ is_officer: isOfficer, employee_name: name }),
+        await apiFetch('/api/companies/' + currentRealm + '/employees/' + employeeUuid + '/officer', {
+          method: 'POST', body: JSON.stringify({ is_officer: isOfficer, employee_name: name }),
         });
         toast((isOfficer ? 'Tagged' : 'Untagged') + ' ' + name + ' as officer');
-      } catch(e) {
-        toast('Failed to update officer status');
-      }
+      } catch(e) { toast('Failed to update officer status'); }
     }
 
     function renderPayrollResults(data) {
       const s = data.summary || {};
-      // Stats
       qs('#payroll-stats').style.display = '';
       qs('#pay-count').textContent = s.payrollCount || 0;
       qs('#pay-gross').textContent = fmtPay(s.totalGrossPay);
@@ -1293,41 +1901,27 @@
       qs('#pay-mismatches').textContent = mc;
       qs('#pay-mismatches').style.color = mc > 0 ? 'var(--red)' : 'var(--green)';
       qs('#pay-period').textContent = 'Period: ' + (data.period || '');
-
-      let html = '';
-
-      if (!data.payrolls || data.payrolls.length === 0) {
+      if (!data.payrolls?.length) {
         qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No processed payrolls found for this period.</div>';
         return;
       }
-
-      // === Gusto vs QBO Comparison ===
-      html += '<h3 style="font-size:0.88rem;margin:0 0 0.5rem;">Gusto vs QBO Comparison</h3>';
+      let html = '<h3 style="font-size:0.88rem;margin:0 0 0.5rem;">Gusto vs QBO Comparison</h3>';
       html += '<div class="table-wrap"><table><thead><tr><th>Category</th><th class="amount">Gusto</th><th class="amount">QBO P&L</th><th class="amount">Difference</th><th>Status</th></tr></thead><tbody>';
-
       const qbo = data.qboComparison || {};
       const comparisons = [
-        { label: 'Salaries (Non-Officer)', gusto: s.salaryWages, qbo: qbo.salaries||0 },
-        { label: 'Officer Compensation', gusto: s.officerWages, qbo: qbo.officerComp||0 },
-        { label: 'Total Gross Wages', gusto: s.totalGrossPay, qbo: (qbo.salaries||0)+(qbo.officerComp||0) },
-        { label: 'Employer Payroll Taxes', gusto: s.totalEmployerTaxes, qbo: qbo.payrollTax||0 },
-        { label: 'Payroll Processing Fees', gusto: null, qbo: qbo.payrollFees||0 },
+        { label:'Salaries (Non-Officer)', gusto:s.salaryWages, qbo:qbo.salaries||0 },
+        { label:'Officer Compensation', gusto:s.officerWages, qbo:qbo.officerComp||0 },
+        { label:'Total Gross Wages', gusto:s.totalGrossPay, qbo:(qbo.salaries||0)+(qbo.officerComp||0) },
+        { label:'Employer Payroll Taxes', gusto:s.totalEmployerTaxes, qbo:qbo.payrollTax||0 },
+        { label:'Payroll Processing Fees', gusto:null, qbo:qbo.payrollFees||0 },
       ];
       for (const c of comparisons) {
         const diff = (c.gusto !== null && c.qbo !== null) ? c.gusto - c.qbo : null;
         const ok = diff === null || Math.abs(diff) <= 1;
         const rowStyle = !ok ? ' style="background:rgba(245,101,101,0.06);"' : '';
-        html += '<tr'+rowStyle+'>'
-          + '<td style="font-weight:600;">'+esc(c.label)+'</td>'
-          + '<td class="amount">'+(c.gusto !== null ? fmtPay(c.gusto) : '<span style="color:var(--muted);">—</span>')+'</td>'
-          + '<td class="amount">'+(c.qbo !== null ? fmtPay(c.qbo) : '<span style="color:var(--muted);">N/A</span>')+'</td>'
-          + '<td class="amount">'+(diff !== null ? fmtPay(diff) : '—')+'</td>'
-          + '<td>'+(ok ? '<span class="badge badge-ok">OK</span>' : '<span class="badge badge-flag">Mismatch</span>')+'</td>'
-          + '</tr>';
+        html += '<tr'+rowStyle+'><td style="font-weight:600;">'+esc(c.label)+'</td><td class="amount">'+(c.gusto!==null?fmtPay(c.gusto):'<span style="color:var(--muted);">—</span>')+'</td><td class="amount">'+(c.qbo!==null?fmtPay(c.qbo):'<span style="color:var(--muted);">N/A</span>')+'</td><td class="amount">'+(diff!==null?fmtPay(diff):'—')+'</td><td>'+(ok?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-flag">Mismatch</span>')+'</td></tr>';
       }
       html += '</tbody></table></div>';
-
-      // === Payroll Summary Totals ===
       html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Gusto Period Totals</h3>';
       html += '<div class="table-wrap"><table><thead><tr><th>Metric</th><th class="amount">Amount</th></tr></thead><tbody>';
       html += '<tr><td>Gross Pay</td><td class="amount" style="font-weight:600;">'+fmtPay(s.totalGrossPay)+'</td></tr>';
@@ -1337,89 +1931,49 @@
       html += '<tr><td>Net Pay</td><td class="amount" style="font-weight:600;">'+fmtPay(s.totalNetPay)+'</td></tr>';
       html += '<tr><td>Employees</td><td class="amount">'+s.employeeCount+'</td></tr>';
       html += '</tbody></table></div>';
-
-      // === Payroll Runs ===
       html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Payroll Runs</h3>';
       html += '<div class="table-wrap"><table><thead><tr><th>Check Date</th><th>Pay Period</th><th class="amount">Gross Pay</th><th class="amount">Employer Taxes</th><th class="amount">Net Pay</th><th>Employees</th></tr></thead><tbody>';
       for (const p of data.payrolls) {
-        html += '<tr>'
-          + '<td style="font-weight:600;">'+esc(p.checkDate)+'</td>'
-          + '<td style="color:var(--muted);font-size:0.78rem;">'+esc(p.payPeriodStart)+' — '+esc(p.payPeriodEnd)+'</td>'
-          + '<td class="amount">'+fmtPay(p.grossPay)+'</td>'
-          + '<td class="amount">'+fmtPay(p.employerTaxes)+'</td>'
-          + '<td class="amount">'+fmtPay(p.netPay)+'</td>'
-          + '<td>'+(p.employeeCount||0)+'</td>'
-          + '</tr>';
+        html += '<tr><td style="font-weight:600;">'+esc(p.checkDate)+'</td><td style="color:var(--muted);font-size:0.78rem;">'+esc(p.payPeriodStart)+' — '+esc(p.payPeriodEnd)+'</td><td class="amount">'+fmtPay(p.grossPay)+'</td><td class="amount">'+fmtPay(p.employerTaxes)+'</td><td class="amount">'+fmtPay(p.netPay)+'</td><td>'+(p.employeeCount||0)+'</td></tr>';
       }
       html += '</tbody></table></div>';
-
-      // === Wages by Employee ===
-      if (data.employees && data.employees.length > 0) {
+      if (data.employees?.length > 0) {
         html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Wages by Employee</h3>';
-        html += '<p style="font-size:0.75rem;color:var(--muted);margin-bottom:0.5rem;">Click the Officer column to tag employees as officers. This splits wages into Salaries vs Officer Comp for QBO comparison.</p>';
+        html += '<p style="font-size:0.75rem;color:var(--muted);margin-bottom:0.5rem;">Tag officers to split wages into Salaries vs Officer Comp for QBO comparison.</p>';
         html += '<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Officer</th><th>FLSA</th><th class="amount">Hours</th><th class="amount">Gross Pay</th><th class="amount">Net Pay</th></tr></thead><tbody>';
         for (const e of data.employees) {
-          const checked = e.isOfficer ? ' checked' : '';
-          html += '<tr>'
-            + '<td style="font-weight:600;">'+esc(e.name)+'</td>'
-            + '<td style="text-align:center;"><input type="checkbox"'+checked+' onchange="toggleOfficer(\''+esc(e.employeeUuid)+'\',this.checked,\''+esc(e.name)+'\')" style="cursor:pointer;width:16px;height:16px;accent-color:var(--gold);"></td>'
-            + '<td style="font-size:0.78rem;color:var(--muted);">'+esc(e.flsaStatus||'')+'</td>'
-            + '<td class="amount">'+Number(e.hours||0).toFixed(1)+'</td>'
-            + '<td class="amount">'+fmtPay(e.grossPay)+'</td>'
-            + '<td class="amount">'+fmtPay(e.netPay)+'</td>'
-            + '</tr>';
+          html += '<tr><td style="font-weight:600;">'+esc(e.name)+'</td><td style="text-align:center;"><input type="checkbox"'+(e.isOfficer?' checked':'')+' onchange="toggleOfficer(\''+esc(e.employeeUuid)+'\',this.checked,\''+esc(e.name)+'\')" style="cursor:pointer;width:16px;height:16px;accent-color:var(--gold);"></td><td style="font-size:0.78rem;color:var(--muted);">'+esc(e.flsaStatus||'')+'</td><td class="amount">'+Number(e.hours||0).toFixed(1)+'</td><td class="amount">'+fmtPay(e.grossPay)+'</td><td class="amount">'+fmtPay(e.netPay)+'</td></tr>';
         }
         html += '</tbody></table></div>';
       }
-
-      // === W-2 / Gusto Portal Link ===
       const portalUrl = data.gustoPortalUrl || 'https://app.gusto.com';
-      html += '<div style="margin-top:1.5rem;padding:1.2rem;background:var(--card);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:space-between;">';
-      html += '<div><span style="font-weight:600;">W-2s & Tax Documents</span><br><span style="font-size:0.78rem;color:var(--muted);">Access W-2s, 1099s, and tax filings in the Gusto portal</span></div>';
-      html += '<a href="'+portalUrl+'" target="_blank" class="btn btn-gold" style="white-space:nowrap;">Open Gusto Portal</a>';
-      html += '</div>';
-
+      html += '<div style="margin-top:1.5rem;padding:1.2rem;background:var(--card);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:space-between;"><div><span style="font-weight:600;">W-2s & Tax Documents</span><br><span style="font-size:0.78rem;color:var(--muted);">Access via Gusto portal</span></div><a href="'+portalUrl+'" target="_blank" class="btn btn-gold" style="white-space:nowrap;">Open Gusto Portal</a></div>';
       qs('#payroll-results').innerHTML = html;
     }
 
     async function loadLatestPayroll(autoRun) {
       if (!currentRealm) return;
       try {
-        const resp = await fetch('/api/companies/' + currentRealm + '/scans?type=payroll');
+        const resp = await apiFetch('/api/companies/' + currentRealm + '/scans?type=payroll');
         if (!resp.ok) return;
         const scan = await resp.json();
-        if (!scan || !scan.result_data) {
-          if (autoRun) return runPayrollScan();
-          qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No payroll scans yet. Click "Run Payroll Check" to start.</div>';
-          return;
-        }
-        const data = typeof scan.result_data === 'string' ? JSON.parse(scan.result_data) : scan.result_data;
-        if (data.error && data.connected === false) {
-          if (autoRun) return runPayrollScan();
-          qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No payroll scans yet. Click "Run Payroll Check" to start.</div>';
-          return;
-        }
-        renderPayrollResults(data);
+        if (!scan?.result_data) { if (autoRun) return runPayrollScan(); return; }
+        const data = parseScanData(scan);
+        if (data?.error && data.connected === false) { if (autoRun) return runPayrollScan(); return; }
+        if (data) renderPayrollResults(data);
       } catch(e) {
-        qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No payroll scans yet. Click "Run Payroll Check" to start.</div>';
+        qs('#payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No payroll scans yet.</div>';
       }
     }
 
-    // --- Helpers ---
+    // ===== HELPERS =====
     function esc(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
     function toast(msg) { const el=qs('#toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),3000); }
 
     function logout() {
-      // Clear Basic Auth by sending a request with bad credentials
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', '/dashboard', true);
-      xhr.setRequestHeader('Authorization', 'Basic ' + btoa('logout:logout'));
-      xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4) {
-          window.location.href = '/';
-        }
-      };
-      xhr.send();
+      localStorage.removeItem('dl_token');
+      localStorage.removeItem('dl_firm');
+      window.location.replace('/login');
     }
 
     init();

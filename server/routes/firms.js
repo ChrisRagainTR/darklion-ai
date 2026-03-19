@@ -16,7 +16,7 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
-  keyGenerator: (req) => req.ip,
+  // Use default IP key generator (handles IPv6 correctly)
 });
 
 const registerLimiter = rateLimit({
@@ -25,7 +25,6 @@ const registerLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many registration attempts. Please try again later.' },
-  keyGenerator: (req) => req.ip,
 });
 
 // --- Input validation ---

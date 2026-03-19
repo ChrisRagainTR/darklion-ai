@@ -88,10 +88,6 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests. Please slow down.' },
-  keyGenerator: (req) => {
-    // Rate limit by firm id if available, otherwise by IP
-    return req.firm?.id ? `firm_${req.firm.id}` : req.ip;
-  },
   skip: (req) => req.path === '/health',
 });
 

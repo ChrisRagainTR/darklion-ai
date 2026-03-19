@@ -287,14 +287,20 @@
       }
 
       // Forward to backend for token exchange
+      // state may contain firmId:nonce — pass it through so backend can associate company with firm
       const backendUrl = new URL('/auth/callback', window.location.origin);
       if (code)    backendUrl.searchParams.set('code', code);
       if (realmId) backendUrl.searchParams.set('realmId', realmId);
       if (state)   backendUrl.searchParams.set('state', state);
 
+      // Also send JWT in Authorization header if available
+      const dlToken = localStorage.getItem('dl_token');
+
       let autoConnected = false;
       try {
-        const res = await fetch(backendUrl.toString(), { signal: AbortSignal.timeout(15000) });
+        const headers = {};
+        if (dlToken) headers['Authorization'] = 'Bearer ' + dlToken;
+        const res = await fetch(backendUrl.toString(), { signal: AbortSignal.timeout(15000), headers });
         if (res.ok) {
           autoConnected = true;
         }
