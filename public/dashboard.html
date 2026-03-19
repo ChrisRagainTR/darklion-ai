@@ -571,10 +571,6 @@
             </div>
             <div class="period-actions">
               <div class="selected-label">Selected: <strong id="cp-selected-label">—</strong></div>
-              <div class="display-toggle">
-                <input type="checkbox" id="cp-by-month" onchange="if(cpSelection.startDate) generateClosePackage()">
-                <label for="cp-by-month">Display by month</label>
-              </div>
             </div>
           </div>
           <div id="cp-results">
@@ -1327,26 +1323,14 @@
     // ===== CLOSE PACKAGE =====
     async function generateClosePackage() {
       if (!cpSelection.startDate) { toast('Select a period first'); return; }
-      const byMonth = qs('#cp-by-month').checked;
       qs('#cp-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Generating close package for '+esc(cpSelection.label)+'…</div>';
       try {
-        const body = { startDate:cpSelection.startDate, endDate:cpSelection.endDate, period:cpSelection.period, label:cpSelection.label, byMonth };
+        const body = { startDate:cpSelection.startDate, endDate:cpSelection.endDate, period:cpSelection.period, label:cpSelection.label };
         const data = await (await apiFetch('/api/companies/'+currentRealm+'/close-package',{method:'POST',body:JSON.stringify(body)})).json();
         if (data.error) throw new Error(data.error);
-        if (Array.isArray(data)) {
-          let html = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(cpSelection.label)+' — By Month</h3>';
-          for (const pkg of data) {
-            const rd = parseScanData(pkg) || pkg.report_data;
-            html += '<div style="border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;margin-bottom:1rem;background:var(--card);"><h3 style="font-size:0.88rem;color:var(--gold);margin-bottom:0.75rem;">'+esc((typeof rd === 'object' && rd?.period) || pkg.period)+'</h3>';
-            html += renderClosePackageBody(typeof rd === 'string' ? JSON.parse(rd) : rd, pkg);
-            html += '</div>';
-          }
-          qs('#cp-results').innerHTML = html;
-        } else {
-          const rd = parseScanData(data) || data.report_data;
-          const rdObj = typeof rd === 'string' ? JSON.parse(rd) : rd;
-          qs('#cp-results').innerHTML = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(cpSelection.label)+'</h3>' + renderClosePackageBody(rdObj, data);
-        }
+        const rd = parseScanData(data) || data.report_data;
+        const rdObj = typeof rd === 'string' ? JSON.parse(rd) : rd;
+        qs('#cp-results').innerHTML = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(cpSelection.label)+'</h3>' + renderClosePackageBody(rdObj, data);
         toast('Close package generated for '+cpSelection.label);
       } catch(e) {
         toast('Generation failed: '+e.message);
