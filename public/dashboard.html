@@ -2907,8 +2907,7 @@
           const dt = a.monthly_received_at ? new Date(a.monthly_received_at).toLocaleDateString() : '';
           statusCell = `<span class="badge badge-green">✅ Retrieved${dt ? ' ' + dt : ''}</span>`;
         } else {
-          statusCell = `<span class="badge badge-orange">Pending</span>
-            <button class="btn btn-outline btn-sm" style="margin-left:0.4rem;" onclick="markStmtRetrieved('${realmId}',${a.id},this)">Mark Retrieved</button>`;
+          statusCell = `<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:nowrap;"><span class="badge badge-orange">Pending</span><button class="btn btn-outline btn-sm" onclick="markStmtRetrieved('${realmId}',${a.id},this)">Mark Retrieved</button></div>`;
         }
 
         const methodSel = Object.entries(METHOD_LABELS).filter(([k]) => !['qbo','client'].includes(k)).map(([k,v]) =>
