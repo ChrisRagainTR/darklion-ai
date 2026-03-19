@@ -2614,8 +2614,7 @@
       }
     }
 
-    // Make amount cells drillable — patch renderDataRow and renderVarianceResults
-    const _origRenderDataRow = renderDataRow;
+    // Override renderDataRow to make amount cells drillable
     function renderDataRow(colData, depth, isTotal, colCount, startDate, endDate) {
       // If startDate/endDate passed, make amount cells drillable
       const cls = isTotal ? ' class="report-row-total"' : '';

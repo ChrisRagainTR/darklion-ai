@@ -169,16 +169,7 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// --- Firms routes ---
-// Public invite lookup endpoints
-app.get('/firms/invite-lookup/:token', (req, res) => {
-  req.url = '/invite-lookup/' + req.params.token;
-  firmsRouter(req, res, () => {});
-});
-app.post('/firms/invite-lookup/:token/accept', (req, res) => {
-  req.url = '/invite-lookup/' + req.params.token + '/accept';
-  firmsRouter(req, res, () => {});
-});
+// --- Firms routes (register/login/invite-lookup are public; protected routes use requireFirm internally) ---
 app.use('/firms', firmsRouter);
 
 // --- Auth (QBO/Gusto OAuth callbacks — public) ---
