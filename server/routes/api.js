@@ -458,4 +458,259 @@ router.post('/companies/:realmId/transactions/recode', async (req, res) => {
   }
 });
 
+// ===== STATEMENT ACCOUNT TRACKER =====
+
+// List all statement accounts for a company
+router.get('/companies/:realmId/statements', async (req, res) => {
+  try {
+    const { realmId } = req.params;
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
+
+    const { rows } = await pool.query(
+      'SELECT * FROM statement_schedules WHERE realm_id = $1 ORDER BY account_name ASC',
+      [realmId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create a statement account
+router.post('/companies/:realmId/statements', async (req, res) => {
+  try {
+    const { realmId } = req.params;
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
+
+    const { account_name, institution, access_method, statement_day, notes, client_name, contact_email } = req.body;
+    if (!account_name) return res.status(400).json({ error: 'account_name is required' });
+
+    const { rows } = await pool.query(
+      `INSERT INTO statement_schedules (realm_id, client_name, account_name, institution, access_method, statement_day, notes, contact_email)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT (realm_id, account_name) DO UPDATE SET
+         institution = EXCLUDED.institution,
+         access_method = EXCLUDED.access_method,
+         statement_day = EXCLUDED.statement_day,
+         notes = EXCLUDED.notes,
+         contact_email = EXCLUDED.contact_email
+       RETURNING *`,
+      [realmId, client_name || '', account_name, institution || '', access_method || 'portal', statement_day || 1, notes || '', contact_email || '']
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update a statement account
+router.put('/companies/:realmId/statements/:id', async (req, res) => {
+  try {
+    const { realmId, id } = req.params;
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
+
+    const { account_name, institution, access_method, statement_day, notes, client_name, contact_email } = req.body;
+    const { rows } = await pool.query(
+      `UPDATE statement_schedules SET
+         account_name = COALESCE($1, account_name),
+         institution = COALESCE($2, institution),
+         access_method = COALESCE($3, access_method),
+         statement_day = COALESCE($4, statement_day),
+         notes = COALESCE($5, notes),
+         client_name = COALESCE($6, client_name),
+         contact_email = COALESCE($7, contact_email)
+       WHERE id = $8 AND realm_id = $9
+       RETURNING *`,
+      [account_name, institution, access_method, statement_day, notes, client_name, contact_email, id, realmId]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a statement account
+router.delete('/companies/:realmId/statements/:id', async (req, res) => {
+  try {
+    const { realmId, id } = req.params;
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
+
+    const { rowCount } = await pool.query(
+      'DELETE FROM statement_schedules WHERE id = $1 AND realm_id = $2',
+      [id, realmId]
+    );
+    if (rowCount === 0) return res.status(404).json({ error: 'Not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Import from QBO — pull Bank/CC/Loan accounts
+router.post('/companies/:realmId/statements/import-qbo', async (req, res) => {
+  try {
+    const { realmId } = req.params;
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
+
+    const accounts = await getChartOfAccounts(realmId);
+
+    // Filter for bank, credit card, and loan-related accounts
+    const loanSubTypes = ['LineOfCredit', 'LoanPayable', 'NotesPayable', 'OtherCurrentLiabilities', 'Trust', 'Vehicle', 'Equipment'];
+    const relevant = accounts.filter(a => {
+      const type = a.AccountType || '';
+      const subType = a.AccountSubType || '';
+      if (type === 'Bank') return true;
+      if (type === 'Credit Card') return true;
+      if (type === 'Long Term Liability') return true;
+      if (type === 'Other Current Liability' && loanSubTypes.includes(subType)) return true;
+      return false;
+    });
+
+    let imported = 0;
+    let skipped = 0;
+    for (const acct of relevant) {
+      const accountName = acct.FullyQualifiedName || acct.Name;
+      const accessMethod = acct.AccountType === 'Bank' ? 'portal' : acct.AccountType === 'Credit Card' ? 'portal' : 'portal';
+      try {
+        await pool.query(
+          `INSERT INTO statement_schedules (realm_id, client_name, account_name, institution, access_method)
+           VALUES ($1, '', $2, '', $3)
+           ON CONFLICT (realm_id, account_name) DO NOTHING`,
+          [realmId, accountName, accessMethod]
+        );
+        imported++;
+      } catch (e) {
+        skipped++;
+      }
+    }
+
+    const { rows } = await pool.query(
+      'SELECT * FROM statement_schedules WHERE realm_id = $1 ORDER BY account_name ASC',
+      [realmId]
+    );
+    res.json({ ok: true, imported, skipped, accounts: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all accounts + monthly status for a given month
+router.get('/companies/:realmId/statements/monthly', async (req, res) => {
+  try {
+    const { realmId } = req.params;
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
+
+    const month = req.query.month || currentPeriod();
+
+    const { rows } = await pool.query(
+      `SELECT ss.*,
+         COALESCE(sms.status, 'pending') AS monthly_status,
+         sms.received_at AS monthly_received_at,
+         COALESCE(sms.notes, '') AS monthly_notes,
+         sms.id AS monthly_id
+       FROM statement_schedules ss
+       LEFT JOIN statement_monthly_status sms
+         ON sms.schedule_id = ss.id AND sms.month = $2
+       WHERE ss.realm_id = $1
+       ORDER BY ss.account_name ASC`,
+      [realmId, month]
+    );
+    res.json({ month, accounts: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update monthly status for a specific account+month
+router.put('/companies/:realmId/statements/:id/monthly/:month', async (req, res) => {
+  try {
+    const { realmId, id, month } = req.params;
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
+
+    const { status, notes } = req.body;
+
+    // Verify the schedule belongs to this realm
+    const { rows: schedRows } = await pool.query(
+      'SELECT id FROM statement_schedules WHERE id = $1 AND realm_id = $2',
+      [id, realmId]
+    );
+    if (schedRows.length === 0) return res.status(404).json({ error: 'Statement account not found' });
+
+    const received_at = status === 'received' || status === 'uploaded' ? new Date() : null;
+
+    const { rows } = await pool.query(
+      `INSERT INTO statement_monthly_status (schedule_id, realm_id, month, status, notes, received_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       ON CONFLICT (schedule_id, month) DO UPDATE SET
+         status = EXCLUDED.status,
+         notes = COALESCE(NULLIF(EXCLUDED.notes, ''), statement_monthly_status.notes),
+         received_at = CASE WHEN EXCLUDED.status IN ('received','uploaded') AND statement_monthly_status.received_at IS NULL THEN NOW() ELSE statement_monthly_status.received_at END,
+         updated_at = NOW()
+       RETURNING *`,
+      [id, realmId, month, status || 'pending', notes || '', received_at]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Firm-wide calendar: all companies + accounts grouped by statement_day
+router.get('/statements/calendar', async (req, res) => {
+  try {
+    const firmId = req.firm?.id;
+    const month = req.query.month || currentPeriod();
+
+    // Get all realm_ids for this firm
+    let realmQuery, realmParams;
+    if (firmId) {
+      realmQuery = 'SELECT realm_id, company_name FROM companies WHERE firm_id = $1';
+      realmParams = [firmId];
+    } else {
+      realmQuery = 'SELECT realm_id, company_name FROM companies';
+      realmParams = [];
+    }
+    const { rows: companyRows } = await pool.query(realmQuery, realmParams);
+    const realmIds = companyRows.map(r => r.realm_id);
+
+    if (realmIds.length === 0) return res.json({ month, byDay: {} });
+
+    const companyMap = {};
+    for (const c of companyRows) companyMap[c.realm_id] = c.company_name;
+
+    const { rows } = await pool.query(
+      `SELECT ss.*, c.company_name,
+         COALESCE(sms.status, 'pending') AS monthly_status,
+         sms.received_at AS monthly_received_at
+       FROM statement_schedules ss
+       JOIN companies c ON c.realm_id = ss.realm_id
+       LEFT JOIN statement_monthly_status sms
+         ON sms.schedule_id = ss.id AND sms.month = $2
+       WHERE ss.realm_id = ANY($1)
+       ORDER BY ss.statement_day ASC, c.company_name ASC, ss.account_name ASC`,
+      [realmIds, month]
+    );
+
+    // Group by statement_day
+    const byDay = {};
+    for (const row of rows) {
+      const day = row.statement_day || 1;
+      if (!byDay[day]) byDay[day] = [];
+      byDay[day].push(row);
+    }
+
+    res.json({ month, byDay });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

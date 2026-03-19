@@ -160,6 +160,25 @@ async function initDB() {
       FOREIGN KEY (realm_id) REFERENCES companies(realm_id)
     );
 
+    -- Add UNIQUE constraint on statement_schedules (realm_id, account_name) if not exists
+    DO $$ BEGIN
+      ALTER TABLE statement_schedules ADD CONSTRAINT statement_schedules_realm_account_unique UNIQUE (realm_id, account_name);
+    EXCEPTION WHEN duplicate_table THEN NULL;
+    WHEN duplicate_object THEN NULL;
+    END $$;
+
+    CREATE TABLE IF NOT EXISTS statement_monthly_status (
+      id SERIAL PRIMARY KEY,
+      schedule_id INTEGER NOT NULL REFERENCES statement_schedules(id) ON DELETE CASCADE,
+      realm_id TEXT NOT NULL,
+      month TEXT NOT NULL,
+      status TEXT DEFAULT 'pending' CHECK(status IN ('pending','requested','received','uploaded')),
+      received_at TIMESTAMPTZ,
+      notes TEXT DEFAULT '',
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(schedule_id, month)
+    );
+
     CREATE TABLE IF NOT EXISTS employee_metadata (
       id SERIAL PRIMARY KEY,
       realm_id TEXT NOT NULL,
