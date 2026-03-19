@@ -87,38 +87,75 @@ async function getVendors(realmId) {
   return data.QueryResponse?.Vendor || [];
 }
 
+// Map QBO transaction type names to API entity names
+const TXN_TYPE_MAP = {
+  'expense':          'purchase',
+  'purchase':         'purchase',
+  'credit card credit': 'purchase',
+  'bill':             'bill',
+  'bill payment':     'billpayment',
+  'check':            'purchase',
+  'journal entry':    'journalentry',
+  'sales receipt':    'salesreceipt',
+  'invoice':          'invoice',
+  'credit memo':      'creditmemo',
+  'vendor credit':    'vendorcredit',
+};
+
 // Write back a categorized transaction to QuickBooks
-async function writeBackTransaction(realmId, qbId, accountName) {
-  // First read the current purchase
-  const data = await qbFetch(realmId, `/purchase/${qbId}?minorversion=75`);
-  const purchase = data.Purchase;
-
-  if (!purchase) throw new Error(`Purchase ${qbId} not found`);
-
-  // Look up account ID by name
+async function writeBackTransaction(realmId, qbId, accountName, txnType) {
+  // Look up account ID by name first
   const accounts = await getChartOfAccounts(realmId);
   const account = accounts.find(a => a.Name === accountName || a.FullyQualifiedName === accountName);
   if (!account) throw new Error(`Account "${accountName}" not found in chart of accounts`);
 
-  // Update the first line's account
-  if (purchase.Line?.[0]?.AccountBasedExpenseLineDetail) {
-    purchase.Line[0].AccountBasedExpenseLineDetail.AccountRef = {
-      value: account.Id,
-      name: account.Name,
-    };
+  // Determine entity type from txnType
+  const entityType = (txnType ? TXN_TYPE_MAP[txnType.toLowerCase()] : null) || 'purchase';
+  console.log(`[recode] txnId=${qbId} txnType=${txnType} → entity=${entityType} account=${accountName}`);
+
+  // Fetch the transaction
+  const data = await qbFetch(realmId, `/${entityType}/${qbId}?minorversion=75`);
+  const txnKey = Object.keys(data).find(k => k !== 'time');
+  const txn = data[txnKey];
+
+  if (!txn) throw new Error(`Transaction ${qbId} (type: ${entityType}) not found`);
+
+  const purchase = txn; // use generic name
+
+  // Update account reference based on transaction type
+  if (entityType === 'purchase' || entityType === 'check') {
+    // Purchase/Expense/Check: update Line[0] AccountBasedExpenseLineDetail
+    const line = purchase.Line?.find(l => l.AccountBasedExpenseLineDetail);
+    if (line) {
+      line.AccountBasedExpenseLineDetail.AccountRef = { value: account.Id, name: account.Name };
+    } else if (purchase.Line?.[0]) {
+      purchase.Line[0].AccountBasedExpenseLineDetail = {
+        AccountRef: { value: account.Id, name: account.Name }
+      };
+    }
+  } else if (entityType === 'journalentry') {
+    // Journal Entry: update the debit line's AccountRef
+    const debitLine = purchase.Line?.find(l => l.JournalEntryLineDetail?.PostingType === 'Debit');
+    if (debitLine) debitLine.JournalEntryLineDetail.AccountRef = { value: account.Id, name: account.Name };
+  } else if (entityType === 'bill') {
+    const line = purchase.Line?.find(l => l.AccountBasedExpenseLineDetail);
+    if (line) line.AccountBasedExpenseLineDetail.AccountRef = { value: account.Id, name: account.Name };
+  } else {
+    throw new Error(`Recode not supported for transaction type: ${txnType}`);
   }
 
   // Write back
-  await qbFetch(realmId, `/purchase`, {
+  // Write back using correct entity endpoint
+  await qbFetch(realmId, `/${entityType}`, {
     method: 'POST',
     body: JSON.stringify(purchase),
   });
 
-  // Update local status
+  // Update local status if tracked
   await pool.query(
     "UPDATE transactions SET status = 'written_back', updated_at = NOW() WHERE realm_id = $1 AND qb_id = $2",
     [realmId, qbId]
-  );
+  ).catch(() => {}); // non-fatal if not in local DB
 
   return { ok: true };
 }

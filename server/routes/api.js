@@ -451,7 +451,8 @@ router.get('/companies/:realmId/transactions/drilldown', async (req, res) => {
           memo:   cols[idx.memo]?.value  || '',
           split:  cols[idx.split]?.value || '',
           amount,
-          txnId:  cols[idx.date]?.id || cols[0]?.id || '',
+          // GL: transaction ID is on the type column's id field (e.g. {"value":"Expense","id":"3178"})
+          txnId:  cols[idx.type]?.id || cols[idx.date]?.id || cols[0]?.id || '',
         });
       } else if ((row.type === 'Section' || row.group) && row.Rows?.Row) {
         row.Rows.Row.forEach(parseGLSection);
@@ -485,7 +486,7 @@ router.post('/companies/:realmId/transactions/recode', async (req, res) => {
     const { txnId, txnType, newAccount } = req.body;
     if (!txnId || !newAccount) return res.status(400).json({ error: 'txnId and newAccount are required' });
 
-    await writeBackTransaction(req.params.realmId, txnId, newAccount);
+    await writeBackTransaction(req.params.realmId, txnId, newAccount, txnType);
 
     await auditLog(
       firmId,
