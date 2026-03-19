@@ -173,6 +173,12 @@ async function initDB() {
     EXCEPTION WHEN duplicate_column THEN NULL;
     END $$;
 
+    -- Add last_retrieved_month column if not exists
+    DO $$ BEGIN
+      ALTER TABLE statement_schedules ADD COLUMN last_retrieved_month TEXT DEFAULT '';
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$;
+
     CREATE TABLE IF NOT EXISTS statement_monthly_status (
       id SERIAL PRIMARY KEY,
       schedule_id INTEGER NOT NULL REFERENCES statement_schedules(id) ON DELETE CASCADE,

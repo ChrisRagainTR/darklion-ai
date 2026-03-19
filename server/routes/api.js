@@ -566,6 +566,20 @@ router.get('/companies/:realmId/statements/accounts', async (req, res) => {
     // Sort: by account_name
     merged.sort((a, b) => (a.account_name || '').localeCompare(b.account_name || ''));
 
+    // Compute months_behind for each account
+    const currentMon = currentPeriod();
+    for (const acct of merged) {
+      if (!acct.id) { acct.months_behind = 0; continue; }
+      const lrm = acct.last_retrieved_month || '';
+      if (!lrm) {
+        acct.months_behind = 0;
+      } else {
+        const [cy, cm] = currentMon.split('-').map(Number);
+        const [ly, lm] = lrm.split('-').map(Number);
+        acct.months_behind = (cy - ly) * 12 + (cm - lm);
+      }
+    }
+
     res.json({ month, accounts: merged });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -817,6 +831,7 @@ router.put('/companies/:realmId/statements/:id/monthly/:month', async (req, res)
 });
 
 // Firm-wide calendar: all companies + accounts grouped by statement_day
+// Returns per-day summary: { day, total, retrieved, pending, items: [{id, realmId, companyName, accountName, method, isRetrieved, retrievedAt}] }
 router.get('/statements/calendar', async (req, res) => {
   try {
     const firmId = req.firm?.id;
@@ -834,13 +849,11 @@ router.get('/statements/calendar', async (req, res) => {
     const { rows: companyRows } = await pool.query(realmQuery, realmParams);
     const realmIds = companyRows.map(r => r.realm_id);
 
-    if (realmIds.length === 0) return res.json({ month, byDay: {} });
-
-    const companyMap = {};
-    for (const c of companyRows) companyMap[c.realm_id] = c.company_name;
+    if (realmIds.length === 0) return res.json({ month, days: [], byDay: {} });
 
     const { rows } = await pool.query(
-      `SELECT ss.*, c.company_name,
+      `SELECT ss.id, ss.realm_id, ss.account_name, ss.access_method, ss.statement_day,
+         c.company_name,
          COALESCE(sms.status, 'pending') AS monthly_status,
          sms.received_at AS monthly_received_at
        FROM statement_schedules ss
@@ -852,15 +865,80 @@ router.get('/statements/calendar', async (req, res) => {
       [realmIds, month]
     );
 
-    // Group by statement_day
-    const byDay = {};
+    // Build per-day summaries
+    const dayMap = {};
     for (const row of rows) {
       const day = row.statement_day || 1;
-      if (!byDay[day]) byDay[day] = [];
-      byDay[day].push(row);
+      if (!dayMap[day]) dayMap[day] = { day, total: 0, retrieved: 0, pending: 0, items: [] };
+      const isRetrieved = row.monthly_status === 'received' || row.monthly_status === 'uploaded';
+      dayMap[day].total++;
+      if (isRetrieved) dayMap[day].retrieved++;
+      else dayMap[day].pending++;
+      dayMap[day].items.push({
+        id: row.id,
+        realmId: row.realm_id,
+        companyName: row.company_name,
+        accountName: row.account_name,
+        method: row.access_method,
+        isRetrieved,
+        retrievedAt: row.monthly_received_at || null,
+      });
     }
 
-    res.json({ month, byDay });
+    const days = Object.values(dayMap).sort((a, b) => a.day - b.day);
+    // Keep byDay for backwards compat
+    const byDay = {};
+    for (const d of days) byDay[d.day] = d.items;
+
+    res.json({ month, days, byDay });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/companies/:realmId/statements/:id/mark-current
+router.put('/companies/:realmId/statements/:id/mark-current', async (req, res) => {
+  try {
+    const { realmId, id } = req.params;
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
+
+    const currentMonth = currentPeriod();
+
+    const { rows: schedRows } = await pool.query(
+      'SELECT id, last_retrieved_month FROM statement_schedules WHERE id = $1 AND realm_id = $2',
+      [id, realmId]
+    );
+    if (schedRows.length === 0) return res.status(404).json({ error: 'Statement account not found' });
+
+    // Update last_retrieved_month on the schedule
+    await pool.query(
+      `UPDATE statement_schedules SET last_retrieved_month = $1, status = 'received', received_at = NOW(), current_month = $1 WHERE id = $2 AND realm_id = $3`,
+      [currentMonth, id, realmId]
+    );
+
+    // Mark all monthly status entries for this account in prior months as received (or upsert current month)
+    // First upsert current month
+    await pool.query(
+      `INSERT INTO statement_monthly_status (schedule_id, realm_id, month, status, received_at, updated_at)
+       VALUES ($1, $2, $3, 'received', NOW(), NOW())
+       ON CONFLICT (schedule_id, month) DO UPDATE SET status = 'received', received_at = COALESCE(statement_monthly_status.received_at, NOW()), updated_at = NOW()`,
+      [id, realmId, currentMonth]
+    );
+
+    // Mark all prior pending months as received too
+    await pool.query(
+      `UPDATE statement_monthly_status SET status = 'received', received_at = COALESCE(received_at, NOW()), updated_at = NOW()
+       WHERE schedule_id = $1 AND realm_id = $2 AND month < $3 AND status = 'pending'`,
+      [id, realmId, currentMonth]
+    );
+
+    const { rows } = await pool.query(
+      'SELECT * FROM statement_schedules WHERE id = $1 AND realm_id = $2',
+      [id, realmId]
+    );
+
+    res.json({ ok: true, account: rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
