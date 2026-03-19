@@ -261,6 +261,30 @@ router.get('/team', requireFirm, async (req, res) => {
   }
 });
 
+// --- PUT /firms/team/:userId (edit name/email) ---
+router.put('/team/:userId', requireFirm, async (req, res) => {
+  try {
+    if (req.firm.role !== 'owner') return res.status(403).json({ error: 'Only owners can edit team members' });
+    const { name, email } = req.body;
+    if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email required' });
+    const targetId = parseInt(req.params.userId);
+    if (targetId === req.firm.userId) return res.status(400).json({ error: 'Cannot edit your own account this way' });
+    // Check email not already taken by another user in this firm
+    const existing = await pool.query(
+      'SELECT id FROM firm_users WHERE firm_id = $1 AND email = $2 AND id != $3',
+      [req.firm.id, email.toLowerCase().trim(), targetId]
+    );
+    if (existing.rows.length > 0) return res.status(400).json({ error: 'Email already in use by another team member' });
+    await pool.query(
+      'UPDATE firm_users SET name = $1, email = $2 WHERE id = $3 AND firm_id = $4',
+      [name?.trim() || '', email.toLowerCase().trim(), targetId, req.firm.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- DELETE /firms/team/:userId ---
 router.delete('/team/:userId', requireFirm, async (req, res) => {
   try {

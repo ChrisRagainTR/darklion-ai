@@ -2560,10 +2560,13 @@
              </select>`
           : `<span class="badge badge-ok" style="font-size:0.72rem;">${u.role}</span>`;
 
-        const actions = isOwner && !isSelf
-          ? `<button class="btn btn-outline btn-sm" onclick="toggleCompanyAccess(${u.id})" style="font-size:0.72rem;margin-right:0.35rem;">Companies</button>
-             <button style="background:transparent;border:1px solid var(--red);color:var(--red);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.68rem;cursor:pointer;font-weight:600;" onclick="removeTeamMember(${u.id}, '${esc(u.email)}')">Remove</button>`
-          : (isSelf ? '<span style="color:var(--muted);font-size:0.72rem;">You</span>' : '');
+        const actions = !isSelf
+          ? `<div style="display:flex;gap:0.35rem;align-items:center;flex-wrap:wrap;">
+               ${isOwner ? `<button class="btn btn-outline btn-sm" onclick="editTeamMember(${u.id},'${esc(u.name||'')}','${esc(u.email)}')" style="font-size:0.72rem;">Edit</button>` : ''}
+               <button class="btn btn-outline btn-sm" onclick="toggleCompanyAccess(${u.id})" style="font-size:0.72rem;">Companies</button>
+               ${isOwner ? `<button style="background:transparent;border:1px solid var(--red);color:var(--red);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.68rem;cursor:pointer;font-weight:600;" onclick="removeTeamMember(${u.id}, '${esc(u.email)}')">Remove</button>` : ''}
+             </div>`
+          : '<span style="color:var(--muted);font-size:0.72rem;">You</span>';
 
         return `<tr id="team-row-${u.id}">
           <td style="font-weight:600;">${esc(u.name || '—')}</td>
@@ -2637,6 +2640,24 @@
       } catch (e) {
         toast('Failed to update role: ' + e.message);
       }
+    }
+
+    function editTeamMember(userId, currentName, currentEmail) {
+      const newName = prompt('Name:', currentName);
+      if (newName === null) return; // cancelled
+      const newEmail = prompt('Email:', currentEmail);
+      if (newEmail === null) return;
+      if (!newEmail.includes('@')) { toast('Invalid email'); return; }
+
+      apiFetch('/firms/team/' + userId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim(), email: newEmail.trim().toLowerCase() })
+      }).then(r => r.json()).then(data => {
+        if (data.error) { toast('Error: ' + data.error); return; }
+        toast('Team member updated');
+        loadTeam();
+      }).catch(e => toast('Failed: ' + e.message));
     }
 
     async function removeTeamMember(userId, email) {
