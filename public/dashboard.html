@@ -2526,16 +2526,18 @@
         return;
       }
 
-      // Get current user's role from JWT
-      let currentRole = 'admin', currentUserId = null;
+      // Derive current user identity from server data (not JWT — avoids stale-token bugs)
+      let currentUserId = null, currentRole = 'admin';
       try {
         const token = localStorage.getItem('dl_token');
         if (token) {
           const p = JSON.parse(atob(token.split('.')[1]));
-          currentRole = p.role || 'admin';
           currentUserId = p.userId;
         }
       } catch(e) {}
+      // Find self in team data to get real role from DB
+      const selfEntry = teamData.find(u => u.id === currentUserId);
+      if (selfEntry) currentRole = selfEntry.role || 'admin';
 
       const isOwner = currentRole === 'owner';
 
