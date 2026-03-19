@@ -431,31 +431,44 @@ router.get('/companies/:realmId/transactions/drilldown', async (req, res) => {
     const rows = data.Rows?.Row || [];
     const transactions = [];
 
-    function parseRows(rowArr) {
-      for (const row of rowArr) {
-        if ((row.type === 'Section' || row.group) && row.Rows?.Row) {
-          parseRows(row.Rows.Row);
-        } else if (row.ColData) {
-          const cols = row.ColData;
-          const amount = parseFloat(cols[idx.amount]?.value || '0');
-          // Skip $0 split lines — these are the individual account legs of a split transaction.
-          // The parent transaction with a real amount is what we want.
-          if (amount === 0) continue;
-          const txn = {
-            date:   cols[idx.date]?.value  || '',
-            type:   cols[idx.type]?.value  || '',
-            num:    cols[idx.num]?.value   || '',
-            name:   cols[idx.name]?.value  || '',
-            memo:   cols[idx.memo]?.value  || '',
-            split:  cols[idx.split]?.value || '',
-            amount,
-            txnId:  cols[idx.date]?.id || cols[0]?.id || '',
-          };
-          if (txn.date) transactions.push(txn);
+    // GL returns one Section per account. Filter to only the section(s) matching our account.
+    // Match on the section Header's first ColData value (account name), case-insensitive partial match.
+    const accountLower = account.toLowerCase();
+
+    function parseGLSection(row) {
+      // Only parse rows from sections whose header matches the requested account
+      if (row.ColData) {
+        const cols = row.ColData;
+        const dateVal = cols[idx.date]?.value || '';
+        if (!dateVal || dateVal === 'Beginning Balance') return; // skip balance rows
+        const amount = parseFloat(cols[idx.amount]?.value || '0');
+        if (amount === 0) return;
+        transactions.push({
+          date:   dateVal,
+          type:   cols[idx.type]?.value  || '',
+          num:    cols[idx.num]?.value   || '',
+          name:   cols[idx.name]?.value  || '',
+          memo:   cols[idx.memo]?.value  || '',
+          split:  cols[idx.split]?.value || '',
+          amount,
+          txnId:  cols[idx.date]?.id || cols[0]?.id || '',
+        });
+      } else if ((row.type === 'Section' || row.group) && row.Rows?.Row) {
+        row.Rows.Row.forEach(parseGLSection);
+      }
+    }
+
+    for (const row of rows) {
+      if (row.type === 'Section' || row.group) {
+        // Check if this section's header matches our account name
+        const sectionName = (row.Header?.ColData?.[0]?.value || '').toLowerCase();
+        const matches = sectionName.includes(accountLower) || accountLower.includes(sectionName.split(' ')[0]);
+        console.log('[drilldown] section:', sectionName, '| matches:', matches);
+        if (matches && row.Rows?.Row) {
+          row.Rows.Row.forEach(parseGLSection);
         }
       }
     }
-    parseRows(rows);
 
     res.json(transactions);
   } catch (err) {
