@@ -1853,8 +1853,18 @@
         const isTotal = r.account.startsWith('TOTAL:');
         const rowCls = isTotal ? ' class="report-row-total"' : (r.flagged ? ' style="background:rgba(245,101,101,0.06);"' : '');
         const name = isTotal ? '<strong>'+esc(r.account)+'</strong>' : esc(r.account);
-        const momColor = r.momFlagged ? (r.momDiff > 0 ? 'color:var(--red);font-weight:700;' : 'color:var(--green);font-weight:700;') : '';
-        const yoyColor = r.yoyFlagged ? (r.yoyDiff > 0 ? 'color:var(--red);font-weight:700;' : 'color:var(--green);font-weight:700;') : '';
+        // Color logic: for income accounts, more = green; for expense accounts, less = green
+        // isIncome=true → positive diff is good (green), negative is bad (red)
+        // isIncome=false → negative diff is good (green), positive is bad (red)
+        // isIncome=null (totals) → use sign as-is
+        function varColor(diff, isIncome, flagged) {
+          if (!flagged) return '';
+          if (isIncome === true) return diff > 0 ? 'color:var(--green);font-weight:700;' : 'color:var(--red);font-weight:700;';
+          if (isIncome === false) return diff < 0 ? 'color:var(--green);font-weight:700;' : 'color:var(--red);font-weight:700;';
+          return diff > 0 ? 'color:var(--red);font-weight:700;' : 'color:var(--green);font-weight:700;';
+        }
+        const momColor = varColor(r.momDiff, r.isIncome, r.momFlagged);
+        const yoyColor = varColor(r.yoyDiff, r.isIncome, r.yoyFlagged);
         html += '<tr'+rowCls+'><td>'+name+'</td><td class="amount">'+fmtCur(r.current)+'</td><td class="amount">'+fmtCur(r.priorMonth)+'</td><td class="amount" style="'+momColor+'">'+fmtCurSigned(r.momDiff)+'</td><td class="amount" style="'+momColor+'">'+(r.momPct>0?'+':'')+r.momPct+'%</td><td class="amount">'+fmtCur(r.priorYearMonth)+'</td><td class="amount" style="'+yoyColor+'">'+fmtCurSigned(r.yoyDiff)+'</td><td class="amount" style="'+yoyColor+'">'+(r.yoyPct>0?'+':'')+r.yoyPct+'%</td></tr>';
       }
       html += '</tbody></table></div>';

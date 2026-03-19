@@ -1,29 +1,36 @@
 const { pool } = require('../db');
 const { qbFetch } = require('./quickbooks');
 
-// Helper: parse QBO P&L report rows into { accountName: amount } map
-function parsePnlRows(rows, prefix = '') {
+// Helper: parse QBO P&L report rows into { accountName: {amount, isIncome} } map
+// isIncome=true for Income accounts, false for Expense accounts
+function parsePnlRows(rows, isIncome = null) {
   const result = {};
   if (!rows) return result;
 
   for (const row of rows) {
     if (row.type === 'Section' || row.group) {
-      const sectionName = row.Header?.ColData?.[0]?.value || '';
+      const sectionName = (row.Header?.ColData?.[0]?.value || '').toLowerCase();
+      // Detect top-level section type
+      let childIsIncome = isIncome;
+      if (isIncome === null) {
+        if (/income|revenue|sales/.test(sectionName)) childIsIncome = true;
+        else if (/expense|cost|cogs/.test(sectionName)) childIsIncome = false;
+      }
       // Recurse into sub-rows
       if (row.Rows?.Row) {
-        const sub = parsePnlRows(row.Rows.Row, prefix);
+        const sub = parsePnlRows(row.Rows.Row, childIsIncome);
         Object.assign(result, sub);
       }
       // Summary/total row
       if (row.Summary?.ColData) {
         const name = row.Summary.ColData[0]?.value || sectionName;
         const amt = parseFloat(row.Summary.ColData[1]?.value || '0');
-        if (name) result['TOTAL: ' + name] = amt;
+        if (name) result['TOTAL: ' + name] = { amount: amt, isIncome: childIsIncome };
       }
     } else if (row.ColData) {
       const name = row.ColData[0]?.value || '';
       const amt = parseFloat(row.ColData[1]?.value || '0');
-      if (name) result[name] = amt;
+      if (name) result[name] = { amount: amt, isIncome };
     }
   }
   return result;
@@ -69,9 +76,13 @@ async function scanVariance(realmId, options = {}) {
   const variances = [];
 
   for (const acct of allAccounts) {
-    const cur = curData[acct] || 0;
-    const prior = priorData[acct] || 0;
-    const yoy = yoyData[acct] || 0;
+    const curEntry = curData[acct] || { amount: 0, isIncome: null };
+    const priorEntry = priorData[acct] || { amount: 0, isIncome: null };
+    const yoyEntry = yoyData[acct] || { amount: 0, isIncome: null };
+    const cur = typeof curEntry === 'object' ? curEntry.amount : curEntry;
+    const prior = typeof priorEntry === 'object' ? priorEntry.amount : priorEntry;
+    const yoy = typeof yoyEntry === 'object' ? yoyEntry.amount : yoyEntry;
+    const isIncome = curEntry.isIncome ?? priorEntry.isIncome ?? yoyEntry.isIncome ?? null;
 
     // Month-over-month variance
     const momDiff = cur - prior;
@@ -86,6 +97,7 @@ async function scanVariance(realmId, options = {}) {
 
     variances.push({
       account: acct,
+      isIncome,
       current: cur,
       priorMonth: prior,
       priorYearMonth: yoy,
