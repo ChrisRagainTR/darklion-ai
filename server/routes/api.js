@@ -400,8 +400,27 @@ router.get('/companies/:realmId/transactions/drilldown', async (req, res) => {
     const endpoint = `/reports/TransactionList?start_date=${startDate}&end_date=${endDate}&account_name=${encodeURIComponent(account)}&minorversion=75`;
     const data = await qbFetch(req.params.realmId, endpoint);
 
-    // Parse QBO TransactionList report
-    const report = data.QueryData || data;
+    // Parse QBO TransactionList report — read column headers dynamically
+    // so we're resilient to QBO inserting extra columns (e.g. "Posting")
+    const colHeaders = (data.Columns?.Column || []).map(c => (c.ColTitle || '').toLowerCase().trim());
+    const idx = {
+      date:   colHeaders.findIndex(h => h === 'date'),
+      type:   colHeaders.findIndex(h => h === 'transaction type' || h === 'txntype' || h === 'type'),
+      num:    colHeaders.findIndex(h => h === 'num' || h === 'doc num' || h === 'docnum'),
+      name:   colHeaders.findIndex(h => h === 'name'),
+      memo:   colHeaders.findIndex(h => h.includes('memo') || h.includes('description')),
+      split:  colHeaders.findIndex(h => h === 'split' || h.includes('account')),
+      amount: colHeaders.findIndex(h => h === 'amount'),
+    };
+    // Fallback to positional if headers not found (legacy)
+    if (idx.date === -1)   idx.date   = 0;
+    if (idx.type === -1)   idx.type   = 1;
+    if (idx.num  === -1)   idx.num    = 2;
+    if (idx.name === -1)   idx.name   = 3;
+    if (idx.memo === -1)   idx.memo   = 4;
+    if (idx.split === -1)  idx.split  = 5;
+    if (idx.amount === -1) idx.amount = 6;
+
     const rows = data.Rows?.Row || [];
     const transactions = [];
 
@@ -411,16 +430,19 @@ router.get('/companies/:realmId/transactions/drilldown', async (req, res) => {
           parseRows(row.Rows.Row);
         } else if (row.ColData) {
           const cols = row.ColData;
-          // QBO TransactionList columns: Date, TxnType, DocNum, Name, Memo/Description, Split, Amount, TxnId
+          const amount = parseFloat(cols[idx.amount]?.value || '0');
+          // Skip $0 split lines — these are the individual account legs of a split transaction.
+          // The parent transaction with a real amount is what we want.
+          if (amount === 0) continue;
           const txn = {
-            date: cols[0]?.value || '',
-            type: cols[1]?.value || '',
-            num: cols[2]?.value || '',
-            name: cols[3]?.value || '',
-            memo: cols[4]?.value || '',
-            split: cols[5]?.value || '',
-            amount: parseFloat(cols[6]?.value || '0'),
-            txnId: cols[7]?.value || (cols[0]?.id || ''),
+            date:   cols[idx.date]?.value  || '',
+            type:   cols[idx.type]?.value  || '',
+            num:    cols[idx.num]?.value   || '',
+            name:   cols[idx.name]?.value  || '',
+            memo:   cols[idx.memo]?.value  || '',
+            split:  cols[idx.split]?.value || '',
+            amount,
+            txnId:  cols[idx.date]?.id || cols[0]?.id || '',
           };
           if (txn.date) transactions.push(txn);
         }
