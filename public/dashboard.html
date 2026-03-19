@@ -586,29 +586,69 @@
     .badge-green { background: rgba(62,207,142,0.12); color: #3ecf8e; }
     .badge-orange { background: rgba(249,115,22,0.12); color: #f97316; }
 
-    /* Calendar grid */
-    .cal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
-    .cal-day-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.75rem; min-height: 60px; }
-    .cal-day-card.cal-day-has-items { border-color: rgba(201,168,76,0.3); }
-    .cal-day-num { font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-bottom: 0.35rem; }
-    .cal-day-has-items .cal-day-num { color: var(--gold); }
-    .cal-item { display: flex; align-items: flex-start; gap: 0.35rem; font-size: 0.74rem; margin-bottom: 0.3rem; line-height: 1.3; }
-    .cal-item:last-child { margin-bottom: 0; }
-    .cal-item-dot { flex-shrink: 0; padding-top: 0.05rem; }
-    .cal-item-text { flex: 1; }
-    .cal-company { color: var(--gold); font-weight: 600; }
-    .cal-sep { color: var(--muted); }
-    .cal-account { color: var(--text); }
-    .cal-method { color: var(--muted); }
-    .btn-cal-retrieve { background: transparent; border: 1px solid rgba(62,207,142,0.4); color: #3ecf8e; border-radius: 4px; cursor: pointer; font-size: 0.7rem; padding: 0.1rem 0.3rem; flex-shrink: 0; transition: background 0.15s; }
-    .btn-cal-retrieve:hover { background: rgba(62,207,142,0.15); }
+    /* ===== HEATMAP CALENDAR GRID ===== */
+    .cal-heatmap { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 0.5rem; }
+    .cal-hm-day {
+      background: var(--card); border: 2px solid transparent; border-radius: 8px;
+      padding: 0.45rem 0.5rem; cursor: default; transition: border-color 0.15s, transform 0.1s;
+      min-height: 62px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between;
+    }
+    .cal-hm-day.has-items { cursor: pointer; }
+    .cal-hm-day.has-items:hover { transform: scale(1.04); }
+    .cal-hm-day.all-retrieved { border-color: rgba(62,207,142,0.4); background: rgba(62,207,142,0.05); }
+    .cal-hm-day.all-pending { border-color: rgba(237,137,54,0.5); background: rgba(237,137,54,0.05); }
+    .cal-hm-day.mixed { border-color: rgba(201,168,76,0.5); background: rgba(201,168,76,0.04); }
+    .cal-hm-num { font-size: 1.1rem; font-weight: 700; line-height: 1; color: var(--muted); }
+    .cal-hm-day.has-items .cal-hm-num { color: var(--text); }
+    .cal-hm-badges { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.3rem; font-size: 0.65rem; line-height: 1; }
+    .cal-hm-badge { display: inline-flex; align-items: center; gap: 0.15rem; }
 
-    /* Legacy calendar styles (kept for compat) */
-    .cal-day-block { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1rem; overflow: hidden; }
-    .cal-day-header { padding: 0.7rem 1.2rem; background: rgba(201,168,76,0.06); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; }
-    .cal-day-label { font-size: 0.78rem; color: var(--muted); }
-    .cal-items { padding: 0.25rem 0; }
-    .cal-status { min-width: 90px; text-align: right; }
+    /* ===== DAY DRAWER ===== */
+    .day-drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 410; }
+    .day-drawer-overlay.open { display: block; }
+    .day-drawer {
+      position: fixed; top: 0; right: -420px; width: 400px; max-width: 100vw; height: 100vh;
+      background: var(--charcoal); border-left: 1px solid var(--border);
+      z-index: 411; display: flex; flex-direction: column;
+      transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+      box-shadow: -8px 0 40px rgba(0,0,0,0.4);
+    }
+    .day-drawer.open { right: 0; }
+    .day-drawer-header {
+      padding: 1rem 1.2rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between; flex-shrink: 0;
+    }
+    .day-drawer-title { font-size: 1rem; font-weight: 700; color: var(--gold); }
+    .day-drawer-close { background: none; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; padding: 0.1rem 0.3rem; line-height: 1; }
+    .day-drawer-close:hover { color: var(--text); }
+    .day-drawer-progress { padding: 0.75rem 1.2rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .day-drawer-prog-label { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.4rem; }
+    .day-drawer-prog-bar { background: var(--card); border-radius: 4px; height: 6px; overflow: hidden; }
+    .day-drawer-prog-fill { height: 100%; background: var(--gold); border-radius: 4px; transition: width 0.3s; }
+    .day-drawer-body { flex: 1; overflow-y: auto; padding: 0.5rem 0; }
+    .day-drawer-row {
+      display: grid; grid-template-columns: 1fr auto auto; gap: 0.5rem; align-items: center;
+      padding: 0.55rem 1.2rem; border-bottom: 1px solid rgba(201,168,76,0.06); font-size: 0.8rem;
+    }
+    .day-drawer-row:last-child { border-bottom: none; }
+    .day-drawer-row.retrieved { opacity: 0.6; }
+    .dd-row-info { min-width: 0; }
+    .dd-row-company { font-weight: 600; color: var(--text); font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dd-row-account { color: var(--muted); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dd-row-method { font-size: 0.68rem; background: rgba(201,168,76,0.12); color: var(--gold); padding: 0.15rem 0.4rem; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+    .dd-row-action { flex-shrink: 0; }
+    .btn-dd-retrieve {
+      background: transparent; border: 1px solid rgba(62,207,142,0.5); color: #3ecf8e;
+      border-radius: 5px; cursor: pointer; font-size: 0.75rem; padding: 0.2rem 0.5rem;
+      transition: background 0.15s; white-space: nowrap;
+    }
+    .btn-dd-retrieve:hover { background: rgba(62,207,142,0.15); }
+    .btn-dd-retrieve:disabled { opacity: 0.5; cursor: default; }
+    .dd-retrieved-date { font-size: 0.7rem; color: #3ecf8e; white-space: nowrap; }
+
+    /* Progress bar in stats */
+    .cal-progress-wrap { margin-top: 0.5rem; background: var(--card); border-radius: 4px; height: 6px; overflow: hidden; }
+    .cal-progress-fill { height: 100%; background: var(--gold); border-radius: 4px; transition: width 0.4s; }
   </style>
 </head>
 <body>
@@ -1061,16 +1101,20 @@
             </div>
           </div>
 
-          <!-- Month selector -->
+          <!-- Month nav -->
           <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.2rem;">
-            <button class="btn btn-outline btn-sm" onclick="calChangeMonth(-1)">&#8592;</button>
-            <span id="cal-month-display" style="font-weight:600;min-width:110px;text-align:center;"></span>
-            <button class="btn btn-outline btn-sm" onclick="calChangeMonth(1)">&#8594;</button>
+            <button class="btn btn-outline btn-sm" onclick="calChangeMonth(-1)">&#8592; Prev</button>
+            <span id="cal-month-display" style="font-weight:700;min-width:130px;text-align:center;font-size:1rem;"></span>
+            <button class="btn btn-outline btn-sm" onclick="calChangeMonth(1)">Next &#8594;</button>
           </div>
 
           <!-- Stats bar -->
           <div id="cal-stats" style="display:none;margin-bottom:1.2rem;">
             <div class="stats-grid" id="cal-stats-grid"></div>
+            <div style="margin-top:0.6rem;">
+              <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.25rem;" id="cal-pct-label"></div>
+              <div class="cal-progress-wrap"><div class="cal-progress-fill" id="cal-progress-fill" style="width:0%"></div></div>
+            </div>
           </div>
 
           <div id="stmt-calendar-body">
@@ -1080,6 +1124,24 @@
       </div>
 
     </div><!-- /dashboard -->
+  </div>
+
+  <!-- Day Drawer Overlay + Panel -->
+  <div class="day-drawer-overlay" id="day-drawer-overlay" onclick="closeDayDrawer()"></div>
+  <div class="day-drawer" id="day-drawer">
+    <div class="day-drawer-header">
+      <div>
+        <div class="day-drawer-title" id="day-drawer-title">Day —</div>
+      </div>
+      <button class="day-drawer-close" onclick="closeDayDrawer()">×</button>
+    </div>
+    <div class="day-drawer-progress">
+      <div class="day-drawer-prog-label" id="day-drawer-prog-label">— of — retrieved</div>
+      <div class="day-drawer-prog-bar"><div class="day-drawer-prog-fill" id="day-drawer-prog-fill" style="width:0%"></div></div>
+    </div>
+    <div class="day-drawer-body" id="day-drawer-body">
+      <div style="padding:2rem;text-align:center;color:var(--muted);">Loading…</div>
+    </div>
   </div>
 
   <!-- Invite Modal -->
@@ -2813,6 +2875,8 @@
       qbo: 'QBO Pull', client: 'Client Upload' // legacy compat
     };
 
+    // ===== STATEMENTS PAGE (account setup + health overview) =====
+
     async function loadStatementsView() {
       if (!currentRealm) {
         qs('#stmt-table-wrap').innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Select a client to view statements.</div>';
@@ -2825,7 +2889,6 @@
       const month = stmtCurrentMonth();
       const company = companies.find(c => c.realm_id === currentRealm);
       qs('#stmt-page-title').textContent = 'Statements — ' + (company?.company_name || currentRealm);
-      qs('#stmt-subtitle').textContent = month;
 
       const wrapEl = qs('#stmt-table-wrap');
       wrapEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div>';
@@ -2857,22 +2920,25 @@
           } catch(e) { /* skip */ }
         }
 
-        // Stats
-        let total = 0, pending = 0, received = 0;
-        for (const a of accounts) {
-          total++;
-          const s = a.monthly_status || 'pending';
-          if (s === 'pending') pending++;
-          else if (s === 'received' || s === 'uploaded') received++;
+        // Compute overall currency subtitle
+        const savedAccounts = accounts.filter(a => a.id);
+        const behind = savedAccounts.filter(a => (a.months_behind || 0) > 0);
+        if (savedAccounts.length > 0) {
+          if (behind.length === 0) {
+            qs('#stmt-subtitle').innerHTML = 'All current <span style="color:var(--green)">✅</span>';
+          } else {
+            qs('#stmt-subtitle').innerHTML = `<span style="color:var(--red)">${behind.length} account${behind.length > 1 ? 's' : ''} behind 🔴</span>`;
+          }
+        } else {
+          qs('#stmt-subtitle').textContent = '';
         }
-        const pct = total > 0 ? Math.round(received / total * 100) : 0;
-        if (total > 0) {
+
+        if (accounts.length > 0) {
           qs('#stmt-summary').style.display = '';
           qs('#stmt-stats-grid').innerHTML = `
-            <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${total}</div></div>
-            <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value orange">${pending}</div></div>
-            <div class="stat-card"><div class="stat-label">Retrieved</div><div class="stat-value green">${received}</div></div>
-            <div class="stat-card"><div class="stat-label">Complete</div><div class="stat-value">${pct}%</div></div>
+            <div class="stat-card"><div class="stat-label">Total Accounts</div><div class="stat-value">${accounts.length}</div></div>
+            <div class="stat-card"><div class="stat-label">Current</div><div class="stat-value green">${savedAccounts.length - behind.length}</div></div>
+            <div class="stat-card"><div class="stat-label">Behind</div><div class="stat-value ${behind.length > 0 ? 'orange' : 'green'}">${behind.length}</div></div>
           `;
         }
 
@@ -2899,33 +2965,46 @@
         </tr></thead><tbody>`;
 
       for (const a of accounts) {
-        const status = a.monthly_status || 'pending';
-        const isReceived = status === 'received' || status === 'uploaded';
         const typeLabel = [a.accountType, a.accountSubType].filter(Boolean).join(' / ') || (a._manual ? 'Manual' : '—');
+        const monthsBehind = a.months_behind || 0;
 
         let statusCell;
-        if (isReceived) {
-          const dt = a.monthly_received_at ? new Date(a.monthly_received_at).toLocaleDateString() : '';
-          statusCell = `<span class="badge badge-green">✅ Retrieved${dt ? ' ' + dt : ''}</span>`;
+        if (!a.id) {
+          statusCell = `<span style="color:var(--muted);font-size:0.75rem;">Not saved</span>`;
+        } else if (!a.last_retrieved_month) {
+          statusCell = `<span style="color:var(--muted);font-size:0.75rem;">No history</span>`;
+        } else if (monthsBehind === 0) {
+          statusCell = `<span style="color:var(--green);font-size:0.8rem;">✅ Current</span>`;
+        } else if (monthsBehind === 1) {
+          statusCell = `<span style="color:var(--orange);font-size:0.8rem;">🟠 1 month behind</span>`;
         } else {
-          statusCell = `<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:nowrap;"><span class="badge badge-orange">Pending</span><button class="btn btn-outline btn-sm" onclick="markStmtRetrieved('${realmId}',${a.id},this)">Mark Retrieved</button></div>`;
+          statusCell = `<span style="color:var(--red);font-size:0.8rem;">🔴 ${monthsBehind} months behind</span>`;
+        }
+
+        let markCurrentBtn = '';
+        if (a.id && monthsBehind > 0) {
+          const label = monthsBehind >= 3 ? `Clear ${monthsBehind}-Month Backlog` : 'Mark Current';
+          markCurrentBtn = `<button class="btn btn-gold btn-sm" onclick="markStmtCurrent('${realmId}',${a.id},this)">${label}</button>`;
         }
 
         const methodSel = Object.entries(METHOD_LABELS).filter(([k]) => !['qbo','client'].includes(k)).map(([k,v]) =>
           `<option value="${k}"${(a.access_method||'qbo_pull')===k?' selected':''}>${v}</option>`
         ).join('');
 
-        html += `<tr id="stmtrow-${a.id}">
+        html += `<tr id="stmtrow-${a.id || 'new'}">
           <td style="font-weight:500;">${esc(a.account_name)}</td>
           <td style="font-size:0.78rem;color:var(--muted);">${esc(typeLabel)}</td>
           <td>
-            <select class="stmt-select" onchange="updateStmtMethod('${realmId}',${a.id},this)">
-              ${methodSel}
-            </select>
+            ${a.id ? `<select class="stmt-select" onchange="updateStmtMethod('${realmId}',${a.id},this)">${methodSel}</select>` : `<span style="color:var(--muted);font-size:0.78rem;">${esc(METHOD_LABELS[a.access_method] || a.access_method || '—')}</span>`}
           </td>
-          <td><input class="stmt-input stmt-day-input" type="number" min="1" max="31" value="${a.statement_day || 1}" style="width:60px;" onblur="updateStmtDay('${realmId}',${a.id},this)"></td>
+          <td>
+            ${a.id ? `<input class="stmt-input stmt-day-input" type="number" min="1" max="31" value="${a.statement_day || 1}" style="width:60px;" onblur="updateStmtDay('${realmId}',${a.id},this)">` : `<span style="color:var(--muted);">${a.statement_day || 1}</span>`}
+          </td>
           <td>${statusCell}</td>
-          <td>${a._manual ? `<button class="btn-icon" onclick="deleteStmtAccount('${realmId}',${a.id})" title="Delete">🗑</button>` : ''}</td>
+          <td style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
+            ${markCurrentBtn}
+            ${a._manual && a.id ? `<button class="btn-icon" onclick="deleteStmtAccount('${realmId}',${a.id})" title="Delete">🗑</button>` : ''}
+          </td>
         </tr>`;
       }
 
@@ -2957,25 +3036,18 @@
       }
     }
 
-    async function markStmtRetrieved(realmId, id, btn) {
+    async function markStmtCurrent(realmId, id, btn) {
       btn.disabled = true;
+      const origText = btn.textContent;
       btn.textContent = '…';
       try {
-        const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id + '/retrieve', { method: 'POST', body: '{}' });
+        const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id + '/mark-current', { method: 'PUT', body: '{}' });
         if (!res.ok) throw new Error((await res.json()).error);
-        // Update row inline
-        const row = qs('#stmtrow-' + id);
-        if (row) {
-          const statusCell = row.querySelector('td:nth-child(5)');
-          if (statusCell) {
-            const dt = new Date().toLocaleDateString();
-            statusCell.innerHTML = `<span class="badge badge-green">✅ Retrieved ${dt}</span>`;
-          }
-        }
-        toast('Marked as retrieved');
+        toast('Account marked current — backlog cleared');
+        await loadStatementsView();
       } catch(e) {
         btn.disabled = false;
-        btn.textContent = 'Mark Retrieved';
+        btn.textContent = origText;
         toast('Failed: ' + e.message);
       }
     }
@@ -3026,9 +3098,10 @@
       }
     }
 
-    // ===== STATEMENTS CALENDAR (firm-wide) =====
+    // ===== STATEMENTS CALENDAR — heatmap + day drawer =====
 
     let calCurrentMonth = stmtCurrentMonth();
+    let calDaysData = {}; // day -> {day, total, retrieved, pending, items[]}
 
     function initCalendarView() {
       if (!calCurrentMonth) calCurrentMonth = stmtCurrentMonth();
@@ -3047,6 +3120,7 @@
       const d = new Date(y, m - 1 + delta, 1);
       calCurrentMonth = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
       qs('#cal-month-display').textContent = calMonthLabel(calCurrentMonth);
+      closeDayDrawer();
       loadCalendarView();
     }
 
@@ -3062,52 +3136,50 @@
         const data = await res.json();
         if (data.error) throw new Error(data.error);
 
-        const byDay = data.byDay || {};
-        const allItems = Object.values(byDay).flat();
-        const total = allItems.length;
-        const retrieved = allItems.filter(i => i.monthly_status === 'received' || i.monthly_status === 'uploaded').length;
+        const days = data.days || [];
+        calDaysData = {};
+        let total = 0, retrieved = 0;
+        for (const d of days) {
+          calDaysData[d.day] = d;
+          total += d.total;
+          retrieved += d.retrieved;
+        }
         const pending = total - retrieved;
         const pct = total > 0 ? Math.round(retrieved / total * 100) : 0;
 
         if (total > 0) {
           statsEl.style.display = '';
           qs('#cal-stats-grid').innerHTML = `
-            <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${total}</div></div>
+            <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-value">${total}</div></div>
             <div class="stat-card"><div class="stat-label">Retrieved</div><div class="stat-value green">${retrieved}</div></div>
             <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value orange">${pending}</div></div>
             <div class="stat-card"><div class="stat-label">Complete</div><div class="stat-value">${pct}%</div></div>
           `;
+          qs('#cal-pct-label').textContent = `${retrieved} of ${total} retrieved (${pct}%)`;
+          qs('#cal-progress-fill').style.width = pct + '%';
         }
 
-        // Build day grid 1-31
-        let html = '<div class="cal-grid">';
+        // Build compact heatmap — 1 through 31
+        let html = '<div class="cal-heatmap">';
         for (let day = 1; day <= 31; day++) {
-          const items = byDay[day] || [];
-          const hasItems = items.length > 0;
-          html += `<div class="cal-day-card${hasItems ? ' cal-day-has-items' : ''}">
-            <div class="cal-day-num">${day}</div>`;
-          if (hasItems) {
-            for (const item of items) {
-              const status = item.monthly_status || 'pending';
-              const isRetrieved = status === 'received' || status === 'uploaded';
-              const dot = isRetrieved
-                ? `<span style="color:#22c55e;font-size:0.9rem;" title="Retrieved">●</span>`
-                : `<span style="color:#f97316;font-size:0.9rem;" title="Pending">●</span>`;
-              const method = METHOD_LABELS[item.access_method] || item.access_method || '—';
-              html += `<div class="cal-item" id="calitem-${item.id}">
-                <span class="cal-item-dot">${dot}</span>
-                <span class="cal-item-text">
-                  <span class="cal-company">${esc(item.company_name || item.realm_id)}</span>
-                  <span class="cal-sep"> — </span>
-                  <span class="cal-account">${esc(item.account_name)}</span>
-                  <span class="cal-sep"> — </span>
-                  <span class="cal-method">${esc(method)}</span>
-                </span>
-                ${!isRetrieved ? `<button class="btn-cal-retrieve" title="Mark retrieved" onclick="calMarkRetrieved('${item.realm_id}',${item.id},${day})">✓</button>` : ''}
-              </div>`;
-            }
+          const d = calDaysData[day];
+          if (!d) {
+            // quiet day
+            html += `<div class="cal-hm-day"><div class="cal-hm-num" style="color:rgba(143,163,184,0.3);">${day}</div></div>`;
+          } else {
+            // determine color class
+            let colorClass = 'all-pending';
+            if (d.pending === 0) colorClass = 'all-retrieved';
+            else if (d.retrieved > 0) colorClass = 'mixed';
+
+            const pendBadge = d.pending > 0 ? `<span class="cal-hm-badge">🟠 ${d.pending}</span>` : '';
+            const retBadge = d.retrieved > 0 ? `<span class="cal-hm-badge">✅ ${d.retrieved}</span>` : '';
+
+            html += `<div class="cal-hm-day has-items ${colorClass}" onclick="openDayDrawer(${day})" title="Day ${day}: ${d.total} statements">
+              <div class="cal-hm-num">${day}</div>
+              <div class="cal-hm-badges">${pendBadge}${retBadge}</div>
+            </div>`;
           }
-          html += `</div>`;
         }
         html += '</div>';
 
@@ -3117,23 +3189,127 @@
       }
     }
 
-    async function calMarkRetrieved(realmId, id, day) {
+    // ===== DAY DRAWER =====
+
+    function openDayDrawer(day) {
+      const d = calDaysData[day];
+      if (!d) return;
+
+      const monthLabel = calMonthLabel(calCurrentMonth);
+      qs('#day-drawer-title').textContent = `Day ${day} — ${monthLabel}`;
+      updateDrawerProgress(d);
+      renderDrawerItems(d);
+
+      qs('#day-drawer-overlay').classList.add('open');
+      qs('#day-drawer').classList.add('open');
+    }
+
+    function closeDayDrawer() {
+      qs('#day-drawer-overlay').classList.remove('open');
+      qs('#day-drawer').classList.remove('open');
+    }
+
+    function updateDrawerProgress(d) {
+      const pct = d.total > 0 ? Math.round(d.retrieved / d.total * 100) : 0;
+      qs('#day-drawer-prog-label').textContent = `${d.retrieved} of ${d.total} retrieved`;
+      qs('#day-drawer-prog-fill').style.width = pct + '%';
+    }
+
+    function renderDrawerItems(d) {
+      if (!d || !d.items || d.items.length === 0) {
+        qs('#day-drawer-body').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);">No statements for this day.</div>';
+        return;
+      }
+
+      // Sort: pending first, retrieved at bottom
+      const sorted = [...d.items].sort((a, b) => {
+        if (a.isRetrieved === b.isRetrieved) return 0;
+        return a.isRetrieved ? 1 : -1;
+      });
+
+      let html = '';
+      for (const item of sorted) {
+        const methodLabel = METHOD_LABELS[item.method] || item.method || '—';
+        const retrievedDate = item.retrievedAt ? new Date(item.retrievedAt).toLocaleDateString() : '';
+
+        html += `<div class="day-drawer-row${item.isRetrieved ? ' retrieved' : ''}" id="ddr-${item.id}">
+          <div class="dd-row-info">
+            <div class="dd-row-company">${esc(item.companyName || item.realmId)}</div>
+            <div class="dd-row-account">${esc(item.accountName)}</div>
+          </div>
+          <span class="dd-row-method">${esc(methodLabel)}</span>
+          <div class="dd-row-action">
+            ${item.isRetrieved
+              ? `<span class="dd-retrieved-date">✅ ${retrievedDate}</span>`
+              : `<button class="btn-dd-retrieve" onclick="drawerMarkRetrieved('${item.realmId}',${item.id},${d.day})">✓</button>`
+            }
+          </div>
+        </div>`;
+      }
+      qs('#day-drawer-body').innerHTML = html;
+    }
+
+    async function drawerMarkRetrieved(realmId, id, day) {
+      const btn = qs(`#ddr-${id} .btn-dd-retrieve`);
+      if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
       try {
         const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id + '/retrieve', { method: 'POST', body: '{}' });
         if (!res.ok) throw new Error((await res.json()).error);
-        // Update dot inline
-        const itemEl = qs('#calitem-' + id);
-        if (itemEl) {
-          const dotEl = itemEl.querySelector('.cal-item-dot');
-          if (dotEl) dotEl.innerHTML = `<span style="color:#22c55e;font-size:0.9rem;" title="Retrieved">●</span>`;
-          const btn = itemEl.querySelector('.btn-cal-retrieve');
-          if (btn) btn.remove();
+
+        // Update the in-memory item
+        const d = calDaysData[day];
+        if (d) {
+          const item = d.items.find(i => i.id === id);
+          if (item) {
+            item.isRetrieved = true;
+            item.retrievedAt = new Date().toISOString();
+            d.retrieved++;
+            d.pending--;
+          }
+          // Refresh drawer UI
+          updateDrawerProgress(d);
+          renderDrawerItems(d);
+          // Refresh the heatmap box
+          refreshHeatmapBox(day, d);
         }
+
         toast('Marked as retrieved');
-        // Refresh stats
-        loadCalendarView();
       } catch(e) {
+        if (btn) { btn.disabled = false; btn.textContent = '✓'; }
         toast('Failed: ' + e.message);
+      }
+    }
+
+    function refreshHeatmapBox(day, d) {
+      // Update the stats bar
+      let total = 0, retrieved = 0;
+      for (const dd of Object.values(calDaysData)) { total += dd.total; retrieved += dd.retrieved; }
+      const pct = total > 0 ? Math.round(retrieved / total * 100) : 0;
+      const pending = total - retrieved;
+      qs('#cal-stats-grid').innerHTML = `
+        <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-value">${total}</div></div>
+        <div class="stat-card"><div class="stat-label">Retrieved</div><div class="stat-value green">${retrieved}</div></div>
+        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value orange">${pending}</div></div>
+        <div class="stat-card"><div class="stat-label">Complete</div><div class="stat-value">${pct}%</div></div>
+      `;
+      qs('#cal-pct-label').textContent = `${retrieved} of ${total} retrieved (${pct}%)`;
+      qs('#cal-progress-fill').style.width = pct + '%';
+
+      // Re-render just this day box
+      const boxes = document.querySelectorAll('.cal-hm-day');
+      for (const box of boxes) {
+        // find by onclick attribute
+        if (box.getAttribute('onclick') === `openDayDrawer(${day})`) {
+          let colorClass = 'all-pending';
+          if (d.pending === 0) colorClass = 'all-retrieved';
+          else if (d.retrieved > 0) colorClass = 'mixed';
+          box.className = `cal-hm-day has-items ${colorClass}`;
+          const pendBadge = d.pending > 0 ? `<span class="cal-hm-badge">🟠 ${d.pending}</span>` : '';
+          const retBadge = d.retrieved > 0 ? `<span class="cal-hm-badge">✅ ${d.retrieved}</span>` : '';
+          box.innerHTML = `<div class="cal-hm-num">${day}</div><div class="cal-hm-badges">${pendBadge}${retBadge}</div>`;
+          break;
+        }
       }
     }
 
