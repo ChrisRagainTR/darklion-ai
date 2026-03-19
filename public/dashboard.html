@@ -23,7 +23,7 @@
       position: fixed; top: 60px; left: 0; bottom: 0; overflow-y: auto; z-index: 100;
       display: flex; flex-direction: column; padding: 0;
     }
-    .sidebar-brand { display: flex; align-items: center; gap: 0.6rem; padding: 1.2rem 1rem; border-bottom: 1px solid var(--border); text-decoration: none; }
+    .sidebar-brand { display: flex; align-items: center; gap: 0.6rem; padding: 1.2rem 1rem; text-decoration: none; }
     .sidebar-brand .nav-name { font-size: 1.1rem; font-weight: 700; color: var(--text); }
     .sidebar-brand .nav-name span { color: var(--gold); }
 
@@ -313,7 +313,7 @@
     /* Responsive */
     @media (max-width: 800px) {
       .sidebar { width: 60px; }
-      .sidebar .sidebar-section, .sidebar-nav li a span, .sidebar-brand .nav-name { display: none; }
+      .sidebar .sidebar-section, .sidebar-nav li a span { display: none; }
       .sidebar-nav li a { justify-content: center; padding: 0.75rem; }
       .main { margin-left: 60px; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -328,7 +328,7 @@
       height: 60px; background: rgba(15,25,35,0.97);
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center; gap: 1rem;
-      padding: 0 1.5rem 0 calc(var(--sidebar-w) + 1.5rem);
+      padding: 0 1.5rem 0 1rem;
       z-index: 200;
       backdrop-filter: blur(8px);
     }
@@ -434,7 +434,7 @@
 
     @media (max-width: 800px) {
       .top-header { left: 0; padding-left: calc(60px + 1rem); }
-      .header-logo { display: none; }
+      .header-logo .hl-name { display: none; }
       .header-search-wrap { max-width: 100%; }
     }
 
@@ -600,10 +600,7 @@
 
   <!-- Sidebar -->
   <aside class="sidebar">
-    <a class="sidebar-brand" href="/">
-      <img src="/lion-logo.png" alt="DarkLion" width="32" height="32" style="display:block;flex-shrink:0;">
-      <span class="nav-name">Dark<span>Lion</span></span>
-    </a>
+    <div style="height:60px;"></div><!-- spacer for fixed top-header -->
 
     <nav>
       <div class="sidebar-section">Overview</div>
@@ -643,6 +640,11 @@
 
   <!-- Top Header Bar -->
   <header class="top-header" id="top-header">
+    <!-- Logo -->
+    <a class="header-logo" href="/">
+      <img src="/lion-logo.png" alt="DarkLion" width="30" height="30" style="display:block;flex-shrink:0;">
+      <span class="hl-name">Dark<span>Lion</span></span>
+    </a>
     <!-- Client Search (centered) -->
     <div class="header-search-wrap">
       <span class="header-search-icon">🔍</span>
