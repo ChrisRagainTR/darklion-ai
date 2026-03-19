@@ -2046,16 +2046,35 @@
       const colCount = Math.max(columns.length, 2);
       const dataCols = colCount - 1;
 
-      // Extract per-column date ranges from QBO column MetaData
-      // QBO stores StartDate/EndDate in each column's MetaData array
+      // Extract per-column date ranges — first try QBO metadata, then parse column title
+      const MONTH_MAP = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+      function parseTitleDate(title) {
+        if (!title) return { start: '', end: '' };
+        // Try "MMM YYYY" format (e.g. "JAN 2025")
+        const m = title.trim().match(/^([A-Za-z]{3})\s+(\d{4})$/);
+        if (m) {
+          const mo = MONTH_MAP[m[1].toLowerCase()];
+          const yr = parseInt(m[2]);
+          if (mo && yr) {
+            const start = yr + '-' + String(mo).padStart(2,'0') + '-01';
+            const lastD = new Date(yr, mo, 0).getDate();
+            const end = yr + '-' + String(mo).padStart(2,'0') + '-' + String(lastD).padStart(2,'0');
+            return { start, end };
+          }
+        }
+        // Try "YYYY" annual format
+        const yr = title.trim().match(/^(\d{4})$/);
+        if (yr) return { start: yr[1]+'-01-01', end: yr[1]+'-12-31' };
+        return { start: '', end: '' };
+      }
       const colDates = columns.map(col => {
         const meta = col.MetaData || [];
         const start = meta.find(m => m.Name === 'StartDate')?.Value || '';
         const end   = meta.find(m => m.Name === 'EndDate')?.Value   || '';
-        return { start, end };
+        if (start && end) return { start, end };
+        // Fall back to parsing the column title
+        return parseTitleDate(col.ColTitle || '');
       });
-      // Debug: log first few colDates so we can verify QBO is returning per-col metadata
-      console.log('[DL] colDates sample:', colDates.slice(1, 4));
 
       // Name col: 60% for 2 cols, 40% for 3-4, 30% for 5-8, 25% for 9+
       const firstColPct = dataCols <= 1 ? 60 : dataCols <= 3 ? 40 : dataCols <= 7 ? 30 : 25;
