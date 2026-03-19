@@ -460,44 +460,145 @@ router.post('/companies/:realmId/transactions/recode', async (req, res) => {
 
 // ===== STATEMENT ACCOUNT TRACKER =====
 
-// List all statement accounts for a company
+// GET /api/companies/:realmId/statements/accounts — QBO auto-pull + merge with saved schedules
+router.get('/companies/:realmId/statements/accounts', async (req, res) => {
+  try {
+    const { realmId } = req.params;
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
+
+    const month = req.query.month || currentPeriod();
+
+    // Pull relevant accounts from QBO
+    let qboAccounts = [];
+    try {
+      const allAccounts = await getChartOfAccounts(realmId);
+      const relevantTypes = ['Bank', 'Credit Card', 'Long Term Liability', 'Other Current Liability'];
+      const relevantSubTypes = ['Checking', 'Savings', 'MoneyMarket', 'LineOfCredit', 'Loan', 'CreditCard',
+        'LoanPayable', 'NotesPayable', 'OtherCurrentLiabilities', 'Trust', 'Vehicle', 'Equipment'];
+      qboAccounts = allAccounts.filter(a => {
+        const type = a.AccountType || '';
+        const subType = a.AccountSubType || '';
+        const balance = a.CurrentBalance || 0;
+        if (relevantTypes.includes(type) && balance !== 0) return true;
+        if (relevantSubTypes.includes(subType)) return true;
+        return false;
+      });
+    } catch (qboErr) {
+      // QBO unavailable — fall through to return saved schedules only
+    }
+
+    // Load existing schedules for this realm + monthly status
+    const { rows: saved } = await pool.query(
+      `SELECT ss.*,
+         COALESCE(sms.status, 'pending') AS monthly_status,
+         sms.received_at AS monthly_received_at,
+         COALESCE(sms.notes, '') AS monthly_notes,
+         sms.id AS monthly_status_id
+       FROM statement_schedules ss
+       LEFT JOIN statement_monthly_status sms
+         ON sms.schedule_id = ss.id AND sms.month = $2
+       WHERE ss.realm_id = $1
+       ORDER BY ss.account_name ASC`,
+      [realmId, month]
+    );
+
+    // Build a map of saved schedules by qb_account_id and account_name
+    const savedByQbId = {};
+    const savedByName = {};
+    for (const s of saved) {
+      if (s.qb_account_id) savedByQbId[s.qb_account_id] = s;
+      savedByName[s.account_name] = s;
+    }
+
+    // Merge QBO accounts with saved schedules
+    const merged = [];
+    const seenIds = new Set();
+
+    for (const qa of qboAccounts) {
+      const qbId = String(qa.Id || '');
+      const name = qa.FullyQualifiedName || qa.Name;
+      const existing = savedByQbId[qbId] || savedByName[name];
+      if (existing) {
+        seenIds.add(existing.id);
+        merged.push({ ...existing, qb_account_id: qbId, _from_qbo: true,
+          accountType: qa.AccountType, accountSubType: qa.AccountSubType, balance: qa.CurrentBalance });
+      } else {
+        merged.push({
+          id: null, realm_id: realmId, account_name: name, institution: '',
+          access_method: 'qbo_pull', statement_day: 1, notes: '', qb_account_id: qbId,
+          monthly_status: 'pending', monthly_received_at: null, monthly_notes: '',
+          _from_qbo: true, _new: true,
+          accountType: qa.AccountType, accountSubType: qa.AccountSubType, balance: qa.CurrentBalance
+        });
+      }
+    }
+
+    // Also include manually-added accounts not from QBO
+    for (const s of saved) {
+      if (!seenIds.has(s.id)) {
+        merged.push({ ...s, _manual: true });
+      }
+    }
+
+    // Sort: by account_name
+    merged.sort((a, b) => (a.account_name || '').localeCompare(b.account_name || ''));
+
+    res.json({ month, accounts: merged });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/companies/:realmId/statements — return schedules for this realm + current month
 router.get('/companies/:realmId/statements', async (req, res) => {
   try {
     const { realmId } = req.params;
     const firmId = req.firm?.id;
     if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
 
+    const month = req.query.month || currentPeriod();
     const { rows } = await pool.query(
-      'SELECT * FROM statement_schedules WHERE realm_id = $1 ORDER BY account_name ASC',
-      [realmId]
+      `SELECT ss.*,
+         COALESCE(sms.status, 'pending') AS monthly_status,
+         sms.received_at AS monthly_received_at,
+         COALESCE(sms.notes, '') AS monthly_notes,
+         sms.id AS monthly_status_id
+       FROM statement_schedules ss
+       LEFT JOIN statement_monthly_status sms
+         ON sms.schedule_id = ss.id AND sms.month = $2
+       WHERE ss.realm_id = $1
+       ORDER BY ss.account_name ASC`,
+      [realmId, month]
     );
-    res.json(rows);
+    res.json({ month, accounts: rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Create a statement account
+// POST /api/companies/:realmId/statements — upsert a statement_schedule row
 router.post('/companies/:realmId/statements', async (req, res) => {
   try {
     const { realmId } = req.params;
     const firmId = req.firm?.id;
     if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
 
-    const { account_name, institution, access_method, statement_day, notes, client_name, contact_email } = req.body;
+    const { account_name, institution, access_method, statement_day, notes, client_name, contact_email, qb_account_id } = req.body;
     if (!account_name) return res.status(400).json({ error: 'account_name is required' });
 
     const { rows } = await pool.query(
-      `INSERT INTO statement_schedules (realm_id, client_name, account_name, institution, access_method, statement_day, notes, contact_email)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO statement_schedules (realm_id, client_name, account_name, institution, access_method, statement_day, notes, contact_email, qb_account_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT (realm_id, account_name) DO UPDATE SET
-         institution = EXCLUDED.institution,
+         institution = COALESCE(NULLIF(EXCLUDED.institution,''), statement_schedules.institution),
          access_method = EXCLUDED.access_method,
          statement_day = EXCLUDED.statement_day,
-         notes = EXCLUDED.notes,
-         contact_email = EXCLUDED.contact_email
+         notes = COALESCE(NULLIF(EXCLUDED.notes,''), statement_schedules.notes),
+         contact_email = COALESCE(NULLIF(EXCLUDED.contact_email,''), statement_schedules.contact_email),
+         qb_account_id = COALESCE(NULLIF(EXCLUDED.qb_account_id,''), statement_schedules.qb_account_id)
        RETURNING *`,
-      [realmId, client_name || '', account_name, institution || '', access_method || 'portal', statement_day || 1, notes || '', contact_email || '']
+      [realmId, client_name || '', account_name, institution || '', access_method || 'qbo_pull', statement_day || 1, notes || '', contact_email || '', qb_account_id || '']
     );
     res.json(rows[0]);
   } catch (err) {
@@ -505,14 +606,14 @@ router.post('/companies/:realmId/statements', async (req, res) => {
   }
 });
 
-// Update a statement account
+// PUT /api/companies/:realmId/statements/:id — update fields
 router.put('/companies/:realmId/statements/:id', async (req, res) => {
   try {
     const { realmId, id } = req.params;
     const firmId = req.firm?.id;
     if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
 
-    const { account_name, institution, access_method, statement_day, notes, client_name, contact_email } = req.body;
+    const { account_name, institution, access_method, statement_day, notes, status, client_name, contact_email, qb_account_id } = req.body;
     const { rows } = await pool.query(
       `UPDATE statement_schedules SET
          account_name = COALESCE($1, account_name),
@@ -521,10 +622,11 @@ router.put('/companies/:realmId/statements/:id', async (req, res) => {
          statement_day = COALESCE($4, statement_day),
          notes = COALESCE($5, notes),
          client_name = COALESCE($6, client_name),
-         contact_email = COALESCE($7, contact_email)
-       WHERE id = $8 AND realm_id = $9
+         contact_email = COALESCE($7, contact_email),
+         qb_account_id = COALESCE($8, qb_account_id)
+       WHERE id = $9 AND realm_id = $10
        RETURNING *`,
-      [account_name, institution, access_method, statement_day, notes, client_name, contact_email, id, realmId]
+      [account_name, institution, access_method, statement_day, notes, client_name, contact_email, qb_account_id, id, realmId]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(rows[0]);
@@ -533,7 +635,45 @@ router.put('/companies/:realmId/statements/:id', async (req, res) => {
   }
 });
 
-// Delete a statement account
+// POST /api/companies/:realmId/statements/:id/retrieve — mark retrieved for current month
+router.post('/companies/:realmId/statements/:id/retrieve', async (req, res) => {
+  try {
+    const { realmId, id } = req.params;
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
+
+    const month = currentPeriod();
+
+    const { rows: schedRows } = await pool.query(
+      'SELECT id FROM statement_schedules WHERE id = $1 AND realm_id = $2',
+      [id, realmId]
+    );
+    if (schedRows.length === 0) return res.status(404).json({ error: 'Statement account not found' });
+
+    const { rows } = await pool.query(
+      `INSERT INTO statement_monthly_status (schedule_id, realm_id, month, status, received_at, updated_at)
+       VALUES ($1, $2, $3, 'received', NOW(), NOW())
+       ON CONFLICT (schedule_id, month) DO UPDATE SET
+         status = 'received',
+         received_at = COALESCE(statement_monthly_status.received_at, NOW()),
+         updated_at = NOW()
+       RETURNING *`,
+      [id, realmId, month]
+    );
+
+    // Also update statement_schedules for convenience
+    await pool.query(
+      `UPDATE statement_schedules SET status = 'received', received_at = NOW(), current_month = $3 WHERE id = $1 AND realm_id = $2`,
+      [id, realmId, month]
+    );
+
+    res.json({ ok: true, month, status: rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/companies/:realmId/statements/:id — delete an account
 router.delete('/companies/:realmId/statements/:id', async (req, res) => {
   try {
     const { realmId, id } = req.params;
@@ -551,56 +691,49 @@ router.delete('/companies/:realmId/statements/:id', async (req, res) => {
   }
 });
 
-// Import from QBO — pull Bank/CC/Loan accounts
+// Legacy: import from QBO (kept for backwards compat)
 router.post('/companies/:realmId/statements/import-qbo', async (req, res) => {
   try {
     const { realmId } = req.params;
     const firmId = req.firm?.id;
     if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
 
-    const accounts = await getChartOfAccounts(realmId);
-
-    // Filter for bank, credit card, and loan-related accounts
-    const loanSubTypes = ['LineOfCredit', 'LoanPayable', 'NotesPayable', 'OtherCurrentLiabilities', 'Trust', 'Vehicle', 'Equipment'];
-    const relevant = accounts.filter(a => {
+    const allAccounts = await getChartOfAccounts(realmId);
+    const relevantTypes = ['Bank', 'Credit Card', 'Long Term Liability', 'Other Current Liability'];
+    const relevantSubTypes = ['Checking', 'Savings', 'MoneyMarket', 'LineOfCredit', 'Loan', 'CreditCard',
+      'LoanPayable', 'NotesPayable', 'OtherCurrentLiabilities', 'Trust', 'Vehicle', 'Equipment'];
+    const relevant = allAccounts.filter(a => {
       const type = a.AccountType || '';
       const subType = a.AccountSubType || '';
-      if (type === 'Bank') return true;
-      if (type === 'Credit Card') return true;
-      if (type === 'Long Term Liability') return true;
-      if (type === 'Other Current Liability' && loanSubTypes.includes(subType)) return true;
-      return false;
+      return relevantTypes.includes(type) || relevantSubTypes.includes(subType);
     });
 
     let imported = 0;
-    let skipped = 0;
     for (const acct of relevant) {
       const accountName = acct.FullyQualifiedName || acct.Name;
-      const accessMethod = acct.AccountType === 'Bank' ? 'portal' : acct.AccountType === 'Credit Card' ? 'portal' : 'portal';
+      const qbId = String(acct.Id || '');
       try {
         await pool.query(
-          `INSERT INTO statement_schedules (realm_id, client_name, account_name, institution, access_method)
-           VALUES ($1, '', $2, '', $3)
-           ON CONFLICT (realm_id, account_name) DO NOTHING`,
-          [realmId, accountName, accessMethod]
+          `INSERT INTO statement_schedules (realm_id, client_name, account_name, institution, access_method, qb_account_id)
+           VALUES ($1, '', $2, '', 'qbo_pull', $3)
+           ON CONFLICT (realm_id, account_name) DO UPDATE SET qb_account_id = COALESCE(NULLIF(EXCLUDED.qb_account_id,''), statement_schedules.qb_account_id)`,
+          [realmId, accountName, qbId]
         );
         imported++;
-      } catch (e) {
-        skipped++;
-      }
+      } catch (e) { /* skip */ }
     }
 
     const { rows } = await pool.query(
       'SELECT * FROM statement_schedules WHERE realm_id = $1 ORDER BY account_name ASC',
       [realmId]
     );
-    res.json({ ok: true, imported, skipped, accounts: rows });
+    res.json({ ok: true, imported, accounts: rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Get all accounts + monthly status for a given month
+// Legacy: get monthly status (kept for compat)
 router.get('/companies/:realmId/statements/monthly', async (req, res) => {
   try {
     const { realmId } = req.params;
@@ -608,7 +741,6 @@ router.get('/companies/:realmId/statements/monthly', async (req, res) => {
     if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
 
     const month = req.query.month || currentPeriod();
-
     const { rows } = await pool.query(
       `SELECT ss.*,
          COALESCE(sms.status, 'pending') AS monthly_status,
@@ -628,7 +760,7 @@ router.get('/companies/:realmId/statements/monthly', async (req, res) => {
   }
 });
 
-// Update monthly status for a specific account+month
+// Legacy: update monthly status for a specific account+month
 router.put('/companies/:realmId/statements/:id/monthly/:month', async (req, res) => {
   try {
     const { realmId, id, month } = req.params;
@@ -637,7 +769,6 @@ router.put('/companies/:realmId/statements/:id/monthly/:month', async (req, res)
 
     const { status, notes } = req.body;
 
-    // Verify the schedule belongs to this realm
     const { rows: schedRows } = await pool.query(
       'SELECT id FROM statement_schedules WHERE id = $1 AND realm_id = $2',
       [id, realmId]

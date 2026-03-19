@@ -167,6 +167,12 @@ async function initDB() {
     WHEN duplicate_object THEN NULL;
     END $$;
 
+    -- Add qb_account_id column if not exists
+    DO $$ BEGIN
+      ALTER TABLE statement_schedules ADD COLUMN qb_account_id TEXT DEFAULT '';
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$;
+
     CREATE TABLE IF NOT EXISTS statement_monthly_status (
       id SERIAL PRIMARY KEY,
       schedule_id INTEGER NOT NULL REFERENCES statement_schedules(id) ON DELETE CASCADE,
