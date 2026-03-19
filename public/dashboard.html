@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <title>Dashboard — DarkLion v2</title>
+  <title>Dashboard — DarkLion</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -141,8 +141,12 @@
 
     /* Close Package table — fixed layout to prevent column drift */
     #sec-close-package table { table-layout: fixed; width: 100%; }
-    #sec-close-package th, #sec-close-package td { padding: 0.5rem 0.6rem; font-size: 0.78rem; }
+    #sec-close-package th,
+    #sec-close-package td { padding: 0.5rem 0.6rem; font-size: 0.78rem; }
     #sec-close-package th { white-space: nowrap; }
+    /* Data columns: center-align headers and cells identically */
+    #sec-close-package th.amount,
+    #sec-close-package td.amount { text-align: center; }
     .report-section { margin-top: 1.5rem; }
     .report-section h3 { font-size: 0.88rem; margin-bottom: 0.75rem; }
     .report-section .table-wrap { margin-bottom: 1rem; }
@@ -175,12 +179,12 @@
     .date-range-row label { font-size: 0.78rem; font-weight: 600; color: var(--muted); }
     .date-range-row input[type="date"] { background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.82rem; }
     .period-year-label { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
-    .period-actions { display: flex; gap: 0.5rem; align-items: center; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
-    .period-actions .selected-label { flex: 1; font-size: 0.82rem; color: var(--muted); }
+    .period-actions { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .period-actions .selected-label { flex: 1; font-size: 0.82rem; color: var(--muted); min-width: 0; }
     .period-actions .selected-label strong { color: var(--gold); }
-    .display-toggle { display: flex; align-items: center; gap: 0.5rem; margin-right: 0.5rem; }
-    .display-toggle label { font-size: 0.75rem; color: var(--muted); cursor: pointer; }
-    .display-toggle input { accent-color: var(--gold); }
+    .display-toggle { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+    .display-toggle label { font-size: 0.78rem; color: var(--muted); cursor: pointer; white-space: nowrap; }
+    .display-toggle input { accent-color: var(--gold); cursor: pointer; }
 
     /* Toast */
     .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--charcoal); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem 1.5rem; font-size: 0.85rem; color: var(--text); box-shadow: 0 8px 30px rgba(0,0,0,0.4); transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 200; }
@@ -1409,91 +1413,6 @@
       } catch(e) {}
     }
 
-    // --- Client Summary ---
-    async function loadClientSummary() {
-      if (!currentRealm) return;
-      const company = companies.find(c => c.realm_id === currentRealm);
-      if (qs('#cs-subtitle')) qs('#cs-subtitle').textContent = (company?.company_name || currentRealm) + ' — health overview';
-
-      let uncatData = null, varData = null, liabData = null, payData = null, pkgData = null;
-      try {
-        const [uncatResp, varResp, liabResp, payResp, pkgResp] = await Promise.allSettled([
-          apiFetch('/api/companies/'+currentRealm+'/scans').then(r => r.ok ? r.json() : null),
-          apiFetch('/api/companies/'+currentRealm+'/scans?type=variance').then(r => r.ok ? r.json() : null),
-          apiFetch('/api/companies/'+currentRealm+'/scans?type=liability').then(r => r.ok ? r.json() : null),
-          apiFetch('/api/companies/'+currentRealm+'/scans?type=payroll').then(r => r.ok ? r.json() : null),
-          apiFetch('/api/companies/'+currentRealm+'/close-packages').then(r => r.ok ? r.json() : null),
-        ]);
-        const scans = uncatResp.value;
-        if (Array.isArray(scans)) {
-          const u = scans.find(s => s.scan_type === 'uncategorized');
-          if (u?.result_data) uncatData = typeof u.result_data === 'string' ? JSON.parse(u.result_data) : u.result_data;
-        }
-        if (varResp.value?.result_data) varData = typeof varResp.value.result_data === 'string' ? JSON.parse(varResp.value.result_data) : varResp.value.result_data;
-        if (liabResp.value?.result_data) liabData = typeof liabResp.value.result_data === 'string' ? JSON.parse(liabResp.value.result_data) : liabResp.value.result_data;
-        if (payResp.value?.result_data) payData = typeof payResp.value.result_data === 'string' ? JSON.parse(payResp.value.result_data) : payResp.value.result_data;
-        const pkgs = pkgResp.value;
-        if (Array.isArray(pkgs) && pkgs.length > 0) {
-          const rd = typeof pkgs[0].report_data === 'string' ? JSON.parse(pkgs[0].report_data) : pkgs[0].report_data;
-          pkgData = { pkg: pkgs[0], rd };
-        }
-      } catch(e) {}
-
-      // Build alerts
-      const alerts = [];
-      const uncatCount = uncatData?.summary?.flaggedCount || 0;
-      const varCount = varData?.summary?.flaggedCount || 0;
-      const liabCount = liabData?.summary?.flaggedCount || 0;
-      const payCount = payData?.summary?.mismatchCount || 0;
-      const disconnected = company?.token_status === 'disconnected';
-
-      if (disconnected) alerts.push({ icon: '🔌', text: 'QuickBooks connection is disconnected' });
-      if (uncatCount > 0) alerts.push({ icon: '🏷️', text: uncatCount + ' uncategorized transaction flag'+(uncatCount>1?'s':'') });
-      if (varCount > 0) alerts.push({ icon: '📊', text: varCount + ' P&L variance flag'+(varCount>1?'s':'') });
-      if (liabCount > 0) alerts.push({ icon: '⚠️', text: liabCount + ' liability issue'+(liabCount>1?'s':'') });
-      if (payCount > 0) alerts.push({ icon: '💰', text: payCount + ' payroll mismatch'+(payCount>1?'es':'') });
-
-      const panel = qs('#cs-alerts-panel');
-      const list = qs('#cs-alerts-list');
-      if (alerts.length === 0) {
-        panel.className = 'alert-panel all-clear';
-        panel.querySelector('.alert-panel-header').innerHTML = '<span>✓</span> All Clear — No issues found';
-        list.innerHTML = '';
-      } else {
-        panel.className = 'alert-panel has-alerts';
-        panel.querySelector('.alert-panel-header').innerHTML = '<span>⚠</span> '+alerts.length+' issue'+(alerts.length>1?'s':'')+' need attention';
-        list.innerHTML = alerts.map(a => '<div class="alert-item"><span class="alert-icon">'+a.icon+'</span><span>'+esc(a.text)+'</span></div>').join('');
-      }
-
-      // Health score
-      let score = 100;
-      if (disconnected) score -= 40;
-      score -= Math.min(uncatCount * 3, 20);
-      score -= Math.min(varCount * 3, 15);
-      score -= Math.min(liabCount * 5, 20);
-      score -= Math.min(payCount * 5, 15);
-      score = Math.max(0, Math.min(100, score));
-      const gaugeColor = score >= 80 ? 'var(--green)' : score >= 50 ? 'var(--orange)' : 'var(--red)';
-      const gaugeEl = qs('#cs-gauge');
-      if (gaugeEl) { gaugeEl.style.setProperty('--score', score); gaugeEl.style.setProperty('--gauge-color', gaugeColor); }
-      if (qs('#cs-gauge-value')) qs('#cs-gauge-value').textContent = score;
-
-      // Quick stats
-      const statColor = n => n === 0 ? 'var(--green)' : 'var(--red)';
-      if (qs('#cs-stat-uncat')) { qs('#cs-stat-uncat').textContent = uncatCount; qs('#cs-stat-uncat').style.color = statColor(uncatCount); }
-      if (qs('#cs-stat-var')) { qs('#cs-stat-var').textContent = varCount; qs('#cs-stat-var').style.color = statColor(varCount); }
-      if (qs('#cs-stat-liab')) { qs('#cs-stat-liab').textContent = liabCount; qs('#cs-stat-liab').style.color = statColor(liabCount); }
-      if (qs('#cs-stat-pay')) { qs('#cs-stat-pay').textContent = payCount === 0 && !payData ? '—' : payCount; qs('#cs-stat-pay').style.color = payCount > 0 ? 'var(--red)' : 'var(--green)'; }
-
-      // Mini P&L
-      const miniEl = qs('#cs-mini-pnl');
-      if (pkgData?.rd?.pnl) {
-        miniEl.innerHTML = '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.5rem;">Period: <strong style="color:var(--gold);">'+esc(pkgData.rd.period || pkgData.pkg.period)+'</strong></div>' + renderQBReport(pkgData.rd.pnl);
-      } else {
-        miniEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No close package data yet. Generate a close package first.</div>';
-      }
-    }
-
     // ===== LIABILITY =====
     async function runLiabilityScan() {
       qs('#liab-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Scanning liability accounts…</div>';
@@ -1559,16 +1478,10 @@
     function renderClosePackageBody(rd, pkg) {
       if (!rd) return '<div style="color:var(--muted);padding:1rem;">No report data available.</div>';
       let html = '';
-      html += '<div class="table-wrap" style="margin-bottom:0.75rem;"><table><thead><tr><th>Item</th><th>Status</th><th>Details</th></tr></thead><tbody>';
-      for (const item of (rd.checklist||[])) {
-        const badge = item.status==='ok'?'badge-ok':item.status==='warning'?'badge-warning':'badge-pending';
-        const label = item.status==='ok'?'OK':item.status==='warning'?'Warning':item.status==='missing'?'Missing':'Not Run';
-        html += '<tr><td style="font-weight:600;">'+esc(item.item)+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td style="color:var(--muted);">'+(item.flagCount!==undefined?item.flagCount+' flags':'')+'</td></tr>';
-      }
-      html += '</tbody></table></div>';
       if (rd.pnl) html += '<div class="report-section"><h3>Profit & Loss</h3>'+renderQBReport(rd.pnl)+'</div>';
       if (rd.balanceSheet) html += '<div class="report-section"><h3>Balance Sheet</h3>'+renderQBReport(rd.balanceSheet)+'</div>';
       if (rd.trialBalance) html += '<div class="report-section"><h3>Trial Balance</h3>'+renderQBReport(rd.trialBalance)+'</div>';
+      if (!rd.pnl && !rd.balanceSheet && !rd.trialBalance) html += '<div style="color:var(--muted);padding:1rem;text-align:center;">No report data available.</div>';
       html += '<div style="margin-top:0.75rem;text-align:right;"><span class="badge badge-pending" style="font-size:0.75rem;padding:0.2rem 0.6rem;">'+esc(pkg.status||'draft')+'</span></div>';
       return html;
     }
@@ -1581,18 +1494,18 @@
 
       const columns = report.Columns?.Column || [];
       const colCount = Math.max(columns.length, 2);
+      const dataCols = colCount - 1;
 
-      // Calculate column widths
-      const firstColPct = colCount <= 2 ? 60 : 50;
-      const restPct = (100 - firstColPct) / Math.max(colCount - 1, 1);
+      // Name col: 60% for 2 cols, 40% for 3-4, 30% for 5-8, 25% for 9+
+      const firstColPct = dataCols <= 1 ? 60 : dataCols <= 3 ? 40 : dataCols <= 7 ? 30 : 25;
+      const restPct = (100 - firstColPct) / dataCols;
 
       let html = '<div class="table-wrap"><table style="table-layout:fixed;width:100%;">';
 
-      // Colgroup for fixed widths
       html += '<colgroup>';
       html += `<col style="width:${firstColPct}%">`;
-      for (let i = 1; i < colCount; i++) {
-        html += `<col style="width:${restPct.toFixed(1)}%">`;
+      for (let i = 0; i < dataCols; i++) {
+        html += `<col style="width:${restPct.toFixed(2)}%">`;
       }
       html += '</colgroup>';
 
