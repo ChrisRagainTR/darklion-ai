@@ -2651,7 +2651,8 @@
       let html = '<table class="drilldown-table">';
       html += '<thead><tr><th>Date</th><th>Type</th><th>Name</th><th>Memo</th><th class="dd-amount">Amount</th><th></th></tr></thead><tbody>';
       ddTransactions.forEach((t, i) => {
-        const amt = t.amount >= 0 ? '$' + t.amount.toLocaleString(undefined, {minimumFractionDigits:2}) : '<span style="color:var(--red);">($' + Math.abs(t.amount).toLocaleString(undefined, {minimumFractionDigits:2}) + ')</span>';
+        const rawAmt = t.amount == null ? 0 : Number(t.amount);
+        const amt = rawAmt >= 0 ? '$' + rawAmt.toLocaleString(undefined, {minimumFractionDigits:2}) : '<span style="color:var(--red);">($' + Math.abs(rawAmt).toLocaleString(undefined, {minimumFractionDigits:2}) + ')</span>';
         html += `<tr id="ddr-${i}">
           <td style="white-space:nowrap;">${esc(t.date)}</td>
           <td style="color:var(--muted);">${esc(t.type)}</td>
