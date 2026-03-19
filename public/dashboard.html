@@ -582,17 +582,32 @@
     .btn-icon:hover { color: var(--red); }
     .stmt-add-row { padding: 0.6rem 0.75rem; border-top: 1px solid var(--border); background: rgba(0,0,0,0.1); }
 
-    /* Calendar view */
+    /* Badge variants */
+    .badge-green { background: rgba(62,207,142,0.12); color: #3ecf8e; }
+    .badge-orange { background: rgba(249,115,22,0.12); color: #f97316; }
+
+    /* Calendar grid */
+    .cal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
+    .cal-day-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.75rem; min-height: 60px; }
+    .cal-day-card.cal-day-has-items { border-color: rgba(201,168,76,0.3); }
+    .cal-day-num { font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-bottom: 0.35rem; }
+    .cal-day-has-items .cal-day-num { color: var(--gold); }
+    .cal-item { display: flex; align-items: flex-start; gap: 0.35rem; font-size: 0.74rem; margin-bottom: 0.3rem; line-height: 1.3; }
+    .cal-item:last-child { margin-bottom: 0; }
+    .cal-item-dot { flex-shrink: 0; padding-top: 0.05rem; }
+    .cal-item-text { flex: 1; }
+    .cal-company { color: var(--gold); font-weight: 600; }
+    .cal-sep { color: var(--muted); }
+    .cal-account { color: var(--text); }
+    .cal-method { color: var(--muted); }
+    .btn-cal-retrieve { background: transparent; border: 1px solid rgba(62,207,142,0.4); color: #3ecf8e; border-radius: 4px; cursor: pointer; font-size: 0.7rem; padding: 0.1rem 0.3rem; flex-shrink: 0; transition: background 0.15s; }
+    .btn-cal-retrieve:hover { background: rgba(62,207,142,0.15); }
+
+    /* Legacy calendar styles (kept for compat) */
     .cal-day-block { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1rem; overflow: hidden; }
     .cal-day-header { padding: 0.7rem 1.2rem; background: rgba(201,168,76,0.06); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; }
-    .cal-day-num { font-size: 1.4rem; font-weight: 900; color: var(--gold); min-width: 2rem; text-align: center; }
     .cal-day-label { font-size: 0.78rem; color: var(--muted); }
     .cal-items { padding: 0.25rem 0; }
-    .cal-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1.2rem; border-bottom: 1px solid rgba(201,168,76,0.05); font-size: 0.82rem; }
-    .cal-item:last-child { border-bottom: none; }
-    .cal-company { color: var(--muted); font-size: 0.75rem; min-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cal-account { flex: 1; font-weight: 600; }
-    .cal-method { font-size: 0.72rem; color: var(--muted); min-width: 80px; }
     .cal-status { min-width: 90px; text-align: right; }
   </style>
 </head>
@@ -2784,140 +2799,133 @@
 
     // ===== STATEMENTS =====
     // current month helper (YYYY-MM)
+    // ===== STATEMENTS (per-client) =====
+
     function stmtCurrentMonth() {
       const d = new Date();
       return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
     }
 
-    // Init default month pickers
-    function initStmtMonthPickers() {
-      const cur = stmtCurrentMonth();
-      const mp = qs('#stmt-month-picker');
-      const cp = qs('#cal-month-picker');
-      if (mp && !mp.value) mp.value = cur;
-      if (cp && !cp.value) cp.value = cur;
-    }
+    const METHOD_LABELS = {
+      qbo_pull: 'QBO Pull', portal: 'Portal Download', manual: 'Manual Download',
+      email: 'Email', client_upload: 'Client Upload',
+      qbo: 'QBO Pull', client: 'Client Upload' // legacy compat
+    };
 
     async function loadStatementsView() {
-      const month = qs('#stmt-month-picker').value || stmtCurrentMonth();
-      const listEl = qs('#stmt-companies-list');
-      listEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div>';
+      if (!currentRealm) {
+        qs('#stmt-table-wrap').innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Select a client to view statements.</div>';
+        qs('#stmt-page-title').textContent = 'Statements';
+        qs('#stmt-subtitle').textContent = '';
+        qs('#stmt-summary').style.display = 'none';
+        return;
+      }
+
+      const month = stmtCurrentMonth();
+      const company = companies.find(c => c.realm_id === currentRealm);
+      qs('#stmt-page-title').textContent = 'Statements — ' + (company?.company_name || currentRealm);
+      qs('#stmt-subtitle').textContent = month;
+
+      const wrapEl = qs('#stmt-table-wrap');
+      wrapEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div>';
       qs('#stmt-summary').style.display = 'none';
 
       try {
-        // Load all companies then their monthly statements
-        const allCompanies = companies; // already loaded
-        if (!allCompanies.length) {
-          listEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No companies connected.</div>';
-          return;
-        }
+        const res = await apiFetch('/api/companies/' + currentRealm + '/statements/accounts?month=' + encodeURIComponent(month));
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
 
-        // Load statements for each company in parallel
-        const results = await Promise.all(allCompanies.map(async c => {
+        const accounts = data.accounts || [];
+
+        // Auto-save new QBO accounts that haven't been saved yet
+        const newAccounts = accounts.filter(a => a._new && !a.id);
+        for (const a of newAccounts) {
           try {
-            const res = await apiFetch('/api/companies/' + c.realm_id + '/statements/monthly?month=' + encodeURIComponent(month));
-            const data = await res.json();
-            return { company: c, accounts: data.accounts || [], month: data.month };
-          } catch(e) {
-            return { company: c, accounts: [], month, error: e.message };
-          }
-        }));
+            const saveRes = await apiFetch('/api/companies/' + currentRealm + '/statements', {
+              method: 'POST',
+              body: JSON.stringify({
+                account_name: a.account_name, institution: '', access_method: 'qbo_pull',
+                statement_day: 1, qb_account_id: a.qb_account_id || ''
+              })
+            });
+            if (saveRes.ok) {
+              const saved = await saveRes.json();
+              a.id = saved.id;
+              a._new = false;
+            }
+          } catch(e) { /* skip */ }
+        }
 
         // Stats
-        let totalAccounts = 0, totalPending = 0, totalRequested = 0, totalReceived = 0, totalUploaded = 0;
-        for (const r of results) {
-          for (const a of r.accounts) {
-            totalAccounts++;
-            const s = a.monthly_status || 'pending';
-            if (s === 'pending') totalPending++;
-            else if (s === 'requested') totalRequested++;
-            else if (s === 'received') totalReceived++;
-            else if (s === 'uploaded') totalUploaded++;
-          }
+        let total = 0, pending = 0, received = 0;
+        for (const a of accounts) {
+          total++;
+          const s = a.monthly_status || 'pending';
+          if (s === 'pending') pending++;
+          else if (s === 'received' || s === 'uploaded') received++;
         }
-
-        if (totalAccounts > 0) {
+        const pct = total > 0 ? Math.round(received / total * 100) : 0;
+        if (total > 0) {
           qs('#stmt-summary').style.display = '';
           qs('#stmt-stats-grid').innerHTML = `
-            <div class="stat-card"><div class="stat-label">Total Accounts</div><div class="stat-value">${totalAccounts}</div></div>
-            <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value" style="color:var(--muted);">${totalPending}</div></div>
-            <div class="stat-card"><div class="stat-label">Requested</div><div class="stat-value orange">${totalRequested}</div></div>
-            <div class="stat-card"><div class="stat-label">Received</div><div class="stat-value green">${totalReceived}</div></div>
-            <div class="stat-card"><div class="stat-label">Uploaded</div><div class="stat-value gold">${totalUploaded}</div></div>
+            <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${total}</div></div>
+            <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value orange">${pending}</div></div>
+            <div class="stat-card"><div class="stat-label">Retrieved</div><div class="stat-value green">${received}</div></div>
+            <div class="stat-card"><div class="stat-label">Complete</div><div class="stat-value">${pct}%</div></div>
           `;
         }
 
-        // Render company sections
-        listEl.innerHTML = results.map(r => renderStmtCompanySection(r, month)).join('');
+        wrapEl.innerHTML = renderStmtTable(accounts, currentRealm, month);
 
       } catch(e) {
-        listEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: ' + esc(e.message) + '</div>';
+        wrapEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: ' + esc(e.message) + '</div>';
       }
     }
 
-    function renderStmtCompanySection(r, month) {
-      const cid = r.company.realm_id.replace(/[^a-z0-9]/gi, '_');
-      const hasAccounts = r.accounts.length > 0;
-      const name = esc(r.company.company_name || r.company.realm_id);
-
-      let html = `<div class="stmt-company-section" id="stmtsec-${cid}">`;
-      html += `<div class="stmt-company-header" onclick="toggleStmtSection('${cid}')">
-        <h3>🏢 ${name}</h3>
-        <div style="display:flex;gap:0.5rem;align-items:center;">
-          <span style="font-size:0.75rem;color:var(--muted);">${r.accounts.length} account${r.accounts.length !== 1 ? 's' : ''}</span>
-          <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();importQboStatements('${r.company.realm_id}','${month}')">↓ Import QBO</button>
-          <button class="btn btn-gold btn-sm" onclick="event.stopPropagation();showAddAccountForm('${r.company.realm_id}','${cid}','${month}')">+ Add Account</button>
-        </div>
-        <span class="sch-arrow">▼</span>
-      </div>`;
-
-      html += `<div class="stmt-company-body" id="stmtbody-${cid}">`;
-      if (hasAccounts) {
-        html += renderStmtTable(r.accounts, r.company.realm_id, month, cid);
-      } else {
-        html += `<div style="padding:1.2rem;text-align:center;color:var(--muted);font-size:0.85rem;">No accounts yet. Import from QBO or add manually.</div>`;
+    function renderStmtTable(accounts, realmId, month) {
+      if (!accounts.length) {
+        return '<div style="text-align:center;padding:2rem;color:var(--muted);">No accounts found. Add one manually or wait for QBO accounts to appear.</div>';
       }
-      html += `</div></div>`;
-      return html;
-    }
 
-    function renderStmtTable(accounts, realmId, month, cid) {
-      const rid = realmId.replace(/[^a-z0-9]/gi, '_');
       let html = `<table class="stmt-table">
         <thead><tr>
-          <th>Account Name</th>
-          <th>Institution</th>
-          <th>Source</th>
-          <th>Avail. Day</th>
-          <th>Status (${month})</th>
-          <th>Notes</th>
-          <th></th>
+          <th>Account</th>
+          <th>Type</th>
+          <th>Method</th>
+          <th>Statement Day</th>
+          <th>Status</th>
+          <th>Actions</th>
         </tr></thead><tbody>`;
 
       for (const a of accounts) {
-        const statusCls = 'status-' + (a.monthly_status || 'pending');
+        const status = a.monthly_status || 'pending';
+        const isReceived = status === 'received' || status === 'uploaded';
+        const typeLabel = [a.accountType, a.accountSubType].filter(Boolean).join(' / ') || (a._manual ? 'Manual' : '—');
+
+        let statusCell;
+        if (isReceived) {
+          const dt = a.monthly_received_at ? new Date(a.monthly_received_at).toLocaleDateString() : '';
+          statusCell = `<span class="badge badge-green">✅ Retrieved${dt ? ' ' + dt : ''}</span>`;
+        } else {
+          statusCell = `<span class="badge badge-orange">Pending</span>
+            <button class="btn btn-outline btn-sm" style="margin-left:0.4rem;" onclick="markStmtRetrieved('${realmId}',${a.id},this)">Mark Retrieved</button>`;
+        }
+
+        const methodSel = Object.entries(METHOD_LABELS).filter(([k]) => !['qbo','client'].includes(k)).map(([k,v]) =>
+          `<option value="${k}"${(a.access_method||'qbo_pull')===k?' selected':''}>${v}</option>`
+        ).join('');
+
         html += `<tr id="stmtrow-${a.id}">
-          <td><input class="stmt-input stmt-name-input" value="${esc(a.account_name)}" data-field="account_name" onchange="updateStmtField('${realmId}',${a.id},this)" title="${esc(a.account_name)}"></td>
-          <td><input class="stmt-input stmt-inst-input" value="${esc(a.institution || '')}" placeholder="Bank name" data-field="institution" onchange="updateStmtField('${realmId}',${a.id},this)"></td>
+          <td style="font-weight:500;">${esc(a.account_name)}</td>
+          <td style="font-size:0.78rem;color:var(--muted);">${esc(typeLabel)}</td>
           <td>
-            <select class="stmt-select" onchange="updateStmtField('${realmId}',${a.id},this)" data-field="access_method">
-              <option value="qbo"${a.access_method==='qbo'?' selected':''}>QBO Pull</option>
-              <option value="portal"${a.access_method==='portal'?' selected':''}>Portal</option>
-              <option value="client"${a.access_method==='client'?' selected':''}>Client Request</option>
-              <option value="manual"${a.access_method==='manual'?' selected':''}>Manual</option>
+            <select class="stmt-select" onchange="updateStmtMethod('${realmId}',${a.id},this)">
+              ${methodSel}
             </select>
           </td>
-          <td><input class="stmt-input stmt-day-input" type="number" min="1" max="31" value="${a.statement_day || 1}" data-field="statement_day" onchange="updateStmtField('${realmId}',${a.id},this)"></td>
-          <td>
-            <select class="stmt-select ${statusCls}" id="stmtstatus-${a.id}" onchange="updateMonthlyStatus('${realmId}',${a.id},'${month}',this)">
-              <option value="pending"${(a.monthly_status||'pending')==='pending'?' selected':''}>⬜ Pending</option>
-              <option value="requested"${a.monthly_status==='requested'?' selected':''}>📤 Requested</option>
-              <option value="received"${a.monthly_status==='received'?' selected':''}>✅ Received</option>
-              <option value="uploaded"${a.monthly_status==='uploaded'?' selected':''}>☁️ Uploaded</option>
-            </select>
-          </td>
-          <td><input class="stmt-input stmt-notes-input" value="${esc(a.monthly_notes || a.notes || '')}" placeholder="Notes…" data-field="notes" onchange="updateStmtMonthlyNotes('${realmId}',${a.id},'${month}',this)"></td>
-          <td><button class="btn-icon" onclick="deleteStmtAccount('${realmId}',${a.id},'${cid}','${month}')" title="Delete">🗑</button></td>
+          <td><input class="stmt-input stmt-day-input" type="number" min="1" max="31" value="${a.statement_day || 1}" style="width:60px;" onblur="updateStmtDay('${realmId}',${a.id},this)"></td>
+          <td>${statusCell}</td>
+          <td>${a._manual ? `<button class="btn-icon" onclick="deleteStmtAccount('${realmId}',${a.id})" title="Delete">🗑</button>` : ''}</td>
         </tr>`;
       }
 
@@ -2925,169 +2933,129 @@
       return html;
     }
 
-    function toggleStmtSection(cid) {
-      const header = qs('#stmtsec-' + cid + ' .stmt-company-header');
-      const body = qs('#stmtbody-' + cid);
-      if (!header || !body) return;
-      header.classList.toggle('collapsed');
-      body.classList.toggle('hidden');
-    }
-
-    async function updateStmtField(realmId, id, inputEl) {
-      const field = inputEl.dataset.field;
-      const value = inputEl.value;
+    async function updateStmtMethod(realmId, id, selectEl) {
       try {
-        const body = {};
-        body[field] = field === 'statement_day' ? parseInt(value) : value;
-        const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id, { method: 'PUT', body: JSON.stringify(body) });
+        const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id, {
+          method: 'PUT', body: JSON.stringify({ access_method: selectEl.value })
+        });
         if (!res.ok) throw new Error((await res.json()).error);
-        // Update status select class if applicable
-        if (field === 'status') {
-          inputEl.className = 'stmt-select status-' + value;
-        }
       } catch(e) {
         toast('Save failed: ' + e.message);
       }
     }
 
-    async function updateMonthlyStatus(realmId, id, month, selectEl) {
-      const status = selectEl.value;
-      selectEl.className = 'stmt-select status-' + status;
+    async function updateStmtDay(realmId, id, inputEl) {
+      const day = parseInt(inputEl.value) || 1;
+      inputEl.value = Math.max(1, Math.min(31, day));
       try {
-        const notesEl = qs('#stmtrow-' + id + ' .stmt-notes-input');
-        const notes = notesEl ? notesEl.value : '';
-        const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id + '/monthly/' + month, {
-          method: 'PUT', body: JSON.stringify({ status, notes })
-        });
-        if (!res.ok) throw new Error((await res.json()).error);
-        toast('Status updated');
-      } catch(e) {
-        toast('Update failed: ' + e.message);
-      }
-    }
-
-    async function updateStmtMonthlyNotes(realmId, id, month, inputEl) {
-      try {
-        const statusEl = qs('#stmtstatus-' + id);
-        const status = statusEl ? statusEl.value : 'pending';
-        const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id + '/monthly/' + month, {
-          method: 'PUT', body: JSON.stringify({ status, notes: inputEl.value })
+        const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id, {
+          method: 'PUT', body: JSON.stringify({ statement_day: parseInt(inputEl.value) })
         });
         if (!res.ok) throw new Error((await res.json()).error);
       } catch(e) {
-        toast('Notes save failed: ' + e.message);
+        toast('Save failed: ' + e.message);
       }
     }
 
-    async function deleteStmtAccount(realmId, id, cid, month) {
+    async function markStmtRetrieved(realmId, id, btn) {
+      btn.disabled = true;
+      btn.textContent = '…';
+      try {
+        const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id + '/retrieve', { method: 'POST', body: '{}' });
+        if (!res.ok) throw new Error((await res.json()).error);
+        // Update row inline
+        const row = qs('#stmtrow-' + id);
+        if (row) {
+          const statusCell = row.querySelector('td:nth-child(5)');
+          if (statusCell) {
+            const dt = new Date().toLocaleDateString();
+            statusCell.innerHTML = `<span class="badge badge-green">✅ Retrieved ${dt}</span>`;
+          }
+        }
+        toast('Marked as retrieved');
+      } catch(e) {
+        btn.disabled = false;
+        btn.textContent = 'Mark Retrieved';
+        toast('Failed: ' + e.message);
+      }
+    }
+
+    async function deleteStmtAccount(realmId, id) {
       if (!confirm('Delete this statement account?')) return;
       try {
         const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id, { method: 'DELETE' });
         if (!res.ok) throw new Error((await res.json()).error);
         toast('Account deleted');
-        // Reload just this company section
-        await refreshStmtCompanySection(realmId, cid, month);
+        await loadStatementsView();
       } catch(e) {
         toast('Delete failed: ' + e.message);
       }
     }
 
-    async function importQboStatements(realmId, month) {
-      toast('Importing from QBO…');
-      try {
-        const res = await apiFetch('/api/companies/' + realmId + '/statements/import-qbo', { method: 'POST', body: '{}' });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-        toast(`Imported ${data.imported} account(s)`);
-        const cid = realmId.replace(/[^a-z0-9]/gi, '_');
-        await refreshStmtCompanySection(realmId, cid, month);
-      } catch(e) {
-        toast('Import failed: ' + e.message);
-      }
+    function showStmtAddForm() {
+      qs('#stmt-add-form').style.display = '';
+      qs('#stmt-new-name')?.focus();
     }
 
-    async function refreshStmtCompanySection(realmId, cid, month) {
-      try {
-        const res = await apiFetch('/api/companies/' + realmId + '/statements/monthly?month=' + encodeURIComponent(month));
-        const data = await res.json();
-        const company = companies.find(c => c.realm_id === realmId) || { realm_id: realmId, company_name: realmId };
-        const sectionEl = qs('#stmtsec-' + cid);
-        if (sectionEl) {
-          const bodyEl = qs('#stmtbody-' + cid);
-          if (bodyEl) {
-            bodyEl.innerHTML = data.accounts.length
-              ? renderStmtTable(data.accounts, realmId, month, cid)
-              : '<div style="padding:1.2rem;text-align:center;color:var(--muted);font-size:0.85rem;">No accounts yet.</div>';
-          }
-          // Update count
-          const countEl = sectionEl.querySelector('.stmt-company-header span');
-          if (countEl) countEl.textContent = data.accounts.length + ' account' + (data.accounts.length !== 1 ? 's' : '');
-        }
-      } catch(e) { /* ignore */ }
+    function hideStmtAddForm() {
+      qs('#stmt-add-form').style.display = 'none';
+      if (qs('#stmt-new-name')) qs('#stmt-new-name').value = '';
+      if (qs('#stmt-new-inst')) qs('#stmt-new-inst').value = '';
+      if (qs('#stmt-new-day')) qs('#stmt-new-day').value = '1';
     }
 
-    function showAddAccountForm(realmId, cid, month) {
-      const bodyEl = qs('#stmtbody-' + cid);
-      if (!bodyEl) return;
-
-      // Remove existing add form if any
-      const existing = qs('#stmt-add-form-' + cid);
-      if (existing) { existing.remove(); return; }
-
-      const form = document.createElement('div');
-      form.id = 'stmt-add-form-' + cid;
-      form.className = 'stmt-add-row';
-      form.innerHTML = `
-        <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
-          <input class="stmt-input" id="add-name-${cid}" placeholder="Account name *" style="width:180px;">
-          <input class="stmt-input" id="add-inst-${cid}" placeholder="Institution" style="width:150px;">
-          <select class="stmt-select" id="add-method-${cid}">
-            <option value="qbo">QBO Pull</option>
-            <option value="portal" selected>Portal</option>
-            <option value="client">Client Request</option>
-            <option value="manual">Manual</option>
-          </select>
-          <input class="stmt-input stmt-day-input" type="number" id="add-day-${cid}" placeholder="Day" value="1" min="1" max="31">
-          <button class="btn btn-gold btn-sm" onclick="saveNewAccount('${realmId}','${cid}','${month}')">Save</button>
-          <button class="btn btn-outline btn-sm" onclick="qs('#stmt-add-form-${cid}').remove()">Cancel</button>
-        </div>
-      `;
-      bodyEl.appendChild(form);
-      qs('#add-name-' + cid)?.focus();
-    }
-
-    async function saveNewAccount(realmId, cid, month) {
-      const nameEl = qs('#add-name-' + cid);
-      const instEl = qs('#add-inst-' + cid);
-      const methodEl = qs('#add-method-' + cid);
-      const dayEl = qs('#add-day-' + cid);
-      const name = nameEl?.value.trim();
+    async function saveNewStmtAccount() {
+      if (!currentRealm) { toast('Select a client first'); return; }
+      const name = qs('#stmt-new-name')?.value.trim();
       if (!name) { toast('Account name is required'); return; }
+      const institution = qs('#stmt-new-inst')?.value.trim() || '';
+      const method = qs('#stmt-new-method')?.value || 'portal';
+      const day = parseInt(qs('#stmt-new-day')?.value || 1);
 
       try {
-        const res = await apiFetch('/api/companies/' + realmId + '/statements', {
+        const res = await apiFetch('/api/companies/' + currentRealm + '/statements', {
           method: 'POST',
-          body: JSON.stringify({
-            account_name: name,
-            institution: instEl?.value.trim() || '',
-            access_method: methodEl?.value || 'portal',
-            statement_day: parseInt(dayEl?.value || 1),
-          })
+          body: JSON.stringify({ account_name: name, institution, access_method: method, statement_day: day })
         });
         if (!res.ok) throw new Error((await res.json()).error);
         toast('Account added');
-        qs('#stmt-add-form-' + cid)?.remove();
-        await refreshStmtCompanySection(realmId, cid, month);
+        hideStmtAddForm();
+        await loadStatementsView();
       } catch(e) {
         toast('Add failed: ' + e.message);
       }
     }
 
-    // ===== STATEMENTS CALENDAR =====
+    // ===== STATEMENTS CALENDAR (firm-wide) =====
+
+    let calCurrentMonth = stmtCurrentMonth();
+
+    function initCalendarView() {
+      if (!calCurrentMonth) calCurrentMonth = stmtCurrentMonth();
+      qs('#cal-month-display').textContent = calMonthLabel(calCurrentMonth);
+      loadCalendarView();
+    }
+
+    function calMonthLabel(ym) {
+      const [y, m] = ym.split('-');
+      const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      return (months[parseInt(m)-1] || m) + ' ' + y;
+    }
+
+    function calChangeMonth(delta) {
+      const [y, m] = calCurrentMonth.split('-').map(Number);
+      const d = new Date(y, m - 1 + delta, 1);
+      calCurrentMonth = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+      qs('#cal-month-display').textContent = calMonthLabel(calCurrentMonth);
+      loadCalendarView();
+    }
+
     async function loadCalendarView() {
-      const month = qs('#cal-month-picker').value || stmtCurrentMonth();
+      const month = calCurrentMonth || stmtCurrentMonth();
       const bodyEl = qs('#stmt-calendar-body');
+      const statsEl = qs('#cal-stats');
       bodyEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading calendar…</div>';
+      statsEl.style.display = 'none';
 
       try {
         const res = await apiFetch('/api/statements/calendar?month=' + encodeURIComponent(month));
@@ -3095,41 +3063,77 @@
         if (data.error) throw new Error(data.error);
 
         const byDay = data.byDay || {};
-        const days = Object.keys(byDay).map(Number).sort((a,b) => a-b);
+        const allItems = Object.values(byDay).flat();
+        const total = allItems.length;
+        const retrieved = allItems.filter(i => i.monthly_status === 'received' || i.monthly_status === 'uploaded').length;
+        const pending = total - retrieved;
+        const pct = total > 0 ? Math.round(retrieved / total * 100) : 0;
 
-        if (days.length === 0) {
-          bodyEl.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">No statement accounts configured for any company.</div>';
-          return;
+        if (total > 0) {
+          statsEl.style.display = '';
+          qs('#cal-stats-grid').innerHTML = `
+            <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${total}</div></div>
+            <div class="stat-card"><div class="stat-label">Retrieved</div><div class="stat-value green">${retrieved}</div></div>
+            <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value orange">${pending}</div></div>
+            <div class="stat-card"><div class="stat-label">Complete</div><div class="stat-value">${pct}%</div></div>
+          `;
         }
 
-        const methodLabels = { qbo: 'QBO Pull', portal: 'Portal', client: 'Client', manual: 'Manual' };
-
-        let html = '';
-        for (const day of days) {
-          const items = byDay[day];
-          const ordinal = day + (day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th');
-          html += `<div class="cal-day-block">
-            <div class="cal-day-header">
-              <div class="cal-day-num">${ordinal}</div>
-              <div class="cal-day-label">of month · ${items.length} account${items.length !== 1 ? 's' : ''}</div>
-            </div>
-            <div class="cal-items">`;
-          for (const item of items) {
-            const status = item.monthly_status || 'pending';
-            const statusLabel = { pending:'⬜ Pending', requested:'📤 Requested', received:'✅ Received', uploaded:'☁️ Uploaded' }[status] || status;
-            const badgeCls = 'badge badge-stmt-' + status;
-            html += `<div class="cal-item">
-              <span class="cal-company">${esc(item.company_name || item.realm_id)}</span>
-              <span class="cal-account">${esc(item.account_name)}</span>
-              <span class="cal-method">${esc(methodLabels[item.access_method] || item.access_method || 'Portal')}</span>
-              <span class="cal-status"><span class="${badgeCls}">${statusLabel}</span></span>
-            </div>`;
+        // Build day grid 1-31
+        let html = '<div class="cal-grid">';
+        for (let day = 1; day <= 31; day++) {
+          const items = byDay[day] || [];
+          const hasItems = items.length > 0;
+          html += `<div class="cal-day-card${hasItems ? ' cal-day-has-items' : ''}">
+            <div class="cal-day-num">${day}</div>`;
+          if (hasItems) {
+            for (const item of items) {
+              const status = item.monthly_status || 'pending';
+              const isRetrieved = status === 'received' || status === 'uploaded';
+              const dot = isRetrieved
+                ? `<span style="color:#22c55e;font-size:0.9rem;" title="Retrieved">●</span>`
+                : `<span style="color:#f97316;font-size:0.9rem;" title="Pending">●</span>`;
+              const method = METHOD_LABELS[item.access_method] || item.access_method || '—';
+              html += `<div class="cal-item" id="calitem-${item.id}">
+                <span class="cal-item-dot">${dot}</span>
+                <span class="cal-item-text">
+                  <span class="cal-company">${esc(item.company_name || item.realm_id)}</span>
+                  <span class="cal-sep"> — </span>
+                  <span class="cal-account">${esc(item.account_name)}</span>
+                  <span class="cal-sep"> — </span>
+                  <span class="cal-method">${esc(method)}</span>
+                </span>
+                ${!isRetrieved ? `<button class="btn-cal-retrieve" title="Mark retrieved" onclick="calMarkRetrieved('${item.realm_id}',${item.id},${day})">✓</button>` : ''}
+              </div>`;
+            }
           }
-          html += `</div></div>`;
+          html += `</div>`;
         }
+        html += '</div>';
+
         bodyEl.innerHTML = html;
       } catch(e) {
         bodyEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: ' + esc(e.message) + '</div>';
+      }
+    }
+
+    async function calMarkRetrieved(realmId, id, day) {
+      try {
+        const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id + '/retrieve', { method: 'POST', body: '{}' });
+        if (!res.ok) throw new Error((await res.json()).error);
+        // Update dot inline
+        const itemEl = qs('#calitem-' + id);
+        if (itemEl) {
+          const dotEl = itemEl.querySelector('.cal-item-dot');
+          if (dotEl) dotEl.innerHTML = `<span style="color:#22c55e;font-size:0.9rem;" title="Retrieved">●</span>`;
+          const btn = itemEl.querySelector('.btn-cal-retrieve');
+          if (btn) btn.remove();
+        }
+        toast('Marked as retrieved');
+        // Refresh stats
+        loadCalendarView();
+      } catch(e) {
+        toast('Failed: ' + e.message);
       }
     }
 
