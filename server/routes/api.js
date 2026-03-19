@@ -397,7 +397,10 @@ router.get('/companies/:realmId/transactions/drilldown', async (req, res) => {
       return res.status(400).json({ error: 'account, startDate, and endDate are required' });
     }
 
-    const endpoint = `/reports/TransactionList?start_date=${startDate}&end_date=${endDate}&account_name=${encodeURIComponent(account)}&minorversion=75`;
+    // QBO TransactionList: filter by account name (exact match on account name)
+    // Requesting explicit columns so we get consistent ordering regardless of QBO defaults
+    const columns = 'tx_date,txn_type,doc_num,name,memo,split_acc,subt_nat_amount';
+    const endpoint = `/reports/TransactionList?start_date=${startDate}&end_date=${endDate}&account_name=${encodeURIComponent(account)}&columns=${columns}&minorversion=75`;
     const data = await qbFetch(req.params.realmId, endpoint);
 
     // Parse QBO TransactionList report — read column headers dynamically

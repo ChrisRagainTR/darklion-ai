@@ -2046,6 +2046,15 @@
       const colCount = Math.max(columns.length, 2);
       const dataCols = colCount - 1;
 
+      // Extract per-column date ranges from QBO column MetaData
+      // QBO stores StartDate/EndDate in each column's MetaData array
+      const colDates = columns.map(col => {
+        const meta = col.MetaData || [];
+        const start = meta.find(m => m.Name === 'StartDate')?.Value || '';
+        const end   = meta.find(m => m.Name === 'EndDate')?.Value   || '';
+        return { start, end };
+      });
+
       // Name col: 60% for 2 cols, 40% for 3-4, 30% for 5-8, 25% for 9+
       const firstColPct = dataCols <= 1 ? 60 : dataCols <= 3 ? 40 : dataCols <= 7 ? 30 : 25;
       const restPct = (100 - firstColPct) / dataCols;
@@ -2070,12 +2079,12 @@
       html += '</tr></thead>';
 
       html += '<tbody>';
-      html += renderReportRows(report.Rows.Row, 0, colCount);
+      html += renderReportRows(report.Rows.Row, 0, colCount, colDates);
       html += '</tbody></table></div>';
       return html;
     }
 
-    function renderReportRows(rows, depth, colCount) {
+    function renderReportRows(rows, depth, colCount, colDates) {
       let html = '';
       for (const row of rows) {
         if (row.type === 'Section' || row.group) {
@@ -2086,16 +2095,16 @@
             for (let i = 1; i < colCount; i++) html += '<td class="amount"></td>';
             html += '</tr>';
           }
-          if (row.Rows?.Row) html += renderReportRows(row.Rows.Row, depth + 1, colCount);
-          if (row.Summary?.ColData) html += renderDataRow(row.Summary.ColData, depth, true, colCount);
+          if (row.Rows?.Row) html += renderReportRows(row.Rows.Row, depth + 1, colCount, colDates);
+          if (row.Summary?.ColData) html += renderDataRow(row.Summary.ColData, depth, true, colCount, colDates);
         } else if (row.ColData) {
-          html += renderDataRow(row.ColData, depth, false, colCount);
+          html += renderDataRow(row.ColData, depth, false, colCount, colDates);
         }
       }
       return html;
     }
 
-    function renderDataRow(colData, depth, isTotal, colCount) {
+    function renderDataRow(colData, depth, isTotal, colCount, colDates) {
       const cls = isTotal ? ' class="report-row-total"' : '';
       let html = `<tr${cls}>`;
       for (let i = 0; i < colCount; i++) {
@@ -2106,7 +2115,15 @@
         } else {
           const num = parseFloat(val);
           const display = isNaN(num) ? esc(val) : formatCurrency(num);
-          html += `<td class="amount" style="${isTotal ? 'font-weight:700;' : ''}">${display}</td>`;
+          // Use per-column dates from QBO metadata; fall back to cpSelection for single-period reports
+          const colDate = colDates?.[i] || {};
+          const sDate = colDate.start || cpSelection?.startDate || '';
+          const eDate = colDate.end   || cpSelection?.endDate   || '';
+          const accountName = colData[0]?.value || '';
+          const drillable = !isNaN(num) && num !== 0 && sDate && eDate && !isTotal ? ' drillable' : '';
+          const drillAttr = drillable
+            ? ` data-account="${esc(accountName)}" data-start="${esc(sDate)}" data-end="${esc(eDate)}" onclick="openDrilldown('${esc(accountName)}','${esc(sDate)}','${esc(eDate)}')"` : '';
+          html += `<td class="amount${drillable}"${drillAttr} style="${isTotal ? 'font-weight:700;' : ''}">${display}</td>`;
         }
       }
       html += '</tr>';
@@ -2823,31 +2840,6 @@
         toast('Recode failed: ' + e.message);
         if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
       }
-    }
-
-    // Override renderDataRow to make amount cells drillable
-    function renderDataRow(colData, depth, isTotal, colCount, startDate, endDate) {
-      // If startDate/endDate passed, make amount cells drillable
-      const cls = isTotal ? ' class="report-row-total"' : '';
-      let html = `<tr${cls}>`;
-      const sDate = startDate || cpSelection?.startDate || '';
-      const eDate = endDate || cpSelection?.endDate || '';
-      for (let i = 0; i < colCount; i++) {
-        const val = colData[i]?.value ?? '';
-        if (i === 0) {
-          const pad = (depth * 1.2) + 1;
-          html += `<td style="padding-left:${pad}rem;${isTotal ? 'font-weight:700;' : ''}">${esc(val)}</td>`;
-        } else {
-          const num = parseFloat(val);
-          const display = isNaN(num) ? esc(val) : formatCurrency(num);
-          const accountName = colData[0]?.value || '';
-          const drillable = !isNaN(num) && num !== 0 && sDate && eDate && !isTotal ? ' drillable' : '';
-          const drillAttr = drillable ? ` data-account="${esc(accountName)}" data-start="${esc(sDate)}" data-end="${esc(eDate)}" onclick="openDrilldown('${esc(accountName)}','${esc(sDate)}','${esc(eDate)}')"` : '';
-          html += `<td class="amount${drillable}"${drillAttr} style="${isTotal ? 'font-weight:700;' : ''}">${display}</td>`;
-        }
-      }
-      html += '</tr>';
-      return html;
     }
 
     // ===== HELPERS =====
