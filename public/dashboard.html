@@ -2862,24 +2862,25 @@
       if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
 
       try {
+        console.log('[recode] sending:', { txnId: t.txnId, txnType: t.type, newAccount });
         const res = await apiFetch('/api/companies/' + currentRealm + '/transactions/recode', {
           method: 'POST',
           body: JSON.stringify({ txnId: t.txnId, txnType: t.type, newAccount }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
+        if (!res.ok) throw new Error(data.error || JSON.stringify(data));
 
-        // Update the row visually
-        ddTransactions[idx] = { ...t, split: newAccount };
-        qs('#ddr-recode-' + idx).style.display = 'none';
+        // Update the row visually — remove from list since it moved accounts
+        ddTransactions.splice(idx, 1);
+        const recodeRow = qs('#ddr-recode-' + idx);
         const origRow = qs('#ddr-' + idx);
-        if (origRow) {
-          const cells = origRow.querySelectorAll('td');
-          // Show success indicator
-          const recode = origRow.querySelector('.btn-recode');
-          if (recode) recode.innerHTML = '✅ ' + esc(newAccount.split(':').pop());
-        }
-        toast('Transaction recoded to ' + newAccount);
+        if (recodeRow) recodeRow.remove();
+        if (origRow) origRow.remove();
+
+        toast('✅ Recoded to ' + newAccount.split(':').pop() + ' — refreshing report…');
+
+        // Reload the current section so report reflects the change
+        setTimeout(() => reloadCurrentSection(), 1500);
       } catch (e) {
         toast('Recode failed: ' + e.message);
         if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
