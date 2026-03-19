@@ -2054,6 +2054,8 @@
         const end   = meta.find(m => m.Name === 'EndDate')?.Value   || '';
         return { start, end };
       });
+      // Debug: log first few colDates so we can verify QBO is returning per-col metadata
+      console.log('[DL] colDates sample:', colDates.slice(1, 4));
 
       // Name col: 60% for 2 cols, 40% for 3-4, 30% for 5-8, 25% for 9+
       const firstColPct = dataCols <= 1 ? 60 : dataCols <= 3 ? 40 : dataCols <= 7 ? 30 : 25;
@@ -2122,7 +2124,7 @@
           const accountName = colData[0]?.value || '';
           const drillable = !isNaN(num) && num !== 0 && sDate && eDate && !isTotal ? ' drillable' : '';
           const drillAttr = drillable
-            ? ` data-account="${esc(accountName)}" data-start="${esc(sDate)}" data-end="${esc(eDate)}" onclick="openDrilldown('${esc(accountName)}','${esc(sDate)}','${esc(eDate)}')"` : '';
+            ? ` data-account="${esc(accountName)}" data-start="${esc(sDate)}" data-end="${esc(eDate)}" onclick="openDrilldown('${esc(accountName)}','${esc(sDate)}','${esc(eDate)}','${display.replace(/['"<>]/g,'')}')"` : '';
           html += `<td class="amount${drillable}"${drillAttr} style="${isTotal ? 'font-weight:700;' : ''}">${display}</td>`;
         }
       }
@@ -2693,11 +2695,11 @@
     let ddEndDate = null;
     let ddTransactions = [];
 
-    function openDrilldown(account, startDate, endDate) {
+    function openDrilldown(account, startDate, endDate, amount) {
       ddCurrentAccount = account;
       ddStartDate = startDate;
       ddEndDate = endDate;
-      qs('#dd-account-name').textContent = account;
+      qs('#dd-account-name').textContent = account + (amount ? ' — ' + amount : '');
       qs('#dd-period').textContent = startDate + ' to ' + endDate;
       qs('#drilldown-body').innerHTML = '<div class="drilldown-loading">Loading transactions…</div>';
       qs('#drilldown-overlay').classList.add('open');
