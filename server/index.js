@@ -87,6 +87,7 @@ const apiLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false }, // suppress ERR_ERL_PERMISSIVE_TRUST_PROXY — we trust Railway's proxy
   message: { error: 'Too many requests. Please slow down.' },
   skip: (req) => req.path === '/health',
 });

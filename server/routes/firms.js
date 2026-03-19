@@ -17,6 +17,7 @@ const loginLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false },
   message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
 });
 
@@ -25,6 +26,7 @@ const registerLimiter = rateLimit({
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false },
   message: { error: 'Too many registration attempts. Please try again later.' },
 });
 
