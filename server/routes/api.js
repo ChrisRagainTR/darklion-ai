@@ -6,11 +6,13 @@ const { scanVariance } = require('../services/variance');
 const { scanLiabilities } = require('../services/liability');
 const { verifyPayroll } = require('../services/payroll');
 const { auditLog } = require('./firms');
+const { getChartOfAccounts, qbFetch, writeBackTransaction } = require('../services/quickbooks');
 
 const router = Router();
 
-// Helper: verify realm belongs to this firm
-async function assertRealmOwner(firmId, realmId, res) {
+// Helper: verify realm belongs to this firm AND user has access (via firm_user_companies)
+async function assertRealmOwner(firmId, realmId, res, userId) {
+  // Check firm owns the company
   const { rows } = await pool.query(
     'SELECT realm_id FROM companies WHERE realm_id = $1 AND (firm_id = $2 OR firm_id IS NULL)',
     [realmId, firmId]
@@ -19,26 +21,65 @@ async function assertRealmOwner(firmId, realmId, res) {
     res.status(403).json({ error: 'Access denied to this company' });
     return false;
   }
+
+  // Check per-user company restriction (if userId present)
+  if (userId) {
+    const { rows: accessRows } = await pool.query(
+      'SELECT id FROM firm_user_companies WHERE firm_user_id = $1',
+      [userId]
+    );
+    // If user has specific company restrictions, check if this realm is allowed
+    if (accessRows.length > 0) {
+      const { rows: allowed } = await pool.query(
+        'SELECT id FROM firm_user_companies WHERE firm_user_id = $1 AND realm_id = $2',
+        [userId, realmId]
+      );
+      if (allowed.length === 0) {
+        res.status(403).json({ error: 'Access denied to this company' });
+        return false;
+      }
+    }
+    // If no rows → unrestricted access to all firm companies
+  }
+
   return true;
+}
+
+// Helper: get allowed realm IDs for a user (empty array = all)
+async function getUserAllowedRealms(userId) {
+  if (!userId) return null; // no restriction
+  const { rows } = await pool.query(
+    'SELECT realm_id FROM firm_user_companies WHERE firm_user_id = $1',
+    [userId]
+  );
+  return rows.length > 0 ? rows.map(r => r.realm_id) : null; // null = unrestricted
 }
 
 // --- Dashboard data ---
 
-// List connected companies scoped to this firm
+// List connected companies scoped to this firm (filtered by user access)
 router.get('/companies', async (req, res) => {
   const firmId = req.firm?.id;
+  const userId = req.firm?.userId || null;
   let query, params;
 
   if (firmId) {
     query = 'SELECT realm_id, company_name, connected_at, last_sync_at, token_expires_at, refresh_token, gusto_access_token, gusto_company_id FROM companies WHERE firm_id = $1 ORDER BY company_name ASC';
     params = [firmId];
   } else {
-    // Fallback: show all (dev mode / no JWT)
     query = 'SELECT realm_id, company_name, connected_at, last_sync_at, token_expires_at, refresh_token, gusto_access_token, gusto_company_id FROM companies ORDER BY company_name ASC';
     params = [];
   }
 
-  const { rows } = await pool.query(query, params);
+  let { rows } = await pool.query(query, params);
+
+  // Filter by per-user company access if applicable
+  if (userId && firmId) {
+    const allowedRealms = await getUserAllowedRealms(userId);
+    if (allowedRealms !== null) {
+      rows = rows.filter(r => allowedRealms.includes(r.realm_id));
+    }
+  }
   const now = Date.now();
   const { refreshTokens } = require('./auth');
 
@@ -76,7 +117,7 @@ router.delete('/companies/:realmId', async (req, res) => {
     const { realmId } = req.params;
     const firmId = req.firm?.id;
 
-    if (firmId && !(await assertRealmOwner(firmId, realmId, res))) return;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
 
     // Get company name for audit log
     const { rows: [comp] } = await pool.query('SELECT company_name FROM companies WHERE realm_id = $1', [realmId]);
@@ -102,7 +143,7 @@ router.delete('/companies/:realmId', async (req, res) => {
 router.post('/companies/:realmId/scan/uncategorized', async (req, res) => {
   try {
     const firmId = req.firm?.id;
-    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res, req.firm?.userId))) return;
 
     const result = await scanUncategorized(req.params.realmId);
     await auditLog(firmId, 'scan_uncategorized', `Realm: ${req.params.realmId}, flags: ${result.summary.flaggedCount}`, req.ip);
@@ -116,7 +157,7 @@ router.post('/companies/:realmId/scan/uncategorized', async (req, res) => {
 router.post('/companies/:realmId/scan/variance', async (req, res) => {
   try {
     const firmId = req.firm?.id;
-    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res, req.firm?.userId))) return;
 
     const { year, month, thresholdPct, thresholdAmt } = req.body || {};
     const result = await scanVariance(req.params.realmId, { year, month, thresholdPct, thresholdAmt });
@@ -131,7 +172,7 @@ router.post('/companies/:realmId/scan/variance', async (req, res) => {
 router.post('/companies/:realmId/scan/payroll', async (req, res) => {
   try {
     const firmId = req.firm?.id;
-    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res, req.firm?.userId))) return;
 
     const { year, month } = req.body || {};
     const result = await verifyPayroll(req.params.realmId, { year, month });
@@ -146,7 +187,7 @@ router.post('/companies/:realmId/scan/payroll', async (req, res) => {
 router.get('/companies/:realmId/employees/metadata', async (req, res) => {
   try {
     const firmId = req.firm?.id;
-    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res, req.firm?.userId))) return;
 
     const { rows } = await pool.query(
       'SELECT employee_uuid, employee_name, is_officer FROM employee_metadata WHERE realm_id = $1',
@@ -162,7 +203,7 @@ router.post('/companies/:realmId/employees/:employeeUuid/officer', async (req, r
   try {
     const { realmId, employeeUuid } = req.params;
     const firmId = req.firm?.id;
-    if (firmId && !(await assertRealmOwner(firmId, realmId, res))) return;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
 
     const { is_officer, employee_name } = req.body;
     await pool.query(`
@@ -183,7 +224,7 @@ router.post('/companies/:realmId/employees/:employeeUuid/officer', async (req, r
 router.post('/companies/:realmId/scan/liability', async (req, res) => {
   try {
     const firmId = req.firm?.id;
-    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res, req.firm?.userId))) return;
 
     const result = await scanLiabilities(req.params.realmId);
     await auditLog(firmId, 'scan_liability', `Realm: ${req.params.realmId}, flags: ${result.summary?.flaggedCount || 0}`, req.ip);
@@ -197,7 +238,7 @@ router.post('/companies/:realmId/scan/liability', async (req, res) => {
 router.get('/companies/:realmId/scans', async (req, res) => {
   try {
     const firmId = req.firm?.id;
-    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res, req.firm?.userId))) return;
 
     const { type } = req.query;
     if (type) {
@@ -222,7 +263,7 @@ router.get('/companies/:realmId/scans', async (req, res) => {
 router.post('/companies/:realmId/close-package', async (req, res) => {
   try {
     const firmId = req.firm?.id;
-    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res, req.firm?.userId))) return;
 
     const { startDate, endDate, period, label, byMonth } = req.body;
     const realmId = req.params.realmId;
@@ -259,7 +300,7 @@ router.post('/companies/:realmId/close-package', async (req, res) => {
 router.get('/companies/:realmId/close-packages', async (req, res) => {
   try {
     const firmId = req.firm?.id;
-    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res, req.firm?.userId))) return;
 
     const { rows } = await pool.query(
       'SELECT id, period, status, report_data, generated_at FROM close_packages WHERE realm_id = $1 ORDER BY generated_at DESC',
@@ -274,7 +315,7 @@ router.get('/companies/:realmId/close-packages', async (req, res) => {
 router.get('/companies/:realmId/close-packages/:id', async (req, res) => {
   try {
     const firmId = req.firm?.id;
-    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res, req.firm?.userId))) return;
 
     const { rows } = await pool.query(
       'SELECT * FROM close_packages WHERE id = $1 AND realm_id = $2',
@@ -290,7 +331,7 @@ router.get('/companies/:realmId/close-packages/:id', async (req, res) => {
 router.put('/companies/:realmId/close-packages/:id', async (req, res) => {
   try {
     const firmId = req.firm?.id;
-    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res))) return;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res, req.firm?.userId))) return;
 
     const { status, reviewer_notes } = req.body;
     const updates = [];
@@ -322,5 +363,99 @@ function currentPeriod() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
+
+// --- Chart of Accounts ---
+router.get('/companies/:realmId/accounts', async (req, res) => {
+  try {
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res, req.firm?.userId))) return;
+
+    const accounts = await getChartOfAccounts(req.params.realmId);
+    // Return simplified structure grouped by type
+    const simplified = accounts.map(a => ({
+      id: a.Id,
+      name: a.Name,
+      fullName: a.FullyQualifiedName || a.Name,
+      type: a.AccountType,
+      subType: a.AccountSubType,
+      active: a.Active !== false,
+    }));
+    res.json(simplified);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Transaction Drill-Down ---
+router.get('/companies/:realmId/transactions/drilldown', async (req, res) => {
+  try {
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res, req.firm?.userId))) return;
+
+    const { account, startDate, endDate } = req.query;
+    if (!account || !startDate || !endDate) {
+      return res.status(400).json({ error: 'account, startDate, and endDate are required' });
+    }
+
+    const endpoint = `/reports/TransactionList?start_date=${startDate}&end_date=${endDate}&account_name=${encodeURIComponent(account)}&minorversion=75`;
+    const data = await qbFetch(req.params.realmId, endpoint);
+
+    // Parse QBO TransactionList report
+    const report = data.QueryData || data;
+    const rows = data.Rows?.Row || [];
+    const transactions = [];
+
+    function parseRows(rowArr) {
+      for (const row of rowArr) {
+        if (row.type === 'Section' && row.Rows?.Row) {
+          parseRows(row.Rows.Row);
+        } else if (row.ColData) {
+          const cols = row.ColData;
+          // QBO TransactionList columns: Date, TxnType, DocNum, Name, Memo/Description, Split, Amount, TxnId
+          const txn = {
+            date: cols[0]?.value || '',
+            type: cols[1]?.value || '',
+            num: cols[2]?.value || '',
+            name: cols[3]?.value || '',
+            memo: cols[4]?.value || '',
+            split: cols[5]?.value || '',
+            amount: parseFloat(cols[6]?.value || '0'),
+            txnId: cols[7]?.value || (cols[0]?.id || ''),
+          };
+          if (txn.date) transactions.push(txn);
+        }
+      }
+    }
+    parseRows(rows);
+
+    res.json(transactions);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Transaction Recode ---
+router.post('/companies/:realmId/transactions/recode', async (req, res) => {
+  try {
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, req.params.realmId, res, req.firm?.userId))) return;
+
+    const { txnId, txnType, newAccount } = req.body;
+    if (!txnId || !newAccount) return res.status(400).json({ error: 'txnId and newAccount are required' });
+
+    await writeBackTransaction(req.params.realmId, txnId, newAccount);
+
+    await auditLog(
+      firmId,
+      'transaction_recode',
+      `Realm: ${req.params.realmId}, txnId: ${txnId}, type: ${txnType || 'Purchase'}, account: ${newAccount}`,
+      req.ip
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;

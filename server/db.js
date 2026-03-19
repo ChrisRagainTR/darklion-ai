@@ -171,6 +171,35 @@ async function initDB() {
       UNIQUE(realm_id, employee_uuid),
       FOREIGN KEY (realm_id) REFERENCES companies(realm_id)
     );
+
+    -- ===================== FIRM USERS (multi-user per firm) =====================
+    CREATE TABLE IF NOT EXISTS firm_users (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+      name TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL,
+      password_hash TEXT,
+      role TEXT NOT NULL DEFAULT 'admin' CHECK(role IN ('owner','admin')),
+      invite_token TEXT UNIQUE,
+      invite_expires_at TIMESTAMPTZ,
+      accepted_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      last_login_at TIMESTAMPTZ,
+      UNIQUE(firm_id, email)
+    );
+
+    CREATE TABLE IF NOT EXISTS firm_user_companies (
+      id SERIAL PRIMARY KEY,
+      firm_user_id INTEGER NOT NULL REFERENCES firm_users(id) ON DELETE CASCADE,
+      realm_id TEXT NOT NULL,
+      UNIQUE(firm_user_id, realm_id)
+    );
+
+    -- Migrate existing firm owners into firm_users (idempotent)
+    INSERT INTO firm_users (firm_id, name, email, password_hash, role, accepted_at)
+    SELECT id, name, email, password_hash, 'owner', NOW()
+    FROM firms
+    ON CONFLICT (firm_id, email) DO NOTHING;
   `);
 }
 

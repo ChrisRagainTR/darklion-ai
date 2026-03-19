@@ -147,6 +147,9 @@ app.get('/terms', (req, res) => res.sendFile(path.join(publicDir, 'terms.html'))
 app.get('/login', (req, res) => res.sendFile(path.join(publicDir, 'login.html')));
 app.get('/register', (req, res) => res.sendFile(path.join(publicDir, 'register.html')));
 
+// --- Invite page (public) ---
+app.get('/invite/:token', (req, res) => res.sendFile(path.join(publicDir, 'invite.html')));
+
 // --- Dashboard (JWT auth; falls back to Basic Auth for dev) ---
 // Note: the HTML page itself is served publicly; the page JS will redirect if no token
 app.get('/dashboard', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
@@ -166,13 +169,15 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// --- Firms routes (register/login are public; /me requires JWT) ---
-// /firms/me needs requireFirm before the router
-app.get('/firms/me', requireFirm, (req, res) => {
-  const { pool } = require('./db');
-  pool.query('SELECT id, name, email, plan, created_at FROM firms WHERE id = $1', [req.firm.id])
-    .then(({ rows }) => rows[0] ? res.json(rows[0]) : res.status(404).json({ error: 'Firm not found' }))
-    .catch(() => res.status(500).json({ error: 'Failed to fetch firm info' }));
+// --- Firms routes ---
+// Public invite lookup endpoints
+app.get('/firms/invite-lookup/:token', (req, res) => {
+  req.url = '/invite-lookup/' + req.params.token;
+  firmsRouter(req, res, () => {});
+});
+app.post('/firms/invite-lookup/:token/accept', (req, res) => {
+  req.url = '/invite-lookup/' + req.params.token + '/accept';
+  firmsRouter(req, res, () => {});
 });
 app.use('/firms', firmsRouter);
 

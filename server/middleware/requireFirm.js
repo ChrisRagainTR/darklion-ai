@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { pool } = require('../db');
 
 function requireFirm(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -9,7 +10,15 @@ function requireFirm(req, res, next) {
   const token = authHeader.slice(7);
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.firm = payload; // { id, email, name }
+
+    // Support both old JWT format { id, email, name } and new { firmId, userId, role, email, name }
+    const firmId = payload.firmId || payload.id;
+    const userId = payload.userId || null;
+    const role = payload.role || 'owner';
+    const email = payload.email;
+    const name = payload.name;
+
+    req.firm = { id: firmId, userId, role, email, name };
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
