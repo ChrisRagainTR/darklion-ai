@@ -2272,8 +2272,8 @@
       const secName = activeSection.id.replace('sec-', '');
       try {
         if (secName === 'uncategorized') await loadLatestUncategorized();
-        else if (secName === 'close-package') await loadLatestClosePackage();
-        else if (secName === 'variance') await loadLatestVariance();
+        else if (secName === 'close-package') await generateClosePackage(); // force fresh from QBO
+        else if (secName === 'variance') await runVarianceScan(); // force fresh from QBO
         else if (secName === 'liability') await loadLatestLiability();
         else if (secName === 'payroll') initPayrollSection();
         else if (secName === 'client-summary') await loadClientSummary();
@@ -2880,10 +2880,11 @@
         if (recodeRow) recodeRow.remove();
         if (origRow) origRow.remove();
 
-        toast('✅ Recoded to ' + newAccount.split(':').pop() + ' — refreshing report…');
+        toast('✅ Recoded to ' + newAccount.split(':').pop() + ' — refreshing…');
+        closeDrilldown();
 
-        // Reload the current section so report reflects the change
-        setTimeout(() => reloadCurrentSection(), 1500);
+        // Force fresh regenerate from QBO so numbers update immediately
+        setTimeout(() => reloadCurrentSection(), 800);
       } catch (e) {
         toast('Recode failed: ' + e.message);
         if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
