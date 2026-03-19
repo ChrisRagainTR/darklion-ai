@@ -2880,10 +2880,9 @@
         if (recodeRow) recodeRow.remove();
         if (origRow) origRow.remove();
 
-        toast('✅ Recoded to ' + newAccount.split(':').pop() + ' — refreshing…');
-        closeDrilldown();
+        toast('✅ Recoded to ' + newAccount.split(':').pop() + ' — P&L refreshing in background…');
 
-        // Force fresh regenerate from QBO so numbers update immediately
+        // Refresh the report in background without closing drawer
         setTimeout(() => reloadCurrentSection(), 800);
       } catch (e) {
         toast('Recode failed: ' + e.message);
