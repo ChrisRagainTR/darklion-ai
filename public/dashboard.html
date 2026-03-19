@@ -2946,7 +2946,7 @@
         return '<div style="text-align:center;padding:2rem;color:var(--muted);">No accounts found. Add one manually or wait for QBO accounts to appear.</div>';
       }
 
-      let html = `<table class="stmt-table">
+      let html = `<div class="table-wrap"><table class="stmt-table">
         <thead><tr>
           <th>Account</th>
           <th>Type</th>
@@ -3000,7 +3000,7 @@
         </tr>`;
       }
 
-      html += `</tbody></table>`;
+      html += `</tbody></table></div>`;
       return html;
     }
 
