@@ -638,7 +638,7 @@
 // =====================================================================
 //  STATE
 // =====================================================================
-const token = localStorage.getItem('token');
+const token = localStorage.getItem('dl_token');
 let allRelationships = [];
 let allPeople = [];
 let allCompanies = [];
@@ -1511,7 +1511,7 @@ function showFormError(elId, msg) {
 }
 
 function logout() {
-  localStorage.removeItem('token');
+  localStorage.removeItem('dl_token');
   window.location.href = '/login';
 }
 </script>
