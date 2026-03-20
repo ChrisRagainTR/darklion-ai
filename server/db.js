@@ -520,6 +520,12 @@ async function initDB() {
       ALTER TABLE pipeline_stages ADD COLUMN IF NOT EXISTS auto_message TEXT DEFAULT '';
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
+
+    -- Team member credentials (e.g. CPA/PFS, CFP)
+    DO $$ BEGIN
+      ALTER TABLE firm_users ADD COLUMN IF NOT EXISTS credentials TEXT DEFAULT '';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
   `);
 }
 

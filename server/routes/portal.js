@@ -265,7 +265,7 @@ router.get('/team', async (req, res) => {
   const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
   try {
     const { rows } = await pool.query(
-      `SELECT DISTINCT fu.id, COALESCE(fu.display_name, fu.name, fu.email) AS name, fu.email, fu.avatar_url
+      `SELECT DISTINCT fu.id, COALESCE(fu.display_name, fu.name, fu.email) AS name, fu.email, fu.avatar_url, fu.credentials
        FROM messages m
        JOIN message_threads mt ON mt.id = m.thread_id
        JOIN firm_users fu ON fu.id = m.sender_id
@@ -277,7 +277,7 @@ router.get('/team', async (req, res) => {
       if (member.avatar_url) {
         try { avatar_url = await getSignedDownloadUrl({ key: member.avatar_url, bucket }); } catch(e) { /* non-fatal */ }
       }
-      return { id: member.id, name: member.name, email: member.email, avatar_url };
+      return { id: member.id, name: member.name, email: member.email, credentials: member.credentials || '', avatar_url };
     }));
     res.json(result);
   } catch (err) {
@@ -294,19 +294,19 @@ router.get('/firm-team', async (req, res) => {
   const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
   try {
     const { rows: rawRows } = await pool.query(
-      `(SELECT fu.id, COALESCE(fu.display_name, fu.name, fu.email) AS name, fu.email, fu.avatar_url, fu.role, 0 AS sort_order
+      `(SELECT fu.id, COALESCE(fu.display_name, fu.name, fu.email) AS name, fu.email, fu.avatar_url, fu.credentials, fu.role, 0 AS sort_order
         FROM firm_users fu
         WHERE fu.firm_id = $1 AND fu.role = 'owner' AND fu.accepted_at IS NOT NULL
         LIMIT 1)
        UNION ALL
-       (SELECT fu.id, COALESCE(fu.display_name, fu.name, fu.email) AS name, fu.email, fu.avatar_url, fu.role,
+       (SELECT fu.id, COALESCE(fu.display_name, fu.name, fu.email) AS name, fu.email, fu.avatar_url, fu.credentials, fu.role,
                COUNT(m.id) AS sort_order
         FROM messages m
         JOIN message_threads mt ON mt.id = m.thread_id
         JOIN firm_users fu ON fu.id = m.sender_id
         WHERE mt.person_id = $2 AND m.sender_type = 'staff' AND m.is_internal = false
           AND fu.firm_id = $1 AND fu.role != 'owner'
-        GROUP BY fu.id, fu.display_name, fu.name, fu.email, fu.avatar_url, fu.role
+        GROUP BY fu.id, fu.display_name, fu.name, fu.email, fu.avatar_url, fu.credentials, fu.role
         ORDER BY COUNT(m.id) DESC
         LIMIT 4)`,
       [firmId, personId]
@@ -328,7 +328,7 @@ router.get('/firm-team', async (req, res) => {
       if (member.avatar_url) {
         try { avatar_url = await getSignedDownloadUrl({ key: member.avatar_url, bucket }); } catch(e) { /* non-fatal */ }
       }
-      return { id: member.id, name: member.name, email: member.email, role: member.role, avatar_url };
+      return { id: member.id, name: member.name, email: member.email, credentials: member.credentials || '', role: member.role, avatar_url };
     }));
     res.json(result);
   } catch (err) {

@@ -2540,8 +2540,12 @@
           : `<div style="width:36px;height:36px;border-radius:50%;background:var(--gold);color:#0f1117;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;flex-shrink:0;">${initials}</div>`;
         const uploadBtn = `<label style="cursor:pointer;font-size:0.72rem;color:var(--gold);white-space:nowrap;"><input type="file" accept="image/*" style="display:none;" onchange="uploadAvatar(${u.id}, this)"> 📷 Photo</label>`;
 
+        const credInput = `<input type="text" value="${esc(u.credentials||'')}" placeholder="e.g. CPA/PFS" 
+          style="background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-size:0.68rem;width:80px;outline:none;margin-top:0.2rem;"
+          onblur="saveCredentials(${u.id}, this.value)" onkeydown="if(event.key==='Enter')this.blur()">`;
+
         return `<tr id="team-row-${u.id}">
-          <td style="font-weight:600;"><div style="display:flex;align-items:center;gap:0.6rem;">${avatarHtml}<span>${esc(u.name || '—')}</span></div></td>
+          <td style="font-weight:600;"><div style="display:flex;align-items:center;gap:0.6rem;">${avatarHtml}<div><div>${esc(u.name || '—')}</div>${credInput}</div></div></td>
           <td style="color:var(--muted);">${esc(u.email)}</td>
           <td style="text-align:center;">${roleCell}</td>
           <td style="text-align:center;">${companiesDisplay}</td>
@@ -2658,6 +2662,15 @@
       } catch (e) {
         toast('Failed to remove: ' + e.message);
       }
+    }
+
+    async function saveCredentials(userId, value) {
+      try {
+        await apiFetch(`/firms/team/${userId}/credentials`, {
+          method: 'PUT',
+          body: JSON.stringify({ credentials: value.trim() })
+        });
+      } catch(e) { /* silent */ }
     }
 
     async function uploadAvatar(userId, input) {

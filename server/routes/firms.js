@@ -235,7 +235,7 @@ router.get('/team', requireFirm, async (req, res) => {
   try {
     const firmId = req.firm.id;
     const { rows: users } = await pool.query(
-      `SELECT id, firm_id, name, email, role, accepted_at, created_at, last_login_at, invite_expires_at,
+      `SELECT id, firm_id, name, display_name, email, role, credentials, accepted_at, created_at, last_login_at, invite_expires_at,
               avatar_url,
               (invite_token IS NOT NULL AND accepted_at IS NULL) as pending
        FROM firm_users
@@ -482,6 +482,22 @@ router.post('/team/:userId/avatar', requireFirm, upload.single('avatar'), async 
   } catch (err) {
     console.error('Avatar upload error:', err);
     res.status(500).json({ error: 'Avatar upload failed: ' + err.message });
+  }
+});
+
+// --- PUT /firms/team/:userId/credentials ---
+router.put('/team/:userId/credentials', requireFirm, async (req, res) => {
+  try {
+    const firmId = req.firm.id;
+    const userId = parseInt(req.params.userId);
+    const { credentials } = req.body;
+    await pool.query(
+      'UPDATE firm_users SET credentials = $1 WHERE id = $2 AND firm_id = $3',
+      [(credentials || '').slice(0, 100), userId, firmId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

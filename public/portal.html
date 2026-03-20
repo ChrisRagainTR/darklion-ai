@@ -1167,16 +1167,20 @@
         const roleLabel = r => r === 'owner' ? 'Principal' : 'Advisor';
         const grid = document.getElementById('teamGrid');
         grid.innerHTML = _firmTeam.map(m => {
-          const firstName = (m.name || '').split(' ')[0] || m.name || '?';
-          const initials = (m.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+          // Full name — strip credentials suffix if embedded in display_name
+          const fullName = (m.name || '?').replace(/,\s*[A-Z\/]+$/, '').trim();
+          // First name only for display (keep full name in title)
+          const displayName = fullName.split(' ').slice(0, 2).join(' '); // First + Last
+          const initials = fullName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
           const avatarHtml = m.avatar_url
             ? `<img src="${escHtml(m.avatar_url)}" alt="${escHtml(initials)}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
                <div style="display:none;width:52px;height:52px;border-radius:50%;background:var(--gold);color:#0f1117;align-items:center;justify-content:center;font-weight:700;font-size:1rem;">${escHtml(initials)}</div>`
             : `<div style="display:flex;width:52px;height:52px;border-radius:50%;background:var(--gold);color:#0f1117;align-items:center;justify-content:center;font-weight:700;font-size:1rem;">${escHtml(initials)}</div>`;
-          return `<div style="display:flex;flex-direction:column;align-items:center;gap:0.3rem;text-align:center;min-width:56px;">
+          const credLine = m.credentials ? `<div style="font-size:0.6rem;color:var(--gold);font-weight:600;">${escHtml(m.credentials)}</div>` : '';
+          return `<div style="display:flex;flex-direction:column;align-items:center;gap:0.2rem;text-align:center;min-width:64px;max-width:80px;">
             ${avatarHtml}
-            <div style="font-size:0.72rem;font-weight:600;color:var(--text);">${escHtml(firstName)}</div>
-            <div style="font-size:0.62rem;color:var(--muted);">${roleLabel(m.role)}</div>
+            <div style="font-size:0.72rem;font-weight:600;color:var(--text);line-height:1.2;">${escHtml(displayName)}</div>
+            ${credLine}
           </div>`;
         }).join('');
         document.getElementById('teamSection').style.display = '';
