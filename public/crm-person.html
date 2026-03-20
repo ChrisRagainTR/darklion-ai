@@ -588,11 +588,11 @@
     html += `<div class="card">
       <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
         <span>Company Access</span>
-        <button class="btn btn-ghost btn-xs" onclick="loadPersonCompanies()">↺ Refresh</button>
+        <button class="btn btn-gold btn-sm" onclick="openGrantCompanyModal()">+ Grant Access</button>
       </div>
       <div id="companies-list">`;
     if (!companies.length) {
-      html += `<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No company access.</div>`;
+      html += `<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No company access. Use "+ Grant Access" to link this person to a company.</div>`;
     } else {
       companies.forEach(a => {
         const accessCls = { view: 'badge-muted', full: 'badge-gold', sign: 'badge-green' };
@@ -603,6 +603,7 @@
             <div class="person-meta">${a.entity_type ? esc(a.entity_type) : ''}${a.ownership_pct != null ? ' · ' + a.ownership_pct + '%' : ''}</div>
           </div>
           <span class="badge ${accessCls[a.access_level]||'badge-muted'}">${accessLbl[a.access_level]||esc(a.access_level)}</span>
+          <button class="btn btn-danger btn-xs" onclick="revokeCompanyAccess(${a.company_id})">✕</button>
           <a href="/crm/company/${a.company_id}" class="btn btn-ghost btn-xs">→</a>
         </div>`;
       });
@@ -1307,6 +1308,69 @@
       if (n && !n.value) n.value = file.name.replace(/\.[^/.]+$/, '');
     }, 50);
   });
+
+  // ── Grant Company Access Modal ──
+  async function openGrantCompanyModal() {
+    if (!personData) return;
+    const relId = personData.relationship_id;
+    if (!relId) { toast('Person has no relationship assigned', 'error'); return; }
+    try {
+      const res = await apiFetch(`/api/relationships/${relId}/companies`);
+      const companies = await res.json();
+      const existing = (personData.company_access || []).map(a => a.company_id);
+      const available = companies.filter(c => !existing.includes(c.id));
+      if (!available.length) { toast('All companies in this relationship are already linked', 'error'); return; }
+      const opts = available.map(c => `<option value="${c.id}">${esc(c.company_name||'Unknown')}</option>`).join('');
+      const html = `<div class="modal-overlay open" id="grant-company-modal" onclick="if(event.target===this)this.remove()">
+        <div class="modal" onclick="event.stopPropagation()" style="max-width:400px;">
+          <h2 style="margin-bottom:1rem;">Grant Company Access</h2>
+          <div class="form-group"><label>Company</label><select id="gc-company" class="form-control">${opts}</select></div>
+          <div class="form-group"><label>Access Level</label>
+            <select id="gc-access" class="form-control">
+              <option value="full">Full (upload + message)</option>
+              <option value="view">View only</option>
+              <option value="sign">Sign only</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Ownership % (optional)</label><input type="number" id="gc-ownership" class="form-control" placeholder="e.g. 50" min="0" max="100" step="0.01"></div>
+          <div class="modal-actions">
+            <button class="btn btn-outline" onclick="document.getElementById('grant-company-modal').remove()">Cancel</button>
+            <button class="btn btn-gold" onclick="submitGrantCompany()">Grant Access</button>
+          </div>
+        </div></div>`;
+      document.body.insertAdjacentHTML('beforeend', html);
+    } catch(e) { toast('Failed to load companies: ' + e.message, 'error'); }
+  }
+
+  async function submitGrantCompany() {
+    const companyId = parseInt(document.getElementById('gc-company').value);
+    const accessLevel = document.getElementById('gc-access').value;
+    const ownershipPct = document.getElementById('gc-ownership').value;
+    try {
+      const res = await apiFetch(`/api/people/${personId}/company-access`, {
+        method: 'POST',
+        body: JSON.stringify({ company_id: companyId, access_level: accessLevel, ownership_pct: ownershipPct || null })
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      document.getElementById('grant-company-modal').remove();
+      toast('Company access granted');
+      const freshRes = await apiFetch(`/api/people/${personId}`);
+      personData = await freshRes.json();
+      renderOverview(personData);
+    } catch(e) { toast('Failed: ' + e.message, 'error'); }
+  }
+
+  async function revokeCompanyAccess(companyId) {
+    if (!confirm('Remove access to this company?')) return;
+    try {
+      const res = await apiFetch(`/api/people/${personId}/company-access/${companyId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed');
+      toast('Access revoked');
+      const freshRes = await apiFetch(`/api/people/${personId}`);
+      personData = await freshRes.json();
+      renderOverview(personData);
+    } catch(e) { toast('Failed: ' + e.message, 'error'); }
+  }
 </script>
 </body>
 </html>

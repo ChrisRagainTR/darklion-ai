@@ -958,9 +958,12 @@
 
     const people = c.people || [];
     html += `<div class="card">
-      <div class="card-title">People &amp; Owners</div>`;
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>People &amp; Owners</span>
+        <button class="btn btn-gold btn-sm" onclick="openAttachPersonModal()">+ Attach Person</button>
+      </div>`;
     if (!people.length) {
-      html += `<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No people attached.</div>`;
+      html += `<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No people attached. Use "+ Attach Person" to add owners or contacts.</div>`;
     } else {
       people.forEach(p => {
         const initials = ((p.first_name||'').charAt(0)+(p.last_name||'').charAt(0)).toUpperCase()||'?';
@@ -975,6 +978,7 @@
           </div>
           <span class="badge ${accessCls[p.access_level]||'badge-muted'}">${accessLbl[p.access_level]||esc(p.access_level)}</span>
           ${portalBadge}
+          <button class="btn btn-danger btn-xs" onclick="detachPerson(${p.person_id})">✕</button>
           <a href="/crm/person/${p.person_id}" class="btn btn-ghost btn-xs">→</a>
         </div>`;
       });
@@ -2808,6 +2812,67 @@
       }
     }, 50);
   });
+
+  // ── Attach Person Modal ──
+  async function openAttachPersonModal() {
+    // Fetch people in the same relationship
+    if (!companyData) return;
+    const relId = companyData.relationship_id;
+    if (!relId) { toast('Company has no relationship assigned', 'error'); return; }
+    try {
+      const res = await apiFetch(`/api/relationships/${relId}/people`);
+      const people = await res.json();
+      const existing = (companyData.people || []).map(p => p.person_id);
+      const available = people.filter(p => !existing.includes(p.id));
+      if (!available.length) { toast('All people in this relationship are already attached', 'error'); return; }
+
+      const opts = available.map(p => `<option value="${p.id}">${esc((p.first_name||'')+' '+(p.last_name||''))}</option>`).join('');
+      const html = `<div class="modal-overlay open" id="attach-person-modal" onclick="if(event.target===this)this.remove()">
+        <div class="modal" onclick="event.stopPropagation()" style="max-width:400px;">
+          <h2 style="margin-bottom:1rem;">Attach Person to Company</h2>
+          <div class="form-group"><label>Person</label><select id="ap-person" class="form-control">${opts}</select></div>
+          <div class="form-group"><label>Access Level</label>
+            <select id="ap-access" class="form-control">
+              <option value="full">Full (upload + message)</option>
+              <option value="view">View only</option>
+              <option value="sign">Sign only</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Ownership % (optional)</label><input type="number" id="ap-ownership" class="form-control" placeholder="e.g. 50" min="0" max="100" step="0.01"></div>
+          <div class="modal-actions">
+            <button class="btn btn-outline" onclick="document.getElementById('attach-person-modal').remove()">Cancel</button>
+            <button class="btn btn-gold" onclick="submitAttachPerson()">Attach</button>
+          </div>
+        </div></div>`;
+      document.body.insertAdjacentHTML('beforeend', html);
+    } catch(e) { toast('Failed to load people: ' + e.message, 'error'); }
+  }
+
+  async function submitAttachPerson() {
+    const personId = parseInt(document.getElementById('ap-person').value);
+    const accessLevel = document.getElementById('ap-access').value;
+    const ownershipPct = document.getElementById('ap-ownership').value;
+    try {
+      const res = await apiFetch(`/api/people/${personId}/company-access`, {
+        method: 'POST',
+        body: JSON.stringify({ company_id: companyId, access_level: accessLevel, ownership_pct: ownershipPct || null })
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      document.getElementById('attach-person-modal').remove();
+      toast('Person attached successfully');
+      await loadCompany();
+    } catch(e) { toast('Failed: ' + e.message, 'error'); }
+  }
+
+  async function detachPerson(personId) {
+    if (!confirm('Remove this person from the company?')) return;
+    try {
+      const res = await apiFetch(`/api/people/${personId}/company-access/${companyId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed');
+      toast('Person removed');
+      await loadCompany();
+    } catch(e) { toast('Failed: ' + e.message, 'error'); }
+  }
 </script>
 </body>
 </html>
