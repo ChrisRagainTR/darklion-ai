@@ -155,6 +155,8 @@ app.get('/invite/:token', (req, res) => res.sendFile(path.join(publicDir, 'invit
 // Note: the HTML page itself is served publicly; the page JS will redirect if no token
 app.get('/dashboard', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
 app.get('/dashboard.html', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
+// Team page — redirect to dashboard team section for now
+app.get('/team', (req, res) => res.redirect('/dashboard?section=team'));
 app.get('/crm', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
 app.get('/crm.html', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
 app.get('/crm/person/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-person.html')));
