@@ -649,6 +649,22 @@
     }
 
     /* ── MESSAGES ─────────────────────────────────────────── */
+    .chat-layout { display: flex; height: calc(100vh - 160px); }
+    .chat-contacts { width: 280px; flex-shrink: 0; border-right: 1px solid var(--border); overflow-y: auto; background: var(--card); border: 1px solid var(--border); border-radius: 12px 0 0 12px; }
+    .chat-contact-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; cursor: pointer; transition: background 0.12s; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .chat-contact-row:hover, .chat-contact-row.active { background: rgba(201,168,76,0.08); }
+    .chat-contact-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--gold); color: #0f1117; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; }
+    .chat-contact-info { flex: 1; min-width: 0; }
+    .chat-contact-name { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-contact-preview { font-size: 0.75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.1rem; }
+    .chat-contact-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem; flex-shrink: 0; }
+    .chat-contact-time { font-size: 0.7rem; color: var(--muted); }
+    .chat-unread-badge { background: var(--gold); color: #0f1117; border-radius: 10px; padding: 0.1rem 0.4rem; font-size: 0.68rem; font-weight: 700; }
+    .chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--card); border: 1px solid var(--border); border-left: none; border-radius: 0 12px 12px 0; overflow: hidden; }
+    .chat-main-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; }
+    .chat-main-header .hdr-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--gold); color: #0f1117; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+    .chat-main-header .hdr-name { font-weight: 700; font-size: 0.95rem; }
+    .chat-empty-contacts { padding: 2rem 1rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
     .chat-wrap {
       display: flex;
       flex-direction: column;
@@ -828,16 +844,27 @@
 
     <!-- ── MESSAGES TAB ───────────────────────────────────── -->
     <div class="tab-panel" id="tab-messages">
-      <div class="chat-wrap" id="chatWrap">
-        <div class="chat-messages" id="chatMessages">
-          <div class="chat-empty" id="chatEmpty">Loading messages…</div>
+      <div class="chat-layout">
+        <!-- Left: staff contacts -->
+        <div class="chat-contacts" id="chatContacts">
+          <div class="chat-empty-contacts">No messages yet.<br>Your advisor will reach out here.</div>
         </div>
-        <div class="chat-attach-chips" id="chatAttachChips"></div>
-        <input type="file" id="chatAttachInput" multiple style="display:none;" onchange="handleChatAttach(this.files)">
-        <div class="chat-input-bar">
-          <button class="chat-attach-btn" onclick="document.getElementById('chatAttachInput').click()" title="Attach files">📎</button>
-          <textarea id="chatInput" placeholder="Write a message to your advisor…" rows="1"></textarea>
-          <button class="chat-send-btn" id="chatSendBtn">Send</button>
+        <!-- Right: conversation -->
+        <div class="chat-main">
+          <div class="chat-main-header" id="chatMainHeader" style="display:none;">
+            <div class="hdr-avatar" id="chatHdrAvatar">?</div>
+            <div class="hdr-name" id="chatHdrName">Messages</div>
+          </div>
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-empty" id="chatEmpty">Select a contact to view messages.</div>
+          </div>
+          <div class="chat-attach-chips" id="chatAttachChips"></div>
+          <input type="file" id="chatAttachInput" multiple style="display:none;" onchange="handleChatAttach(this.files)">
+          <div class="chat-input-bar">
+            <button class="chat-attach-btn" onclick="document.getElementById('chatAttachInput').click()" title="Attach files">📎</button>
+            <textarea id="chatInput" placeholder="Write a message to your advisor…" rows="1"></textarea>
+            <button class="chat-send-btn" id="chatSendBtn">Send</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1351,11 +1378,78 @@
     let _chatLoaded = false;
     let _chatAllMessages = [];
     let _chatAttachFiles = [];
+    let _contacts = [];
+    let _selectedStaffId = null;
 
     async function initChat() {
       if (_chatLoaded) return;
       _chatLoaded = true;
+      await loadContacts();
       await loadAllMessages();
+    }
+
+    async function loadContacts() {
+      const token = localStorage.getItem('portalToken');
+      try {
+        const res = await fetch('/portal/messages/staff-contacts', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) return;
+        _contacts = await res.json();
+        if (!Array.isArray(_contacts)) _contacts = [];
+        renderContacts();
+        if (_contacts.length > 0 && _selectedStaffId === null) {
+          selectContact(_contacts[0]);
+        }
+      } catch(e) { console.error('[portal] loadContacts error:', e); }
+    }
+
+    function renderContacts() {
+      const el = document.getElementById('chatContacts');
+      if (!el) return;
+      if (!_contacts.length) {
+        el.innerHTML = '<div class="chat-empty-contacts">No messages yet.<br>Your advisor will reach out here.</div>';
+        return;
+      }
+      el.innerHTML = _contacts.map(c => {
+        const initials = (c.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        const time = c.last_message_at ? new Date(c.last_message_at).toLocaleDateString() : '';
+        const preview = c.last_body ? chatEsc(c.last_body).slice(0, 50) : 'No messages yet';
+        const unread = parseInt(c.unread_count || 0);
+        const isActive = _selectedStaffId === c.id;
+        return `<div class="chat-contact-row${isActive ? ' active' : ''}" data-staff-id="${c.id}">
+          <div class="chat-contact-avatar">${initials}</div>
+          <div class="chat-contact-info">
+            <div class="chat-contact-name">${chatEsc(c.name)}</div>
+            <div class="chat-contact-preview">${preview}</div>
+          </div>
+          <div class="chat-contact-meta">
+            <div class="chat-contact-time">${time}</div>
+            ${unread > 0 ? `<div class="chat-unread-badge">${unread}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+      el.querySelectorAll('.chat-contact-row').forEach(row => {
+        row.addEventListener('click', function() {
+          const staffId = parseInt(row.dataset.staffId);
+          const contact = _contacts.find(c => c.id === staffId);
+          if (contact) selectContact(contact);
+        });
+      });
+    }
+
+    function selectContact(contact) {
+      _selectedStaffId = contact.id;
+      document.querySelectorAll('.chat-contact-row').forEach(r => {
+        r.classList.toggle('active', parseInt(r.dataset.staffId) === contact.id);
+      });
+      const hdr = document.getElementById('chatMainHeader');
+      if (hdr) hdr.style.display = '';
+      const hdrAvatar = document.getElementById('chatHdrAvatar');
+      if (hdrAvatar) hdrAvatar.textContent = (contact.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+      const hdrName = document.getElementById('chatHdrName');
+      if (hdrName) hdrName.textContent = contact.name || 'Advisor';
+      _chatLoaded = false;
+      _chatAllMessages = [];
+      loadAllMessages();
     }
 
     async function loadAllMessages() {
@@ -1504,6 +1598,8 @@
       if (count > 0) {
         btn.insertAdjacentHTML('beforeend', `<span class="unread-badge-tab">${count}</span>`);
       }
+      // Silently refresh contacts to update unread counts in left panel
+      loadContacts();
     }
 
     function chatEsc(s) {

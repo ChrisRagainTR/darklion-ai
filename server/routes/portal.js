@@ -252,6 +252,35 @@ router.get('/messages', async (req, res) => {
   }
 });
 
+// --- GET /portal/messages/staff-contacts --- staff members who have messaged this person
+router.get('/messages/staff-contacts', async (req, res) => {
+  const personId = req.portal.personId;
+  try {
+    const { rows } = await pool.query(
+      `SELECT
+         fu.id,
+         COALESCE(fu.display_name, fu.name, fu.email, 'The firm') AS name,
+         MAX(m.created_at) AS last_message_at,
+         (array_agg(m.body ORDER BY m.created_at DESC))[1] AS last_body,
+         COUNT(CASE WHEN m.read_at IS NULL THEN 1 END) AS unread_count
+       FROM messages m
+       JOIN message_threads mt ON mt.id = m.thread_id
+       JOIN firm_users fu ON fu.id = m.sender_id
+       WHERE mt.person_id = $1
+         AND m.sender_type = 'staff'
+         AND m.is_internal = false
+       GROUP BY fu.id, fu.display_name, fu.name, fu.email
+       ORDER BY last_message_at DESC`,
+      [personId]
+    );
+    res.json(rows);
+  } catch (err) {
+    if (err.code === '42P01') return res.json([]);
+    console.error('Portal /messages/staff-contacts error:', err);
+    res.status(500).json({ error: 'Failed to fetch staff contacts' });
+  }
+});
+
 // --- GET /portal/messages/:threadId --- full thread (non-internal only)
 router.get('/messages/:threadId', async (req, res) => {
   const personId = req.portal.personId;
