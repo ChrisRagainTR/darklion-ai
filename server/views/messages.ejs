@@ -139,6 +139,58 @@
     .sidebar-nav li a.nav-coming-soon { opacity: 0.4; cursor: default; pointer-events: none; }
 </style>
 
+<div class="main">
+  <!-- Inbox panel -->
+  <div class="inbox-panel">
+    <div class="inbox-header">
+      <h2>💬 Messages</h2>
+      <input type="text" class="inbox-search" id="searchBox" placeholder="Search by name…" oninput="filterThreads()">
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="active" onclick="setFilter('active', this)">Active</button>
+        <button class="filter-tab" data-filter="open" onclick="setFilter('open', this)">Open</button>
+        <button class="filter-tab" data-filter="waiting" onclick="setFilter('waiting', this)">Waiting</button>
+        <button class="filter-tab" data-filter="resolved" onclick="setFilter('resolved', this)">Resolved</button>
+        <button class="filter-tab" data-filter="all" onclick="setFilter('all', this)">All</button>
+      </div>
+    </div>
+    <div class="inbox-list" id="inboxList">
+      <div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Thread detail -->
+  <div class="detail-panel" id="detailPanel">
+    <div class="no-thread-selected" id="noThreadSelected">
+      <div class="nts-icon">💬</div>
+      <div>Select a thread to read messages</div>
+    </div>
+
+    <!-- Thread view (hidden until thread selected) -->
+    <div id="threadView" style="display:none;flex:1;display:none;flex-direction:column;height:100%;">
+      <div class="detail-header" id="detailHeader">
+        <!-- filled dynamically -->
+      </div>
+      <div class="detail-messages" id="detailMessages">
+        <div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>
+      </div>
+      <div class="reply-box" id="replyBox">
+        <div class="reply-box-controls">
+          <label><input type="checkbox" id="internalToggle"> 🔒 Internal note</label>
+          <div style="flex:1;"></div>
+        </div>
+        <textarea id="replyBody" placeholder="Write a reply…" rows="3"></textarea>
+        <div class="attach-chips" id="attachChips"></div>
+        <input type="file" id="attachFileInput" multiple style="display:none;" onchange="handleAttachFiles(this.files)">
+        <div class="reply-box-actions">
+          <button class="btn btn-gold btn-sm" onclick="sendReply()">Send Reply</button>
+          <button class="btn-attach" onclick="document.getElementById('attachFileInput').click()">📎 Attach</button>
+          <button class="btn btn-outline btn-sm" onclick="markResolved()">✅ Resolve</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <%- include('partials/shell-globals') %>
 
 <script>
