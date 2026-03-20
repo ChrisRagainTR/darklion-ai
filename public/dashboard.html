@@ -686,7 +686,7 @@
           </p>
           <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;">
             <a href="/crm" class="btn btn-gold">👥 Go to CRM</a>
-            <a href="#" onclick="showSection('statements-calendar',qs('[data-section=statements-calendar]'));return false;" class="btn btn-outline">📅 Statement Calendar</a>
+            <a href="#" onclick="showSection('statements-calendar',null);return false;" class="btn btn-outline">📅 Statement Calendar</a>
           </div>
         </div>
       </div>
@@ -1131,30 +1131,9 @@
 
     function qs(sel) { return document.querySelector(sel); }
 
-    // ===== HEADER CLIENT SEARCH (dashboard-specific: update bar placeholder on client select) =====
-    function updateHeaderClient(c) {
-      const bar = qs('#header-search-bar');
-      if (!bar) return;
-      if (c) {
-        bar.value = '';
-        bar.placeholder = c.company_name || c.realm_id;
-        bar.setAttribute('data-realm', c.realm_id);
-      } else {
-        bar.value = '';
-        bar.placeholder = 'Search relationships, companies, people…';
-        bar.removeAttribute('data-realm');
-      }
-    }
-
-    function selectClientFromHeader(realmId) {
-      selectCompany(realmId);
-    }
-
-    function updateClientTrigger() {
-      // Updates the header search bar to show current client
-      const c = companies.find(co => co.realm_id === currentRealm);
-      updateHeaderClient(c || null);
-    }
+    function updateClientTrigger() { /* no-op — header search is now unified, not company-specific */ }
+    function updateHeaderClient(c) { /* no-op */ }
+    function selectClientFromHeader(realmId) { selectCompany(realmId); }
 
     // ===== INIT =====
     async function init() {
