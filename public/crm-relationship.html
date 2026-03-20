@@ -16,7 +16,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--navy); color: var(--text); line-height: 1.6; display: flex; min-height: 100vh; }
 
-    .sidebar { width: var(--sidebar-w); background: rgba(15,25,35,0.98); border-right: 1px solid var(--border); position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; z-index: 100; }
+    .sidebar { width: var(--sidebar-w); background: rgba(15,25,35,0.98); border-right: 1px solid var(--border); position: fixed; top: 60px; left: 0; bottom: 0; overflow-y: auto; display: flex; flex-direction: column; z-index: 100; }
     .sidebar-brand { display: flex; align-items: center; gap: 0.6rem; padding: 1.2rem 1rem; text-decoration: none; }
     .sidebar-brand .nav-name { font-size: 1.1rem; font-weight: 700; color: var(--text); }
     .sidebar-brand .nav-name span { color: var(--gold); }
@@ -30,7 +30,7 @@
     .sidebar-footer { margin-top: auto; padding: 1rem; border-top: 1px solid var(--border); }
     .sidebar-footer a { display: block; text-align: center; color: var(--muted); font-size: 0.82rem; text-decoration: none; }
 
-    .main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+    .main { margin-left: var(--sidebar-w); margin-top: 60px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
 
     .top-header { position: fixed; top: 0; left: var(--sidebar-w); right: 0; height: 56px; background: rgba(15,25,35,0.97); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; padding: 0 1.5rem; z-index: 90; }
     .top-header-title { font-size: 1rem; font-weight: 700; color: var(--gold); white-space: nowrap; }
@@ -56,7 +56,7 @@
     .header-logout { margin-left: auto; color: var(--muted); font-size: 0.82rem; cursor: pointer; background: none; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; }
     .header-logout:hover { color: var(--text); background: rgba(255,255,255,0.05); }
 
-    .entity-header { margin-top: 56px; background: rgba(28,43,58,0.8); border-bottom: 1px solid var(--border); padding: 1.25rem 1.5rem; display: flex; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+    .entity-header { margin-top: 0; background: rgba(28,43,58,0.8); border-bottom: 1px solid var(--border); padding: 1.25rem 1.5rem; display: flex; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
     .entity-back { color: var(--muted); text-decoration: none; font-size: 0.82rem; display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0; margin-top: 0.35rem; transition: color 0.15s; }
     .entity-back:hover { color: var(--gold); }
     .entity-header-content { flex: 1; min-width: 0; }
@@ -147,7 +147,7 @@
       .sidebar .sidebar-section, .sidebar-nav li a span, .sidebar-brand .nav-name { display: none; }
       .sidebar-nav li a { justify-content: center; padding: 0.75rem; }
       .main { margin-left: 56px; }
-      .top-header { left: 56px; }
+      
       .form-row { grid-template-columns: 1fr; }
     }
     .sidebar-nav li a.nav-coming-soon { opacity: 0.4; cursor: default; pointer-events: none; }
@@ -276,7 +276,7 @@
     c.appendChild(t);
     setTimeout(() => t.remove(), 3500);
   }
-  function logout() { localStorage.removeItem('dl_token'); window.location.href = '/login'; }
+
 
   function tierBadge(tier) {
     const labels = { standard:'Standard', legacy_blueprint:'Legacy Blueprint', tax_only:'Tax Only', full_service:'Full Service' };
@@ -469,90 +469,7 @@
 
   loadRelationship();
 
-  // ===== HEADER SEARCH (unified dashboard-style) =====
-  let hcdOpen = false;
-  let hcdFocusIdx = -1;
-  let headerSearchTimer = null;
-  let searchResults = [];
 
-  function openHeaderSearch() {
-    const bar = document.getElementById('header-search-bar');
-    bar.removeAttribute('readonly');
-    bar.placeholder = 'Search relationships, companies, people…';
-    bar.value = '';
-    hcdOpen = true;
-    searchResults = [];
-    renderHcd();
-    document.getElementById('header-client-dropdown').classList.add('open');
-  }
-
-  function closeHeaderSearch() {
-    hcdOpen = false;
-    document.getElementById('header-client-dropdown').classList.remove('open');
-    document.getElementById('header-search-bar').setAttribute('readonly', '');
-    document.getElementById('header-search-bar').placeholder = 'Search…';
-    document.getElementById('header-search-bar').value = '';
-  }
-
-  function headerSearchInput(query) {
-    clearTimeout(headerSearchTimer);
-    if (!query || query.length < 2) { searchResults = []; renderHcd(); return; }
-    headerSearchTimer = setTimeout(async () => {
-      try {
-        const res = await apiFetch(`/api/search?q=${encodeURIComponent(query)}`);
-        const data = await res.json();
-        searchResults = [
-          ...(data.relationships||[]).map(r => ({ ...r, _type: 'relationship', _label: r.name, _sub: 'Relationship' })),
-          ...(data.companies||[]).map(c => ({ ...c, _type: 'company', _label: c.name||c.company_name, _sub: c.entity_type || 'Company' })),
-          ...(data.people||[]).map(p => ({ ...p, _type: 'person', _label: (p.first_name||'') + ' ' + (p.last_name||''), _sub: p.relationship_name || 'Person' })),
-        ];
-        renderHcd();
-      } catch(e) { /* silent */ }
-    }, 200);
-  }
-
-  function searchNavigate(type, id) {
-    closeHeaderSearch();
-    if (type === 'relationship') window.location.href = `/crm/relationship/${id}`;
-    else if (type === 'company') window.location.href = `/crm/company/${id}`;
-    else if (type === 'person') window.location.href = `/crm/person/${id}`;
-  }
-
-  function renderHcd() {
-    const list = document.getElementById('hcd-list');
-    if (!searchResults.length) {
-      list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Type to search relationships, companies, and people…</div>';
-    } else {
-      list.innerHTML = searchResults.map((r, i) => {
-        const typeIcon = r._type === 'relationship' ? '👥' : r._type === 'company' ? '🏢' : '👤';
-        return `<div class="hcd-option" data-idx="${i}" onclick="searchNavigate('${r._type}', ${r.id})" onmouseenter="setHcdFocus(${i})">
-          <span style="font-size:1rem;">${typeIcon}</span>
-          <span class="hcd-info">
-            <span class="hcd-name">${esc(r._label||'')}</span>
-            <span class="hcd-meta">${esc(r._sub||'')}</span>
-          </span>
-        </div>`;
-      }).join('');
-    }
-    document.getElementById('hcd-footer').textContent = searchResults.length ? `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''}` : '';
-  }
-
-  function setHcdFocus(idx) {
-    hcdFocusIdx = idx;
-    document.querySelectorAll('.hcd-option').forEach((el, i) => el.classList.toggle('focused', i === idx));
-  }
-
-  function handleHeaderSearchKey(e) {
-    if (!hcdOpen) return;
-    if (e.key === 'ArrowDown') { e.preventDefault(); hcdFocusIdx = Math.min(hcdFocusIdx+1, searchResults.length-1); setHcdFocus(hcdFocusIdx); document.querySelector(`.hcd-option[data-idx="${hcdFocusIdx}"]`)?.scrollIntoView({block:'nearest'}); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); hcdFocusIdx = Math.max(hcdFocusIdx-1, 0); setHcdFocus(hcdFocusIdx); document.querySelector(`.hcd-option[data-idx="${hcdFocusIdx}"]`)?.scrollIntoView({block:'nearest'}); }
-    else if (e.key === 'Enter' && hcdFocusIdx >= 0 && searchResults[hcdFocusIdx]) { searchNavigate(searchResults[hcdFocusIdx]._type, searchResults[hcdFocusIdx].id); }
-    else if (e.key === 'Escape') { closeHeaderSearch(); }
-  }
-
-  document.addEventListener('click', (e) => {
-    if (hcdOpen && !e.target.closest('.header-search-wrap')) closeHeaderSearch();
-  });
 </script>
 </body>
 </html>
