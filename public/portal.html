@@ -1454,7 +1454,9 @@
               return `<a class="attachment-chip" href="#" onclick="downloadPortalAttachment(${a.documentId});return false;">📎 ${chatEsc(a.displayName)}${size}</a>`;
             }).join('')}</div>`
           : '';
+        const senderLabel = !isClient && m.sender_name ? `<div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">${chatEsc(m.sender_name)}</div>` : '';
         return `<div class="chat-bubble-wrap ${side}">
+          ${senderLabel}
           <div class="chat-bubble ${side}">${m.body ? chatEsc(m.body) : ''}${attachmentsHtml}</div>
           <div class="chat-bubble-meta">${time}</div>
         </div>`;

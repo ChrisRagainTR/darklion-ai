@@ -265,12 +265,14 @@ router.get('/messages/:threadId', async (req, res) => {
     );
     if (!threadRows[0]) return res.status(404).json({ error: 'Thread not found' });
 
-    // Fetch non-internal messages only
+    // Fetch non-internal messages, join sender name for staff messages
     const { rows: msgs } = await pool.query(
-      `SELECT id, sender_type, sender_id, body, created_at, read_at
-       FROM messages
-       WHERE thread_id = $1 AND is_internal = false
-       ORDER BY created_at ASC`,
+      `SELECT m.id, m.sender_type, m.sender_id, m.body, m.created_at, m.read_at,
+              CASE WHEN m.sender_type = 'staff' THEN COALESCE(fu.display_name, fu.name, fu.email) ELSE NULL END AS sender_name
+       FROM messages m
+       LEFT JOIN firm_users fu ON fu.id = m.sender_id AND m.sender_type = 'staff'
+       WHERE m.thread_id = $1 AND m.is_internal = false
+       ORDER BY m.created_at ASC`,
       [threadId]
     );
 
