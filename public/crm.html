@@ -1122,7 +1122,7 @@ async function loadPersonOverview() {
         <div class="panel-section-title">Contact Info</div>
         <div class="info-row"><span class="info-label">Email</span><span class="info-val">${p.email ? esc(p.email) : '—'}</span></div>
         <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${p.phone ? esc(p.phone) : '—'}</span></div>
-        <div class="info-row"><span class="info-label">DOB</span><span class="info-val">${p.has_dob ? '●●/●●/●●●●' : '—'}</span></div>
+        <div class="info-row"><span class="info-label">DOB</span><span class="info-val">${p.date_of_birth ? esc(p.date_of_birth) : '—'}</span></div>
         <div class="info-row"><span class="info-label">Spouse</span><span class="info-val">${spouseHtml}</span></div>
       </div>
       ${p.stanford_tax_url ? `

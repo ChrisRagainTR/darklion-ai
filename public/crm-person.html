@@ -564,7 +564,7 @@
       <div class="info-row"><span class="info-label">Email</span><span class="info-val">${p.email ? esc(p.email) : '—'}</span></div>
       <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${p.phone ? esc(p.phone) : '—'}</span></div>
       <div class="info-row"><span class="info-label">Filing</span><span class="info-val">${p.filing_status ? `<span class="badge badge-muted">${filingLabel(p.filing_status)}</span>` : '—'}</span></div>
-      <div class="info-row"><span class="info-label">DOB</span><span class="info-val">${p.has_dob ? '●●/●●/●●●●' : '—'}</span></div>
+      <div class="info-row"><span class="info-label">DOB</span><span class="info-val">${p.date_of_birth ? esc(p.date_of_birth) : '—'}</span></div>
 
     </div>`;
 

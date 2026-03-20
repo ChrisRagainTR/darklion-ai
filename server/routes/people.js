@@ -9,9 +9,15 @@ function sanitizePerson(row) {
   const person = { ...row };
   delete person.ssn_encrypted;
   delete person.ssn_last4;
-  delete person.date_of_birth_encrypted;
   delete person.portal_password_hash;
-  person.has_dob = !!(row.date_of_birth_encrypted && row.date_of_birth_encrypted !== '');
+  // Decrypt DOB for staff display
+  if (row.date_of_birth_encrypted) {
+    try { person.date_of_birth = decrypt(row.date_of_birth_encrypted); } catch(e) { person.date_of_birth = null; }
+  } else {
+    person.date_of_birth = null;
+  }
+  delete person.date_of_birth_encrypted;
+  person.has_dob = !!person.date_of_birth;
   return person;
 }
 
