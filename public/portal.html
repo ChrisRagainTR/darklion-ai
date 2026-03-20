@@ -1055,13 +1055,27 @@
     }
 
     // ── DOCUMENTS ────────────────────────────────────────
-    const DOC_ICONS = {
-      tax_return: '📋', tax: '📋', w2: '📄', '1099': '📄',
-      engagement_letter: '✍️', organizer: '📝', statement: '🏦',
-      bookkeeping: '📊', other: '📎',
-    };
+    // Get file type label from mime type or filename
+    function fileTypeBadge(mimeType, displayName) {
+      const mime = (mimeType || '').toLowerCase();
+      const name = (displayName || '').toLowerCase();
+      const ext = name.includes('.') ? name.split('.').pop() : '';
 
-    function docIcon(type) { return DOC_ICONS[String(type).toLowerCase()] || '📎'; }
+      if (mime === 'application/pdf' || ext === 'pdf') return { label: 'PDF', color: '#e53e3e' };
+      if (mime.includes('spreadsheet') || mime.includes('excel') || ext === 'xlsx' || ext === 'xls' || ext === 'csv')
+        return { label: ext === 'csv' ? 'CSV' : 'Excel', color: '#38a169' };
+      if (mime.includes('word') || ext === 'docx' || ext === 'doc')
+        return { label: 'Word', color: '#3182ce' };
+      if (mime.includes('presentation') || mime.includes('powerpoint') || ext === 'pptx' || ext === 'ppt')
+        return { label: 'PPT', color: '#dd6b20' };
+      if (mime.startsWith('image/') || ['jpg','jpeg','png','gif','webp','heic'].includes(ext))
+        return { label: 'Image', color: '#805ad5' };
+      if (mime.includes('zip') || mime.includes('compressed') || ext === 'zip')
+        return { label: 'ZIP', color: '#718096' };
+      if (mime.startsWith('text/') || ext === 'txt')
+        return { label: 'TXT', color: '#718096' };
+      return { label: ext ? ext.toUpperCase().slice(0,4) : 'FILE', color: '#718096' };
+    }
 
     function fmtBytes(b) {
       if (!b) return '';
@@ -1111,7 +1125,8 @@
             } else {
               catDocs.forEach(doc => {
                 const isNew = !doc.viewed_at;
-                y += `<div class="doc-row" data-docid="${doc.id}"><span class="doc-icon">${docIcon(doc.doc_type)}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
+                const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
+                y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
               });
             }
             y += `</div></div>`;
