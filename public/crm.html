@@ -49,30 +49,53 @@
       display: flex; align-items: center; gap: 1rem; padding: 0 1.5rem; z-index: 90;
     }
     .top-header-title { font-size: 1rem; font-weight: 700; color: var(--gold); white-space: nowrap; }
-    .header-search-wrap { position: relative; flex: 1; max-width: 420px; }
-    .header-search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 0.9rem; pointer-events: none; }
+    /* Client search bar */
+    .header-search-wrap {
+      flex: 1; max-width: 580px; min-width: 0;
+      margin: 0 auto;
+      position: relative;
+    }
     .header-search-bar {
-      width: 100%; padding: 0.45rem 0.75rem 0.45rem 2.2rem;
-      background: var(--charcoal); border: 1px solid var(--border); border-radius: 6px;
-      color: var(--text); font-size: 0.85rem; outline: none;
+      width: 100%; height: 44px;
+      background: var(--charcoal);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 0 1rem 0 2.6rem;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      cursor: pointer;
     }
-    .header-search-bar:focus { border-color: var(--gold); }
-    .search-results-dropdown {
-      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 200; max-height: 380px; overflow-y: auto;
-      display: none;
+    .header-search-bar:focus, .header-search-bar.open {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(201,168,76,0.15);
     }
-    .search-results-dropdown.open { display: block; }
-    .search-group-label { padding: 0.5rem 0.9rem 0.2rem; font-size: 0.65rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
-    .search-result-item {
-      display: flex; align-items: center; gap: 0.6rem;
-      padding: 0.5rem 0.9rem; cursor: pointer; font-size: 0.85rem; border-left: 3px solid transparent;
+    .header-search-bar::placeholder { color: var(--muted); }
+    .header-search-icon {
+      position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%);
+      color: var(--muted); font-size: 1rem; pointer-events: none;
     }
-    .search-result-item:hover { background: rgba(201,168,76,0.08); border-left-color: var(--gold); }
-    .search-result-item .sr-name { color: var(--text); font-weight: 500; }
-    .search-result-item .sr-sub { color: var(--muted); font-size: 0.75rem; }
-    .search-no-results { padding: 1rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
+    .header-client-dropdown {
+      display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+      background: #13222f; border: 1px solid var(--border); border-radius: 10px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5); z-index: 300; overflow: hidden;
+    }
+    .header-client-dropdown.open { display: block; }
+    .hcd-list { max-height: 320px; overflow-y: auto; }
+    .hcd-option {
+      display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 1rem;
+      cursor: pointer; transition: background 0.1s; font-size: 0.85rem;
+    }
+    .hcd-option:hover, .hcd-option.focused { background: rgba(201,168,76,0.07); }
+    .hcd-option.active { background: rgba(201,168,76,0.12); }
+    .hcd-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .hcd-dot.healthy { background: var(--green); }
+    .hcd-dot.expired { background: var(--red); }
+    .hcd-info { flex: 1; min-width: 0; }
+    .hcd-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hcd-meta { font-size: 0.72rem; color: var(--muted); }
+    .hcd-footer { padding: 0.4rem 1rem; border-top: 1px solid var(--border); font-size: 0.72rem; color: var(--muted); }
     .header-logout { margin-left: auto; color: var(--muted); font-size: 0.82rem; cursor: pointer; background: none; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; }
     .header-logout:hover { color: var(--text); background: rgba(255,255,255,0.05); }
 
@@ -307,13 +330,16 @@
     <div class="header-search-wrap">
       <span class="header-search-icon">🔍</span>
       <input type="text" class="header-search-bar" id="header-search-bar"
-        placeholder="Search relationships, people, companies…"
+        placeholder="Search relationships, companies, people…"
         autocomplete="off"
-        oninput="globalSearchInput(this.value)"
-        onkeydown="globalSearchKeydown(event)"
-        onfocus="if(this.value.trim().length>1)showSearchDrop()"
-      >
-      <div class="search-results-dropdown" id="search-dropdown"></div>
+        oninput="headerSearchInput(this.value)"
+        onfocus="openHeaderSearch()"
+        onkeydown="handleHeaderSearchKey(event)"
+        readonly>
+      <div class="header-client-dropdown" id="header-client-dropdown">
+        <div class="hcd-list" id="hcd-list"></div>
+        <div class="hcd-footer" id="hcd-footer"></div>
+      </div>
     </div>
     <button class="header-logout" onclick="logout()">Logout</button>
   </header>
@@ -736,8 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCompanies();
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllPanels(); });
   document.addEventListener('click', e => {
-    const drop = document.getElementById('search-dropdown');
-    if (!e.target.closest('.header-search-wrap')) { drop.classList.remove('open'); }
+    if (hcdOpen && !e.target.closest('.header-search-wrap')) { closeHeaderSearch(); }
     // Close searchable selects
     if (!e.target.closest('.searchable-select-wrap')) {
       document.querySelectorAll('.searchable-select-options.open').forEach(el => el.classList.remove('open'));
@@ -1460,68 +1485,85 @@ function selectSearchableOption(key, id, label) {
 }
 
 // =====================================================================
-//  GLOBAL SEARCH
+//  HEADER SEARCH (unified dashboard-style)
 // =====================================================================
-function globalSearchInput(q) {
+let hcdOpen = false;
+let hcdFocusIdx = -1;
+let searchResults = [];
+
+function openHeaderSearch() {
+  const bar = document.getElementById('header-search-bar');
+  bar.removeAttribute('readonly');
+  bar.placeholder = 'Search relationships, companies, people…';
+  bar.value = '';
+  hcdOpen = true;
+  searchResults = [];
+  renderHcd();
+  document.getElementById('header-client-dropdown').classList.add('open');
+}
+
+function closeHeaderSearch() {
+  hcdOpen = false;
+  document.getElementById('header-client-dropdown').classList.remove('open');
+  document.getElementById('header-search-bar').setAttribute('readonly', '');
+  document.getElementById('header-search-bar').placeholder = 'Search…';
+  document.getElementById('header-search-bar').value = '';
+}
+
+function headerSearchInput(query) {
   clearTimeout(searchTimer);
-  if (q.length < 2) { document.getElementById('search-dropdown').classList.remove('open'); return; }
-  searchTimer = setTimeout(() => performGlobalSearch(q), 300);
-}
-
-async function performGlobalSearch(q) {
-  try {
-    const res = await apiFetch(`/api/search?q=${encodeURIComponent(q)}`);
-    const data = await res.json();
-    renderSearchDropdown(data);
-  } catch(e) {}
-}
-
-function renderSearchDropdown(data) {
-  const drop = document.getElementById('search-dropdown');
-  let html = '';
-  const groups = [
-    { key: 'relationships', label: 'Relationships', icon: '👥' },
-    { key: 'people', label: 'People', icon: '👤' },
-    { key: 'companies', label: 'Companies', icon: '🏢' },
-  ];
-  let total = 0;
-  for (const g of groups) {
-    const items = data[g.key] || [];
-    if (!items.length) continue;
-    total += items.length;
-    html += `<div class="search-group-label">${g.icon} ${g.label}</div>`;
-    html += items.slice(0, 5).map(item => {
-      const name = item.display_name || item.name || (item.first_name ? `${item.first_name} ${item.last_name}` : 'Unknown');
-      const sub = item.service_tier || item.relationship_name || item.entity_type || '';
-      return `<div class="search-result-item" onclick="searchNavigate('${g.key}', ${item.id})">
-        <div class="sr-name">${esc(name)}</div>
-        ${sub ? `<div class="sr-sub">${esc(sub)}</div>` : ''}
-      </div>`;
-    }).join('');
-  }
-  if (!total) html = '<div class="search-no-results">No results found</div>';
-  drop.innerHTML = html;
-  drop.classList.add('open');
-}
-
-function showSearchDrop() {
-  const q = document.getElementById('header-search-bar').value.trim();
-  if (q.length >= 2) document.getElementById('search-dropdown').classList.add('open');
-}
-
-function globalSearchKeydown(e) {
-  if (e.key === 'Escape') { document.getElementById('search-dropdown').classList.remove('open'); }
+  if (!query || query.length < 2) { searchResults = []; renderHcd(); return; }
+  searchTimer = setTimeout(async () => {
+    try {
+      const res = await apiFetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      searchResults = [
+        ...(data.relationships||[]).map(r => ({ ...r, _type: 'relationship', _label: r.name, _sub: 'Relationship' })),
+        ...(data.companies||[]).map(c => ({ ...c, _type: 'company', _label: c.name||c.company_name, _sub: c.entity_type || 'Company' })),
+        ...(data.people||[]).map(p => ({ ...p, _type: 'person', _label: (p.first_name||'') + ' ' + (p.last_name||''), _sub: p.relationship_name || 'Person' })),
+      ];
+      renderHcd();
+    } catch(e) { /* silent */ }
+  }, 200);
 }
 
 function searchNavigate(type, id) {
-  document.getElementById('search-dropdown').classList.remove('open');
-  if (type === 'relationships') {
-    window.location.href = '/crm/relationship/' + id;
-  } else if (type === 'people') {
-    window.location.href = '/crm/person/' + id;
-  } else if (type === 'companies') {
-    window.location.href = '/crm/company/' + id;
+  closeHeaderSearch();
+  if (type === 'relationship') window.location.href = `/crm/relationship/${id}`;
+  else if (type === 'company') window.location.href = `/crm/company/${id}`;
+  else if (type === 'person') window.location.href = `/crm/person/${id}`;
+}
+
+function renderHcd() {
+  const list = document.getElementById('hcd-list');
+  if (!searchResults.length) {
+    list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Type to search relationships, companies, and people…</div>';
+  } else {
+    list.innerHTML = searchResults.map((r, i) => {
+      const typeIcon = r._type === 'relationship' ? '👥' : r._type === 'company' ? '🏢' : '👤';
+      return `<div class="hcd-option" data-idx="${i}" onclick="searchNavigate('${r._type}', ${r.id})" onmouseenter="setHcdFocus(${i})">
+        <span style="font-size:1rem;">${typeIcon}</span>
+        <span class="hcd-info">
+          <span class="hcd-name">${esc(r._label||'')}</span>
+          <span class="hcd-meta">${esc(r._sub||'')}</span>
+        </span>
+      </div>`;
+    }).join('');
   }
+  document.getElementById('hcd-footer').textContent = searchResults.length ? `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''}` : '';
+}
+
+function setHcdFocus(idx) {
+  hcdFocusIdx = idx;
+  document.querySelectorAll('.hcd-option').forEach((el, i) => el.classList.toggle('focused', i === idx));
+}
+
+function handleHeaderSearchKey(e) {
+  if (!hcdOpen) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); hcdFocusIdx = Math.min(hcdFocusIdx+1, searchResults.length-1); setHcdFocus(hcdFocusIdx); document.querySelector(`.hcd-option[data-idx="${hcdFocusIdx}"]`)?.scrollIntoView({block:'nearest'}); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); hcdFocusIdx = Math.max(hcdFocusIdx-1, 0); setHcdFocus(hcdFocusIdx); document.querySelector(`.hcd-option[data-idx="${hcdFocusIdx}"]`)?.scrollIntoView({block:'nearest'}); }
+  else if (e.key === 'Enter' && hcdFocusIdx >= 0 && searchResults[hcdFocusIdx]) { searchNavigate(searchResults[hcdFocusIdx]._type, searchResults[hcdFocusIdx].id); }
+  else if (e.key === 'Escape') { closeHeaderSearch(); }
 }
 
 function openRelByName(name) {
