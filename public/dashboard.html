@@ -739,39 +739,15 @@
 
       <!-- ==================== OVERVIEW ==================== -->
       <div class="section-page active" id="sec-overview">
-        <div class="container">
-          <div class="page-header">
-            <div>
-              <h1>Monthly Close Overview</h1>
-              <div class="subtitle" id="overview-period"></div>
-            </div>
-          </div>
-          <div class="overview-grid" id="overview-grid">
-            <div class="overview-card" onclick="showSection('companies',qs('[data-section=companies]'))">
-              <h3>Companies</h3>
-              <div class="oc-value" id="ov-companies">--</div>
-              <div class="oc-sub" id="ov-companies-sub">Connected</div>
-              <span class="oc-link">Manage &rarr;</span>
-            </div>
-            <div class="overview-card" onclick="showSection('uncategorized',qs('[data-section=uncategorized]'))">
-              <h3>Uncategorized</h3>
-              <div class="oc-value" id="ov-uncat">--</div>
-              <div class="oc-sub" id="ov-uncat-sub">Run scan to check</div>
-              <span class="oc-link">View &rarr;</span>
-            </div>
-            <div class="overview-card" onclick="showSection('close-package',qs('[data-section=close-package]'))">
-              <h3>Close Package</h3>
-              <div class="oc-value" id="ov-pkg">--</div>
-              <div class="oc-sub" id="ov-pkg-sub">Generate to review</div>
-              <span class="oc-link">View &rarr;</span>
-            </div>
-          </div>
-          <h3 style="font-size:0.88rem;margin-bottom:0.75rem;">Recent Scan Results</h3>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Scan Type</th><th>Flags</th><th>Date</th><th>Status</th></tr></thead>
-              <tbody id="overview-scans"></tbody>
-            </table>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:3rem 2rem;">
+          <div style="font-size:3rem;margin-bottom:1.5rem;">👁️</div>
+          <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:0.75rem;">Welcome to DarkLion</h1>
+          <p style="color:var(--muted);max-width:480px;line-height:1.7;margin-bottom:2rem;">
+            Your firm dashboard is being built. Search for a client above, or navigate using the left menu to get started.
+          </p>
+          <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;">
+            <a href="/crm" class="btn btn-gold">👥 Go to CRM</a>
+            <a href="#" onclick="showSection('statements-calendar',qs('[data-section=statements-calendar]'));return false;" class="btn btn-outline">📅 Statement Calendar</a>
           </div>
         </div>
       </div>
