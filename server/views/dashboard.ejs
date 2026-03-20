@@ -3159,13 +3159,20 @@
       }
     }
 
+    // Handle ?section= BEFORE init so calendar/team shows even without companies
+    const _deepSection = new URLSearchParams(window.location.search).get('section');
+    if (_deepSection) {
+      // Force show the dashboard div so section is visible
+      const dashEl = qs('#dashboard');
+      if (dashEl) dashEl.style.display = '';
+      const emptyEl = qs('#empty-state');
+      if (emptyEl) emptyEl.style.display = 'none';
+      showSection(_deepSection, null);
+    }
+
     init().then(() => {
-      // Handle ?section= query param for deep linking from other pages
-      const section = new URLSearchParams(window.location.search).get('section');
-      if (section) {
-        // link may be null if sidebar no longer has data-section attrs — showSection handles null gracefully
-        const link = document.querySelector(`[data-section="${section}"]`);
-        showSection(section, link || null);
-      }
+      // If no deep section, normal flow already handled by init
+      // If deep section was set, re-apply it after init in case init overwrites display
+      if (_deepSection) showSection(_deepSection, null);
     });
   </script>
