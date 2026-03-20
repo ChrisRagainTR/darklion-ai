@@ -19,6 +19,26 @@
   .ph-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
   .ph-desc { font-size: 0.86rem; }
 
+  /* ── Tax tab ── */
+  .delivery-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; display: flex; align-items: flex-start; gap: 1rem; }
+  .delivery-card:hover { border-color: rgba(201,168,76,0.3); }
+  .delivery-info { flex: 1; min-width: 0; }
+  .delivery-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.2rem; }
+  .delivery-meta { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.5rem; }
+  .delivery-signers { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+  .signer-chip { display: flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; padding: 0.2rem 0.55rem; border-radius: 20px; border: 1px solid var(--border); background: var(--charcoal); }
+  .signer-chip.signed { border-color: rgba(62,207,142,0.4); color: var(--green); }
+  .signer-chip.pending { color: var(--muted); }
+  .signer-chip.needs-changes { border-color: rgba(237,137,54,0.4); color: var(--orange); }
+  .delivery-actions { display: flex; gap: 0.5rem; flex-shrink: 0; flex-wrap: wrap; }
+  .status-pill { display: inline-flex; align-items: center; padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .status-draft { background: rgba(143,163,184,0.12); color: var(--muted); }
+  .status-sent { background: rgba(74,144,217,0.12); color: #4a90d9; }
+  .status-signed { background: rgba(62,207,142,0.12); color: var(--green); }
+  .status-complete { background: rgba(62,207,142,0.2); color: var(--green); border: 1px solid rgba(62,207,142,0.3); }
+  .status-needs_changes { background: rgba(237,137,54,0.12); color: var(--orange); }
+  .status-approved { background: rgba(201,168,76,0.12); color: var(--gold); }
+
   /* ── Docs tab — portal-matched styles ── */
   .docs-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 1.5rem; }
   @media (max-width: 900px) { .docs-layout { grid-template-columns: 1fr; } }
@@ -135,7 +155,37 @@
 </div>
 
 <div id="tab-tax" class="tab-content">
-  <div id="tax-content"><div class="loading-state"><div class="loading-spinner"></div></div></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem 0;">
+    <span style="font-size:0.84rem;color:var(--muted);">Tax return deliveries &amp; e-signatures</span>
+    <button class="btn btn-gold btn-sm" onclick="openNewDeliveryModal()">+ New Delivery</button>
+  </div>
+  <div id="tax-content" style="padding:1.5rem;"></div>
+
+  <!-- New Delivery Modal -->
+  <div class="modal-overlay" id="new-delivery-modal">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
+      <h2>New Tax Delivery</h2>
+      <div id="delivery-error" style="display:none;color:var(--red);font-size:0.82rem;margin-bottom:0.75rem;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+        <div class="form-group"><label>Tax Year *</label><input type="text" class="form-control" id="nd-year" placeholder="2024"></div>
+        <div class="form-group"><label>Title</label><input type="text" class="form-control" id="nd-title" placeholder="e.g. 2024 Individual Return"></div>
+      </div>
+      <div class="form-group"><label>Intro Note (shown to client)</label><textarea class="form-control" id="nd-intro" rows="3" placeholder="Please review and sign your tax return…"></textarea></div>
+      <div class="form-group"><label>Review Document (PDF for client to review)</label>
+        <select class="form-control" id="nd-review-doc"><option value="">— Select document —</option></select>
+      </div>
+      <div class="form-group"><label>Signature Document (PDF to sign)</label>
+        <select class="form-control" id="nd-sig-doc"><option value="">— Select document —</option></select>
+      </div>
+      <div class="form-group"><label>Signers</label>
+        <div id="nd-signers-list" style="display:flex;flex-direction:column;gap:0.4rem;"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeDeliveryModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="submitNewDelivery()">Create Draft</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="tab-bookkeeping" class="tab-content" style="padding:1.5rem;">
@@ -486,6 +536,131 @@
     if (el.dataset.loaded) return;
     el.dataset.loaded = '1';
     el.innerHTML = '<div class="empty-state">No tax returns on file.</div>';
+  }
+
+  // ── TAX DELIVERIES ────────────────────────────────────────────────────────
+
+  async function loadTax() {
+    const el = document.getElementById('tax-content');
+    if (el.dataset.loaded) return;
+    el.dataset.loaded = '1';
+    el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>';
+    try {
+      const res = await apiFetch(`/api/tax-deliveries?company_id=${companyId}`);
+      const deliveries = await res.json();
+      renderTaxDeliveries(deliveries);
+    } catch(e) { el.innerHTML = '<div class="empty-state" style="padding:2rem;text-align:center;color:var(--muted);">Failed to load.</div>'; }
+  }
+
+  function statusPill(status) {
+    return `<span class="status-pill status-${status}">${(status||'draft').replace(/_/g,' ')}</span>`;
+  }
+
+  function renderTaxDeliveries(deliveries) {
+    const el = document.getElementById('tax-content');
+    if (!deliveries.length) {
+      el.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted);">
+        <div style="font-size:2.5rem;margin-bottom:1rem;">📄</div>
+        <div style="font-weight:700;color:var(--text);margin-bottom:0.5rem;">No tax deliveries yet</div>
+        <div style="font-size:0.84rem;margin-bottom:1.5rem;">Create a delivery to send the tax return for review and e-signature</div>
+        <button class="btn btn-gold" onclick="openNewDeliveryModal()">+ New Delivery</button>
+      </div>`;
+      return;
+    }
+    el.innerHTML = deliveries.map(d => {
+      const signers = d.signers || [];
+      const signerChips = signers.map(s => {
+        const name = esc(s.person_name || ('Person #' + s.person_id));
+        if (s.signed_at) return '<span class="signer-chip signed">✓ ' + name + '</span>';
+        if (s.needs_changes_at) return '<span class="signer-chip needs-changes">↩ ' + name + '</span>';
+        return '<span class="signer-chip pending">⏳ ' + name + '</span>';
+      }).join('');
+      return '<div class="delivery-card">' +
+        '<div class="delivery-info">' +
+          '<div class="delivery-title">' + esc(d.title || d.tax_year + ' Tax Return') + ' ' + statusPill(d.status) + '</div>' +
+          '<div class="delivery-meta">Tax Year: ' + esc(d.tax_year) + ' · Created ' + new Date(d.created_at).toLocaleDateString() + '</div>' +
+          (signerChips ? '<div class="delivery-signers">' + signerChips + '</div>' : '') +
+        '</div>' +
+        '<div class="delivery-actions">' +
+          (d.status === 'draft' ? '<button class="btn btn-gold btn-sm" onclick="sendDelivery(' + d.id + ')">Send →</button>' : '') +
+          (d.status === 'draft' ? '<button class="btn btn-outline btn-sm" onclick="deleteDelivery(' + d.id + ')">Delete</button>' : '') +
+          (d.status === 'complete' ? '<button class="btn btn-outline btn-sm" onclick="downloadSigned(' + d.id + ')">⬇ Signed</button>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  async function openNewDeliveryModal() {
+    const docsRes = await apiFetch('/api/documents?owner_type=company&owner_id=' + companyId);
+    const docs = await docsRes.json();
+    const pdfDocs = docs.filter(d => d.mime_type && d.mime_type.includes('pdf'));
+    const opts = '<option value="">— None —</option>' + pdfDocs.map(d => '<option value="' + d.id + '">' + esc(d.display_name || 'Untitled') + ' (' + (d.year || '') + ')</option>').join('');
+    document.getElementById('nd-review-doc').innerHTML = opts;
+    document.getElementById('nd-sig-doc').innerHTML = opts;
+    const people = (companyData && companyData.people) || [];
+    document.getElementById('nd-signers-list').innerHTML = people.length
+      ? people.map(p => '<label style="display:flex;align-items:center;gap:0.5rem;font-size:0.84rem;cursor:pointer;"><input type="checkbox" name="nd-signer" value="' + p.person_id + '" checked> ' + esc(p.first_name) + ' ' + esc(p.last_name) + (p.email ? ' <span style="color:var(--muted);font-size:0.75rem;">(' + esc(p.email) + ')</span>' : '') + '</label>').join('')
+      : '<div style="color:var(--muted);font-size:0.82rem;">No people attached to this company.</div>';
+    document.getElementById('nd-year').value = String(new Date().getFullYear() - 1);
+    document.getElementById('delivery-error').style.display = 'none';
+    document.getElementById('new-delivery-modal').classList.add('open');
+  }
+
+  function closeDeliveryModal() { document.getElementById('new-delivery-modal').classList.remove('open'); }
+
+  async function submitNewDelivery() {
+    const year = document.getElementById('nd-year').value.trim();
+    if (!year) { document.getElementById('delivery-error').textContent = 'Tax year is required'; document.getElementById('delivery-error').style.display = ''; return; }
+    const signerIds = Array.from(document.querySelectorAll('input[name="nd-signer"]:checked')).map(i => parseInt(i.value));
+    const body = {
+      company_id: parseInt(companyId),
+      tax_year: year,
+      title: document.getElementById('nd-title').value.trim(),
+      intro_note: document.getElementById('nd-intro').value.trim(),
+      review_doc_id: document.getElementById('nd-review-doc').value ? parseInt(document.getElementById('nd-review-doc').value) : null,
+      signature_doc_id: document.getElementById('nd-sig-doc').value ? parseInt(document.getElementById('nd-sig-doc').value) : null,
+      signer_person_ids: signerIds,
+    };
+    try {
+      const res = await apiFetch('/api/tax-deliveries', { method: 'POST', body: JSON.stringify(body) });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      closeDeliveryModal();
+      toast('Delivery created');
+      const el = document.getElementById('tax-content');
+      delete el.dataset.loaded;
+      loadTax();
+    } catch(e) { document.getElementById('delivery-error').textContent = e.message; document.getElementById('delivery-error').style.display = ''; }
+  }
+
+  async function sendDelivery(id) {
+    if (!confirm('Send this tax return to the client for review and signature?')) return;
+    try {
+      const res = await apiFetch('/api/tax-deliveries/' + id + '/send', { method: 'POST', body: '{}' });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      toast('Delivery sent to client');
+      const el = document.getElementById('tax-content');
+      delete el.dataset.loaded;
+      loadTax();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function deleteDelivery(id) {
+    if (!confirm('Delete this draft delivery?')) return;
+    try {
+      await apiFetch('/api/tax-deliveries/' + id, { method: 'DELETE' });
+      toast('Deleted');
+      const el = document.getElementById('tax-content');
+      delete el.dataset.loaded;
+      loadTax();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function downloadSigned(id) {
+    try {
+      const res = await apiFetch('/api/tax-deliveries/' + id + '/download-signature');
+      const d = await res.json();
+      if (d.url) window.open(d.url, '_blank');
+    } catch(e) { toast('Failed to download', 'error'); }
   }
 
   async function autoSaveNotes(val, force) {
