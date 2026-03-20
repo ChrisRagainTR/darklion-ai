@@ -111,6 +111,15 @@ Relationship  →  the household/group (top-level billing unit)
 - CRM link (🗂️) added to main dashboard sidebar
 - `/crm` route added to `server/index.js`
 
+**Phase 3b additions (full-page detail views):**
+- `public/crm-person.html` — `/crm/person/:id`, tabs: Overview · Docs · Tax · Communication · Organizers · Workflow · Notes · Billing
+- `public/crm-company.html` — `/crm/company/:id`, tabs: Overview · Docs · Tax · Bookkeeping · Communication · Organizers · Workflow · Notes. Bookkeeping tab has secondary sub-tabs: Close Package · Uncategorized · P&L Variance · Liability Health · Payroll Check · Statements · Statement Calendar
+- `public/crm-relationship.html` — `/crm/relationship/:id`, tabs: Overview · Notes · Billing
+- Dashboard sidebar stripped of bookkeeping items — those live inside Company → Bookkeeping tab
+- `GET /api/companies/:id` and `PUT /api/companies/:id` added
+- `notes` column added to companies table
+- `folder_section` and `folder_category` columns added to documents table
+
 ---
 
 ### ✅ Phase 4 — Document Management (COMPLETE — 2026-03-20)
