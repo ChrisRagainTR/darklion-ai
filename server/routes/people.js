@@ -8,9 +8,9 @@ const router = Router();
 function sanitizePerson(row) {
   const person = { ...row };
   delete person.ssn_encrypted;
+  delete person.ssn_last4;
   delete person.date_of_birth_encrypted;
   delete person.portal_password_hash;
-  person.has_ssn = !!(row.ssn_encrypted && row.ssn_encrypted !== '');
   person.has_dob = !!(row.date_of_birth_encrypted && row.date_of_birth_encrypted !== '');
   return person;
 }
@@ -49,7 +49,6 @@ router.post('/', async (req, res) => {
     portal_enabled = false,
     stanford_tax_url = '',
     notes = '',
-    ssn,
     date_of_birth,
   } = req.body;
 
@@ -63,22 +62,20 @@ router.post('/', async (req, res) => {
     );
     if (relRows.length === 0) return res.status(404).json({ error: 'Relationship not found' });
 
-    const ssn_last4 = ssn ? String(ssn).slice(-4) : '';
-    const ssn_encrypted = ssn ? encrypt(ssn) : '';
     const date_of_birth_encrypted = date_of_birth ? encrypt(date_of_birth) : '';
 
     const { rows } = await pool.query(`
       INSERT INTO people (
         firm_id, relationship_id, first_name, last_name, email, phone,
-        date_of_birth_encrypted, ssn_last4, ssn_encrypted,
+        date_of_birth_encrypted,
         filing_status, spouse_id, portal_enabled, stanford_tax_url, notes,
         created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
       RETURNING *
     `, [
       firmId, relationship_id, first_name, last_name, email, phone,
-      date_of_birth_encrypted, ssn_last4, ssn_encrypted,
+      date_of_birth_encrypted,
       filing_status, spouse_id, portal_enabled, stanford_tax_url, notes,
     ]);
 
@@ -143,7 +140,6 @@ router.put('/:id', async (req, res) => {
     portal_enabled,
     stanford_tax_url,
     notes,
-    ssn,
     date_of_birth,
   } = req.body;
 
@@ -163,12 +159,7 @@ router.put('/:id', async (req, res) => {
       if (relRows.length === 0) return res.status(404).json({ error: 'Relationship not found' });
     }
 
-    // Build SSN fields only if SSN provided
-    const ssn_last4 = ssn !== undefined ? String(ssn).slice(-4) : undefined;
-    const ssn_encrypted = ssn !== undefined ? encrypt(ssn) : undefined;
     const date_of_birth_encrypted = date_of_birth !== undefined ? encrypt(date_of_birth) : undefined;
-
-    const current = existing[0];
 
     const { rows } = await pool.query(`
       UPDATE people
@@ -183,11 +174,9 @@ router.put('/:id', async (req, res) => {
         portal_enabled = COALESCE($8, portal_enabled),
         stanford_tax_url = COALESCE($9, stanford_tax_url),
         notes = COALESCE($10, notes),
-        ssn_last4 = CASE WHEN $11::TEXT IS NOT NULL THEN $11 ELSE ssn_last4 END,
-        ssn_encrypted = CASE WHEN $12::TEXT IS NOT NULL THEN $12 ELSE ssn_encrypted END,
-        date_of_birth_encrypted = CASE WHEN $13::TEXT IS NOT NULL THEN $13 ELSE date_of_birth_encrypted END,
+        date_of_birth_encrypted = CASE WHEN $11::TEXT IS NOT NULL THEN $11 ELSE date_of_birth_encrypted END,
         updated_at = NOW()
-      WHERE id = $14 AND firm_id = $15
+      WHERE id = $12 AND firm_id = $13
       RETURNING *
     `, [
       relationship_id || null,
@@ -200,8 +189,6 @@ router.put('/:id', async (req, res) => {
       portal_enabled !== undefined ? portal_enabled : null,
       stanford_tax_url !== undefined ? stanford_tax_url : null,
       notes !== undefined ? notes : null,
-      ssn_last4 !== undefined ? ssn_last4 : null,
-      ssn_encrypted !== undefined ? ssn_encrypted : null,
       date_of_birth_encrypted !== undefined ? date_of_birth_encrypted : null,
       id,
       firmId,

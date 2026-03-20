@@ -665,9 +665,9 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">SSN</label>
-          <input type="text" class="form-control" id="person-form-ssn" placeholder="XXX-XX-XXXX" maxlength="11">
-          <div class="form-hint">Stored encrypted; only last 4 shown after save</div>
+          <label class="form-label" style="color:var(--muted);">SSN</label>
+          <input type="text" class="form-control" id="person-form-ssn" placeholder="Stored in Drake / external system" disabled style="opacity:0.4;">
+          <div class="form-hint">SSN is managed in your tax software, not stored here</div>
         </div>
         <div class="form-group">
           <label class="form-label">Stanford Tax URL</label>
@@ -1122,7 +1122,7 @@ async function loadPersonOverview() {
         <div class="panel-section-title">Contact Info</div>
         <div class="info-row"><span class="info-label">Email</span><span class="info-val">${p.email ? esc(p.email) : '—'}</span></div>
         <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${p.phone ? esc(p.phone) : '—'}</span></div>
-        <div class="info-row"><span class="info-label">DOB</span><span class="info-val">${p.date_of_birth ? '●●/●●/●●●●' : '—'}${p.ssn_last4 ? ' &nbsp;<span class="badge badge-muted">SSN ···'+esc(p.ssn_last4)+'</span>' : (p.has_ssn ? ' &nbsp;<span class="badge badge-green">Has SSN</span>' : '')}</span></div>
+        <div class="info-row"><span class="info-label">DOB</span><span class="info-val">${p.has_dob ? '●●/●●/●●●●' : '—'}</span></div>
         <div class="info-row"><span class="info-label">Spouse</span><span class="info-val">${spouseHtml}</span></div>
       </div>
       ${p.stanford_tax_url ? `
@@ -1268,7 +1268,6 @@ function openNewPerson(prefilledRelId = null, prefilledRelName = null) {
   document.getElementById('person-form-email').value = '';
   document.getElementById('person-form-phone').value = '';
   document.getElementById('person-form-filing').value = '';
-  document.getElementById('person-form-ssn').value = '';
   document.getElementById('person-form-dob').value = '';
   document.getElementById('person-form-stanford').value = '';
   document.getElementById('person-form-notes').value = '';
@@ -1301,7 +1300,6 @@ async function openEditPerson(id) {
   document.getElementById('person-form-email').value = p.email || '';
   document.getElementById('person-form-phone').value = p.phone || '';
   document.getElementById('person-form-filing').value = p.filing_status || '';
-  document.getElementById('person-form-ssn').value = '';
   document.getElementById('person-form-dob').value = p.date_of_birth ? p.date_of_birth.slice(0,10) : '';
   document.getElementById('person-form-stanford').value = p.stanford_tax_url || '';
   document.getElementById('person-form-notes').value = p.notes || '';
@@ -1342,8 +1340,6 @@ async function submitPersonForm() {
     notes: document.getElementById('person-form-notes').value || null,
     spouse_id: document.getElementById('person-form-spouse-id').value ? parseInt(document.getElementById('person-form-spouse-id').value) : null,
   };
-  const ssn = document.getElementById('person-form-ssn').value.trim();
-  if (ssn) body.ssn = ssn;
   const btn = document.getElementById('person-form-submit');
   btn.disabled = true;
   try {
