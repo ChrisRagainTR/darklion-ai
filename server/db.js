@@ -494,6 +494,26 @@ async function initDB() {
       moved_at TIMESTAMPTZ DEFAULT NOW(),
       note TEXT DEFAULT ''
     );
+
+    -- ===================== PIPELINE ENHANCEMENTS =====================
+
+    -- Job status / blocker flags
+    DO $$ BEGIN
+      ALTER TABLE pipeline_jobs ADD COLUMN IF NOT EXISTS job_status TEXT DEFAULT 'active';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    -- Stage auto-assign on entry
+    DO $$ BEGIN
+      ALTER TABLE pipeline_stages ADD COLUMN IF NOT EXISTS auto_assign_to INTEGER REFERENCES firm_users(id);
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    -- Stage auto-message on entry
+    DO $$ BEGIN
+      ALTER TABLE pipeline_stages ADD COLUMN IF NOT EXISTS auto_message TEXT DEFAULT '';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
   `);
 }
 

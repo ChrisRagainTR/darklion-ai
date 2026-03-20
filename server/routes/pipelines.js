@@ -100,7 +100,11 @@ router.get('/templates/:id', async (req, res) => {
     if (!tmpl) return res.status(404).json({ error: 'Template not found' });
 
     const { rows: stages } = await pool.query(
-      'SELECT * FROM pipeline_stages WHERE template_id = $1 ORDER BY position ASC, id ASC',
+      `SELECT ps.*, fu.display_name AS auto_assign_name, fu.name AS auto_assign_full_name
+       FROM pipeline_stages ps
+       LEFT JOIN firm_users fu ON fu.id = ps.auto_assign_to
+       WHERE ps.template_id = $1
+       ORDER BY ps.position ASC, ps.id ASC`,
       [tmpl.id]
     );
     res.json({ ...tmpl, stages });
@@ -220,11 +224,18 @@ router.put('/templates/:id/stages/:stageId', async (req, res) => {
     if (!existing[0]) return res.status(404).json({ error: 'Stage not found' });
 
     const s = existing[0];
-    const { name = s.name, position = s.position, color = s.color, is_terminal = s.is_terminal } = req.body;
+    const {
+      name = s.name,
+      position = s.position,
+      color = s.color,
+      is_terminal = s.is_terminal,
+      auto_assign_to = s.auto_assign_to,
+      auto_message = s.auto_message,
+    } = req.body;
     const { rows } = await pool.query(
-      `UPDATE pipeline_stages SET name=$1, position=$2, color=$3, is_terminal=$4
-       WHERE id=$5 RETURNING *`,
-      [name, position, color, is_terminal, s.id]
+      `UPDATE pipeline_stages SET name=$1, position=$2, color=$3, is_terminal=$4, auto_assign_to=$5, auto_message=$6
+       WHERE id=$7 RETURNING *`,
+      [name, position, color, is_terminal, auto_assign_to || null, auto_message || '', s.id]
     );
     res.json(rows[0]);
   } catch (e) {
@@ -324,7 +335,7 @@ router.get('/instances/:id', async (req, res) => {
       [inst.template_id]
     );
 
-    // Get jobs with entity names
+    // Get jobs with entity names (job_status included via pj.*)
     const { rows: jobs } = await pool.query(
       `SELECT pj.*, fu.display_name AS assigned_name, fu.name AS assigned_full_name
        FROM pipeline_jobs pj
@@ -460,12 +471,13 @@ router.put('/jobs/:jobId', async (req, res) => {
       due_date = job.due_date,
       priority = job.priority,
       current_stage_id = job.current_stage_id,
+      job_status = job.job_status || 'active',
     } = req.body;
 
     const { rows } = await pool.query(
-      `UPDATE pipeline_jobs SET notes=$1, assigned_to=$2, due_date=$3, priority=$4, current_stage_id=$5, updated_at=NOW()
-       WHERE id=$6 RETURNING *`,
-      [notes, assigned_to || null, due_date || null, priority, current_stage_id, job.id]
+      `UPDATE pipeline_jobs SET notes=$1, assigned_to=$2, due_date=$3, priority=$4, current_stage_id=$5, job_status=$6, updated_at=NOW()
+       WHERE id=$7 RETURNING *`,
+      [notes, assigned_to || null, due_date || null, priority, current_stage_id, job_status, job.id]
     );
 
     const updated = rows[0];
@@ -519,6 +531,21 @@ router.post('/jobs/:jobId/move', async (req, res) => {
       [job.id, job.current_stage_id, stage_id, moverId, note]
     );
 
+    // Fetch new stage details for automation
+    const { rows: newStageRows } = await pool.query(
+      'SELECT * FROM pipeline_stages WHERE id = $1',
+      [stage_id]
+    );
+    const newStage = newStageRows[0];
+
+    // Auto-assign if configured
+    if (newStage && newStage.auto_assign_to) {
+      await pool.query(
+        'UPDATE pipeline_jobs SET assigned_to = $1 WHERE id = $2',
+        [newStage.auto_assign_to, job.id]
+      );
+    }
+
     const { rows } = await pool.query(
       `UPDATE pipeline_jobs SET current_stage_id=$1, updated_at=NOW() WHERE id=$2 RETURNING *`,
       [stage_id, job.id]
@@ -526,6 +553,72 @@ router.post('/jobs/:jobId/move', async (req, res) => {
 
     const updated = rows[0];
     updated.entity_name = await resolveEntityName(updated);
+
+    // Auto-message if configured
+    if (newStage && newStage.auto_message && newStage.auto_message.trim()) {
+      try {
+        // Get the firm's instance to find firm_id
+        const { rows: instRows } = await pool.query(
+          'SELECT firm_id FROM pipeline_instances WHERE id = $1',
+          [job.instance_id]
+        );
+        const firmId = instRows[0]?.firm_id;
+        if (firmId) {
+          // Get firm owner
+          const { rows: ownerRows } = await pool.query(
+            `SELECT id FROM firm_users WHERE firm_id = $1 AND role = 'owner' LIMIT 1`,
+            [firmId]
+          );
+          const senderId = ownerRows[0]?.id;
+          if (senderId) {
+            // Resolve person IDs from job entity
+            let personIds = [];
+            if (job.entity_type === 'person') {
+              personIds = [job.entity_id];
+            } else if (job.entity_type === 'company') {
+              const { rows: pca } = await pool.query(
+                'SELECT person_id FROM person_company_access WHERE company_id = $1',
+                [job.entity_id]
+              );
+              personIds = pca.map(r => r.person_id);
+            }
+
+            for (const personId of personIds) {
+              // Find or create an open thread for this person
+              const { rows: threadRows } = await pool.query(
+                `SELECT id FROM message_threads WHERE firm_id = $1 AND person_id = $2 AND status = 'open' ORDER BY last_message_at DESC LIMIT 1`,
+                [firmId, personId]
+              );
+              let threadId;
+              if (threadRows.length > 0) {
+                threadId = threadRows[0].id;
+              } else {
+                const { rows: newThread } = await pool.query(
+                  `INSERT INTO message_threads (firm_id, person_id, subject, status, category, last_message_at)
+                   VALUES ($1, $2, 'Pipeline Update', 'open', 'general', NOW()) RETURNING id`,
+                  [firmId, personId]
+                );
+                threadId = newThread[0].id;
+              }
+              // Insert auto-message
+              await pool.query(
+                `INSERT INTO messages (thread_id, sender_type, sender_id, body, is_internal)
+                 VALUES ($1, 'staff', $2, $3, false)`,
+                [threadId, senderId, newStage.auto_message.trim()]
+              );
+              // Update thread last_message_at
+              await pool.query(
+                'UPDATE message_threads SET last_message_at = NOW() WHERE id = $1',
+                [threadId]
+              );
+            }
+          }
+        }
+      } catch (autoMsgErr) {
+        console.error('Auto-message error (non-fatal):', autoMsgErr);
+      }
+    }
+
     res.json(updated);
   } catch (e) {
     console.error('POST /jobs/:jobId/move error:', e);

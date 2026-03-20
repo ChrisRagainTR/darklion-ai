@@ -253,6 +253,38 @@
     .color-picker-wrap { display: flex; align-items: center; gap: 0.5rem; }
     .color-picker-wrap input[type=color] { width: 32px; height: 28px; border: 1px solid var(--border); border-radius: 4px; background: none; cursor: pointer; padding: 2px; }
 
+    /* ── JOB STATUS BADGES ── */
+    .job-status-badge {
+      display: inline-block; font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.45rem;
+      border-radius: 4px; margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .job-status-badge.waiting_client { background: rgba(234,179,8,0.2); color: #eab308; }
+    .job-status-badge.missing_info   { background: rgba(234,88,12,0.2); color: #f97316; }
+    .job-status-badge.blocked        { background: rgba(239,68,68,0.2); color: #ef4444; }
+    .job-status-badge.under_extension{ background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .job-status-badge.on_hold        { background: rgba(148,163,184,0.15); color: #94a3b8; }
+
+    /* Status left-border on card */
+    .job-card[data-status="waiting_client"]  { border-left: 3px solid #eab308; }
+    .job-card[data-status="missing_info"]    { border-left: 3px solid #f97316; }
+    .job-card[data-status="blocked"]         { border-left: 3px solid #ef4444; }
+    .job-card[data-status="under_extension"] { border-left: 3px solid #60a5fa; }
+    .job-card[data-status="on_hold"]         { border-left: 3px solid #94a3b8; }
+
+    /* Stage automation fields */
+    .stage-auto-row {
+      display: flex; flex-direction: column; gap: 0.4rem;
+      margin-top: 0.5rem; padding: 0.5rem 0.75rem;
+      background: rgba(22,32,48,0.8); border: 1px solid var(--border); border-radius: 6px;
+    }
+    .stage-auto-row label { font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stage-auto-row select, .stage-auto-row textarea {
+      width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text);
+      border-radius: 5px; padding: 0.35rem 0.6rem; font-size: 0.8rem; font-family: inherit;
+    }
+    .stage-auto-row select:focus, .stage-auto-row textarea:focus { outline: none; border-color: var(--gold); }
+    .stage-auto-row textarea { resize: vertical; min-height: 60px; }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 700px) {
       .sidebar { width: 56px; }
@@ -572,6 +604,14 @@
       }
     }
 
+    const JOB_STATUS_LABELS = {
+      waiting_client:  '🟡 Waiting on Client',
+      missing_info:    '🟠 Missing Info',
+      blocked:         '🔴 Blocked',
+      under_extension: '🔵 Under Extension',
+      on_hold:         '⚫ On Hold',
+    };
+
     function renderJobCard(job) {
       const priorityCls = job.priority || 'normal';
       const notesPreview = (job.notes || '').substring(0, 60) + ((job.notes || '').length > 60 ? '…' : '');
@@ -580,12 +620,18 @@
       const isOverdue = job.due_date && new Date(job.due_date) < new Date();
       const assignName = job.assigned_name || job.assigned_full_name || '';
       const assignIni = assignName ? initials(assignName) : '';
+      const status = job.job_status || 'active';
+      const statusAttr = status !== 'active' ? ` data-status="${status}"` : '';
+      const statusBadge = status !== 'active' && JOB_STATUS_LABELS[status]
+        ? `<div><span class="job-status-badge ${status}">${JOB_STATUS_LABELS[status]}</span></div>`
+        : '';
 
-      return `<div class="job-card" data-job-id="${job.id}" draggable="true" onclick="openJobPanel(${job.id})">
+      return `<div class="job-card" data-job-id="${job.id}" draggable="true" onclick="openJobPanel(${job.id})"${statusAttr}>
         <div class="job-card-top">
           <div class="job-entity">${esc(job.entity_name || `#${job.entity_id}`)}</div>
           <span class="priority-badge ${priorityCls}">${priorityCls}</span>
         </div>
+        ${statusBadge}
         ${notesPreview ? `<div class="job-notes-preview">${esc(notesPreview)}</div>` : ''}
         <div class="job-card-meta">
           <span class="job-days">${days}d</span>
@@ -749,6 +795,17 @@
             <select id="panel-stage" onchange="panelMoveStage(${jobId}, this.value)">${stageOpts}</select>
           </div>
           <div class="panel-field">
+            <label>Status</label>
+            <select id="panel-job-status" onchange="panelSaveField(${jobId})">
+              <option value="active" ${(job.job_status || 'active') === 'active' ? 'selected' : ''}>Active</option>
+              <option value="waiting_client" ${job.job_status === 'waiting_client' ? 'selected' : ''}>🟡 Waiting on Client</option>
+              <option value="missing_info" ${job.job_status === 'missing_info' ? 'selected' : ''}>🟠 Missing Info</option>
+              <option value="blocked" ${job.job_status === 'blocked' ? 'selected' : ''}>🔴 Blocked</option>
+              <option value="under_extension" ${job.job_status === 'under_extension' ? 'selected' : ''}>🔵 Under Extension</option>
+              <option value="on_hold" ${job.job_status === 'on_hold' ? 'selected' : ''}>⚫ On Hold</option>
+            </select>
+          </div>
+          <div class="panel-field">
             <label>Priority</label>
             <select id="panel-priority" onchange="panelSaveField(${jobId})">
               <option value="normal" ${job.priority === 'normal' ? 'selected' : ''}>Normal</option>
@@ -797,11 +854,13 @@
         const assigned = document.getElementById('panel-assigned')?.value;
         const due = document.getElementById('panel-due')?.value;
         const notes = document.getElementById('panel-notes')?.value;
+        const jobStatus = document.getElementById('panel-job-status')?.value || 'active';
         await api('PUT', `/jobs/${jobId}`, {
           priority,
           assigned_to: assigned || null,
           due_date: due || null,
           notes,
+          job_status: jobStatus,
         });
         // Refresh board silently
         currentInstanceData = await api('GET', `/instances/${currentInstance}`);
@@ -978,27 +1037,42 @@
       const t = editingTemplate;
       const editorEl = document.getElementById('template-editor');
 
-      const stagesHtml = t.stages.map((s, idx) => `
-        <div class="stage-row" data-stage-id="${s.id}" draggable="true"
-          ondragstart="stageDragStart(event, ${s.id})"
-          ondragover="event.preventDefault(); this.classList.add('drag-over-stage')"
-          ondragleave="this.classList.remove('drag-over-stage')"
-          ondrop="stageDrop(event, ${s.id})">
-          <span class="stage-drag-handle" title="Drag to reorder">⠿</span>
-          <div class="stage-color-swatch" style="background:${s.color||'#c9a84c'}" onclick="openStageColorPicker(${s.id})"></div>
-          <input type="color" id="stage-color-${s.id}" value="${s.color||'#c9a84c'}" style="display:none"
-            oninput="updateStageColorSwatch(${s.id}, this.value)"
-            onchange="saveStageColor(${s.id}, this.value)" />
-          <input class="stage-name-input" type="text" value="${esc(s.name)}" placeholder="Stage name"
-            onchange="saveStageField(${s.id}, 'name', this.value)"
-            onblur="saveStageField(${s.id}, 'name', this.value)" />
-          <label class="stage-terminal-label">
-            <input type="checkbox" ${s.is_terminal ? 'checked' : ''} onchange="saveStageField(${s.id}, 'is_terminal', this.checked)" />
-            Terminal
-          </label>
-          <button class="stage-delete-btn" onclick="deleteStage(${s.id})" title="Delete stage">🗑</button>
-        </div>
-      `).join('');
+      const stagesHtml = t.stages.map((s, idx) => {
+        const autoAssignOpts = '<option value="">None (keep current)</option>' +
+          teamMembers.map(m =>
+            `<option value="${m.id}" ${m.id == s.auto_assign_to ? 'selected' : ''}>${esc(m.display_name || m.name)}</option>`
+          ).join('');
+        return `
+        <div style="margin-bottom:0.75rem;">
+          <div class="stage-row" data-stage-id="${s.id}" draggable="true"
+            ondragstart="stageDragStart(event, ${s.id})"
+            ondragover="event.preventDefault(); this.classList.add('drag-over-stage')"
+            ondragleave="this.classList.remove('drag-over-stage')"
+            ondrop="stageDrop(event, ${s.id})">
+            <span class="stage-drag-handle" title="Drag to reorder">⠿</span>
+            <div class="stage-color-swatch" style="background:${s.color||'#c9a84c'}" onclick="openStageColorPicker(${s.id})"></div>
+            <input type="color" id="stage-color-${s.id}" value="${s.color||'#c9a84c'}" style="display:none"
+              oninput="updateStageColorSwatch(${s.id}, this.value)"
+              onchange="saveStageColor(${s.id}, this.value)" />
+            <input class="stage-name-input" type="text" value="${esc(s.name)}" placeholder="Stage name"
+              onchange="saveStageField(${s.id}, 'name', this.value)"
+              onblur="saveStageField(${s.id}, 'name', this.value)" />
+            <label class="stage-terminal-label">
+              <input type="checkbox" ${s.is_terminal ? 'checked' : ''} onchange="saveStageField(${s.id}, 'is_terminal', this.checked)" />
+              Terminal
+            </label>
+            <button class="stage-delete-btn" onclick="deleteStage(${s.id})" title="Delete stage">🗑</button>
+          </div>
+          <div class="stage-auto-row">
+            <label>Auto-assign to</label>
+            <select id="stage-auto-assign-${s.id}" onchange="saveStageAutoFields(${s.id})">${autoAssignOpts}</select>
+            <label style="margin-top:0.35rem;">Auto-message to client</label>
+            <textarea id="stage-auto-message-${s.id}" rows="2"
+              placeholder="Enter a message to automatically send to the client when a job enters this stage. Leave blank to skip."
+              onblur="saveStageAutoFields(${s.id})">${esc(s.auto_message || '')}</textarea>
+          </div>
+        </div>`;
+      }).join('');
 
       editorEl.innerHTML = `
         <div class="template-editor">
@@ -1021,11 +1095,40 @@
       try {
         const stage = editingTemplate.stages.find(s => s.id == stageId);
         if (!stage) return;
-        const update = { name: stage.name, position: stage.position, color: stage.color, is_terminal: stage.is_terminal };
+        const update = {
+          name: stage.name,
+          position: stage.position,
+          color: stage.color,
+          is_terminal: stage.is_terminal,
+          auto_assign_to: stage.auto_assign_to || null,
+          auto_message: stage.auto_message || '',
+        };
         update[field] = value;
         const updated = await api('PUT', `/templates/${editingTemplate.id}/stages/${stageId}`, update);
         Object.assign(stage, updated);
       } catch (err) { console.error('Stage save error:', err); }
+    };
+
+    window.saveStageAutoFields = async function(stageId) {
+      if (!editingTemplate) return;
+      try {
+        const stage = editingTemplate.stages.find(s => s.id == stageId);
+        if (!stage) return;
+        const autoAssignEl = document.getElementById(`stage-auto-assign-${stageId}`);
+        const autoMsgEl = document.getElementById(`stage-auto-message-${stageId}`);
+        const auto_assign_to = autoAssignEl ? (autoAssignEl.value ? parseInt(autoAssignEl.value) : null) : (stage.auto_assign_to || null);
+        const auto_message = autoMsgEl ? autoMsgEl.value : (stage.auto_message || '');
+        const update = {
+          name: stage.name,
+          position: stage.position,
+          color: stage.color,
+          is_terminal: stage.is_terminal,
+          auto_assign_to,
+          auto_message,
+        };
+        const updated = await api('PUT', `/templates/${editingTemplate.id}/stages/${stageId}`, update);
+        Object.assign(stage, updated);
+      } catch (err) { console.error('Stage auto-fields save error:', err); }
     };
 
     window.openStageColorPicker = function(stageId) {
