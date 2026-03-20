@@ -155,6 +155,8 @@ app.get('/invite/:token', (req, res) => res.sendFile(path.join(publicDir, 'invit
 // Note: the HTML page itself is served publicly; the page JS will redirect if no token
 app.get('/dashboard', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
 app.get('/dashboard.html', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
+app.get('/crm', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
+app.get('/crm.html', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
 
 // Redirect route (previously required Basic Auth)
 app.get('/redirect', (req, res) => res.sendFile(path.join(publicDir, 'redirect.html')));
