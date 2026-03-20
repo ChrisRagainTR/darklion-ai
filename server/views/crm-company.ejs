@@ -1,0 +1,2775 @@
+<div class="entity-header">
+    <a href="/crm?tab=companies" class="entity-back">← Companies</a>
+    <div class="entity-header-content">
+      <div class="entity-name" id="entity-name">Loading…</div>
+      <div class="entity-badges" id="entity-badges"></div>
+      <div class="entity-meta" id="entity-meta"></div>
+    </div>
+    <div class="entity-actions">
+      <button class="btn btn-outline btn-sm" onclick="openEditModal()">Edit</button>
+    </div>
+  </div>
+
+  <!-- Main tab bar -->
+  <div class="tab-bar">
+    <div class="tab-item active" onclick="switchTab('overview', this)">Overview</div>
+    <div class="tab-item" onclick="switchTab('docs', this)">Docs</div>
+    <div class="tab-item" onclick="switchTab('tax', this)">Tax</div>
+    <div class="tab-item" onclick="switchTab('bookkeeping', this)">Bookkeeping</div>
+    <div class="tab-item" onclick="switchTab('communication', this)">Communication</div>
+    <div class="tab-item" onclick="switchTab('organizers', this)">Organizers</div>
+    <div class="tab-item" onclick="switchTab('workflow', this)">Workflow</div>
+    <div class="tab-item" onclick="switchTab('notes', this)">Notes</div>
+  </div>
+
+  <!-- Bookkeeping sub-tab bar (hidden unless bookkeeping tab active) -->
+  <div class="subtab-bar" id="subtab-bar" style="display:none;">
+    <div class="subtab-item active" onclick="switchSubtab('close-package', this)">Close Package</div>
+    <div class="subtab-item" onclick="switchSubtab('uncategorized', this)">Uncategorized</div>
+    <div class="subtab-item" onclick="switchSubtab('variance', this)">P&amp;L Variance</div>
+    <div class="subtab-item" onclick="switchSubtab('liability', this)">Liability Health</div>
+    <div class="subtab-item" onclick="switchSubtab('payroll', this)">Payroll Check</div>
+    <div class="subtab-item" onclick="switchSubtab('statements', this)">Statements</div>
+  </div>
+
+  <!-- ── Tab: Overview ── -->
+  <div id="tab-overview" class="tab-content active">
+    <div class="detail-grid">
+      <div id="overview-left">
+        <div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>
+      </div>
+      <div id="overview-right">
+        <div class="card">
+          <div class="card-title">Internal Notes</div>
+          <textarea class="form-control" id="notes-ta" rows="6" placeholder="Internal staff notes…" onblur="autoSaveNotes(this.value)"></textarea>
+          <div class="save-indicator" id="notes-saved"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Quick Actions</div>
+          <div style="display:flex;flex-direction:column;gap:0.5rem;">
+            <button class="btn btn-outline btn-sm" onclick="openEditModal()">✏️ Edit Company</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Docs ── -->
+  <div id="tab-docs" class="tab-content">
+    <div id="docs-content">
+      <div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Tax ── -->
+  <div id="tab-tax" class="tab-content">
+    <div id="tax-content">
+      <div class="loading-state"><div class="loading-spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Bookkeeping ── -->
+  <div id="tab-bookkeeping" class="tab-content" style="padding:1.5rem;">
+
+    <!-- ── Subtab: Close Package ── -->
+    <div id="subtab-close-package" class="subtab-content active">
+      <div style="margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+        <h2 style="font-size:1.1rem;font-weight:800;">Close Package</h2>
+      </div>
+      <div id="bk-cp-qbo-guard"></div>
+      <div id="bk-cp-main" style="display:none;">
+        <div class="period-picker">
+          <div class="period-tabs">
+            <button class="period-tab active" onclick="bk_showPeriodTab('months',this)">Months</button>
+            <button class="period-tab" onclick="bk_showPeriodTab('quarters',this)">Quarters</button>
+            <button class="period-tab" onclick="bk_showPeriodTab('annual',this)">Annual</button>
+            <button class="period-tab" onclick="bk_showPeriodTab('custom',this)">Date Range</button>
+          </div>
+          <div class="period-panel active" id="bk-pp-months"><div id="bk-month-grid-container"></div></div>
+          <div class="period-panel" id="bk-pp-quarters"><div id="bk-quarter-grid-container"></div></div>
+          <div class="period-panel" id="bk-pp-annual"><div class="year-grid" id="bk-year-grid-container"></div></div>
+          <div class="period-panel" id="bk-pp-custom">
+            <div class="date-range-row">
+              <label>From</label><input type="date" id="bk-cp-date-from">
+              <label>To</label><input type="date" id="bk-cp-date-to">
+              <button class="btn btn-outline btn-sm" onclick="bk_applyCustomRange()">Apply</button>
+            </div>
+          </div>
+          <div class="period-actions">
+            <div class="selected-label">Selected: <strong id="bk-cp-selected-label">—</strong></div>
+          </div>
+        </div>
+        <div id="bk-cp-results">
+          <div style="text-align:center;padding:3rem;color:var(--muted);">Select a period above to generate the close package.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Subtab: Uncategorized ── -->
+    <div id="subtab-uncategorized" class="subtab-content">
+      <div style="margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+        <h2 style="font-size:1.1rem;font-weight:800;">Uncategorized Transaction Scanner</h2>
+        <button class="btn btn-gold" id="bk-btn-uncat-scan" onclick="bk_runUncategorizedScan()">Run Scan</button>
+      </div>
+      <div id="bk-uncat-qbo-guard"></div>
+      <div id="bk-uncat-main" style="display:none;">
+        <div id="bk-uncat-last-scan" style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;">Not yet scanned</div>
+        <div class="stats-grid" id="bk-uncat-stats" style="display:none;">
+          <div class="stat-card"><div class="stat-label">Flagged Accounts</div><div class="stat-value red" id="bk-uncat-flagged">0</div></div>
+          <div class="stat-card"><div class="stat-label">Accounts Checked</div><div class="stat-value" id="bk-uncat-checked">0</div></div>
+          <div class="stat-card"><div class="stat-label">Total Uncategorized</div><div class="stat-value orange" id="bk-uncat-total">$0</div></div>
+        </div>
+        <div id="bk-uncat-results"></div>
+      </div>
+    </div>
+
+    <!-- ── Subtab: P&L Variance ── -->
+    <div id="subtab-variance" class="subtab-content">
+      <div style="margin-bottom:1rem;">
+        <h2 style="font-size:1.1rem;font-weight:800;">P&amp;L Variance Analysis</h2>
+        <div style="font-size:0.82rem;color:var(--muted);">Compares selected month vs prior month and same month last year</div>
+      </div>
+      <div id="bk-var-qbo-guard"></div>
+      <div id="bk-var-main" style="display:none;">
+        <div class="variance-controls">
+          <div>
+            <div class="var-ctrl-label">Period</div>
+            <div class="var-month-scroll" id="bk-var-month-btns"></div>
+          </div>
+          <div>
+            <div class="var-ctrl-label">Threshold %</div>
+            <input type="number" id="bk-var-threshold-pct" class="var-threshold-input" value="15" min="1" max="100">
+          </div>
+          <div>
+            <div class="var-ctrl-label">Min Amount $</div>
+            <input type="number" id="bk-var-threshold-amt" class="var-amt-input" value="500" min="0">
+          </div>
+          <button class="btn btn-gold" onclick="bk_runVarianceScan()">Run Analysis</button>
+        </div>
+        <div id="bk-var-stats" style="display:none;">
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">Accounts Checked</div><div class="stat-value" id="bk-var-total">0</div></div>
+            <div class="stat-card"><div class="stat-label">Flagged</div><div class="stat-value red" id="bk-var-flagged">0</div></div>
+            <div class="stat-card"><div class="stat-label">Threshold</div><div class="stat-value gold" id="bk-var-threshold">15%</div><div class="stat-sub">and &gt;$500</div></div>
+          </div>
+          <div id="bk-var-last-scan" style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;"></div>
+        </div>
+        <div id="bk-var-results">
+          <div style="text-align:center;padding:3rem;color:var(--muted);">Select a period and click "Run Analysis".</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Subtab: Liability Health ── -->
+    <div id="subtab-liability" class="subtab-content">
+      <div style="margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+        <div>
+          <h2 style="font-size:1.1rem;font-weight:800;">Liability Account Health Check</h2>
+          <div style="font-size:0.82rem;color:var(--muted);">Checks for negative balances, stale payroll liabilities, unusual balances</div>
+        </div>
+        <button class="btn btn-gold" onclick="bk_runLiabilityScan()">Run Check</button>
+      </div>
+      <div id="bk-liab-qbo-guard"></div>
+      <div id="bk-liab-main" style="display:none;">
+        <div id="bk-liab-stats" style="display:none;">
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">Liability Accounts</div><div class="stat-value" id="bk-liab-total">0</div></div>
+            <div class="stat-card"><div class="stat-label">Issues Found</div><div class="stat-value red" id="bk-liab-flagged">0</div></div>
+            <div class="stat-card"><div class="stat-label">Total Liabilities</div><div class="stat-value gold" id="bk-liab-balance">$0</div></div>
+          </div>
+          <div id="bk-liab-last-scan" style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;"></div>
+        </div>
+        <div id="bk-liab-results">
+          <div style="text-align:center;padding:3rem;color:var(--muted);">Click "Run Check" to scan liability accounts.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Subtab: Payroll Check ── -->
+    <div id="subtab-payroll" class="subtab-content">
+      <div style="margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+        <div>
+          <h2 style="font-size:1.1rem;font-weight:800;">Payroll Verification</h2>
+          <div style="font-size:0.82rem;color:var(--muted);">Gusto payroll cross-referenced against QBO journal entries</div>
+        </div>
+        <div id="bk-payroll-actions"></div>
+      </div>
+      <div id="bk-payroll-qbo-guard"></div>
+      <div id="bk-payroll-main" style="display:none;">
+        <div id="bk-payroll-month-picker" style="display:none;margin-bottom:1rem;">
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;" id="bk-payroll-months"></div>
+        </div>
+        <div id="bk-payroll-stats" style="display:none;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;">
+            <div class="stat-card"><div class="stat-label">Payrolls</div><div id="bk-pay-count" style="font-size:1.6rem;font-weight:800;color:var(--text);margin-top:0.3rem;">0</div></div>
+            <div class="stat-card"><div class="stat-label">Gross Pay Total</div><div id="bk-pay-gross" style="font-size:1.6rem;font-weight:800;color:var(--gold);margin-top:0.3rem;">$0</div></div>
+            <div class="stat-card"><div class="stat-label">Mismatches</div><div id="bk-pay-mismatches" style="font-size:1.6rem;font-weight:800;color:var(--green);margin-top:0.3rem;">0</div></div>
+          </div>
+          <div id="bk-pay-period" style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;"></div>
+        </div>
+        <div id="bk-payroll-results"><div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- ── Subtab: Statements ── -->
+    <div id="subtab-statements" class="subtab-content">
+      <div style="margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+        <div>
+          <h2 style="font-size:1.1rem;font-weight:800;" id="bk-stmt-page-title">Statements</h2>
+          <div style="font-size:0.82rem;color:var(--muted);" id="bk-stmt-subtitle"></div>
+        </div>
+        <button class="btn btn-gold" onclick="bk_showStmtAddForm()">+ Add Account</button>
+      </div>
+      <div id="bk-stmt-qbo-guard"></div>
+      <div id="bk-stmt-main" style="display:none;">
+        <!-- Add Account inline form -->
+        <div id="bk-stmt-add-form" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:1.2rem;">
+          <div style="font-weight:600;margin-bottom:0.75rem;font-size:0.9rem;">Add Account</div>
+          <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+            <input class="stmt-input" id="bk-stmt-new-name" placeholder="Account name *" style="width:180px;">
+            <input class="stmt-input" id="bk-stmt-new-inst" placeholder="Institution" style="width:150px;">
+            <select class="stmt-select" id="bk-stmt-new-method">
+              <option value="qbo_pull">QBO Pull</option>
+              <option value="portal" selected>Portal Download</option>
+              <option value="manual">Manual Download</option>
+              <option value="email">Email</option>
+              <option value="client_upload">Client Upload</option>
+            </select>
+            <input class="stmt-input stmt-day-input" type="number" id="bk-stmt-new-day" placeholder="Day" value="1" min="1" max="31" style="width:70px;">
+            <button class="btn btn-gold btn-sm" onclick="bk_saveNewStmtAccount()">Save</button>
+            <button class="btn btn-outline btn-sm" onclick="bk_hideStmtAddForm()">Cancel</button>
+          </div>
+        </div>
+        <div id="bk-stmt-summary" style="margin-bottom:1.2rem;display:none;">
+          <div class="stats-grid" id="bk-stmt-stats-grid"></div>
+        </div>
+        <div id="bk-stmt-table-wrap">
+          <div style="text-align:center;padding:3rem;color:var(--muted);">Loading statements…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Subtab: Statement Calendar ── -->
+    <div id="subtab-stmt-calendar" class="subtab-content">
+      <div style="margin-bottom:1rem;">
+        <h2 style="font-size:1.1rem;font-weight:800;">Statement Calendar</h2>
+        <div style="font-size:0.82rem;color:var(--muted);">Accounts grouped by availability day</div>
+      </div>
+      <div id="bk-cal-qbo-guard"></div>
+      <div id="bk-cal-main" style="display:none;">
+        <!-- Month nav -->
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.2rem;">
+          <button class="btn btn-outline btn-sm" onclick="bk_calChangeMonth(-1)">&#8592; Prev</button>
+          <span id="bk-cal-month-display" style="font-weight:700;min-width:130px;text-align:center;font-size:1rem;"></span>
+          <button class="btn btn-outline btn-sm" onclick="bk_calChangeMonth(1)">Next &#8594;</button>
+        </div>
+        <!-- Stats bar -->
+        <div id="bk-cal-stats" style="display:none;margin-bottom:1.2rem;">
+          <div class="stats-grid" id="bk-cal-stats-grid"></div>
+          <div style="margin-top:0.6rem;">
+            <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.25rem;" id="bk-cal-pct-label"></div>
+            <div class="cal-progress-wrap"><div class="cal-progress-fill" id="bk-cal-progress-fill" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div id="bk-stmt-calendar-body">
+          <div style="text-align:center;padding:3rem;color:var(--muted);">Loading calendar…</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-bookkeeping -->
+
+  <!-- ── Tab: Communication ── -->
+  <div id="tab-communication" class="tab-content">
+    <div id="comm-co-content" style="display:flex;gap:1.5rem;max-width:1100px;">
+      <!-- Thread list -->
+      <div id="comm-co-thread-list" style="width:280px;flex-shrink:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+          <div style="font-size:0.8rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.05em;">Messages</div>
+          <button class="btn btn-gold btn-sm" onclick="openCoCompose()">+ New Thread</button>
+        </div>
+        <div id="comm-co-threads"><div class="loading-state"><div class="loading-spinner"></div></div></div>
+      </div>
+      <!-- Thread detail -->
+      <div id="comm-co-thread-detail" style="flex:1;display:none;flex-direction:column;">
+        <div id="comm-co-thread-header" style="margin-bottom:1rem;"></div>
+        <div id="comm-co-messages-list" style="display:flex;flex-direction:column;gap:0.75rem;max-height:420px;overflow-y:auto;padding:0.5rem;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;margin-bottom:1rem;"></div>
+        <div class="card" style="padding:1rem;">
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+            <label style="font-size:0.8rem;color:var(--muted);display:flex;align-items:center;gap:0.3rem;cursor:pointer;">
+              <input type="checkbox" id="comm-co-internal-toggle"> Internal note
+            </label>
+            <div style="flex:1;"></div>
+            <select id="comm-co-status-select" onchange="updateCoThreadStatus()" style="font-size:0.78rem;background:var(--charcoal);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:0.2rem 0.4rem;">
+              <option value="open">Open</option>
+              <option value="waiting">Waiting</option>
+              <option value="resolved">Resolved</option>
+            </select>
+          </div>
+          <textarea id="comm-co-reply-body" rows="3" class="form-control" placeholder="Reply…" style="margin-bottom:0.5rem;"></textarea>
+          <button class="btn btn-gold btn-sm" onclick="sendCoReply()">Send Reply</button>
+        </div>
+      </div>
+      <!-- New thread compose -->
+      <div id="comm-co-compose" style="flex:1;display:none;">
+        <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:1rem;">New Thread</div>
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <label>Person</label>
+          <select id="comm-co-person-select" class="form-control"><option value="">Loading…</option></select>
+        </div>
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <label>Subject</label>
+          <input type="text" id="comm-co-new-subject" class="form-control" placeholder="Subject…">
+        </div>
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <label>Message</label>
+          <textarea id="comm-co-new-body" rows="5" class="form-control" placeholder="Write your message…"></textarea>
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="btn btn-gold btn-sm" onclick="sendCoNewThread()">Send</button>
+          <button class="btn btn-outline btn-sm" onclick="closeCoCompose()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Organizers ── -->
+  <div id="tab-organizers" class="tab-content">
+    <div class="placeholder-section">
+      <div class="ph-icon">📝</div>
+      <div class="ph-title">Organizers</div>
+      <div class="ph-desc">Tax organizers for this company — coming soon.</div>
+      <div id="org-stanford-link" style="margin-top:1rem;"></div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Workflow ── -->
+  <div id="tab-workflow" class="tab-content">
+    <div class="placeholder-section">
+      <div class="ph-icon">⚙️</div>
+      <div class="ph-title">Pipelines</div>
+      <div class="ph-desc">Pipeline jobs for this company will appear here.</div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Notes ── -->
+  <div id="tab-notes" class="tab-content">
+    <div class="card" style="max-width:800px;">
+      <div class="card-title">Internal Notes</div>
+      <textarea class="form-control" id="notes-ta-full" rows="12" placeholder="Internal staff notes…" onblur="autoSaveNotes(this.value)"></textarea>
+      <div style="display:flex;align-items:center;gap:1rem;margin-top:0.75rem;">
+        <button class="btn btn-gold btn-sm" onclick="autoSaveNotes(document.getElementById('notes-ta-full').value, true)">Save Notes</button>
+        <div class="save-indicator" id="notes-saved-full"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit Modal ── -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit Company</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="edit-error" class="error-msg" style="display:none;"></div>
+      <div class="form-group">
+        <label class="form-label">Company Name</label>
+        <input type="text" class="form-control" id="ef-name">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Entity Type</label>
+          <select class="form-control" id="ef-entity-type">
+            <option value="">— Select —</option>
+            <option value="llc">LLC</option>
+            <option value="s_corp">S-Corp</option>
+            <option value="c_corp">C-Corp</option>
+            <option value="partnership">Partnership</option>
+            <option value="sole_prop">Sole Prop</option>
+            <option value="trust">Trust</option>
+            <option value="nonprofit">Non-Profit</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tax Year End</label>
+          <input type="text" class="form-control" id="ef-tax-year-end" placeholder="12/31">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stanford Tax URL</label>
+        <input type="url" class="form-control" id="ef-stanford">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-control" id="ef-status">
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="dissolved">Dissolved</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" id="ef-submit" onclick="submitEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Bookkeeping Drilldown Overlay + Panel -->
+<div class="bk-drilldown-overlay" id="bk-drilldown-overlay" onclick="bk_closeDrilldown()"></div>
+<div class="bk-drilldown-panel" id="bk-drilldown-panel">
+  <div class="bk-drilldown-header">
+    <div>
+      <h3 id="bk-dd-account-name">Account</h3>
+      <div class="bk-dd-period" id="bk-dd-period"></div>
+    </div>
+    <button class="bk-drilldown-close" onclick="bk_closeDrilldown()">✕</button>
+  </div>
+  <div class="bk-drilldown-body" id="bk-drilldown-body">
+    <div class="bk-drilldown-loading">Loading transactions…</div>
+  </div>
+</div>
+
+<!-- Bookkeeping Day Drawer -->
+<div class="bk-day-drawer-overlay" id="bk-day-drawer-overlay" onclick="bk_closeDayDrawer()"></div>
+<div class="bk-day-drawer" id="bk-day-drawer">
+  <div class="bk-day-drawer-header">
+    <div>
+      <div class="bk-day-drawer-title" id="bk-day-drawer-title">Day —</div>
+    </div>
+    <button class="bk-day-drawer-close" onclick="bk_closeDayDrawer()">×</button>
+  </div>
+  <div class="bk-day-drawer-progress">
+    <div class="bk-day-drawer-prog-label" id="bk-day-drawer-prog-label">— of — retrieved</div>
+    <div class="bk-day-drawer-prog-bar"><div class="bk-day-drawer-prog-fill" id="bk-day-drawer-prog-fill" style="width:0%"></div></div>
+  </div>
+  <div class="bk-day-drawer-body" id="bk-day-drawer-body">
+    <div style="padding:2rem;text-align:center;color:var(--muted);">Loading…</div>
+  </div>
+</div>
+
+
+
+<!-- ── Upload Modal ── -->
+<div class="modal-overlay" id="upload-modal">
+  <div class="modal" style="width:480px;">
+    <div class="modal-header">
+      <div class="modal-title">Upload Document</div>
+      <button class="modal-close" onclick="document.getElementById('upload-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="upload-error" class="error-msg" style="display:none;"></div>
+      <div id="upload-dropzone" style="border:2px dashed var(--border);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;"
+           onclick="document.getElementById('upload-file-input').click()"
+           ondragover="event.preventDefault()"
+           ondrop="event.preventDefault();uploadFile=event.dataTransfer.files[0];showUploadFile(uploadFile);">
+        <div id="upload-dropzone-text" style="color:var(--muted);">
+          <div style="font-size:2rem;margin-bottom:0.5rem;">📂</div>
+          <div>Drag & drop or <span style="color:var(--gold);text-decoration:underline;">click to browse</span></div>
+        </div>
+        <div id="upload-file-name" style="display:none;font-weight:600;color:var(--text);"></div>
+      </div>
+      <input type="file" id="upload-file-input" style="display:none;" onchange="uploadFile=this.files[0];showUploadFile(uploadFile);">
+      <div class="form-group">
+        <label class="form-label">Display Name</label>
+        <input type="text" class="form-control" id="upload-display-name">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Year</label>
+          <input type="text" class="form-control" id="upload-year" maxlength="4">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Section</label>
+          <select class="form-control" id="upload-section">
+            <option value="firm_uploaded">Firm Uploaded</option>
+            <option value="client_uploaded">Client Uploaded</option>
+            <option value="private">Private</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-control" id="upload-category">
+          <option value="other">Other</option>
+          <option value="tax">Tax</option>
+          <option value="bookkeeping">Bookkeeping</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('upload-modal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-gold" onclick="submitUpload()">Upload</button>
+    </div>
+  </div>
+</div>
+
+<%- contentFor('styles') %>
+<style>
+:root {
+      --navy: #0f1923; --charcoal: #1c2b3a; --card: #1e2f40;
+      --gold: #c9a84c; --gold-light: #e2c068;
+      --text: #e8edf2; --muted: #8fa3b8;
+      --border: rgba(201,168,76,0.2);
+      --green: #3ecf8e; --red: #f56565; --orange: #ed8936;
+      --sidebar-w: 220px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--navy); color: var(--text); line-height: 1.6; display: flex; min-height: 100vh; }
+
+    .sidebar { width: var(--sidebar-w); background: rgba(15,25,35,0.98); border-right: 1px solid var(--border); position: fixed; top: 60px; left: 0; bottom: 0; overflow-y: auto; display: flex; flex-direction: column; z-index: 100; }
+    .sidebar-brand { display: flex; align-items: center; gap: 0.6rem; padding: 1.2rem 1rem; text-decoration: none; }
+    .sidebar-brand .nav-name { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .sidebar-brand .nav-name span { color: var(--gold); }
+    .sidebar-section { padding: 1rem 0 0.25rem 1rem; font-size: 0.65rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .sidebar-nav { list-style: none; padding: 0; }
+    .sidebar-nav li a { display: flex; align-items: center; gap: 0.55rem; padding: 0.55rem 1rem; color: var(--muted); text-decoration: none; font-size: 0.85rem; border-left: 3px solid transparent; transition: all 0.15s; }
+    .sidebar-nav li a:hover { color: var(--text); background: rgba(201,168,76,0.05); }
+    .sidebar-nav li a.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); font-weight: 600; }
+    .sidebar-nav li a.disabled { opacity: 0.4; pointer-events: none; }
+    .sidebar-divider { height: 1px; background: var(--border); margin: 0.5rem 1rem; }
+    .sidebar-footer { margin-top: auto; padding: 1rem; border-top: 1px solid var(--border); }
+    .sidebar-footer a { display: block; text-align: center; color: var(--muted); font-size: 0.82rem; text-decoration: none; }
+
+    .main { margin-left: var(--sidebar-w); margin-top: 60px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+    .top-header { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: rgb(15,25,35); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; padding: 0 1.5rem 0 1rem; z-index: 200; }
+    .header-logo { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; text-decoration: none; }
+    .header-logo .hl-name { font-size: 1.25rem; font-weight: 800; color: var(--text); }
+    .header-logo .hl-name span { color: var(--gold); }
+    .header-search-wrap { flex: 1; max-width: 580px; min-width: 0; margin: 0 auto; position: relative; }
+    .header-search-bar { width: 100%; height: 44px; background: var(--charcoal); border: 1.5px solid var(--border); color: var(--text); border-radius: 10px; padding: 0 1rem 0 2.6rem; font-size: 0.9rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s; cursor: pointer; }
+    .header-search-bar:focus, .header-search-bar.open { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.15); }
+    .header-search-bar::placeholder { color: var(--muted); }
+    .header-search-icon { position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 1rem; pointer-events: none; }
+    .header-client-dropdown { display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: #13222f; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); z-index: 300; overflow: hidden; }
+    .header-client-dropdown.open { display: block; }
+    .hcd-list { max-height: 320px; overflow-y: auto; }
+    .hcd-option { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 1rem; cursor: pointer; transition: background 0.1s; font-size: 0.85rem; }
+    .hcd-option:hover, .hcd-option.focused { background: rgba(201,168,76,0.07); }
+    .hcd-info { flex: 1; min-width: 0; }
+    .hcd-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .hcd-meta { font-size: 0.72rem; color: var(--muted); display: block; }
+    .hcd-footer { padding: 0.4rem 1rem; border-top: 1px solid var(--border); font-size: 0.72rem; color: var(--muted); }
+    .user-menu-wrap { position: relative; flex-shrink: 0; }
+    .user-menu-trigger { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.3rem 0.5rem; border-radius: 8px; transition: background 0.15s; border: none; background: none; color: var(--text); }
+    .user-menu-trigger:hover { background: rgba(201,168,76,0.08); }
+    .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: #ffffff; color: #1a1a2e; display: flex; align-items: center; justify-content: center; font-size: 0.82rem; font-weight: 800; flex-shrink: 0; overflow: hidden; }
+    .user-menu-info { text-align: left; }
+    .user-menu-name { font-size: 0.8rem; font-weight: 700; line-height: 1.2; }
+    .user-menu-firm { font-size: 0.7rem; color: var(--muted); line-height: 1.2; }
+    .user-menu-chevron { font-size: 0.65rem; color: var(--muted); transition: transform 0.2s; }
+    .user-menu-trigger.open .user-menu-chevron { transform: rotate(180deg); }
+    .user-menu-dropdown { display: none; position: absolute; top: calc(100% + 6px); right: 0; background: var(--charcoal); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); z-index: 300; min-width: 180px; overflow: hidden; }
+    .user-menu-dropdown.open { display: block; }
+    .umd-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1rem; cursor: pointer; font-size: 0.85rem; color: var(--text); transition: background 0.1s; text-decoration: none; }
+    .umd-item:hover { background: rgba(201,168,76,0.07); }
+    .umd-item.danger { color: var(--red); }
+    .umd-item.danger:hover { background: rgba(245,101,101,0.08); }
+    .umd-divider { height: 1px; background: var(--border); margin: 0.25rem 0; }
+
+    .entity-header { margin-top: 0; background: rgba(28,43,58,0.8); border-bottom: 1px solid var(--border); padding: 1.25rem 1.5rem; display: flex; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+    .entity-back { color: var(--muted); text-decoration: none; font-size: 0.82rem; display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0; margin-top: 0.35rem; transition: color 0.15s; }
+    .entity-back:hover { color: var(--gold); }
+    .entity-header-content { flex: 1; min-width: 0; }
+    .entity-name { font-size: 1.5rem; font-weight: 800; color: var(--text); line-height: 1.2; }
+    .entity-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem; }
+    .entity-meta { font-size: 0.82rem; color: var(--muted); margin-top: 0.3rem; }
+    .entity-actions { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; margin-top: 0.25rem; }
+
+    /* ── Main tab bar ── */
+    .tab-bar { background: rgba(15,25,35,0.6); border-bottom: 1px solid var(--border); display: flex; gap: 0; padding: 0 1.5rem; overflow-x: auto; }
+    .tab-item { padding: 0.7rem 1.1rem; cursor: pointer; font-size: 0.86rem; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: all 0.15s; }
+    .tab-item:hover { color: var(--text); }
+    .tab-item.active { color: var(--gold); border-bottom-color: var(--gold); font-weight: 600; }
+
+    /* ── Secondary (bookkeeping) sub-tab bar ── */
+    .subtab-bar { background: rgba(15,25,35,0.4); border-bottom: 1px solid var(--border); display: flex; gap: 0; padding: 0 1.5rem; overflow-x: auto; }
+    .subtab-item { padding: 0.45rem 0.9rem; cursor: pointer; font-size: 0.78rem; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: all 0.15s; }
+    .subtab-item:hover { color: var(--text); }
+    .subtab-item.active { color: var(--gold); border-bottom-color: var(--gold); font-weight: 600; }
+
+    .tab-content { display: none; padding: 1.5rem; flex: 1; }
+    .tab-content.active { display: block; }
+    .subtab-content { display: none; }
+    .subtab-content.active { display: block; }
+
+    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.95rem; border-radius: 6px; font-size: 0.84rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; }
+    .btn-gold { background: var(--gold); color: var(--navy); }
+    .btn-gold:hover { background: var(--gold-light); }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-ghost { background: transparent; color: var(--muted); padding: 0.3rem 0.6rem; font-size: 0.8rem; }
+    .btn-ghost:hover { color: var(--text); }
+    .btn-danger { background: transparent; border: 1px solid rgba(245,101,101,0.3); color: var(--red); }
+    .btn-danger:hover { background: rgba(245,101,101,0.1); }
+    .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+    .btn-xs { padding: 0.2rem 0.5rem; font-size: 0.72rem; }
+
+    .badge { display: inline-block; padding: 0.18rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .badge-gold { background: rgba(201,168,76,0.15); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
+    .badge-green { background: rgba(62,207,142,0.12); color: var(--green); border: 1px solid rgba(62,207,142,0.25); }
+    .badge-red { background: rgba(245,101,101,0.12); color: var(--red); border: 1px solid rgba(245,101,101,0.25); }
+    .badge-orange { background: rgba(237,137,54,0.12); color: var(--orange); border: 1px solid rgba(237,137,54,0.25); }
+    .badge-muted { background: rgba(143,163,184,0.12); color: var(--muted); border: 1px solid rgba(143,163,184,0.2); }
+    .badge-blue { background: rgba(66,153,225,0.12); color: #63b3ed; border: 1px solid rgba(66,153,225,0.25); }
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; }
+    .card-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.85rem; }
+    .info-row { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.4rem; }
+    .info-label { font-size: 0.76rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; min-width: 100px; flex-shrink: 0; }
+    .info-val { font-size: 0.88rem; color: var(--text); word-break: break-word; }
+    .info-val a { color: var(--gold); text-decoration: none; }
+    .info-val a:hover { text-decoration: underline; }
+
+    .detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; align-items: start; }
+    @media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
+
+    .person-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .person-row:last-child { border-bottom: none; }
+    .person-avatar { width: 32px; height: 32px; border-radius: 50%; background: rgba(201,168,76,0.15); display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; color: var(--gold); flex-shrink: 0; }
+    .person-info { flex: 1; min-width: 0; }
+    .person-name { font-size: 0.86rem; font-weight: 600; }
+    .person-meta { font-size: 0.74rem; color: var(--muted); }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-control { width: 100%; padding: 0.5rem 0.75rem; background: var(--navy); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.88rem; outline: none; transition: border-color 0.15s; }
+    .form-control:focus { border-color: var(--gold); }
+    textarea.form-control { resize: vertical; min-height: 120px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    select.form-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238fa3b8'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2rem; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 400; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.18s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal { background: var(--charcoal); border: 1px solid var(--border); border-radius: 12px; width: 520px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column; transform: translateY(20px); transition: transform 0.18s; }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-header { padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font-size: 1rem; font-weight: 700; }
+    .modal-close { background: none; border: none; color: var(--muted); font-size: 1.3rem; cursor: pointer; }
+    .modal-body { padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1; }
+    .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.5rem; }
+
+    .loading-state { padding: 3rem; text-align: center; color: var(--muted); }
+    .loading-spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid rgba(201,168,76,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 0.5rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-state { padding: 2.5rem; text-align: center; color: var(--muted); }
+    .error-msg { background: rgba(245,101,101,0.1); border: 1px solid rgba(245,101,101,0.25); border-radius: 6px; padding: 0.7rem 1rem; color: var(--red); font-size: 0.84rem; margin-bottom: 1rem; }
+
+    .placeholder-section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 3rem; text-align: center; color: var(--muted); }
+    .ph-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
+    .ph-title { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; opacity: 0.75; }
+    .ph-desc { font-size: 0.84rem; }
+
+    .save-indicator { font-size: 0.78rem; color: var(--green); margin-top: 0.35rem; min-height: 1.1em; }
+
+    .stanford-card { background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.25); border-radius: 8px; padding: 1rem 1.2rem; display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; }
+    .stanford-card .sc-text { flex: 1; min-width: 0; }
+    .stanford-card .sc-label { font-size: 0.7rem; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: 0.07em; }
+    .stanford-card .sc-url { font-size: 0.82rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.1rem; }
+
+    /* QBO connection card */
+    .qbo-card { background: rgba(62,207,142,0.06); border: 1px solid rgba(62,207,142,0.25); border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; }
+    .qbo-card.disconnected { background: rgba(143,163,184,0.06); border-color: rgba(143,163,184,0.2); }
+
+    .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999; display: flex; flex-direction: column; gap: 0.5rem; }
+    .toast { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.84rem; color: var(--text); box-shadow: 0 4px 16px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 0.5rem; animation: slideIn 0.2s; min-width: 240px; max-width: 360px; }
+    .toast.success { border-color: rgba(62,207,142,0.4); }
+    .toast.error { border-color: rgba(245,101,101,0.4); }
+    @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    @media (max-width: 768px) {
+      .sidebar { width: 56px; }
+      .sidebar .sidebar-section, .sidebar-nav li a span, .sidebar-brand .nav-name { display: none; }
+      .sidebar-nav li a { justify-content: center; padding: 0.75rem; }
+      .main { margin-left: 56px; }
+      .header-logo .hl-name { display: none; }
+      .header-search-wrap { max-width: 100%; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+
+    /* ===== BOOKKEEPING SECTION STYLES ===== */
+    .connect-qbo-prompt { padding: 3rem; text-align: center; color: var(--muted); background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
+    .connect-qbo-prompt > div:first-child { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.6; }
+    .connect-qbo-prompt h3 { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+    .connect-qbo-prompt p { font-size: 0.88rem; margin-bottom: 1.5rem; }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem; }
+    .stat-label { font-size: 0.7rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+    .stat-value { font-size: 1.6rem; font-weight: 800; }
+    .stat-value.gold { color: var(--gold); }
+    .stat-value.green { color: var(--green); }
+    .stat-value.orange { color: var(--orange); }
+    .stat-value.red { color: var(--red); }
+    .stat-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+
+    /* Table */
+    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; }
+    .table-wrap table { width: 100%; border-collapse: collapse; }
+    .table-wrap th { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); background: var(--card); position: sticky; top: 0; z-index: 10; }
+    .table-wrap td { padding: 0.7rem 1rem; font-size: 0.85rem; border-bottom: 1px solid rgba(201,168,76,0.07); vertical-align: middle; }
+    .table-wrap tr:last-child td { border-bottom: none; }
+    .table-wrap tr:hover td { background: rgba(201,168,76,0.03); }
+    td.amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    td.amount.drillable { cursor: pointer; transition: color 0.15s; }
+    td.amount.drillable:hover { color: var(--gold-light) !important; text-decoration: underline; }
+
+    .badge-pending { background: rgba(237,137,54,0.12); color: var(--orange); }
+    .badge-flag { background: rgba(245,101,101,0.12); color: var(--red); }
+    .badge-ok { background: rgba(62,207,142,0.12); color: var(--green); }
+    .badge-warning { background: rgba(237,137,54,0.12); color: var(--orange); }
+
+    /* Period picker */
+    .period-picker { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.5rem; }
+    .period-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+    .period-tab { padding: 0.5rem 1rem; font-size: 0.78rem; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; }
+    .period-tab:hover { color: var(--text); }
+    .period-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+    .period-panel { display: none; }
+    .period-panel.active { display: block; }
+    .month-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 0.35rem; margin-bottom: 0.75rem; }
+    .month-btn { padding: 0.4rem 0.15rem; font-size: 0.72rem; font-weight: 600; background: var(--charcoal); border: 1px solid var(--border); color: var(--muted); border-radius: 5px; cursor: pointer; transition: all 0.15s; text-align: center; white-space: nowrap; }
+    .month-btn:hover { border-color: var(--gold); color: var(--text); }
+    .month-btn.selected { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+    .month-btn.current { border-color: var(--green); }
+    .quarter-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+    .quarter-btn { padding: 0.6rem 0.5rem; font-size: 0.82rem; font-weight: 700; background: var(--charcoal); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; cursor: pointer; transition: all 0.15s; text-align: center; }
+    .quarter-btn:hover { border-color: var(--gold); color: var(--text); }
+    .quarter-btn.selected { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+    .year-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+    .year-btn { padding: 0.6rem 0.5rem; font-size: 0.82rem; font-weight: 700; background: var(--charcoal); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; cursor: pointer; transition: all 0.15s; text-align: center; }
+    .year-btn:hover { border-color: var(--gold); color: var(--text); }
+    .year-btn.selected { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+    .date-range-row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+    .date-range-row label { font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+    .date-range-row input[type="date"] { background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.82rem; }
+    .period-year-label { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+    .period-actions { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .period-actions .selected-label { flex: 1; font-size: 0.82rem; color: var(--muted); min-width: 0; }
+    .period-actions .selected-label strong { color: var(--gold); }
+
+    /* Close Package report */
+    .report-section { margin-top: 1.5rem; }
+    .report-section h3 { font-size: 0.88rem; margin-bottom: 0.75rem; }
+    .report-section .table-wrap { margin-bottom: 1rem; }
+    .report-row-header td { font-weight: 700; color: var(--gold); background: rgba(201,168,76,0.04); }
+    .report-row-total td { font-weight: 700; border-top: 2px solid var(--border); }
+
+    /* Variance controls */
+    .variance-controls { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
+    .var-ctrl-label { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+    .var-month-scroll { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+    .var-month-btn { padding: 0.3rem 0.55rem; font-size: 0.72rem; font-weight: 600; background: var(--charcoal); border: 1px solid var(--border); color: var(--muted); border-radius: 5px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .var-month-btn:hover { border-color: var(--gold); color: var(--text); }
+    .var-month-btn.selected { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+    .var-threshold-input { width: 75px; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.82rem; }
+    .var-amt-input { width: 90px; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.82rem; }
+
+    /* Drilldown panel */
+    .bk-drilldown-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 400; }
+    .bk-drilldown-overlay.open { display: block; }
+    .bk-drilldown-panel { position: fixed; top: 0; right: -560px; width: 560px; max-width: 96vw; height: 100vh; background: var(--charcoal); border-left: 2px solid var(--gold); z-index: 401; display: flex; flex-direction: column; transition: right 0.3s ease; overflow: hidden; box-shadow: -10px 0 40px rgba(0,0,0,0.4); }
+    .bk-drilldown-panel.open { right: 0; }
+    .bk-drilldown-header { padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; flex-shrink: 0; }
+    .bk-drilldown-header h3 { font-size: 0.9rem; font-weight: 800; color: var(--gold); line-height: 1.3; }
+    .bk-dd-period { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+    .bk-drilldown-close { background: none; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; flex-shrink: 0; padding: 0.1rem 0.3rem; transition: color 0.15s; }
+    .bk-drilldown-close:hover { color: var(--text); }
+    .bk-drilldown-body { flex: 1; overflow-y: auto; padding: 0.5rem 0; }
+    .bk-drilldown-loading { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.85rem; }
+    .bk-drilldown-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .bk-drilldown-table th { font-size: 0.67rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left; position: sticky; top: 0; background: var(--charcoal); }
+    .bk-drilldown-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid rgba(201,168,76,0.06); vertical-align: middle; }
+    .bk-drilldown-table tr:last-child td { border-bottom: none; }
+    .bk-drilldown-table tr:hover td { background: rgba(201,168,76,0.04); }
+    .bk-drilldown-table .dd-amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .bk-btn-recode { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.18rem 0.5rem; border-radius: 4px; font-size: 0.68rem; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .bk-btn-recode:hover { border-color: var(--gold); color: var(--gold); }
+    .bk-recode-row { background: rgba(201,168,76,0.04); }
+    .bk-recode-row td { padding: 0.5rem 0.75rem; }
+    .bk-recode-select { background: var(--navy); border: 1px solid var(--border); color: var(--text); padding: 0.3rem 0.5rem; border-radius: 5px; font-size: 0.78rem; width: 100%; margin-bottom: 0.35rem; }
+    .bk-recode-select:focus { border-color: var(--gold); outline: none; }
+    .bk-recode-actions { display: flex; gap: 0.5rem; }
+    .bk-btn-recode-save { background: var(--gold); color: var(--navy); border: none; border-radius: 5px; padding: 0.3rem 0.7rem; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+    .bk-btn-recode-save:hover { background: var(--gold-light); }
+    .bk-btn-recode-cancel { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 5px; padding: 0.3rem 0.7rem; font-size: 0.75rem; cursor: pointer; }
+
+    /* Statements */
+    .stmt-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .stmt-table th { font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); text-align: left; background: rgba(0,0,0,0.15); }
+    .stmt-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(201,168,76,0.06); vertical-align: middle; }
+    .stmt-table tr:last-child td { border-bottom: none; }
+    .stmt-table tr:hover td { background: rgba(201,168,76,0.03); }
+    .stmt-select { background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.3rem 0.5rem; border-radius: 5px; font-size: 0.78rem; }    .stmt-select:focus { border-color: var(--gold); outline: none; }
+    .stmt-input { background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.3rem 0.5rem; border-radius: 5px; font-size: 0.78rem; }
+    .stmt-input:focus { border-color: var(--gold); outline: none; }
+    .stmt-day-input { width: 54px; }
+    .btn-icon { background: transparent; border: none; cursor: pointer; color: var(--muted); font-size: 0.85rem; padding: 0.15rem 0.3rem; transition: color 0.15s; }
+    .btn-icon:hover { color: var(--red); }
+
+    /* Statement Calendar */
+    .cal-heatmap { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 0.5rem; }
+    .cal-hm-day { background: var(--card); border: 2px solid transparent; border-radius: 8px; padding: 0.45rem 0.5rem; cursor: default; transition: border-color 0.15s, transform 0.1s; min-height: 62px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; }
+    .cal-hm-day.has-items { cursor: pointer; }
+    .cal-hm-day.has-items:hover { transform: scale(1.04); }
+    .cal-hm-day.all-retrieved { border-color: rgba(62,207,142,0.4); background: rgba(62,207,142,0.05); }
+    .cal-hm-day.all-pending { border-color: rgba(237,137,54,0.5); background: rgba(237,137,54,0.05); }
+    .cal-hm-day.mixed { border-color: rgba(201,168,76,0.5); background: rgba(201,168,76,0.04); }
+    .cal-hm-num { font-size: 1.1rem; font-weight: 700; line-height: 1; color: var(--muted); }
+    .cal-hm-day.has-items .cal-hm-num { color: var(--text); }
+    .cal-hm-badges { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.3rem; font-size: 0.65rem; line-height: 1; }
+    .cal-hm-badge { display: inline-flex; align-items: center; gap: 0.15rem; }
+    .cal-progress-wrap { margin-top: 0.5rem; background: var(--card); border-radius: 4px; height: 6px; overflow: hidden; }
+    .cal-progress-fill { height: 100%; background: var(--gold); border-radius: 4px; transition: width 0.4s; }
+
+    /* Day Drawer */
+    .bk-day-drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 410; }
+    .bk-day-drawer-overlay.open { display: block; }
+    .bk-day-drawer { position: fixed; top: 0; right: -420px; width: 400px; max-width: 100vw; height: 100vh; background: var(--charcoal); border-left: 1px solid var(--border); z-index: 411; display: flex; flex-direction: column; transition: right 0.3s cubic-bezier(0.4,0,0.2,1); box-shadow: -8px 0 40px rgba(0,0,0,0.4); }
+    .bk-day-drawer.open { right: 0; }
+    .bk-day-drawer-header { padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; flex-shrink: 0; }
+    .bk-day-drawer-title { font-size: 1rem; font-weight: 700; color: var(--gold); }
+    .bk-day-drawer-close { background: none; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; padding: 0.1rem 0.3rem; line-height: 1; }
+    .bk-day-drawer-close:hover { color: var(--text); }
+    .bk-day-drawer-progress { padding: 0.75rem 1.2rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .bk-day-drawer-prog-label { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.4rem; }
+    .bk-day-drawer-prog-bar { background: var(--card); border-radius: 4px; height: 6px; overflow: hidden; }
+    .bk-day-drawer-prog-fill { height: 100%; background: var(--gold); border-radius: 4px; transition: width 0.3s; }
+    .bk-day-drawer-body { flex: 1; overflow-y: auto; padding: 0.5rem 0; }
+    .bk-day-drawer-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.5rem; align-items: center; padding: 0.55rem 1.2rem; border-bottom: 1px solid rgba(201,168,76,0.06); font-size: 0.8rem; }
+    .bk-day-drawer-row:last-child { border-bottom: none; }
+    .bk-day-drawer-row.retrieved { opacity: 0.6; }
+    .bk-dd-row-info { min-width: 0; }
+    .bk-dd-row-company { font-weight: 600; color: var(--text); font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bk-dd-row-account { color: var(--muted); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bk-dd-row-method { font-size: 0.68rem; background: rgba(201,168,76,0.12); color: var(--gold); padding: 0.15rem 0.4rem; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+    .bk-dd-row-action { flex-shrink: 0; }
+    .bk-btn-dd-retrieve { background: transparent; border: 1px solid rgba(62,207,142,0.5); color: #3ecf8e; border-radius: 5px; cursor: pointer; font-size: 0.75rem; padding: 0.2rem 0.5rem; transition: background 0.15s; white-space: nowrap; }
+    .bk-btn-dd-retrieve:hover { background: rgba(62,207,142,0.15); }
+    .bk-btn-dd-retrieve:disabled { opacity: 0.5; cursor: default; }
+    .bk-dd-retrieved-date { font-size: 0.7rem; color: #3ecf8e; white-space: nowrap; }
+
+    /* Payroll alert bar */
+    .bk-payroll-alert { background: rgba(237,137,54,0.1); border: 1px solid rgba(237,137,54,0.4); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; font-size: 0.86rem; color: var(--orange); display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+    .bk-payroll-alert a { color: var(--gold); text-decoration: underline; cursor: pointer; }
+    .sidebar-nav li a.nav-coming-soon { opacity: 0.4; cursor: default; pointer-events: none; }
+</style>
+
+<%- contentFor('scripts') %>
+<script>
+  const companyId = location.pathname.split('/').pop();
+  const token = localStorage.getItem('dl_token');
+  if (!token) window.location.href = '/login';
+
+  let companyData = null;
+  let bookkeepingRealm = null; // Set after company loads
+  const CURRENT_YEAR = new Date().getFullYear();
+
+  function authHeaders() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }; }
+  async function apiFetch(url, opts = {}) {
+    const res = await fetch(url, { ...opts, headers: { ...authHeaders(), ...(opts.headers||{}) } });
+    if (res.status === 401) window.location.href = '/login';
+    return res;
+  }
+  function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function toast(msg, type='success') {
+    const c = document.getElementById('toast-container');
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = (type==='success'?'✓ ':'✕ ') + msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+
+  // ── Tab switching ──
+  function switchTab(name, el) {
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    if (el) el.classList.add('active');
+    const tc = document.getElementById('tab-' + name);
+    if (tc) tc.classList.add('active');
+    // Show/hide subtab bar
+    const stbar = document.getElementById('subtab-bar');
+    stbar.style.display = name === 'bookkeeping' ? '' : 'none';
+    // Lazy load
+    if (name === 'docs') loadDocs();
+    if (name === 'tax') loadTax();
+    if (name === 'bookkeeping') {
+      bk_initBookkeeping();
+    }
+    if (name === 'notes' && companyData) {
+      document.getElementById('notes-ta-full').value = companyData.notes || '';
+    }
+    if (name === 'organizers' && companyData && companyData.stanford_tax_url) {
+      document.getElementById('org-stanford-link').innerHTML = `<a href="${esc(companyData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax →</a>`;
+    }
+    if (name === 'communication') initCoComm();
+  }
+
+  function switchSubtab(name, el) {
+    document.querySelectorAll('.subtab-item').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.subtab-content').forEach(t => t.classList.remove('active'));
+    if (el) el.classList.add('active');
+    const sc = document.getElementById('subtab-' + name);
+    if (sc) sc.classList.add('active');
+    // Load the sub-tab content
+    bk_loadActiveSubtab(name);
+  }
+
+  // ── Company load ──
+  async function loadCompany() {
+    try {
+      const res = await apiFetch(`/api/companies/${companyId}`);
+      if (!res.ok) { document.getElementById('entity-name').textContent = 'Not Found'; return; }
+      companyData = await res.json();
+      bookkeepingRealm = companyData.realm_id || null;
+      renderHeader(companyData);
+      renderOverview(companyData);
+    } catch(e) {
+      document.getElementById('entity-name').textContent = 'Error loading company';
+    }
+  }
+
+  function entityTypeLabel(t) {
+    const m = { llc:'LLC', s_corp:'S-Corp', c_corp:'C-Corp', partnership:'Partnership', sole_prop:'Sole Prop', trust:'Trust', nonprofit:'Non-Profit', other:'Other' };
+    return m[t] || t || '';
+  }
+
+  function renderHeader(c) {
+    document.title = `${c.company_name} — DarkLion CRM`;
+    document.getElementById('entity-name').textContent = c.company_name || 'Unnamed Company';
+    let html = `<span class="badge badge-muted">Company</span>`;
+    if (c.entity_type) html += ` <span class="badge badge-blue">${entityTypeLabel(c.entity_type)}</span>`;
+    const statusCls = { active: 'badge-green', inactive: 'badge-muted', dissolved: 'badge-red' };
+    if (c.status) html += ` <span class="badge ${statusCls[c.status]||'badge-muted'}">${esc(c.status)}</span>`;
+    if (c.realm_id) html += ` <span class="badge badge-green">QBO Connected</span>`;
+    document.getElementById('entity-badges').innerHTML = html;
+    const meta = [];
+    if (c.tax_year_end) meta.push(`📅 Tax Year End: ${esc(c.tax_year_end)}`);
+    if (c.has_ein) meta.push('EIN: ●●–●●●●●●●');
+    document.getElementById('entity-meta').innerHTML = meta.join('  ·  ');
+  }
+
+  function renderOverview(c) {
+    document.getElementById('notes-ta').value = c.notes || '';
+    document.getElementById('notes-ta-full').value = c.notes || '';
+
+    const left = document.getElementById('overview-left');
+    let html = '';
+
+    html += `<div class="card">
+      <div class="card-title">Company Details</div>
+      <div class="info-row"><span class="info-label">Entity Type</span><span class="info-val">${c.entity_type ? `<span class="badge badge-blue">${entityTypeLabel(c.entity_type)}</span>` : '—'}</span></div>
+      <div class="info-row"><span class="info-label">Status</span><span class="info-val">${c.status ? `<span class="badge badge-${c.status==='active'?'green':c.status==='dissolved'?'red':'muted'}">${esc(c.status)}</span>` : '—'}</span></div>
+      <div class="info-row"><span class="info-label">Tax Year End</span><span class="info-val">${c.tax_year_end ? esc(c.tax_year_end) : '—'}</span></div>
+      <div class="info-row"><span class="info-label">EIN</span><span class="info-val">${c.has_ein ? '●●–●●●●●●●' : '—'}</span></div>
+      <div class="info-row"><span class="info-label">QBO</span><span class="info-val">${c.realm_id ? '<span class="badge badge-green">Connected</span>' : '<span class="badge badge-muted">Not Connected</span>'}</span></div>
+      ${c.last_sync_at ? `<div class="info-row"><span class="info-label">Last Sync</span><span class="info-val" style="font-size:0.82rem;color:var(--muted);">${new Date(c.last_sync_at).toLocaleDateString()}</span></div>` : ''}
+    </div>`;
+
+    if (c.stanford_tax_url) {
+      html += `<div class="card stanford-card">
+        <div class="sc-text">
+          <div class="sc-label">Stanford Tax</div>
+          <div class="sc-url">${esc(c.stanford_tax_url)}</div>
+        </div>
+        <a href="${esc(c.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">Open →</a>
+      </div>`;
+    }
+
+    if (c.relationship) {
+      html += `<div class="card">
+        <div class="card-title">Relationship</div>
+        <a href="/crm/relationship/${c.relationship.id}" class="btn btn-outline btn-sm">👥 ${esc(c.relationship.name)} →</a>
+      </div>`;
+    }
+
+    const people = c.people || [];
+    html += `<div class="card">
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>People &amp; Owners</span>
+        <button class="btn btn-gold btn-sm" onclick="openAttachPersonModal()">+ Attach Person</button>
+      </div>`;
+    if (!people.length) {
+      html += `<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No people attached. Use "+ Attach Person" to add owners or contacts.</div>`;
+    } else {
+      people.forEach(p => {
+        const initials = ((p.first_name||'').charAt(0)+(p.last_name||'').charAt(0)).toUpperCase()||'?';
+        const accessCls = { view:'badge-muted', full:'badge-gold', sign:'badge-green' };
+        const accessLbl = { view:'View', full:'Full', sign:'Sign' };
+        const portalBadge = p.portal_enabled ? '<span class="badge badge-green" style="font-size:0.65rem;">Portal</span>' : '';
+        html += `<div class="person-row">
+          <div class="person-avatar">${initials}</div>
+          <div class="person-info">
+            <div class="person-name"><a href="/crm/person/${p.person_id}" style="color:var(--text);text-decoration:none;">${esc(p.first_name)} ${esc(p.last_name)}</a></div>
+            <div class="person-meta">${p.email ? esc(p.email) : ''}${p.ownership_pct != null ? ' · ' + p.ownership_pct + '%' : ''}</div>
+          </div>
+          <span class="badge ${accessCls[p.access_level]||'badge-muted'}">${accessLbl[p.access_level]||esc(p.access_level)}</span>
+          ${portalBadge}
+          <button class="btn btn-danger btn-xs" onclick="detachPerson(${p.person_id})">✕</button>
+          <a href="/crm/person/${p.person_id}" class="btn btn-ghost btn-xs">→</a>
+        </div>`;
+      });
+    }
+    html += `</div>`;
+    left.innerHTML = html;
+  }
+
+  // ── Docs ──
+  let allDocs = [];
+  let docsLoaded = false;
+  const DOC_SECTIONS = [
+    { key: 'client_uploaded', label: 'Client Uploaded', icon: '📤' },
+    { key: 'firm_uploaded', label: 'Firm Uploaded', icon: '📁' },
+    { key: 'private', label: 'Private (Staff Only)', icon: '🔒' },
+  ];
+
+  async function loadDocs(force) {
+    if (docsLoaded && !force) return;
+    docsLoaded = true;
+    const c = document.getElementById('docs-content');
+    c.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading documents…</div></div>';
+    try {
+      const res = await apiFetch(`/api/documents?owner_type=company&owner_id=${companyId}`);
+      if (!res.ok) throw new Error('Failed');
+      allDocs = await res.json();
+      renderDocs();
+    } catch(e) {
+      c.innerHTML = '<div class="error-msg">Failed to load documents.</div>';
+    }
+  }
+
+  function renderDocs() {
+    const c = document.getElementById('docs-content');
+    const currentYear = new Date().getFullYear();
+    const startYear = 2018;
+    const years = [];
+    for (let y = currentYear; y >= startYear; y--) years.push(String(y));
+
+    // Categories: companies get tax + bookkeeping + other
+    const DOC_CATEGORIES = [
+      { key: 'tax', label: 'Tax', icon: '🧾' },
+      { key: 'bookkeeping', label: 'Bookkeeping', icon: '📒' },
+      { key: 'other', label: 'Other', icon: '📎' },
+    ];
+
+    let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+      <button class="btn btn-gold btn-sm" onclick="openUploadModal()">+ Upload Document</button>
+    </div>`;
+
+    // Build year rows HTML for a set of docs (recent = last 2 years shown, rest in Previous Years)
+    function renderYearRows(secDocs, secKey) {
+      const recentYears = years.slice(0, 2); // current + last year
+      const prevYears = years.slice(2);
+      let out = '';
+
+      function renderOneYear(yr) {
+        const yrDocs = secDocs.filter(d => (d.year||'') === yr);
+        const yrOpen = yrDocs.length > 0;
+        let y = `<div style="margin-bottom:0.4rem;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;padding:0.35rem 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;" onclick="const next=this.nextElementSibling;next.style.display=next.style.display==='none'?'':'none';this.querySelector('.yr-arrow').textContent=next.style.display===''?'▾':'▸'">
+            📅 ${yr} <span style="font-weight:400;">(${yrDocs.length})</span> <span class="yr-arrow" style="float:right;">${yrOpen?'▾':'▸'}</span>
+          </div>
+          <div style="padding-left:1rem;display:${yrOpen?'':'none'}">`;
+        DOC_CATEGORIES.forEach(cat => {
+          const catDocs = yrDocs.filter(d => (d.folder_category||'other') === cat.key);
+          y += `<div style="margin-bottom:0.25rem;">
+            <div style="font-size:0.71rem;font-weight:600;color:var(--muted);padding:0.3rem 0;cursor:pointer;user-select:none;display:flex;align-items:center;gap:0.3rem;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
+              ${cat.icon} ${cat.label} <span style="font-weight:400;">(${catDocs.length})</span>
+              <button class="btn btn-ghost" style="font-size:0.68rem;padding:0.1rem 0.4rem;margin-left:auto;" onclick="event.stopPropagation();openUploadModalWith('${secKey}','${cat.key}','${yr}')">+ Add</button>
+            </div>
+            <div style="padding-left:1rem;">${catDocs.length === 0 ? '<div style="color:var(--muted);font-size:0.78rem;font-style:italic;">Empty</div>' : catDocs.map(d => docRow(d)).join('')}</div>
+          </div>`;
+        });
+        y += `</div></div>`;
+        return y;
+      }
+
+      recentYears.forEach(yr => { out += renderOneYear(yr); });
+
+      // Previous Years folder
+      const prevCount = prevYears.reduce((n, yr) => n + secDocs.filter(d => (d.year||'') === yr).length, 0);
+      out += `<div style="margin-bottom:0.4rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;padding:0.35rem 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;" onclick="const next=this.nextElementSibling;next.style.display=next.style.display==='none'?'block':'none';this.querySelector('.yr-arrow').textContent=next.style.display==='block'?'▾':'▸'">
+          📂 Previous Years <span style="font-weight:400;">(${prevCount})</span> <span class="yr-arrow" style="float:right;">▸</span>
+        </div>
+        <div style="display:none;padding-left:0.5rem;">
+          ${prevYears.map(yr => renderOneYear(yr)).join('')}
+        </div>
+      </div>`;
+
+      return out;
+    }
+
+    DOC_SECTIONS.forEach(sec => {
+      const secDocs = allDocs.filter(d => (d.folder_section||'firm_uploaded') === sec.key);
+      const totalCount = secDocs.length;
+      html += `<div class="card" style="margin-bottom:1.25rem;">
+        <div class="card-title" style="cursor:pointer;user-select:none;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
+          ${sec.icon} ${sec.label}
+          <span style="font-size:0.72rem;color:var(--muted);font-weight:400;margin-left:0.5rem;">(${totalCount} file${totalCount!==1?'s':''})</span>
+          <span style="font-size:0.7rem;color:var(--muted);float:right;">▾</span>
+        </div>
+        <div>${renderYearRows(secDocs, sec.key)}</div>
+      </div>`;
+    });
+
+    c.innerHTML = html;
+  }
+
+  function docRow(d) {
+    const icon = d.folder_category === 'tax' ? '🧾' : d.folder_category === 'bookkeeping' ? '📒' : '📎';
+    const catBadge = d.folder_category ? `<span class="badge badge-muted" style="font-size:0.68rem;">${esc(d.folder_category)}</span>` : '';
+    const delivered = d.is_delivered ? '<span class="badge badge-green" style="font-size:0.68rem;">Delivered</span>' : '<span class="badge badge-muted" style="font-size:0.68rem;">Not Delivered</span>';
+    return `<div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+      <span style="font-size:1.2rem;">${icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(d.display_name||'Untitled')}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.2rem;">${catBadge}${delivered}</div>
+      </div>
+      <div style="display:flex;gap:0.3rem;flex-shrink:0;">
+        <button class="btn btn-ghost btn-xs" onclick="downloadDoc(${d.id})">⬇</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteDoc(${d.id})">✕</button>
+      </div>
+    </div>`;
+  }
+
+  async function downloadDoc(id) {
+    try {
+      const res = await apiFetch(`/api/documents/${id}/download`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error||'Failed');
+      window.open(data.url, '_blank');
+    } catch(e) { toast('Download failed: ' + e.message, 'error'); }
+  }
+
+  async function deleteDoc(id) {
+    if (!confirm('Delete this document?')) return;
+    try {
+      await apiFetch(`/api/documents/${id}`, { method: 'DELETE' });
+      toast('Document deleted');
+      docsLoaded = false;
+      loadDocs();
+    } catch(e) { toast('Failed to delete', 'error'); }
+  }
+
+  let uploadFile = null;
+  function openUploadModal() {
+    openUploadModalWith('firm_uploaded', 'other', CURRENT_YEAR);
+  }
+
+  function openUploadModalWith(section, category, year) {
+    document.getElementById('upload-year').value = year || CURRENT_YEAR;
+    document.getElementById('upload-section').value = section || 'firm_uploaded';
+    document.getElementById('upload-category').value = category || 'other';
+    document.getElementById('upload-display-name').value = '';
+    document.getElementById('upload-error').style.display = 'none';
+    document.getElementById('upload-dropzone-text').style.display = '';
+    document.getElementById('upload-file-name').style.display = 'none';
+    uploadFile = null;
+    document.getElementById('upload-modal').classList.add('open');
+  }
+
+  // ── Tax ──
+  async function loadTax() {
+    const c = document.getElementById('tax-content');
+    if (!companyData) return;
+    let html = '';
+    if (companyData.stanford_tax_url) {
+      html += `<div class="card stanford-card" style="margin-bottom:1rem;">
+        <div class="sc-text">
+          <div class="sc-label">Stanford Tax</div>
+          <div class="sc-url">${esc(companyData.stanford_tax_url)}</div>
+        </div>
+        <a href="${esc(companyData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">Open →</a>
+      </div>`;
+    } else {
+      html += `<div class="card" style="margin-bottom:1rem;">
+        <div class="card-title">Stanford Tax</div>
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <span style="color:var(--muted);font-size:0.84rem;">No Stanford Tax URL set.</span>
+          <button class="btn btn-outline btn-sm" onclick="promptStanfordUrl()">+ Add URL</button>
+        </div>
+      </div>`;
+    }
+    html += `<div class="placeholder-section">
+      <div class="ph-icon">📋</div>
+      <div class="ph-title">Tax Workflows</div>
+      <div class="ph-desc">Tax return delivery coming soon.</div>
+    </div>`;
+    c.innerHTML = html;
+  }
+
+  async function promptStanfordUrl() {
+    const url = prompt('Enter Stanford Tax URL:');
+    if (!url) return;
+    try {
+      await apiFetch(`/api/companies/${companyId}`, { method: 'PUT', body: JSON.stringify({ stanford_tax_url: url }) });
+      companyData.stanford_tax_url = url;
+      toast('Stanford Tax URL saved');
+      loadTax();
+    } catch(e) { toast('Failed to save', 'error'); }
+  }
+
+  // ── Notes ──
+  async function autoSaveNotes(val, force=false) {
+    try {
+      await apiFetch(`/api/companies/${companyId}`, { method: 'PUT', body: JSON.stringify({ notes: val }) });
+      if (companyData) companyData.notes = val;
+      const ta1 = document.getElementById('notes-ta');
+      const ta2 = document.getElementById('notes-ta-full');
+      if (ta1) ta1.value = val;
+      if (ta2) ta2.value = val;
+      const s1 = document.getElementById('notes-saved');
+      const s2 = document.getElementById('notes-saved-full');
+      if (s1) { s1.textContent = '✓ Saved'; setTimeout(() => s1.textContent='', 2000); }
+      if (s2) { s2.textContent = '✓ Saved'; setTimeout(() => s2.textContent='', 2000); }
+      if (force) toast('Notes saved');
+    } catch(e) { toast('Failed to save notes', 'error'); }
+  }
+
+  // ── Edit Modal ──
+  function openEditModal() {
+    if (!companyData) return;
+    document.getElementById('ef-name').value = companyData.company_name || '';
+    document.getElementById('ef-entity-type').value = companyData.entity_type || '';
+    document.getElementById('ef-tax-year-end').value = companyData.tax_year_end || '';
+    document.getElementById('ef-stanford').value = companyData.stanford_tax_url || '';
+    document.getElementById('ef-status').value = companyData.status || 'active';
+    document.getElementById('edit-error').style.display = 'none';
+    document.getElementById('edit-modal').classList.add('open');
+  }
+  function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
+
+  async function submitEdit() {
+    const body = {
+      company_name: document.getElementById('ef-name').value.trim(),
+      entity_type: document.getElementById('ef-entity-type').value || null,
+      tax_year_end: document.getElementById('ef-tax-year-end').value.trim() || null,
+      stanford_tax_url: document.getElementById('ef-stanford').value.trim() || null,
+      status: document.getElementById('ef-status').value,
+    };
+    if (!body.company_name) { const e=document.getElementById('edit-error'); e.textContent='Company name is required.'; e.style.display=''; return; }
+    const btn = document.getElementById('ef-submit');
+    btn.disabled = true;
+    try {
+      const res = await apiFetch(`/api/companies/${companyId}`, { method: 'PUT', body: JSON.stringify(body) });
+      if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Failed'); }
+      const updated = await res.json();
+      companyData = { ...companyData, ...updated };
+      closeModal();
+      toast('Company updated');
+      renderHeader(companyData);
+      renderOverview(companyData);
+    } catch(e) { const err=document.getElementById('edit-error'); err.textContent=e.message; err.style.display=''; }
+    btn.disabled = false;
+  }
+
+  // ================================================================
+  // BOOKKEEPING SECTION
+  // ================================================================
+
+  const BK_QBO_NOT_CONNECTED_HTML = `
+    <div class="connect-qbo-prompt">
+      <div>📊</div>
+      <h3>QuickBooks Not Connected</h3>
+      <p>Connect QuickBooks Online to enable bookkeeping features for this company.</p>
+      <a href="/connect" class="btn btn-gold">Connect QuickBooks</a>
+    </div>`;
+
+  // Track what's been initialized
+  let bk_cpInitialized = false;
+  let bk_varInitialized = false;
+  let bk_calInitialized = false;
+  let bk_stmtLoaded = false;
+  let bk_payrollInitialized = false;
+  let bk_uncatLoaded = false;
+  let bk_liabLoaded = false;
+
+  function bk_qboGuard(guardElId, mainElId) {
+    const guardEl = document.getElementById(guardElId);
+    const mainEl = document.getElementById(mainElId);
+    if (!bookkeepingRealm) {
+      guardEl.innerHTML = BK_QBO_NOT_CONNECTED_HTML;
+      if (mainEl) mainEl.style.display = 'none';
+      return false;
+    }
+    guardEl.innerHTML = '';
+    if (mainEl) mainEl.style.display = '';
+    return true;
+  }
+
+  function bk_initBookkeeping() {
+    // Get the active subtab name
+    const activeSubtab = document.querySelector('.subtab-item.active');
+    const name = activeSubtab ? activeSubtab.getAttribute('onclick').match(/'([^']+)'/)?.[1] : 'close-package';
+    bk_loadActiveSubtab(name || 'close-package');
+  }
+
+  function bk_loadActiveSubtab(name) {
+    if (name === 'close-package') bk_initClosePackage();
+    else if (name === 'uncategorized') bk_initUncategorized();
+    else if (name === 'variance') bk_initVariance();
+    else if (name === 'liability') bk_initLiability();
+    else if (name === 'payroll') bk_initPayroll();
+    else if (name === 'statements') bk_initStatements();
+    else if (name === 'stmt-calendar') bk_initCalendar();
+  }
+
+  // ── Helpers ──
+  function bk_fmtCur(n) { return '$'+Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0}); }
+  function bk_fmtCurSigned(n) { return (n>=0?'+':'-')+'$'+Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0}); }
+  function bk_fmtPay(n) { return '$'+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function bk_parseScanData(scan) {
+    if (!scan || !scan.result_data) return null;
+    try { return typeof scan.result_data === 'string' ? JSON.parse(scan.result_data) : scan.result_data; }
+    catch(e) { return null; }
+  }
+  function bk_lastDay(year, month) {
+    const d = new Date(year, month, 0);
+    return year+'-'+String(month).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function bk_formatCurrency(n) {
+    if (n === 0) return '$0.00';
+    const abs = Math.abs(n);
+    const formatted = '$' + abs.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+    return n < 0 ? `<span style="color:var(--red);">(${formatted})</span>` : formatted;
+  }
+
+  // ================================================================
+  // CLOSE PACKAGE
+  // ================================================================
+  let bk_cpSelection = { type: 'month', startDate: null, endDate: null, label: '', period: '' };
+
+  function bk_initClosePackage() {
+    if (!bk_qboGuard('bk-cp-qbo-guard','bk-cp-main')) return;
+    if (bk_cpInitialized) return;
+    bk_cpInitialized = true;
+    bk_populatePeriodSelectors();
+    bk_loadLatestClosePackage();
+  }
+
+  function bk_populatePeriodSelectors() {
+    const now = new Date();
+    const cutoff = new Date(now.getFullYear(), now.getMonth() - 17, 1);
+    let mhtml = '';
+    for (const year of [now.getFullYear(), now.getFullYear()-1]) {
+      mhtml += '<div class="period-year-label">'+year+'</div><div class="month-grid">';
+      for (let m = 1; m <= 12; m++) {
+        const d = new Date(year, m-1, 1);
+        const val = year + '-' + String(m).padStart(2,'0');
+        const short = d.toLocaleString('default',{month:'short'});
+        const isCurrent = year === now.getFullYear() && m-1 === now.getMonth();
+        const isFuture = d > now;
+        const tooOld = d < cutoff;
+        const disabled = isFuture || tooOld;
+        mhtml += '<button class="month-btn'+(isCurrent?' current':'')+'"'+(disabled?' disabled style="opacity:0.3;cursor:default;"':'')+' data-period="'+val+'" onclick="'+(disabled?'':'bk_selectMonth(this,\''+val+'\')')+'">'+short+'</button>';
+      }
+      mhtml += '</div>';
+    }
+    document.getElementById('bk-month-grid-container').innerHTML = mhtml;
+
+    let qhtml = '';
+    for (const year of [now.getFullYear(), now.getFullYear()-1]) {
+      qhtml += '<div class="period-year-label">'+year+'</div><div class="quarter-grid">';
+      for (let q = 1; q <= 4; q++) {
+        const sm = (q-1)*3 + 1; const em = q*3;
+        const sd = year+'-'+String(sm).padStart(2,'0')+'-01';
+        const ed = bk_lastDay(year, em);
+        qhtml += '<button class="quarter-btn" onclick="bk_selectQuarter(this,'+q+','+year+',\''+sd+'\',\''+ed+'\')">Q'+q+'</button>';
+      }
+      qhtml += '</div>';
+    }
+    document.getElementById('bk-quarter-grid-container').innerHTML = qhtml;
+
+    let yhtml = '';
+    const cy = now.getFullYear();
+    yhtml += '<button class="year-btn" onclick="bk_selectYear(this,'+cy+')">'+cy+' YTD</button>';
+    yhtml += '<button class="year-btn" onclick="bk_selectYear(this,'+(cy-1)+')">'+(cy-1)+'</button>';
+    yhtml += '<button class="year-btn" onclick="bk_selectYear(this,'+(cy-2)+')">'+(cy-2)+'</button>';
+    document.getElementById('bk-year-grid-container').innerHTML = yhtml;
+
+    const lastMonth = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    document.getElementById('bk-cp-date-from').value = lastMonth.getFullYear()+'-'+String(lastMonth.getMonth()+1).padStart(2,'0')+'-01';
+    document.getElementById('bk-cp-date-to').value = bk_lastDay(lastMonth.getFullYear(), lastMonth.getMonth()+1);
+
+    const curVal = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+    const curBtn = document.querySelector('#bk-month-grid-container .month-btn[data-period="'+curVal+'"]');
+    if (curBtn) bk_selectMonth(curBtn, curVal, true);
+  }
+
+  function bk_showPeriodTab(tab, el) {
+    document.querySelectorAll('#subtab-close-package .period-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#subtab-close-package .period-panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('bk-pp-'+tab).classList.add('active');
+  }
+
+  function bk_clearPeriodBtns() {
+    document.querySelectorAll('#bk-month-grid-container .month-btn, #bk-quarter-grid-container .quarter-btn, #bk-year-grid-container .year-btn').forEach(b => b.classList.remove('selected'));
+  }
+
+  function bk_selectMonth(btn, period, skipGenerate) {
+    bk_clearPeriodBtns(); btn.classList.add('selected');
+    const [y,m] = period.split('-').map(Number);
+    const d = new Date(y, m-1, 1);
+    bk_cpSelection = { type:'month', startDate:y+'-'+String(m).padStart(2,'0')+'-01', endDate:bk_lastDay(y,m), label:d.toLocaleString('default',{month:'long',year:'numeric'}), period };
+    document.getElementById('bk-cp-selected-label').textContent = bk_cpSelection.label;
+    if (!skipGenerate) bk_generateClosePackage();
+  }
+
+  function bk_selectQuarter(btn, q, year, sd, ed) {
+    bk_clearPeriodBtns(); btn.classList.add('selected');
+    bk_cpSelection = { type:'quarter', startDate:sd, endDate:ed, label:'Q'+q+' '+year, period:year+'-Q'+q };
+    document.getElementById('bk-cp-selected-label').textContent = bk_cpSelection.label;
+    bk_generateClosePackage();
+  }
+
+  function bk_selectYear(btn, year) {
+    bk_clearPeriodBtns(); btn.classList.add('selected');
+    const now = new Date();
+    const isCurrentYear = year === now.getFullYear();
+    bk_cpSelection = { type:'annual', startDate:year+'-01-01', endDate:isCurrentYear?bk_lastDay(now.getFullYear(),now.getMonth()+1):year+'-12-31', label:isCurrentYear?year+' YTD':String(year), period:String(year) };
+    document.getElementById('bk-cp-selected-label').textContent = bk_cpSelection.label;
+    bk_generateClosePackage();
+  }
+
+  function bk_applyCustomRange() {
+    bk_clearPeriodBtns();
+    const from = document.getElementById('bk-cp-date-from').value;
+    const to = document.getElementById('bk-cp-date-to').value;
+    if (!from || !to) { toast('Select both dates', 'error'); return; }
+    if (from > to) { toast('Start date must be before end date', 'error'); return; }
+    bk_cpSelection = { type:'custom', startDate:from, endDate:to, label:from+' to '+to, period:'custom' };
+    document.getElementById('bk-cp-selected-label').textContent = bk_cpSelection.label;
+    bk_generateClosePackage();
+  }
+
+  async function bk_generateClosePackage() {
+    if (!bookkeepingRealm) return;
+    if (!bk_cpSelection.startDate) { toast('Select a period first', 'error'); return; }
+    document.getElementById('bk-cp-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Generating close package for '+esc(bk_cpSelection.label)+'…</div>';
+    try {
+      const body = { startDate:bk_cpSelection.startDate, endDate:bk_cpSelection.endDate, period:bk_cpSelection.period, label:bk_cpSelection.label };
+      const data = await (await apiFetch('/api/companies/'+bookkeepingRealm+'/close-package',{method:'POST',body:JSON.stringify(body)})).json();
+      if (data.error) throw new Error(data.error);
+      const rd = bk_parseScanData(data) || data.report_data;
+      const rdObj = typeof rd === 'string' ? JSON.parse(rd) : rd;
+      document.getElementById('bk-cp-results').innerHTML = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(bk_cpSelection.label)+'</h3>' + bk_renderClosePackageBody(rdObj, data);
+      toast('Close package generated for '+bk_cpSelection.label);
+    } catch(e) {
+      toast('Generation failed: '+e.message, 'error');
+      document.getElementById('bk-cp-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: '+esc(e.message)+'</div>';
+    }
+  }
+
+  async function bk_loadLatestClosePackage() {
+    if (!bookkeepingRealm) return;
+    try {
+      const resp = await apiFetch('/api/companies/'+bookkeepingRealm+'/close-packages');
+      if (!resp.ok) return;
+      const pkgs = await resp.json();
+      if (!Array.isArray(pkgs) || pkgs.length === 0) return;
+      const latest = pkgs[0];
+      const rd = bk_parseScanData(latest) || latest.report_data;
+      const rdObj = typeof rd === 'string' ? JSON.parse(rd) : rd;
+      if (!rdObj) return;
+      const btn = document.querySelector('#bk-month-grid-container .month-btn[data-period="'+latest.period+'"]');
+      if (btn) bk_selectMonth(btn, latest.period, true);
+      document.getElementById('bk-cp-results').innerHTML = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(rdObj.period||latest.period)+'</h3>' + bk_renderClosePackageBody(rdObj, latest);
+    } catch(e) { console.error('bk_loadLatestClosePackage error:', e); }
+  }
+
+  function bk_renderClosePackageBody(rd, pkg) {
+    if (!rd) return '<div style="color:var(--muted);padding:1rem;">No report data available.</div>';
+    let html = '';
+    if (rd.pnl) html += '<div class="report-section"><h3>Profit & Loss</h3>'+bk_renderQBReport(rd.pnl)+'</div>';
+    if (rd.balanceSheet) html += '<div class="report-section"><h3>Balance Sheet</h3>'+bk_renderQBReport(rd.balanceSheet)+'</div>';
+    if (rd.trialBalance) html += '<div class="report-section"><h3>Trial Balance</h3>'+bk_renderQBReport(rd.trialBalance)+'</div>';
+    if (!rd.pnl && !rd.balanceSheet && !rd.trialBalance) html += '<div style="color:var(--muted);padding:1rem;text-align:center;">No report data available.</div>';
+    html += '<div style="margin-top:0.75rem;text-align:right;"><span class="badge badge-pending" style="font-size:0.75rem;padding:0.2rem 0.6rem;">'+esc(pkg.status||'draft')+'</span></div>';
+    return html;
+  }
+
+  function bk_renderQBReport(report) {
+    if (!report?.Rows?.Row) {
+      return '<div style="text-align:center;padding:1.5rem;color:var(--muted);">No report data available.</div>';
+    }
+    const columns = report.Columns?.Column || [];
+    const colCount = Math.max(columns.length, 2);
+    const dataCols = colCount - 1;
+    const MONTH_MAP = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+    function parseTitleDate(title) {
+      if (!title) return { start: '', end: '' };
+      const m = title.trim().match(/^([A-Za-z]{3})\s+(\d{4})$/);
+      if (m) {
+        const mo = MONTH_MAP[m[1].toLowerCase()];
+        const yr = parseInt(m[2]);
+        if (mo && yr) {
+          const start = yr + '-' + String(mo).padStart(2,'0') + '-01';
+          const lastD = new Date(yr, mo, 0).getDate();
+          const end = yr + '-' + String(mo).padStart(2,'0') + '-' + String(lastD).padStart(2,'0');
+          return { start, end };
+        }
+      }
+      const yr = title.trim().match(/^(\d{4})$/);
+      if (yr) return { start: yr[1]+'-01-01', end: yr[1]+'-12-31' };
+      return { start: '', end: '' };
+    }
+    const colDates = columns.map(col => {
+      const meta = col.MetaData || [];
+      const start = meta.find(m => m.Name === 'StartDate')?.Value || '';
+      const end   = meta.find(m => m.Name === 'EndDate')?.Value   || '';
+      if (start && end) return { start, end };
+      return parseTitleDate(col.ColTitle || '');
+    });
+    const firstColPct = dataCols <= 1 ? 60 : dataCols <= 3 ? 40 : dataCols <= 7 ? 30 : 25;
+    const restPct = (100 - firstColPct) / dataCols;
+    let html = '<div class="table-wrap"><table style="table-layout:fixed;width:100%;">';
+    html += '<colgroup>';
+    html += `<col style="width:${firstColPct}%">`;
+    for (let i = 0; i < dataCols; i++) html += `<col style="width:${restPct.toFixed(2)}%">`;
+    html += '</colgroup>';
+    html += '<thead><tr>';
+    for (let i = 0; i < colCount; i++) {
+      const title = columns[i]?.ColTitle || '';
+      html += i === 0 ? `<th>${esc(title)}</th>` : `<th class="amount">${esc(title)}</th>`;
+    }
+    html += '</tr></thead>';
+    html += '<tbody>';
+    html += bk_renderReportRows(report.Rows.Row, 0, colCount, colDates);
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  function bk_renderReportRows(rows, depth, colCount, colDates) {
+    let html = '';
+    for (const row of rows) {
+      if (row.type === 'Section' || row.group) {
+        if (row.Header?.ColData) {
+          const name = row.Header.ColData[0]?.value || '';
+          const pad = (depth * 1.2) + 1;
+          html += `<tr class="report-row-header"><td style="padding-left:${pad}rem;">${esc(name)}</td>`;
+          for (let i = 1; i < colCount; i++) html += '<td class="amount"></td>';
+          html += '</tr>';
+        }
+        if (row.Rows?.Row) html += bk_renderReportRows(row.Rows.Row, depth + 1, colCount, colDates);
+        if (row.Summary?.ColData) html += bk_renderDataRow(row.Summary.ColData, depth, true, colCount, colDates);
+      } else if (row.ColData) {
+        html += bk_renderDataRow(row.ColData, depth, false, colCount, colDates);
+      }
+    }
+    return html;
+  }
+
+  function bk_renderDataRow(colData, depth, isTotal, colCount, colDates) {
+    const cls = isTotal ? ' class="report-row-total"' : '';
+    let html = `<tr${cls}>`;
+    for (let i = 0; i < colCount; i++) {
+      const val = colData[i]?.value ?? '';
+      if (i === 0) {
+        const pad = (depth * 1.2) + 1;
+        html += `<td style="padding-left:${pad}rem;${isTotal ? 'font-weight:700;' : ''}">${esc(val)}</td>`;
+      } else {
+        const num = parseFloat(val);
+        const display = isNaN(num) ? esc(val) : bk_formatCurrency(num);
+        const colDate = colDates?.[i] || {};
+        const sDate = colDate.start || bk_cpSelection?.startDate || '';
+        const eDate = colDate.end   || bk_cpSelection?.endDate   || '';
+        const accountName = colData[0]?.value || '';
+        const drillable = !isNaN(num) && num !== 0 && sDate && eDate && !isTotal ? ' drillable' : '';
+        const drillAttr = drillable
+          ? ` data-account="${esc(accountName)}" data-start="${esc(sDate)}" data-end="${esc(eDate)}" onclick="bk_openDrilldown('${esc(accountName)}','${esc(sDate)}','${esc(eDate)}','${display.replace(/['"<>]/g,'')}')"` : '';
+        html += `<td class="amount${drillable}"${drillAttr} style="${isTotal ? 'font-weight:700;' : ''}">${display}</td>`;
+      }
+    }
+    html += '</tr>';
+    return html;
+  }
+
+  // ================================================================
+  // UNCATEGORIZED
+  // ================================================================
+  function bk_initUncategorized() {
+    if (!bk_qboGuard('bk-uncat-qbo-guard','bk-uncat-main')) return;
+    if (bk_uncatLoaded) return;
+    bk_uncatLoaded = true;
+    bk_loadLatestUncategorized();
+  }
+
+  async function bk_runUncategorizedScan() {
+    if (!bookkeepingRealm) { toast('No QBO connection', 'error'); return; }
+    const btn = document.getElementById('bk-btn-uncat-scan');
+    btn.disabled=true; btn.textContent='Scanning…';
+    try {
+      const data = await (await apiFetch('/api/companies/'+bookkeepingRealm+'/scan/uncategorized',{method:'POST'})).json();
+      if (data.error) throw new Error(data.error);
+      bk_renderUncatResults(data);
+      toast('Scan complete: '+data.summary.flaggedCount+' flagged');
+    } catch(e) { toast('Scan failed: '+e.message, 'error'); }
+    btn.disabled=false; btn.textContent='Run Scan';
+  }
+
+  function bk_renderUncatResults(data) {
+    const s = data.summary;
+    document.getElementById('bk-uncat-stats').style.display='';
+    document.getElementById('bk-uncat-flagged').textContent = s.flaggedCount;
+    document.getElementById('bk-uncat-checked').textContent = s.checkedCount;
+    document.getElementById('bk-uncat-total').textContent = '$'+Number(s.totalFlaggedAmount).toLocaleString();
+    document.getElementById('bk-uncat-last-scan').textContent = 'Last scanned: ' + new Date().toLocaleString();
+    let html = '';
+    if (data.flagged?.length > 0) {
+      html += '<h3 style="font-size:0.88rem;margin:1rem 0 0.5rem;color:var(--red);">Flagged Accounts</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Balance</th><th>Transactions</th></tr></thead><tbody>';
+      for (const f of data.flagged) {
+        html += '<tr><td style="font-weight:600;">'+esc(f.name)+'</td><td style="color:var(--orange);">$'+Number(f.balance).toLocaleString()+'</td><td>'+f.transactionCount+'</td></tr>';
+        if (f.transactions?.length > 0) {
+          for (const t of f.transactions) {
+            html += '<tr><td style="padding-left:2rem;color:var(--muted);font-size:0.8rem;">'+t.date+'</td><td style="font-size:0.8rem;">$'+Number(t.amount).toFixed(2)+'</td><td style="color:var(--muted);font-size:0.8rem;">'+esc(t.vendor)+' — '+esc(t.description)+'</td></tr>';
+          }
+        }
+      }
+      html += '</tbody></table></div>';
+    }
+    if (data.checked?.length > 0) {
+      html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">All Checked Accounts</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Balance</th><th>Status</th></tr></thead><tbody>';
+      for (const c of data.checked) {
+        html += '<tr><td>'+esc(c.name)+'</td><td>$'+Number(c.balance).toLocaleString()+'</td><td>'+(c.balance===0?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-flag">Flagged</span>')+'</td></tr>';
+      }
+      html += '</tbody></table></div>';
+    }
+    document.getElementById('bk-uncat-results').innerHTML = html;
+  }
+
+  async function bk_loadLatestUncategorized() {
+    if (!bookkeepingRealm) return;
+    try {
+      const scans = await (await apiFetch('/api/companies/'+bookkeepingRealm+'/scans')).json();
+      const latest = Array.isArray(scans) ? scans.find(s => s.scan_type === 'uncategorized') : null;
+      if (!latest) return;
+      const data = bk_parseScanData(latest);
+      if (!data?.summary) return;
+      document.getElementById('bk-uncat-last-scan').textContent = 'Last scanned: ' + new Date(latest.scanned_at).toLocaleString();
+      bk_renderUncatResults(data);
+    } catch(e) {}
+  }
+
+  // ================================================================
+  // VARIANCE
+  // ================================================================
+  let bk_varSelectedMonth = null;
+
+  function bk_initVariance() {
+    if (!bk_qboGuard('bk-var-qbo-guard','bk-var-main')) return;
+    if (bk_varInitialized) return;
+    bk_varInitialized = true;
+    bk_initVarianceMonthPicker();
+    bk_loadLatestVariance();
+  }
+
+  function bk_initVarianceMonthPicker() {
+    const now = new Date();
+    const container = document.getElementById('bk-var-month-btns');
+    const months = [];
+    for (let i = 0; i < 18; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({ year: d.getFullYear(), month: d.getMonth() + 1, label: d.toLocaleString('default',{month:'short'})+' '+d.getFullYear() });
+    }
+    if (!bk_varSelectedMonth) bk_varSelectedMonth = { year: months[0].year, month: months[0].month };
+    container.innerHTML = months.map(m => {
+      const selected = bk_varSelectedMonth && bk_varSelectedMonth.year === m.year && bk_varSelectedMonth.month === m.month;
+      return `<button class="var-month-btn${selected ? ' selected' : ''}" data-year="${m.year}" data-month="${m.month}" onclick="bk_selectVarMonth(this, ${m.year}, ${m.month})">${m.label}</button>`;
+    }).join('');
+  }
+
+  function bk_selectVarMonth(btn, year, month) {
+    document.querySelectorAll('#bk-var-month-btns .var-month-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    bk_varSelectedMonth = { year, month };
+    bk_runVarianceScan();
+  }
+
+  async function bk_runVarianceScan() {
+    if (!bookkeepingRealm) return;
+    const selectedBtn = document.querySelector('#bk-var-month-btns .selected');
+    const year = selectedBtn ? parseInt(selectedBtn.dataset.year) : (bk_varSelectedMonth?.year || new Date().getFullYear());
+    const month = selectedBtn ? parseInt(selectedBtn.dataset.month) : (bk_varSelectedMonth?.month || new Date().getMonth() + 1);
+    const thresholdPct = parseInt(document.getElementById('bk-var-threshold-pct').value) || 15;
+    const thresholdAmt = parseInt(document.getElementById('bk-var-threshold-amt').value) || 500;
+    document.getElementById('bk-var-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Running variance analysis…</div>';
+    try {
+      const data = await (await apiFetch('/api/companies/'+bookkeepingRealm+'/scan/variance', {method:'POST',body:JSON.stringify({year,month,thresholdPct,thresholdAmt})})).json();
+      if (data.error) throw new Error(data.error);
+      bk_renderVarianceResults(data);
+      toast('Variance analysis complete — '+data.summary.flaggedCount+' flagged');
+    } catch(e) {
+      toast('Variance analysis failed: '+e.message, 'error');
+      document.getElementById('bk-var-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: '+esc(e.message)+'</div>';
+    }
+  }
+
+  function bk_renderVarianceResults(data) {
+    document.getElementById('bk-var-stats').style.display='';
+    document.getElementById('bk-var-total').textContent = data.summary.totalAccounts;
+    document.getElementById('bk-var-flagged').textContent = data.summary.flaggedCount;
+    document.getElementById('bk-var-threshold').textContent = (data.thresholdPct||15)+'%';
+    document.getElementById('bk-var-last-scan').textContent = 'Comparing '+data.period+' vs '+data.priorPeriod+' (MoM) and '+data.yoyPeriod+' (YoY)';
+    const v = data.variances || [];
+    if (v.length === 0) { document.getElementById('bk-var-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No P&L data found.</div>'; return; }
+    let html = '<div class="table-wrap"><table><thead><tr><th>Account</th><th class="amount">Current</th><th class="amount">Prior Mo</th><th class="amount">MoM $</th><th class="amount">MoM %</th><th class="amount">Prior Yr</th><th class="amount">YoY $</th><th class="amount">YoY %</th></tr></thead><tbody>';
+    for (const r of v) {
+      const isTotal = r.account.startsWith('TOTAL:');
+      const rowCls = isTotal ? ' class="report-row-total"' : (r.flagged ? ' style="background:rgba(245,101,101,0.06);"' : '');
+      const name = isTotal ? '<strong>'+esc(r.account)+'</strong>' : esc(r.account);
+      function varColor(diff, isIncome, flagged) {
+        if (!flagged) return '';
+        if (isIncome === true) return diff > 0 ? 'color:var(--green);font-weight:700;' : 'color:var(--red);font-weight:700;';
+        if (isIncome === false) return diff < 0 ? 'color:var(--green);font-weight:700;' : 'color:var(--red);font-weight:700;';
+        return diff > 0 ? 'color:var(--red);font-weight:700;' : 'color:var(--green);font-weight:700;';
+      }
+      const momColor = varColor(r.momDiff, r.isIncome, r.momFlagged);
+      const yoyColor = varColor(r.yoyDiff, r.isIncome, r.yoyFlagged);
+      html += '<tr'+rowCls+'><td>'+name+'</td><td class="amount">'+bk_fmtCur(r.current)+'</td><td class="amount">'+bk_fmtCur(r.priorMonth)+'</td><td class="amount" style="'+momColor+'">'+bk_fmtCurSigned(r.momDiff)+'</td><td class="amount" style="'+momColor+'">'+(r.momPct>0?'+':'')+r.momPct+'%</td><td class="amount">'+bk_fmtCur(r.priorYearMonth)+'</td><td class="amount" style="'+yoyColor+'">'+bk_fmtCurSigned(r.yoyDiff)+'</td><td class="amount" style="'+yoyColor+'">'+(r.yoyPct>0?'+':'')+r.yoyPct+'%</td></tr>';
+    }
+    html += '</tbody></table></div>';
+    document.getElementById('bk-var-results').innerHTML = html;
+  }
+
+  async function bk_loadLatestVariance() {
+    if (!bookkeepingRealm) return;
+    try {
+      const resp = await apiFetch('/api/companies/'+bookkeepingRealm+'/scans?type=variance');
+      if (!resp.ok) return;
+      const scan = await resp.json();
+      if (!scan?.result_data) return;
+      const data = bk_parseScanData(scan);
+      if (data) bk_renderVarianceResults(data);
+    } catch(e) {}
+  }
+
+  // ================================================================
+  // LIABILITY
+  // ================================================================
+  function bk_initLiability() {
+    if (!bk_qboGuard('bk-liab-qbo-guard','bk-liab-main')) return;
+    if (bk_liabLoaded) return;
+    bk_liabLoaded = true;
+    bk_loadLatestLiability();
+  }
+
+  async function bk_runLiabilityScan() {
+    if (!bookkeepingRealm) { toast('No QBO connection', 'error'); return; }
+    document.getElementById('bk-liab-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Scanning liability accounts…</div>';
+    try {
+      const data = await (await apiFetch('/api/companies/'+bookkeepingRealm+'/scan/liability', {method:'POST',body:'{}'})).json();
+      if (data.error) throw new Error(data.error);
+      bk_renderLiabilityResults(data);
+      toast('Liability check complete — '+data.summary.flaggedCount+' issues found');
+    } catch(e) {
+      toast('Liability check failed: '+e.message, 'error');
+      document.getElementById('bk-liab-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: '+esc(e.message)+'</div>';
+    }
+  }
+
+  function bk_renderLiabilityResults(data) {
+    if (data.error) { document.getElementById('bk-liab-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">'+esc(data.error)+'</div>'; return; }
+    if (data.message) { document.getElementById('bk-liab-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">'+esc(data.message)+'</div>'; return; }
+    document.getElementById('bk-liab-stats').style.display='';
+    document.getElementById('bk-liab-total').textContent = data.summary.totalAccounts;
+    document.getElementById('bk-liab-flagged').textContent = data.summary.flaggedCount;
+    document.getElementById('bk-liab-balance').textContent = '$'+Math.abs(data.summary.totalLiabilityBalance).toLocaleString();
+    let html = '';
+    if (data.flagged?.length > 0) {
+      html += '<h3 style="font-size:0.88rem;margin:0 0 0.5rem;color:var(--red);">Issues Found</h3>';
+      html += '<div class="table-wrap" style="margin-bottom:1.5rem;"><table><thead><tr><th>Account</th><th>Type</th><th>Subtype</th><th class="amount">Balance</th><th>Issues</th></tr></thead><tbody>';
+      for (const a of data.flagged) {
+        const issueHtml = a.issues.map(i => '<span class="badge '+(i.severity==='warning'?'badge-flag':'badge-pending')+'">'+esc(i.message)+'</span>').join(' ');
+        html += '<tr style="background:rgba(245,101,101,0.06);"><td style="font-weight:600;">'+esc(a.name)+'</td><td style="color:var(--muted);font-size:0.78rem;">'+esc(a.accountType)+'</td><td style="color:var(--muted);font-size:0.78rem;">'+esc(a.subType||'')+'</td><td class="amount" style="color:var(--orange);font-weight:600;">$'+Number(a.balance).toLocaleString()+'</td><td>'+issueHtml+'</td></tr>';
+      }
+      html += '</tbody></table></div>';
+    }
+    if (data.checked?.length > 0) {
+      html += '<h3 style="font-size:0.88rem;margin:0 0 0.5rem;">All Liability Accounts</h3>';
+      html += '<div class="table-wrap"><table><thead><tr><th>Account</th><th>Type</th><th>Subtype</th><th class="amount">Balance</th><th>Status</th></tr></thead><tbody>';
+      for (const a of data.checked) {
+        const ok = a.issues.filter(i => i.severity !== 'info').length === 0;
+        html += '<tr><td>'+esc(a.name)+'</td><td style="color:var(--muted);font-size:0.78rem;">'+esc(a.accountType)+'</td><td style="color:var(--muted);font-size:0.78rem;">'+esc(a.subType||'')+'</td><td class="amount">$'+Number(a.balance).toLocaleString()+'</td><td>'+(ok?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-flag">'+a.issues.filter(i=>i.severity!=='info').length+' issue(s)</span>')+'</td></tr>';
+      }
+      html += '</tbody></table></div>';
+    }
+    document.getElementById('bk-liab-results').innerHTML = html || '<div style="text-align:center;padding:2rem;color:var(--muted);">No liability accounts found.</div>';
+  }
+
+  async function bk_loadLatestLiability() {
+    if (!bookkeepingRealm) return;
+    try {
+      const resp = await apiFetch('/api/companies/'+bookkeepingRealm+'/scans?type=liability');
+      if (!resp.ok) return;
+      const scan = await resp.json();
+      if (!scan?.result_data) return;
+      const data = bk_parseScanData(scan);
+      if (data) bk_renderLiabilityResults(data);
+    } catch(e) {}
+  }
+
+  // ================================================================
+  // PAYROLL
+  // ================================================================
+  let bk_payrollSelectedMonth = null;
+
+  function bk_initPayroll() {
+    if (!bk_qboGuard('bk-payroll-qbo-guard','bk-payroll-main')) return;
+    if (!companyData) return;
+    const actionsEl = document.getElementById('bk-payroll-actions');
+    if (!companyData.gusto_company_id) {
+      // QBO connected but Gusto not connected
+      document.getElementById('bk-payroll-stats').style.display = 'none';
+      document.getElementById('bk-payroll-month-picker').style.display = 'none';
+      actionsEl.innerHTML = '';
+      document.getElementById('bk-payroll-results').innerHTML = `
+        <div class="bk-payroll-alert">
+          ⚠️ Payroll Verification requires both QuickBooks and Gusto to be connected.<br>
+          <span style="margin-top:0.4rem;display:block;">QBO: Connected ✅ &nbsp;|&nbsp; Gusto: Not Connected — <a href="/connect">Connect Gusto</a></span>
+        </div>`;
+      return;
+    }
+    if (bk_payrollInitialized) return;
+    bk_payrollInitialized = true;
+    actionsEl.innerHTML = '<button class="btn btn-gold" onclick="bk_runPayrollScan()">Run Payroll Check</button>';
+    bk_buildPayrollMonthPicker();
+    document.getElementById('bk-payroll-month-picker').style.display = '';
+    bk_loadLatestPayroll(true);
+  }
+
+  function bk_buildPayrollMonthPicker() {
+    const now = new Date();
+    const months = [];
+    for (let i = 0; i < 24; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
+    }
+    if (!bk_payrollSelectedMonth) bk_payrollSelectedMonth = months[0];
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    document.getElementById('bk-payroll-months').innerHTML = months.map(m => {
+      const active = bk_payrollSelectedMonth.year === m.year && bk_payrollSelectedMonth.month === m.month;
+      return '<button class="month-btn'+(active?' active':'')+'" style="padding:0.3rem 0.7rem;font-size:0.75rem;border:1px solid var(--border);border-radius:6px;background:'+(active?'var(--gold)':'var(--charcoal)')+';color:'+(active?'var(--navy)':'var(--text)')+';cursor:pointer;font-weight:'+(active?'700':'400')+';" onclick="bk_selectPayrollMonth('+m.year+','+m.month+')">'+monthNames[m.month-1]+' '+m.year+'</button>';
+    }).join('');
+  }
+
+  function bk_selectPayrollMonth(year, month) { bk_payrollSelectedMonth = { year, month }; bk_buildPayrollMonthPicker(); bk_runPayrollScan(); }
+
+  async function bk_runPayrollScan() {
+    if (!bookkeepingRealm) return;
+    const btn = document.querySelector('#bk-payroll-actions button');
+    if (btn) { btn.disabled = true; btn.textContent = 'Scanning…'; }
+    document.getElementById('bk-payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Running payroll verification…</div>';
+    try {
+      const body = bk_payrollSelectedMonth ? { year: bk_payrollSelectedMonth.year, month: bk_payrollSelectedMonth.month } : {};
+      const res = await apiFetch('/api/companies/' + bookkeepingRealm + '/scan/payroll', { method: 'POST', body: JSON.stringify(body) });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      bk_renderPayrollResults(data);
+      toast('Payroll check complete — ' + data.summary.mismatchCount + ' mismatch(es)');
+    } catch(e) {
+      toast('Payroll check failed: ' + e.message, 'error');
+      document.getElementById('bk-payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: ' + esc(e.message) + '</div>';
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Run Payroll Check'; }
+    }
+  }
+
+  function bk_renderPayrollResults(data) {
+    const s = data.summary || {};
+    document.getElementById('bk-payroll-stats').style.display = '';
+    document.getElementById('bk-pay-count').textContent = s.payrollCount || 0;
+    document.getElementById('bk-pay-gross').textContent = bk_fmtPay(s.totalGrossPay);
+    const mc = s.mismatchCount || 0;
+    document.getElementById('bk-pay-mismatches').textContent = mc;
+    document.getElementById('bk-pay-mismatches').style.color = mc > 0 ? 'var(--red)' : 'var(--green)';
+    document.getElementById('bk-pay-period').textContent = 'Period: ' + (data.period || '');
+    if (!data.payrolls?.length) {
+      document.getElementById('bk-payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No processed payrolls found for this period.</div>';
+      return;
+    }
+    let html = '<h3 style="font-size:0.88rem;margin:0 0 0.5rem;">Gusto vs QBO Comparison</h3>';
+    html += '<div class="table-wrap"><table><thead><tr><th>Category</th><th class="amount">Gusto</th><th class="amount">QBO P&L</th><th class="amount">Difference</th><th>Status</th></tr></thead><tbody>';
+    const qbo = data.qboComparison || {};
+    const comparisons = [
+      { label:'Salaries (Non-Officer)', gusto:s.salaryWages, qbo:qbo.salaries||0 },
+      { label:'Officer Compensation', gusto:s.officerWages, qbo:qbo.officerComp||0 },
+      { label:'Total Gross Wages', gusto:s.totalGrossPay, qbo:(qbo.salaries||0)+(qbo.officerComp||0) },
+      { label:'Employer Payroll Taxes', gusto:s.totalEmployerTaxes, qbo:qbo.payrollTax||0 },
+      { label:'Payroll Processing Fees', gusto:null, qbo:qbo.payrollFees||0 },
+    ];
+    for (const c of comparisons) {
+      const diff = (c.gusto !== null && c.qbo !== null) ? c.gusto - c.qbo : null;
+      const ok = diff === null || Math.abs(diff) <= 1;
+      const rowStyle = !ok ? ' style="background:rgba(245,101,101,0.06);"' : '';
+      html += '<tr'+rowStyle+'><td style="font-weight:600;">'+esc(c.label)+'</td><td class="amount">'+(c.gusto!==null?bk_fmtPay(c.gusto):'<span style="color:var(--muted);">—</span>')+'</td><td class="amount">'+(c.qbo!==null?bk_fmtPay(c.qbo):'<span style="color:var(--muted);">N/A</span>')+'</td><td class="amount">'+(diff!==null?bk_fmtPay(diff):'—')+'</td><td>'+(ok?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-flag">Mismatch</span>')+'</td></tr>';
+    }
+    html += '</tbody></table></div>';
+    html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Gusto Period Totals</h3>';
+    html += '<div class="table-wrap"><table><thead><tr><th>Metric</th><th class="amount">Amount</th></tr></thead><tbody>';
+    html += '<tr><td>Gross Pay</td><td class="amount" style="font-weight:600;">'+bk_fmtPay(s.totalGrossPay)+'</td></tr>';
+    html += '<tr><td>Employer Taxes</td><td class="amount">'+bk_fmtPay(s.totalEmployerTaxes)+'</td></tr>';
+    html += '<tr><td>Employee Taxes</td><td class="amount">'+bk_fmtPay(s.totalEmployeeTaxes)+'</td></tr>';
+    html += '<tr><td>Benefits</td><td class="amount">'+bk_fmtPay(s.totalBenefits)+'</td></tr>';
+    html += '<tr><td>Net Pay</td><td class="amount" style="font-weight:600;">'+bk_fmtPay(s.totalNetPay)+'</td></tr>';
+    html += '<tr><td>Employees</td><td class="amount">'+s.employeeCount+'</td></tr>';
+    html += '</tbody></table></div>';
+    html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Payroll Runs</h3>';
+    html += '<div class="table-wrap"><table><thead><tr><th>Check Date</th><th>Pay Period</th><th class="amount">Gross Pay</th><th class="amount">Employer Taxes</th><th class="amount">Net Pay</th><th>Employees</th></tr></thead><tbody>';
+    for (const p of data.payrolls) {
+      html += '<tr><td style="font-weight:600;">'+esc(p.checkDate)+'</td><td style="color:var(--muted);font-size:0.78rem;">'+esc(p.payPeriodStart)+' — '+esc(p.payPeriodEnd)+'</td><td class="amount">'+bk_fmtPay(p.grossPay)+'</td><td class="amount">'+bk_fmtPay(p.employerTaxes)+'</td><td class="amount">'+bk_fmtPay(p.netPay)+'</td><td>'+(p.employeeCount||0)+'</td></tr>';
+    }
+    html += '</tbody></table></div>';
+    if (data.employees?.length > 0) {
+      html += '<h3 style="font-size:0.88rem;margin:1.5rem 0 0.5rem;">Wages by Employee</h3>';
+      html += '<p style="font-size:0.75rem;color:var(--muted);margin-bottom:0.5rem;">Tag officers to split wages into Salaries vs Officer Comp for QBO comparison.</p>';
+      html += '<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Officer</th><th>FLSA</th><th class="amount">Hours</th><th class="amount">Gross Pay</th><th class="amount">Net Pay</th></tr></thead><tbody>';
+      for (const e of data.employees) {
+        html += '<tr><td style="font-weight:600;">'+esc(e.name)+'</td><td style="text-align:center;"><input type="checkbox"'+(e.isOfficer?' checked':'')+' onchange="bk_toggleOfficer(\''+esc(e.employeeUuid)+'\',this.checked,\''+esc(e.name)+'\')" style="cursor:pointer;width:16px;height:16px;accent-color:var(--gold);"></td><td style="font-size:0.78rem;color:var(--muted);">'+esc(e.flsaStatus||'')+'</td><td class="amount">'+Number(e.hours||0).toFixed(1)+'</td><td class="amount">'+bk_fmtPay(e.grossPay)+'</td><td class="amount">'+bk_fmtPay(e.netPay)+'</td></tr>';
+      }
+      html += '</tbody></table></div>';
+    }
+    const portalUrl = data.gustoPortalUrl || 'https://app.gusto.com';
+    html += '<div style="margin-top:1.5rem;padding:1.2rem;background:var(--card);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:space-between;"><div><span style="font-weight:600;">W-2s & Tax Documents</span><br><span style="font-size:0.78rem;color:var(--muted);">Access via Gusto portal</span></div><a href="'+portalUrl+'" target="_blank" class="btn btn-gold" style="white-space:nowrap;">Open Gusto Portal</a></div>';
+    document.getElementById('bk-payroll-results').innerHTML = html;
+  }
+
+  async function bk_toggleOfficer(employeeUuid, isOfficer, name) {
+    try {
+      await apiFetch('/api/companies/' + bookkeepingRealm + '/employees/' + employeeUuid + '/officer', {
+        method: 'POST', body: JSON.stringify({ is_officer: isOfficer, employee_name: name }),
+      });
+      toast((isOfficer ? 'Tagged' : 'Untagged') + ' ' + name + ' as officer');
+    } catch(e) { toast('Failed to update officer status', 'error'); }
+  }
+
+  async function bk_loadLatestPayroll(autoRun) {
+    if (!bookkeepingRealm) return;
+    try {
+      const resp = await apiFetch('/api/companies/' + bookkeepingRealm + '/scans?type=payroll');
+      if (!resp.ok) return;
+      const scan = await resp.json();
+      if (!scan?.result_data) { if (autoRun) return bk_runPayrollScan(); return; }
+      const data = bk_parseScanData(scan);
+      if (data?.error) { if (autoRun) return bk_runPayrollScan(); return; }
+      if (data) bk_renderPayrollResults(data);
+    } catch(e) {
+      document.getElementById('bk-payroll-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No payroll scans yet.</div>';
+    }
+  }
+
+  // ================================================================
+  // STATEMENTS
+  // ================================================================
+  const BK_METHOD_LABELS = {
+    qbo_pull: 'QBO Pull', portal: 'Portal Download', manual: 'Manual Download',
+    email: 'Email', client_upload: 'Client Upload',
+    qbo: 'QBO Pull', client: 'Client Upload'
+  };
+
+  function bk_stmtCurrentMonth() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  }
+
+  function bk_initStatements() {
+    if (!bk_qboGuard('bk-stmt-qbo-guard','bk-stmt-main')) return;
+    bk_loadStatementsView();
+  }
+
+  async function bk_loadStatementsView() {
+    const month = bk_stmtCurrentMonth();
+    const wrapEl = document.getElementById('bk-stmt-table-wrap');
+    wrapEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div>';
+    document.getElementById('bk-stmt-summary').style.display = 'none';
+
+    if (companyData) {
+      document.getElementById('bk-stmt-page-title').textContent = 'Statements — ' + (companyData.company_name || '');
+    }
+
+    try {
+      const res = await apiFetch('/api/companies/' + bookkeepingRealm + '/statements/accounts?month=' + encodeURIComponent(month));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      const accounts = data.accounts || [];
+
+      // Auto-save new QBO accounts
+      const newAccounts = accounts.filter(a => a._new && !a.id);
+      for (const a of newAccounts) {
+        try {
+          const saveRes = await apiFetch('/api/companies/' + bookkeepingRealm + '/statements', {
+            method: 'POST',
+            body: JSON.stringify({ account_name: a.account_name, institution: '', access_method: 'qbo_pull', statement_day: 1, qb_account_id: a.qb_account_id || '' })
+          });
+          if (saveRes.ok) { const saved = await saveRes.json(); a.id = saved.id; a._new = false; }
+        } catch(e) {}
+      }
+
+      const savedAccounts = accounts.filter(a => a.id);
+      const behind = savedAccounts.filter(a => (a.months_behind || 0) > 0);
+      if (savedAccounts.length > 0) {
+        document.getElementById('bk-stmt-subtitle').innerHTML = behind.length === 0
+          ? 'All current <span style="color:var(--green)">✅</span>'
+          : `<span style="color:var(--red)">${behind.length} account${behind.length > 1 ? 's' : ''} behind 🔴</span>`;
+      }
+      if (accounts.length > 0) {
+        document.getElementById('bk-stmt-summary').style.display = '';
+        document.getElementById('bk-stmt-stats-grid').innerHTML = `
+          <div class="stat-card"><div class="stat-label">Total Accounts</div><div class="stat-value">${accounts.length}</div></div>
+          <div class="stat-card"><div class="stat-label">Current</div><div class="stat-value green">${savedAccounts.length - behind.length}</div></div>
+          <div class="stat-card"><div class="stat-label">Behind</div><div class="stat-value ${behind.length > 0 ? 'orange' : 'green'}">${behind.length}</div></div>`;
+      }
+      wrapEl.innerHTML = bk_renderStmtTable(accounts, bookkeepingRealm, month);
+    } catch(e) {
+      wrapEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: ' + esc(e.message) + '</div>';
+    }
+  }
+
+  function bk_renderStmtTable(accounts, realmId, month) {
+    if (!accounts.length) {
+      return '<div style="text-align:center;padding:2rem;color:var(--muted);">No accounts found. Add one manually or wait for QBO accounts to appear.</div>';
+    }
+    let html = `<div class="table-wrap"><table class="stmt-table">
+      <thead><tr>
+        <th>Account</th><th>Type</th><th>Method</th><th>Statement Day</th><th>Status</th><th>Actions</th>
+      </tr></thead><tbody>`;
+    for (const a of accounts) {
+      const typeLabel = [a.accountType, a.accountSubType].filter(Boolean).join(' / ') || (a._manual ? 'Manual' : '—');
+      const monthsBehind = a.months_behind || 0;
+      let statusCell;
+      if (!a.id) {
+        statusCell = `<span style="color:var(--muted);font-size:0.75rem;">Not saved</span>`;
+      } else if (!a.last_retrieved_month) {
+        statusCell = `<span style="color:var(--muted);font-size:0.75rem;">No history</span>`;
+      } else if (monthsBehind === 0) {
+        statusCell = `<span style="color:var(--green);font-size:0.8rem;">✅ Current</span>`;
+      } else if (monthsBehind === 1) {
+        statusCell = `<span style="color:var(--orange);font-size:0.8rem;">🟠 1 month behind</span>`;
+      } else {
+        statusCell = `<span style="color:var(--red);font-size:0.8rem;">🔴 ${monthsBehind} months behind</span>`;
+      }
+      let markCurrentBtn = '';
+      if (a.id && monthsBehind > 0) {
+        const label = monthsBehind >= 3 ? `Clear ${monthsBehind}-Month Backlog` : 'Mark Current';
+        markCurrentBtn = `<button class="btn btn-gold btn-sm" onclick="bk_markStmtCurrent('${realmId}',${a.id},this)">${label}</button>`;
+      }
+      const methodSel = Object.entries(BK_METHOD_LABELS).filter(([k]) => !['qbo','client'].includes(k)).map(([k,v]) =>
+        `<option value="${k}"${(a.access_method||'qbo_pull')===k?' selected':''}>${v}</option>`
+      ).join('');
+      html += `<tr id="bk-stmtrow-${a.id || 'new'}">
+        <td style="font-weight:500;">${esc(a.account_name)}</td>
+        <td style="font-size:0.78rem;color:var(--muted);">${esc(typeLabel)}</td>
+        <td>${a.id ? `<select class="stmt-select" onchange="bk_updateStmtMethod('${realmId}',${a.id},this)">${methodSel}</select>` : `<span style="color:var(--muted);font-size:0.78rem;">${esc(BK_METHOD_LABELS[a.access_method] || a.access_method || '—')}</span>`}</td>
+        <td>${a.id ? `<input class="stmt-input stmt-day-input" type="number" min="1" max="31" value="${a.statement_day || 1}" style="width:60px;" onblur="bk_updateStmtDay('${realmId}',${a.id},this)">` : `<span style="color:var(--muted);">${a.statement_day || 1}</span>`}</td>
+        <td>${statusCell}</td>
+        <td style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
+          ${markCurrentBtn}
+          ${a._manual && a.id ? `<button class="btn-icon" onclick="bk_deleteStmtAccount('${realmId}',${a.id})" title="Delete">🗑</button>` : ''}
+        </td>
+      </tr>`;
+    }
+    html += `</tbody></table></div>`;
+    return html;
+  }
+
+  async function bk_updateStmtMethod(realmId, id, selectEl) {
+    try {
+      const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id, { method: 'PUT', body: JSON.stringify({ access_method: selectEl.value }) });
+      if (!res.ok) throw new Error((await res.json()).error);
+    } catch(e) { toast('Save failed: ' + e.message, 'error'); }
+  }
+
+  async function bk_updateStmtDay(realmId, id, inputEl) {
+    const day = parseInt(inputEl.value) || 1;
+    inputEl.value = Math.max(1, Math.min(31, day));
+    try {
+      const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id, { method: 'PUT', body: JSON.stringify({ statement_day: parseInt(inputEl.value) }) });
+      if (!res.ok) throw new Error((await res.json()).error);
+    } catch(e) { toast('Save failed: ' + e.message, 'error'); }
+  }
+
+  async function bk_markStmtCurrent(realmId, id, btn) {
+    btn.disabled = true;
+    const origText = btn.textContent;
+    btn.textContent = '…';
+    try {
+      const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id + '/mark-current', { method: 'PUT', body: '{}' });
+      if (!res.ok) throw new Error((await res.json()).error);
+      toast('Account marked current — backlog cleared');
+      await bk_loadStatementsView();
+    } catch(e) {
+      btn.disabled = false;
+      btn.textContent = origText;
+      toast('Failed: ' + e.message, 'error');
+    }
+  }
+
+  async function bk_deleteStmtAccount(realmId, id) {
+    if (!confirm('Delete this statement account?')) return;
+    try {
+      const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id, { method: 'DELETE' });
+      if (!res.ok) throw new Error((await res.json()).error);
+      toast('Account deleted');
+      await bk_loadStatementsView();
+    } catch(e) { toast('Delete failed: ' + e.message, 'error'); }
+  }
+
+  function bk_showStmtAddForm() {
+    document.getElementById('bk-stmt-add-form').style.display = '';
+    document.getElementById('bk-stmt-new-name')?.focus();
+  }
+
+  function bk_hideStmtAddForm() {
+    document.getElementById('bk-stmt-add-form').style.display = 'none';
+    if (document.getElementById('bk-stmt-new-name')) document.getElementById('bk-stmt-new-name').value = '';
+    if (document.getElementById('bk-stmt-new-inst')) document.getElementById('bk-stmt-new-inst').value = '';
+    if (document.getElementById('bk-stmt-new-day')) document.getElementById('bk-stmt-new-day').value = '1';
+  }
+
+  async function bk_saveNewStmtAccount() {
+    if (!bookkeepingRealm) { toast('No QBO connection', 'error'); return; }
+    const name = document.getElementById('bk-stmt-new-name')?.value.trim();
+    if (!name) { toast('Account name is required', 'error'); return; }
+    const institution = document.getElementById('bk-stmt-new-inst')?.value.trim() || '';
+    const method = document.getElementById('bk-stmt-new-method')?.value || 'portal';
+    const day = parseInt(document.getElementById('bk-stmt-new-day')?.value || 1);
+    try {
+      const res = await apiFetch('/api/companies/' + bookkeepingRealm + '/statements', {
+        method: 'POST',
+        body: JSON.stringify({ account_name: name, institution, access_method: method, statement_day: day })
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      toast('Account added');
+      bk_hideStmtAddForm();
+      await bk_loadStatementsView();
+    } catch(e) { toast('Add failed: ' + e.message, 'error'); }
+  }
+
+  // ================================================================
+  // STATEMENT CALENDAR
+  // ================================================================
+  let bk_calCurrentMonth = null;
+  let bk_calDaysData = {};
+
+  function bk_initCalendar() {
+    if (!bk_qboGuard('bk-cal-qbo-guard','bk-cal-main')) return;
+    if (!bk_calCurrentMonth) bk_calCurrentMonth = bk_stmtCurrentMonth();
+    document.getElementById('bk-cal-month-display').textContent = bk_calMonthLabel(bk_calCurrentMonth);
+    bk_loadCalendarView();
+  }
+
+  function bk_calMonthLabel(ym) {
+    const [y, m] = ym.split('-');
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return (months[parseInt(m)-1] || m) + ' ' + y;
+  }
+
+  function bk_calChangeMonth(delta) {
+    const [y, m] = bk_calCurrentMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    bk_calCurrentMonth = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    document.getElementById('bk-cal-month-display').textContent = bk_calMonthLabel(bk_calCurrentMonth);
+    bk_closeDayDrawer();
+    bk_loadCalendarView();
+  }
+
+  async function bk_loadCalendarView() {
+    if (!bookkeepingRealm) return;
+    const month = bk_calCurrentMonth || bk_stmtCurrentMonth();
+    const bodyEl = document.getElementById('bk-stmt-calendar-body');
+    const statsEl = document.getElementById('bk-cal-stats');
+    bodyEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading calendar…</div>';
+    statsEl.style.display = 'none';
+
+    try {
+      const res = await apiFetch('/api/companies/' + bookkeepingRealm + '/statements/calendar?month=' + encodeURIComponent(month));
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      const days = data.days || [];
+      bk_calDaysData = {};
+      let total = 0, retrieved = 0;
+      for (const d of days) {
+        bk_calDaysData[d.day] = d;
+        total += d.total;
+        retrieved += d.retrieved;
+      }
+      const pending = total - retrieved;
+      const pct = total > 0 ? Math.round(retrieved / total * 100) : 0;
+
+      if (total > 0) {
+        statsEl.style.display = '';
+        document.getElementById('bk-cal-stats-grid').innerHTML = `
+          <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-value">${total}</div></div>
+          <div class="stat-card"><div class="stat-label">Retrieved</div><div class="stat-value green">${retrieved}</div></div>
+          <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value orange">${pending}</div></div>
+          <div class="stat-card"><div class="stat-label">Complete</div><div class="stat-value">${pct}%</div></div>`;
+        document.getElementById('bk-cal-pct-label').textContent = `${retrieved} of ${total} retrieved (${pct}%)`;
+        document.getElementById('bk-cal-progress-fill').style.width = pct + '%';
+      }
+
+      let html = '<div class="cal-heatmap">';
+      for (let day = 1; day <= 31; day++) {
+        const d = bk_calDaysData[day];
+        if (!d) {
+          html += `<div class="cal-hm-day"><div class="cal-hm-num" style="color:rgba(143,163,184,0.3);">${day}</div></div>`;
+        } else {
+          let colorClass = 'all-pending';
+          if (d.pending === 0) colorClass = 'all-retrieved';
+          else if (d.retrieved > 0) colorClass = 'mixed';
+          const pendBadge = d.pending > 0 ? `<span class="cal-hm-badge">🟠 ${d.pending}</span>` : '';
+          const retBadge = d.retrieved > 0 ? `<span class="cal-hm-badge">✅ ${d.retrieved}</span>` : '';
+          html += `<div class="cal-hm-day has-items ${colorClass}" onclick="bk_openDayDrawer(${day})" title="Day ${day}: ${d.total} statements">
+            <div class="cal-hm-num">${day}</div>
+            <div class="cal-hm-badges">${pendBadge}${retBadge}</div>
+          </div>`;
+        }
+      }
+      html += '</div>';
+      bodyEl.innerHTML = html;
+    } catch(e) {
+      bodyEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: ' + esc(e.message) + '</div>';
+    }
+  }
+
+  function bk_openDayDrawer(day) {
+    const d = bk_calDaysData[day];
+    if (!d) return;
+    const monthLabel = bk_calMonthLabel(bk_calCurrentMonth);
+    document.getElementById('bk-day-drawer-title').textContent = `Day ${day} — ${monthLabel}`;
+    bk_updateDrawerProgress(d);
+    bk_renderDrawerItems(d, day);
+    document.getElementById('bk-day-drawer-overlay').classList.add('open');
+    document.getElementById('bk-day-drawer').classList.add('open');
+  }
+
+  function bk_closeDayDrawer() {
+    document.getElementById('bk-day-drawer-overlay').classList.remove('open');
+    document.getElementById('bk-day-drawer').classList.remove('open');
+  }
+
+  function bk_updateDrawerProgress(d) {
+    const pct = d.total > 0 ? Math.round(d.retrieved / d.total * 100) : 0;
+    document.getElementById('bk-day-drawer-prog-label').textContent = `${d.retrieved} of ${d.total} retrieved`;
+    document.getElementById('bk-day-drawer-prog-fill').style.width = pct + '%';
+  }
+
+  function bk_renderDrawerItems(d, day) {
+    if (!d || !d.items || d.items.length === 0) {
+      document.getElementById('bk-day-drawer-body').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);">No statements for this day.</div>';
+      return;
+    }
+    const sorted = [...d.items].sort((a, b) => {
+      if (a.isRetrieved === b.isRetrieved) return 0;
+      return a.isRetrieved ? 1 : -1;
+    });
+    let html = '';
+    for (const item of sorted) {
+      const methodLabel = BK_METHOD_LABELS[item.method] || item.method || '—';
+      const retrievedDate = item.retrievedAt ? new Date(item.retrievedAt).toLocaleDateString() : '';
+      html += `<div class="bk-day-drawer-row${item.isRetrieved ? ' retrieved' : ''}" id="bk-ddr-${item.id}">
+        <div class="bk-dd-row-info">
+          <div class="bk-dd-row-company">${esc(item.companyName || item.realmId)}</div>
+          <div class="bk-dd-row-account">${esc(item.accountName)}</div>
+        </div>
+        <span class="bk-dd-row-method">${esc(methodLabel)}</span>
+        <div class="bk-dd-row-action">
+          ${item.isRetrieved
+            ? `<span class="bk-dd-retrieved-date">✅ ${retrievedDate}</span>`
+            : `<button class="bk-btn-dd-retrieve" onclick="bk_drawerMarkRetrieved('${item.realmId}',${item.id},${day})">✓</button>`
+          }
+        </div>
+      </div>`;
+    }
+    document.getElementById('bk-day-drawer-body').innerHTML = html;
+  }
+
+  async function bk_drawerMarkRetrieved(realmId, id, day) {
+    const btn = document.querySelector(`#bk-ddr-${id} .bk-btn-dd-retrieve`);
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try {
+      const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id + '/retrieve', { method: 'POST', body: '{}' });
+      if (!res.ok) throw new Error((await res.json()).error);
+      const d = bk_calDaysData[day];
+      if (d) {
+        const item = d.items.find(i => i.id === id);
+        if (item) { item.isRetrieved = true; item.retrievedAt = new Date().toISOString(); d.retrieved++; d.pending--; }
+        bk_updateDrawerProgress(d);
+        bk_renderDrawerItems(d, day);
+        bk_refreshHeatmapBox(day, d);
+      }
+      toast('Marked as retrieved');
+    } catch(e) {
+      if (btn) { btn.disabled = false; btn.textContent = '✓'; }
+      toast('Failed: ' + e.message, 'error');
+    }
+  }
+
+  function bk_refreshHeatmapBox(day, d) {
+    let total = 0, retrieved = 0;
+    for (const dd of Object.values(bk_calDaysData)) { total += dd.total; retrieved += dd.retrieved; }
+    const pct = total > 0 ? Math.round(retrieved / total * 100) : 0;
+    const pending = total - retrieved;
+    document.getElementById('bk-cal-stats-grid').innerHTML = `
+      <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-value">${total}</div></div>
+      <div class="stat-card"><div class="stat-label">Retrieved</div><div class="stat-value green">${retrieved}</div></div>
+      <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value orange">${pending}</div></div>
+      <div class="stat-card"><div class="stat-label">Complete</div><div class="stat-value">${pct}%</div></div>`;
+    document.getElementById('bk-cal-pct-label').textContent = `${retrieved} of ${total} retrieved (${pct}%)`;
+    document.getElementById('bk-cal-progress-fill').style.width = pct + '%';
+    const boxes = document.querySelectorAll('.cal-hm-day');
+    for (const box of boxes) {
+      if (box.getAttribute('onclick') === `bk_openDayDrawer(${day})`) {
+        let colorClass = 'all-pending';
+        if (d.pending === 0) colorClass = 'all-retrieved';
+        else if (d.retrieved > 0) colorClass = 'mixed';
+        box.className = `cal-hm-day has-items ${colorClass}`;
+        const pendBadge = d.pending > 0 ? `<span class="cal-hm-badge">🟠 ${d.pending}</span>` : '';
+        const retBadge = d.retrieved > 0 ? `<span class="cal-hm-badge">✅ ${d.retrieved}</span>` : '';
+        box.innerHTML = `<div class="cal-hm-num">${day}</div><div class="cal-hm-badges">${pendBadge}${retBadge}</div>`;
+        break;
+      }
+    }
+  }
+
+  // ================================================================
+  // TRANSACTION DRILL-DOWN
+  // ================================================================
+  let bk_cachedAccounts = null;
+  let bk_ddCurrentAccount = null;
+  let bk_ddStartDate = null;
+  let bk_ddEndDate = null;
+  let bk_ddTransactions = [];
+
+  function bk_openDrilldown(account, startDate, endDate, amount) {
+    bk_ddCurrentAccount = account;
+    bk_ddStartDate = startDate;
+    bk_ddEndDate = endDate;
+    document.getElementById('bk-dd-account-name').textContent = account + (amount ? ' — ' + amount : '');
+    document.getElementById('bk-dd-period').textContent = startDate + ' to ' + endDate;
+    document.getElementById('bk-drilldown-body').innerHTML = '<div class="bk-drilldown-loading">Loading transactions…</div>';
+    document.getElementById('bk-drilldown-overlay').classList.add('open');
+    document.getElementById('bk-drilldown-panel').classList.add('open');
+    bk_loadDrilldownTransactions();
+  }
+
+  function bk_closeDrilldown() {
+    document.getElementById('bk-drilldown-overlay').classList.remove('open');
+    document.getElementById('bk-drilldown-panel').classList.remove('open');
+  }
+
+  async function bk_loadDrilldownTransactions() {
+    try {
+      const params = new URLSearchParams({ account: bk_ddCurrentAccount, startDate: bk_ddStartDate, endDate: bk_ddEndDate });
+      const res = await apiFetch('/api/companies/' + bookkeepingRealm + '/transactions/drilldown?' + params);
+      bk_ddTransactions = await res.json();
+      if (bk_ddTransactions.error) throw new Error(bk_ddTransactions.error);
+      bk_renderDrilldownTable();
+    } catch (e) {
+      document.getElementById('bk-drilldown-body').innerHTML = '<div class="bk-drilldown-loading" style="color:var(--red);">Failed to load: ' + esc(e.message) + '</div>';
+    }
+  }
+
+  function bk_renderDrilldownTable() {
+    if (!bk_ddTransactions.length) {
+      document.getElementById('bk-drilldown-body').innerHTML = '<div class="bk-drilldown-loading">No transactions found for this account and period.</div>';
+      return;
+    }
+    let html = '<table class="bk-drilldown-table"><thead><tr><th>Date</th><th>Type</th><th>Name</th><th>Memo</th><th class="dd-amount">Amount</th><th></th></tr></thead><tbody>';
+    bk_ddTransactions.forEach((t, i) => {
+      const rawAmt = t.amount == null ? 0 : Number(t.amount);
+      const amt = rawAmt >= 0 ? '$' + rawAmt.toLocaleString(undefined, {minimumFractionDigits:2}) : '<span style="color:var(--red);">($' + Math.abs(rawAmt).toLocaleString(undefined, {minimumFractionDigits:2}) + ')</span>';
+      html += `<tr id="bk-ddr-txn-${i}">
+        <td style="white-space:nowrap;">${esc(t.date)}</td>
+        <td style="color:var(--muted);">${esc(t.type)}</td>
+        <td>${esc(t.name)}</td>
+        <td style="color:var(--muted);font-size:0.75rem;">${esc(t.memo)}</td>
+        <td class="dd-amount">${amt}</td>
+        <td><button class="bk-btn-recode" onclick="bk_showRecodeForm(${i})">Recode</button></td>
+      </tr>
+      <tr id="bk-ddr-recode-${i}" class="bk-recode-row" style="display:none;">
+        <td colspan="6"><div id="bk-recode-form-${i}"></div></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('bk-drilldown-body').innerHTML = html;
+  }
+
+  async function bk_getAccountsForRecode() {
+    if (bk_cachedAccounts && bk_cachedAccounts.realmId === bookkeepingRealm) return bk_cachedAccounts.accounts;
+    try {
+      const res = await apiFetch('/api/companies/' + bookkeepingRealm + '/accounts');
+      const accounts = await res.json();
+      bk_cachedAccounts = { realmId: bookkeepingRealm, accounts };
+      return accounts;
+    } catch (e) { return []; }
+  }
+
+  async function bk_showRecodeForm(idx) {
+    document.querySelectorAll('[id^="bk-ddr-recode-"]').forEach(r => r.style.display = 'none');
+    const recodeRow = document.getElementById('bk-ddr-recode-' + idx);
+    recodeRow.style.display = '';
+    const formEl = document.getElementById('bk-recode-form-' + idx);
+    formEl.innerHTML = '<div style="color:var(--muted);font-size:0.78rem;padding:0.5rem;">Loading accounts…</div>';
+    const accounts = await bk_getAccountsForRecode();
+    if (!accounts.length) {
+      formEl.innerHTML = '<div style="color:var(--red);font-size:0.78rem;padding:0.5rem;">Failed to load accounts</div>';
+      return;
+    }
+    const byType = {};
+    for (const a of accounts) {
+      if (!a.active) continue;
+      if (!byType[a.type]) byType[a.type] = [];
+      byType[a.type].push(a);
+    }
+    let opts = '';
+    for (const [type, accs] of Object.entries(byType)) {
+      opts += `<optgroup label="${esc(type)}">`;
+      for (const a of accs) {
+        const selected = a.fullName === bk_ddCurrentAccount || a.name === bk_ddCurrentAccount ? ' selected' : '';
+        opts += `<option value="${esc(a.fullName)}"${selected}>${esc(a.fullName)}</option>`;
+      }
+      opts += '</optgroup>';
+    }
+    formEl.innerHTML = `
+      <div style="padding:0.5rem 0;">
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.35rem;">Recode to:</div>
+        <select class="bk-recode-select" id="bk-recode-select-${idx}">${opts}</select>
+        <div class="bk-recode-actions">
+          <button class="bk-btn-recode-save" onclick="bk_saveRecode(${idx})">Save</button>
+          <button class="bk-btn-recode-cancel" onclick="bk_cancelRecode(${idx})">Cancel</button>
+        </div>
+      </div>`;
+  }
+
+  function bk_cancelRecode(idx) {
+    document.getElementById('bk-ddr-recode-' + idx).style.display = 'none';
+  }
+
+  async function bk_saveRecode(idx) {
+    const t = bk_ddTransactions[idx];
+    const newAccount = document.getElementById('bk-recode-select-' + idx)?.value;
+    if (!newAccount) return;
+    const btn = document.getElementById('bk-ddr-recode-' + idx).querySelector('.bk-btn-recode-save');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    try {
+      const res = await apiFetch('/api/companies/' + bookkeepingRealm + '/transactions/recode', {
+        method: 'POST',
+        body: JSON.stringify({ txnId: t.txnId, txnType: t.type, newAccount }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || JSON.stringify(data));
+      bk_ddTransactions.splice(idx, 1);
+      const recodeRow = document.getElementById('bk-ddr-recode-' + idx);
+      const origRow = document.getElementById('bk-ddr-txn-' + idx);
+      if (recodeRow) recodeRow.remove();
+      if (origRow) origRow.remove();
+      toast('✅ Recoded to ' + newAccount.split(':').pop() + ' — P&L refreshing in background…');
+      setTimeout(() => { if (bk_cpInitialized) bk_generateClosePackage(); }, 800);
+    } catch (e) {
+      toast('Recode failed: ' + e.message, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+    }
+  }
+
+  // ================================================================
+  // INIT
+  // ================================================================
+  loadCompany();
+
+  // ── Company Communication Tab ─────────────────────────────────────────────
+  let commCoId = null;
+  let commCoActiveThreadId = null;
+
+  function initCoComm() {
+    commCoId = companyId;
+    loadCoThreads();
+  }
+
+  async function loadCoThreads() {
+    const el = document.getElementById('comm-co-threads');
+    if (!el || !commCoId) return;
+    el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    try {
+      const res = await apiFetch(`/api/messages/company/${commCoId}`);
+      const threads = await res.json();
+      if (!threads.length) {
+        el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0;">No messages yet.</div>';
+        return;
+      }
+      el.innerHTML = threads.map(t => `
+        <div onclick="loadCoThread(${t.id})" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:6px;margin-bottom:0.5rem;cursor:pointer;background:var(--charcoal);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:0.82rem;font-weight:600;color:var(--text);">${esc(t.subject||'(no subject)')}</div>
+            ${t.unreadCount > 0 ? `<span style="background:var(--gold);color:var(--navy);border-radius:10px;padding:0.1rem 0.4rem;font-size:0.7rem;font-weight:700;">${t.unreadCount}</span>` : ''}
+          </div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem;">${esc(t.person ? t.person.firstName+' '+t.person.lastName : '')} — ${esc(t.lastPreview)}</div>
+          <div style="display:flex;gap:0.5rem;margin-top:0.3rem;">
+            <span style="font-size:0.7rem;padding:0.1rem 0.4rem;border-radius:4px;background:${coStatusColor(t.status)};color:#fff;">${t.status}</span>
+          </div>
+        </div>
+      `).join('');
+    } catch(e) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">Failed to load.</div>';
+    }
+  }
+
+  async function loadCoThread(threadId) {
+    commCoActiveThreadId = threadId;
+    document.getElementById('comm-co-compose').style.display = 'none';
+    const detail = document.getElementById('comm-co-thread-detail');
+    detail.style.display = 'flex';
+    detail.style.flexDirection = 'column';
+    document.getElementById('comm-co-messages-list').innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    try {
+      const res = await apiFetch(`/api/messages/${threadId}`);
+      const data = await res.json();
+      document.getElementById('comm-co-thread-header').innerHTML = `
+        <div style="font-size:1rem;font-weight:700;color:var(--text);">${esc(data.subject||'(no subject)')}
+          <span style="font-size:0.75rem;margin-left:0.5rem;padding:0.15rem 0.5rem;border-radius:4px;background:${coStatusColor(data.status)};color:#fff;">${data.status}</span>
+        </div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">From: ${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}</div>
+      `;
+      document.getElementById('comm-co-status-select').value = data.status;
+      const msgEl = document.getElementById('comm-co-messages-list');
+      msgEl.innerHTML = data.messages.map(m => {
+        const isStaff = m.senderType === 'staff';
+        const isInternal = m.isInternal;
+        return `<div style="display:flex;flex-direction:column;align-items:${isStaff?'flex-end':'flex-start'};">
+          <div style="max-width:80%;padding:0.5rem 0.75rem;border-radius:8px;background:${isInternal?'rgba(255,200,0,0.1)':isStaff?'var(--gold)':'var(--charcoal)'};color:${isStaff&&!isInternal?'var(--navy)':'var(--text)'};border:${isInternal?'1px dashed var(--gold)':'none'};">
+            ${isInternal?'<div style="font-size:0.65rem;color:var(--gold);margin-bottom:0.2rem;">🔒 Internal note</div>':''}
+            <div style="font-size:0.85rem;">${esc(m.body)}</div>
+          </div>
+          <div style="font-size:0.68rem;color:var(--muted);margin-top:0.15rem;">${esc(m.senderName||'')} · ${coRelTime(m.createdAt)}</div>
+        </div>`;
+      }).join('');
+      msgEl.scrollTop = msgEl.scrollHeight;
+    } catch(e) {
+      document.getElementById('comm-co-messages-list').innerHTML = '<div style="color:var(--muted);">Failed to load.</div>';
+    }
+  }
+
+  async function sendCoReply() {
+    const body = document.getElementById('comm-co-reply-body').value.trim();
+    if (!body || !commCoActiveThreadId) return;
+    const isInternal = document.getElementById('comm-co-internal-toggle').checked;
+    await apiFetch(`/api/messages/${commCoActiveThreadId}/reply`, { method:'POST', body: JSON.stringify({ body, is_internal: isInternal }) });
+    document.getElementById('comm-co-reply-body').value = '';
+    document.getElementById('comm-co-internal-toggle').checked = false;
+    await loadCoThread(commCoActiveThreadId);
+    await loadCoThreads();
+  }
+
+  async function updateCoThreadStatus() {
+    if (!commCoActiveThreadId) return;
+    const status = document.getElementById('comm-co-status-select').value;
+    await apiFetch(`/api/messages/${commCoActiveThreadId}/status`, { method:'PUT', body: JSON.stringify({ status }) });
+    await loadCoThreads();
+  }
+
+  async function openCoCompose() {
+    document.getElementById('comm-co-thread-detail').style.display = 'none';
+    document.getElementById('comm-co-compose').style.display = 'block';
+    // Load people for this company (using company detail endpoint which includes people)
+    const select = document.getElementById('comm-co-person-select');
+    select.innerHTML = '<option value="">Loading…</option>';
+    try {
+      const res = await apiFetch(`/api/companies/${commCoId}`);
+      const co = await res.json();
+      const people = co.people || [];
+      select.innerHTML = '<option value="">Select person…</option>' + people.map(p => `<option value="${p.person_id}">${esc((p.first_name||'')+' '+(p.last_name||''))}</option>`).join('');
+    } catch(e) {
+      select.innerHTML = '<option value="">Failed to load people</option>';
+    }
+  }
+
+  function closeCoCompose() {
+    document.getElementById('comm-co-compose').style.display = 'none';
+  }
+
+  async function sendCoNewThread() {
+    const personId = document.getElementById('comm-co-person-select').value;
+    const subject = document.getElementById('comm-co-new-subject').value.trim();
+    const body = document.getElementById('comm-co-new-body').value.trim();
+    if (!personId) { alert('Please select a person'); return; }
+    if (!body) { alert('Message body is required'); return; }
+    const res = await apiFetch('/api/messages', { method:'POST', body: JSON.stringify({ person_id: parseInt(personId), subject, body, is_internal: false }) });
+    const data = await res.json();
+    closeCoCompose();
+    await loadCoThreads();
+    if (data.threadId) loadCoThread(data.threadId);
+  }
+
+  function coStatusColor(s) {
+    if (s==='open') return '#c9a84c'; if (s==='waiting') return '#4a90d9'; if (s==='resolved') return '#4caf50'; return '#666';
+  }
+  function coRelTime(ts) {
+    if (!ts) return ''; const d=new Date(ts); const diff=Date.now()-d;
+    if (diff<60000) return 'just now'; if (diff<3600000) return Math.floor(diff/60000)+'m ago';
+    if (diff<86400000) return Math.floor(diff/3600000)+'h ago'; return d.toLocaleDateString();
+  }
+</script>
+<script>
+  function showUploadFile(f) {
+    if (!f) return;
+    document.getElementById('upload-dropzone-text').style.display = 'none';
+    document.getElementById('upload-file-name').style.display = '';
+    document.getElementById('upload-file-name').textContent = f.name;
+    if (!document.getElementById('upload-display-name').value)
+      document.getElementById('upload-display-name').value = f.name.replace(/\.[^.]+$/, '');
+  }
+
+  async function submitUpload() {
+    if (!uploadFile) { document.getElementById('upload-error').textContent='Select a file.'; document.getElementById('upload-error').style.display=''; return; }
+    const fd = new FormData();
+    fd.append('file', uploadFile);
+    fd.append('owner_type', 'company');
+    fd.append('owner_id', companyId);
+    fd.append('display_name', document.getElementById('upload-display-name').value || uploadFile.name);
+    fd.append('year', document.getElementById('upload-year').value || String(CURRENT_YEAR));
+    fd.append('folder_section', document.getElementById('upload-section').value);
+    fd.append('folder_category', document.getElementById('upload-category').value);
+    try {
+      const res = await fetch('/api/documents/upload', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: fd,
+      });
+      if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Upload failed'); }
+      document.getElementById('upload-modal').classList.remove('open');
+      toast('Document uploaded');
+      docsLoaded = false;
+      if (document.getElementById('tab-docs').classList.contains('active')) { docsLoaded = false; loadDocs(true); }
+    } catch(e) { document.getElementById('upload-error').textContent=e.message; document.getElementById('upload-error').style.display=''; }
+  }
+
+  // ── Page-level drag-and-drop: drop anywhere when Docs tab is active ──
+  let dragCounter = 0;
+  const pageDragOverlay = document.createElement('div');
+  pageDragOverlay.id = 'page-drag-overlay';
+  pageDragOverlay.style.cssText = `
+    display:none;position:fixed;inset:0;z-index:9999;
+    background:rgba(201,168,76,0.08);border:3px dashed var(--gold);
+    pointer-events:none;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.5rem;color:var(--gold);font-weight:700;
+  `;
+  pageDragOverlay.innerHTML = '📄 Drop to upload document';
+  pageDragOverlay.style.display = 'none';
+  document.body.appendChild(pageDragOverlay);
+
+  function isDocTabActive() {
+    return document.getElementById('tab-docs')?.classList.contains('active');
+  }
+
+  document.addEventListener('dragenter', (e) => {
+    if (!isDocTabActive()) return;
+    dragCounter++;
+    pageDragOverlay.style.display = 'flex';
+  });
+
+  document.addEventListener('dragleave', (e) => {
+    if (!isDocTabActive()) return;
+    dragCounter--;
+    if (dragCounter <= 0) { dragCounter = 0; pageDragOverlay.style.display = 'none'; }
+  });
+
+  document.addEventListener('dragover', (e) => {
+    if (!isDocTabActive()) return;
+    e.preventDefault();
+  });
+
+  document.addEventListener('drop', (e) => {
+    if (!isDocTabActive()) return;
+    e.preventDefault();
+    dragCounter = 0;
+    pageDragOverlay.style.display = 'none';
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    openUploadModal();
+    // Pre-load the dropped file into the modal
+    setTimeout(() => {
+      uploadFile = file;
+      showUploadFile(file);
+      // Pre-fill display name from filename
+      const nameInput = document.getElementById('upload-display-name');
+      if (nameInput && !nameInput.value) {
+        nameInput.value = file.name.replace(/\.[^/.]+$/, '');
+      }
+    }, 50);
+  });
+
+  // ── Attach Person Modal ──
+  async function openAttachPersonModal() {
+    // Fetch people in the same relationship
+    if (!companyData) return;
+    const relId = companyData.relationship_id;
+    if (!relId) { toast('Company has no relationship assigned', 'error'); return; }
+    try {
+      const res = await apiFetch(`/api/relationships/${relId}/people`);
+      const people = await res.json();
+      const existing = (companyData.people || []).map(p => p.person_id);
+      const available = people.filter(p => !existing.includes(p.id));
+      if (!available.length) { toast('All people in this relationship are already attached', 'error'); return; }
+
+      const opts = available.map(p => `<option value="${p.id}">${esc((p.first_name||'')+' '+(p.last_name||''))}</option>`).join('');
+      const html = `<div class="modal-overlay open" id="attach-person-modal" onclick="if(event.target===this)this.remove()">
+        <div class="modal" onclick="event.stopPropagation()" style="max-width:400px;">
+          <h2 style="margin-bottom:1rem;">Attach Person to Company</h2>
+          <div class="form-group"><label>Person</label><select id="ap-person" class="form-control">${opts}</select></div>
+          <div class="form-group"><label>Access Level</label>
+            <select id="ap-access" class="form-control">
+              <option value="full">Full (upload + message)</option>
+              <option value="view">View only</option>
+              <option value="sign">Sign only</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Ownership % (optional)</label><input type="number" id="ap-ownership" class="form-control" placeholder="e.g. 50" min="0" max="100" step="0.01"></div>
+          <div class="modal-actions">
+            <button class="btn btn-outline" onclick="document.getElementById('attach-person-modal').remove()">Cancel</button>
+            <button class="btn btn-gold" onclick="submitAttachPerson()">Attach</button>
+          </div>
+        </div></div>`;
+      document.body.insertAdjacentHTML('beforeend', html);
+    } catch(e) { toast('Failed to load people: ' + e.message, 'error'); }
+  }
+
+  async function submitAttachPerson() {
+    const personId = parseInt(document.getElementById('ap-person').value);
+    const accessLevel = document.getElementById('ap-access').value;
+    const ownershipPct = document.getElementById('ap-ownership').value;
+    try {
+      const res = await apiFetch(`/api/people/${personId}/company-access`, {
+        method: 'POST',
+        body: JSON.stringify({ company_id: companyId, access_level: accessLevel, ownership_pct: ownershipPct || null })
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      document.getElementById('attach-person-modal').remove();
+      toast('Person attached successfully');
+      await loadCompany();
+    } catch(e) { toast('Failed: ' + e.message, 'error'); }
+  }
+
+  async function detachPerson(personId) {
+    if (!confirm('Remove this person from the company?')) return;
+    try {
+      const res = await apiFetch(`/api/people/${personId}/company-access/${companyId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed');
+      toast('Person removed');
+      await loadCompany();
+    } catch(e) { toast('Failed: ' + e.message, 'error'); }
+  }
+</script>

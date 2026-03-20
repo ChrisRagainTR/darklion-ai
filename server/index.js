@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const expressLayouts = require('express-ejs-layouts');
 
 // Load .env if present
 try {
@@ -41,6 +42,12 @@ const { requireFirm } = require('./middleware/requireFirm');
 const app = express();
 const PORT = process.env.PORT || 8080;
 const IS_PROD = process.env.NODE_ENV === 'production';
+
+// --- EJS template engine ---
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+app.use(expressLayouts);
+app.set('layout', 'layout');
 
 // Trust proxy headers (Fly.io, Railway)
 app.set('trust proxy', true);
@@ -151,18 +158,22 @@ app.get('/register', (req, res) => res.sendFile(path.join(publicDir, 'register.h
 // --- Invite page (public) ---
 app.get('/invite/:token', (req, res) => res.sendFile(path.join(publicDir, 'invite.html')));
 
-// --- Dashboard (JWT auth; falls back to Basic Auth for dev) ---
-// Note: the HTML page itself is served publicly; the page JS will redirect if no token
-app.get('/dashboard', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
+// --- Staff pages (EJS templates with unified layout) ---
+// Note: auth is handled client-side (JWT in localStorage); server just serves the pages
+app.get('/dashboard', (req, res) => res.render('dashboard', { title: 'Dashboard', activeNav: '' }));
+app.get('/dashboard.html', (req, res) => res.redirect('/dashboard'));
 app.get('/theme-preview', (req, res) => res.sendFile(path.join(publicDir, 'theme-preview.html')));
-app.get('/dashboard.html', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
 // Team page — redirect to dashboard team section for now
 app.get('/team', (req, res) => res.redirect('/dashboard?section=team'));
-app.get('/crm', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
-app.get('/crm.html', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
-app.get('/crm/person/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-person.html')));
-app.get('/crm/company/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-company.html')));
-app.get('/crm/relationship/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-relationship.html')));
+app.get('/crm', (req, res) => {
+  const tab = req.query.tab || 'relationships';
+  const navMap = { relationships: 'relationships', people: 'people', companies: 'companies' };
+  res.render('crm', { title: 'CRM', activeNav: navMap[tab] || 'relationships' });
+});
+app.get('/crm.html', (req, res) => res.redirect('/crm'));
+app.get('/crm/person/:id', (req, res) => res.render('crm-person', { title: 'Person', activeNav: 'people' }));
+app.get('/crm/company/:id', (req, res) => res.render('crm-company', { title: 'Company', activeNav: 'companies' }));
+app.get('/crm/relationship/:id', (req, res) => res.render('crm-relationship', { title: 'Relationship', activeNav: 'relationships' }));
 
 // Redirect route (previously required Basic Auth)
 app.get('/redirect', (req, res) => res.sendFile(path.join(publicDir, 'redirect.html')));
@@ -197,11 +208,11 @@ app.use('/api/documents', requireFirm, apiLimiter, documentsRouter);
 
 const messagesRouter = require('./routes/messages');
 app.use('/api/messages', requireFirm, apiLimiter, messagesRouter);
-app.get('/messages', (req, res) => res.sendFile(path.join(publicDir, 'messages.html')));
+app.get('/messages', (req, res) => res.render('messages', { title: 'Messages', activeNav: 'messages' }));
 
 const pipelinesRouter = require('./routes/pipelines');
 app.use('/api/pipelines', requireFirm, apiLimiter, pipelinesRouter);
-app.get('/pipelines', (req, res) => res.sendFile(path.join(publicDir, 'pipelines.html')));
+app.get('/pipelines', (req, res) => res.render('pipelines', { title: 'Pipelines', activeNav: 'pipelines' }));
 
 const portalAuthRouter = require('./routes/portal-auth');
 const portalRouter = require('./routes/portal');
