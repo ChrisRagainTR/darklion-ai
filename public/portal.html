@@ -1633,7 +1633,7 @@
       if (_chatLoaded) return;
       _chatLoaded = true;
       await loadContacts();
-      await loadAllMessages();
+      // loadContacts → selectContact → loadAllMessages, so no need to call it again
     }
 
     async function loadContacts() {
