@@ -337,8 +337,22 @@ One thread per subject. Belongs to a relationship, company, or person.
 | subject | TEXT | |
 | context_type | TEXT | 'relationship', 'company', 'person' |
 | context_id | INTEGER | FK to the relevant entity |
+| status | TEXT | 'open' (needs response), 'waiting' (staff replied, awaiting client), 'resolved' (done, off inbox) |
+| category | TEXT | 'bookkeeping', 'tax', 'general', 'billing', 'other' — set by staff or auto-tagged by Viktor |
+| assigned_to | INTEGER FK → firm_users | staff member who claimed this thread (nullable) |
 | created_at | TIMESTAMPTZ | |
 | last_message_at | TIMESTAMPTZ | used for inbox sort order |
+
+**Team inbox behavior:**
+- Client sends message → thread flips to `open`, appears in shared team inbox
+- Staff replies → flips to `waiting` (our turn is done)
+- Client replies again → flips back to `open`
+- Staff marks resolved → flips to `resolved`, disappears from inbox
+- All threads remain permanently on the person's portal record regardless of status
+- Viktor auto-tags `category` as messages arrive based on content; staff can override
+
+**Staff inbox view:** Filters to `status = 'open'`, sorted oldest-first (most overdue at top).
+Filterable by category so Nick sees bookkeeping threads, Chris sees tax threads, etc.
 
 ---
 
