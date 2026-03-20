@@ -335,55 +335,63 @@
     return (b/(1024*1024)).toFixed(1) + ' MB';
   }
 
-  function buildDocsColumn(docs, title, icon) {
-    if (!docs.length) return `<div class="docs-col-title">${icon} ${title}</div><div style="color:var(--muted);font-size:0.82rem;">No documents</div>`;
+  const DOC_CATS = [
+    { key: 'tax',         label: 'Tax',         icon: '🧾' },
+    { key: 'bookkeeping', label: 'Bookkeeping',  icon: '📒' },
+    { key: 'private',     label: 'Private',      icon: '🔒' },
+    { key: 'other',       label: 'Other',        icon: '📎' },
+  ];
 
-    // Group by year then doc_type
-    const years = {};
+  function buildDocsColumn(sectionDocs, title, icon) {
     const CURRENT_YEAR = new Date().getFullYear();
-    docs.forEach(d => {
-      const y = d.year || 'Unknown';
-      if (!years[y]) years[y] = {};
+    // Fixed year list: current year back to 2018
+    const allYears = [];
+    for (let y = CURRENT_YEAR; y >= 2018; y--) allYears.push(String(y));
+    const recentYears = allYears.slice(0, 2);
+    const priorYears  = allYears.slice(2);
+
+    // Index docs
+    const byYearCat = {};
+    sectionDocs.forEach(d => {
+      const y   = d.year || String(CURRENT_YEAR);
       const cat = d.folder_category || d.doc_type || 'other';
-      if (!years[y][cat]) years[y][cat] = [];
-      years[y][cat].push(d);
+      if (!byYearCat[y]) byYearCat[y] = {};
+      if (!byYearCat[y][cat]) byYearCat[y][cat] = [];
+      byYearCat[y][cat].push(d);
     });
 
-    const sortedYears = Object.keys(years).sort((a,b) => b-a);
-    const recentYears = sortedYears.slice(0, 2);
-    const prevYears = sortedYears.slice(2);
+    const colKey = title.replace(/\s/g, '');
 
-    function renderYear(y, collapsed) {
-      const cats = years[y];
-      const totalCount = Object.values(cats).reduce((s,arr)=>s+arr.length,0);
-      const bodyId = `yb-${title.replace(/\s/g,'')}-${y}`;
+    function renderOneYear(yr, open) {
+      const yrDocs = sectionDocs.filter(d => (d.year || String(CURRENT_YEAR)) === yr);
+      const bodyId = `yb-${colKey}-${yr}`;
       return `<div class="year-block">
-        <div class="year-header" onclick="var b=document.getElementById('${bodyId}');var open=b.style.display!=='none';b.style.display=open?'none':'';this.querySelector('.year-arrow').textContent=open?'▾':'▸';">
-          <span style="font-size:1rem;">📁</span>
-          <span class="year-label">${esc(y)}</span>
-          <span class="year-count">${totalCount}</span>
-          <span class="year-arrow">${collapsed?'▸':'▾'}</span>
+        <div class="year-header" onclick="var b=document.getElementById('${bodyId}');var isOpen=b.style.display!=='none';b.style.display=isOpen?'none':'block';this.querySelector('.year-arrow').textContent=isOpen?'▸':'▾';">
+          <span style="font-size:0.9rem;">📅</span>
+          <span class="year-label">${yr}</span>
+          <span class="year-count">${yrDocs.length}</span>
+          <span class="year-arrow">${open ? '▾' : '▸'}</span>
         </div>
-        <div class="year-body" id="${bodyId}" style="display:${collapsed?'none':'block'}">
-          ${Object.keys(cats).sort().map(cat => {
-            const files = cats[cat];
-            const catId = `cb-${title.replace(/\s/g,'')}-${y}-${cat}`;
-            const catIcon = {tax:'🧾', bookkeeping:'📒', other:'📎'}[cat] || '📎';
+        <div class="year-body" id="${bodyId}" style="display:${open ? 'block' : 'none'}">
+          ${DOC_CATS.map(cat => {
+            const files = (byYearCat[yr] || {})[cat.key] || [];
+            const catId = `cb-${colKey}-${yr}-${cat.key}`;
             return `<div class="cat-block">
-              <div class="cat-header" onclick="var b=document.getElementById('${catId}');var open=b.style.display!=='none';b.style.display=open?'none':'block';">
-                <span style="font-size:0.8rem;">${catIcon}</span>
-                <span class="cat-label">${esc(cat.charAt(0).toUpperCase()+cat.slice(1))}</span>
+              <div class="cat-header" onclick="var b=document.getElementById('${catId}');b.style.display=b.style.display==='none'?'block':'none';">
+                <span>${cat.icon}</span>
+                <span class="cat-label">${cat.label}</span>
                 <span class="cat-count">${files.length}</span>
               </div>
               <div class="cat-body" id="${catId}">
-                ${files.length === 0 ? '<div class="cat-empty">Empty</div>' :
-                  files.map(f => `<div class="doc-row">
-                    ${docTypeBadge(f.mime_type)}
-                    <span class="doc-name" onclick="downloadDoc(${f.id})">${esc(f.display_name||'Untitled')}</span>
-                    ${f.viewed_at ? '<span class="doc-viewed">✓ Viewed</span>' : ''}
-                    <span class="doc-meta">${formatBytes(f.size_bytes)}</span>
-                    <button class="doc-download" onclick="downloadDoc(${f.id})">↓ Download</button>
-                  </div>`).join('')
+                ${files.length === 0
+                  ? '<div class="cat-empty">Empty</div>'
+                  : files.map(f => `<div class="doc-row">
+                      ${docTypeBadge(f.mime_type)}
+                      <span class="doc-name" onclick="downloadDoc(${f.id})">${esc(f.display_name||'Untitled')}</span>
+                      ${f.viewed_at ? '<span class="doc-viewed">✓</span>' : ''}
+                      <span class="doc-meta">${formatBytes(f.size_bytes)}</span>
+                      <button class="doc-download" onclick="downloadDoc(${f.id})">↓</button>
+                    </div>`).join('')
                 }
               </div>
             </div>`;
@@ -392,23 +400,22 @@
       </div>`;
     }
 
-    let html = `<div class="docs-col-title">${icon} ${title} (${docs.length})</div>`;
-    recentYears.forEach(y => { html += renderYear(y, false); });
-    if (prevYears.length) {
-      const prevId = `prev-${title.replace(/\s/g,'')}`;
-      const prevCount = prevYears.reduce((s,y)=>s+Object.values(years[y]).reduce((a,arr)=>a+arr.length,0),0);
-      html += `<div class="year-block">
-        <div class="year-header" onclick="var b=document.getElementById('${prevId}');var open=b.style.display!=='none';b.style.display=open?'none':'block';this.querySelector('.year-arrow').textContent=open?'▾':'▸';">
-          <span style="font-size:1rem;">📁</span>
-          <span class="year-label">Previous Years</span>
-          <span class="year-count">${prevCount}</span>
-          <span class="year-arrow">▸</span>
-        </div>
-        <div id="${prevId}" style="display:none">
-          ${prevYears.map(y => renderYear(y, false)).join('')}
-        </div>
-      </div>`;
-    }
+    const priorCount = priorYears.reduce((n,y) => n + sectionDocs.filter(d => (d.year||String(CURRENT_YEAR)) === y).length, 0);
+    const priorId = `prior-${colKey}`;
+
+    let html = `<div class="docs-col-title">${icon} ${title} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
+    recentYears.forEach(y => { html += renderOneYear(y, true); });
+    html += `<div class="year-block">
+      <div class="year-header" onclick="var b=document.getElementById('${priorId}');var isOpen=b.style.display!=='none';b.style.display=isOpen?'none':'block';this.querySelector('.year-arrow').textContent=isOpen?'▸':'▾';">
+        <span style="font-size:0.9rem;">📂</span>
+        <span class="year-label">Prior Years</span>
+        <span class="year-count">${priorCount}</span>
+        <span class="year-arrow">▸</span>
+      </div>
+      <div id="${priorId}" style="display:none">
+        ${priorYears.map(y => renderOneYear(y, false)).join('')}
+      </div>
+    </div>`;
     return html;
   }
 
