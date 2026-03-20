@@ -133,16 +133,17 @@ Relationship  →  the household/group (top-level billing unit)
 
 ---
 
-### ⏳ Phase 5 — Client Portal (full)
-**Plan:**
-- Full portal UI replacing the placeholder from Phase 2
-- Client sees: their documents (delivered only), their companies, StanfordTax organizer link
-- Secure chat widget (portal side)
-- Email notifications via Resend when:
-  - Staff sends a portal message
-  - Document is delivered
-  - Signature is requested
-- Subdomain routing: `{slug}.darklion.ai` → detects firm from hostname
+### ✅ Phase 5 — Client Portal (COMPLETE — 2026-03-20)
+**What was built:**
+- `server/services/email.js` — Resend email service, branded HTML templates for invite, reset, notification. Graceful degradation if key missing.
+- `POST /portal-auth/send-invite` — staff sends invite → client gets email with set-password link
+- `POST /portal-auth/forgot-password` — now actually sends reset email via Resend
+- `GET /portal/stanford-tax` — personal + company organizer URLs
+- `GET /portal/messages` + `POST /portal/messages/send` — stub, ready for Phase 8
+- `POST /portal/upload` — client can upload their own documents (folder_section='client_uploaded')
+- `public/portal.html` — full rebuild: Overview · Documents · Organizers · Messages tabs, company cards, year-folder doc view with NEW badge, drag-drop upload, mobile-first
+- `public/portal-login.html` — now handles invite (`?invite=TOKEN`) and reset (`?reset=TOKEN`) flows
+- One env var needed: `APP_URL=https://darklion.ai` (for invite/reset email links)
 
 ---
 
