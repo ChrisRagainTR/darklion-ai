@@ -691,7 +691,7 @@
     <div class="header-search-wrap">
       <span class="header-search-icon">🔍</span>
       <input type="text" class="header-search-bar" id="header-search-bar"
-        placeholder="Search clients…"
+        placeholder="Search relationships, companies, people…"
         autocomplete="off"
         oninput="headerSearchInput(this.value)"
         onfocus="openHeaderSearch()"
@@ -1256,14 +1256,16 @@
       }
     }
 
+    let searchTimer = null;
+    let searchResults = [];
+
     function openHeaderSearch() {
       const bar = qs('#header-search-bar');
       bar.removeAttribute('readonly');
-      bar.placeholder = 'Search clients…';
+      bar.placeholder = 'Search relationships, companies, people…';
       bar.value = '';
       hcdOpen = true;
-      hcdFiltered = [...companies];
-      hcdFocusIdx = -1;
+      searchResults = [];
       renderHcd();
       qs('#header-client-dropdown').classList.add('open');
     }
@@ -1272,42 +1274,51 @@
       hcdOpen = false;
       qs('#header-client-dropdown').classList.remove('open');
       qs('#header-search-bar').setAttribute('readonly', '');
-      // Restore current client name
-      const c = companies.find(co => co.realm_id === currentRealm);
-      if (c) {
-        qs('#header-search-bar').value = '';
-        qs('#header-search-bar').placeholder = c.company_name || c.realm_id;
-      }
+      qs('#header-search-bar').placeholder = 'Search…';
+      qs('#header-search-bar').value = '';
     }
 
     function headerSearchInput(query) {
-      const q = (query || '').toLowerCase();
-      hcdFiltered = q ? companies.filter(c => (c.company_name || c.realm_id).toLowerCase().includes(q)) : [...companies];
-      hcdFocusIdx = -1;
-      renderHcd();
+      clearTimeout(searchTimer);
+      if (!query || query.length < 2) { searchResults = []; renderHcd(); return; }
+      searchTimer = setTimeout(async () => {
+        try {
+          const res = await apiFetch(`/api/search?q=${encodeURIComponent(query)}`);
+          const data = await res.json();
+          searchResults = [
+            ...(data.relationships||[]).map(r => ({ ...r, _type: 'relationship', _label: r.name, _sub: 'Relationship' })),
+            ...(data.companies||[]).map(c => ({ ...c, _type: 'company', _label: c.name||c.company_name, _sub: c.entity_type || 'Company' })),
+            ...(data.people||[]).map(p => ({ ...p, _type: 'person', _label: (p.first_name||'') + ' ' + (p.last_name||''), _sub: p.relationship_name || 'Person' })),
+          ];
+          renderHcd();
+        } catch(e) { /* silent */ }
+      }, 200);
+    }
+
+    function searchNavigate(type, id) {
+      closeHeaderSearch();
+      if (type === 'relationship') window.location.href = `/crm/relationship/${id}`;
+      else if (type === 'company') window.location.href = `/crm/company/${id}`;
+      else if (type === 'person') window.location.href = `/crm/person/${id}`;
     }
 
     function renderHcd() {
       const list = qs('#hcd-list');
-      if (hcdFiltered.length === 0) {
-        list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">No clients found</div>';
+      if (!searchResults.length) {
+        list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Type to search relationships, companies, and people…</div>';
       } else {
-        list.innerHTML = hcdFiltered.map((c, i) => {
-          const name = esc(c.company_name || c.realm_id);
-          const isActive = c.realm_id === currentRealm;
-          const dotCls = c.token_status === 'disconnected' ? 'expired' : 'healthy';
-          const sync = c.last_sync_at ? timeAgo(c.last_sync_at) : 'Never synced';
-          return `<div class="hcd-option${isActive ? ' active' : ''}" data-idx="${i}" data-realm="${c.realm_id}"
-            onclick="selectClientFromHeader('${c.realm_id}')" onmouseenter="setHcdFocus(${i})">
-            <span class="hcd-dot ${dotCls}"></span>
+        list.innerHTML = searchResults.map((r, i) => {
+          const typeIcon = r._type === 'relationship' ? '👥' : r._type === 'company' ? '🏢' : '👤';
+          return `<div class="hcd-option" data-idx="${i}" onclick="searchNavigate('${r._type}', ${r.id})" onmouseenter="setHcdFocus(${i})">
+            <span style="font-size:1rem;">${typeIcon}</span>
             <span class="hcd-info">
-              <span class="hcd-name">${name}</span>
-              <span class="hcd-meta">${sync}</span>
+              <span class="hcd-name">${esc(r._label||'')}</span>
+              <span class="hcd-meta">${esc(r._sub||'')}</span>
             </span>
           </div>`;
         }).join('');
       }
-      qs('#hcd-footer').textContent = `${companies.length} client${companies.length !== 1 ? 's' : ''}`;
+      qs('#hcd-footer').textContent = searchResults.length ? `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''}` : '';
     }
 
     function setHcdFocus(idx) {
