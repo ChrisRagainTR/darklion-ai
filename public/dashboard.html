@@ -1188,9 +1188,22 @@
         const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
         qs('#user-avatar').textContent = initials || '?';
         if (!qs('#user-menu-firm').textContent) {
-          // Try from firm storage
           const firm = JSON.parse(localStorage.getItem('dl_firm') || '{}');
           qs('#user-menu-firm').textContent = firm.name || '';
+        }
+        // Load user's own avatar
+        if (payload.userId) {
+          apiFetch(`/firms/team/${payload.userId}/avatar`).then(r => r.json()).then(d => {
+            if (d.url) {
+              const av = qs('#user-avatar');
+              const img = document.createElement('img');
+              img.src = d.url;
+              img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+              img.onerror = () => img.remove();
+              av.textContent = '';
+              av.appendChild(img);
+            }
+          }).catch(() => {});
         }
       }
     } catch(e) {}
