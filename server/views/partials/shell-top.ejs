@@ -82,7 +82,7 @@
     .nav-item.nav-dim { opacity: 0.4; pointer-events: none; }
 
     /* === MAIN CONTENT === */
-    .main { position: absolute; left: var(--sidebar-w); top: var(--header-h); right: 0; min-height: calc(100vh - var(--header-h)); box-sizing: border-box; overflow-x: hidden; }
+    .main { position: fixed; left: var(--sidebar-w); top: var(--header-h); right: 0; bottom: 0; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; }
 
     /* ── Entity pages (person/company/relationship detail) ── */
     .entity-header { position: sticky; top: 0; z-index: 160; background: var(--shell); border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
