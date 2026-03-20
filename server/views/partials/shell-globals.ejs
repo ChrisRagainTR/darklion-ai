@@ -154,8 +154,9 @@
     function updateTabBarTop() {
       var eh = document.querySelector('.entity-header');
       if (!eh) return;
-      var headerH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 58;
-      document.documentElement.style.setProperty('--tab-bar-top', (headerH + eh.offsetHeight) + 'px');
+      // tab-bar sticky is relative to <main> which already starts below the top header
+      // so offset = entity-header height only
+      document.documentElement.style.setProperty('--tab-bar-top', eh.offsetHeight + 'px');
     }
     // Run on load
     if (document.readyState === 'loading') {
