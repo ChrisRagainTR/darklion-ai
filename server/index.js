@@ -192,6 +192,10 @@ app.use('/api/people', requireFirm, apiLimiter, peopleRouter);
 const documentsRouter = require('./routes/documents');
 app.use('/api/documents', requireFirm, apiLimiter, documentsRouter);
 
+const messagesRouter = require('./routes/messages');
+app.use('/api/messages', requireFirm, apiLimiter, messagesRouter);
+app.get('/messages', (req, res) => res.sendFile(path.join(publicDir, 'messages.html')));
+
 const portalAuthRouter = require('./routes/portal-auth');
 const portalRouter = require('./routes/portal');
 const { requirePortal } = require('./middleware/requirePortal');

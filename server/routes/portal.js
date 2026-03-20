@@ -4,6 +4,7 @@ const { Router } = require('express');
 const multer = require('multer');
 const { pool } = require('../db');
 const { getSignedDownloadUrl, uploadFile, buildKey, sanitizeFilename } = require('../services/s3');
+const { classifyMessage } = require('../services/claude');
 
 const router = Router();
 
@@ -217,28 +218,74 @@ router.get('/stanford-tax', async (req, res) => {
   }
 });
 
-// --- GET /portal/messages ---
+// --- GET /portal/messages --- list threads for this person
 router.get('/messages', async (req, res) => {
   const personId = req.portal.personId;
 
   try {
-    const { rows } = await pool.query(
-      `SELECT mt.id, mt.subject, mt.status, mt.created_at, mt.updated_at,
-              (SELECT body FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) AS last_message,
-              (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id) AS message_count
+    const { rows: threads } = await pool.query(
+      `SELECT
+         mt.id, mt.subject, mt.status, mt.last_message_at, mt.created_at,
+         (SELECT body FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) AS last_body,
+         (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'staff' AND m.is_internal = false AND m.read_at IS NULL) AS unread_count
        FROM message_threads mt
        WHERE mt.person_id = $1
-       ORDER BY mt.updated_at DESC`,
+       ORDER BY mt.last_message_at DESC`,
       [personId]
     );
-    res.json(rows);
+
+    res.json(threads.map(t => ({
+      id: t.id,
+      subject: t.subject,
+      status: t.status,
+      lastMessageAt: t.last_message_at,
+      createdAt: t.created_at,
+      lastPreview: t.last_body ? t.last_body.slice(0, 80) : '',
+      unreadCount: parseInt(t.unread_count, 10) || 0,
+    })));
   } catch (err) {
-    if (err.code === '42P01') {
-      // Tables don't exist yet
-      return res.json([]);
-    }
+    if (err.code === '42P01') return res.json([]);
     console.error('Portal /messages error:', err);
     res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+// --- GET /portal/messages/:threadId --- full thread (non-internal only)
+router.get('/messages/:threadId', async (req, res) => {
+  const personId = req.portal.personId;
+  const threadId = parseInt(req.params.threadId);
+
+  try {
+    // Verify thread belongs to this person
+    const { rows: threadRows } = await pool.query(
+      'SELECT id, subject, status, last_message_at, created_at FROM message_threads WHERE id = $1 AND person_id = $2',
+      [threadId, personId]
+    );
+    if (!threadRows[0]) return res.status(404).json({ error: 'Thread not found' });
+
+    // Fetch non-internal messages only
+    const { rows: msgs } = await pool.query(
+      `SELECT id, sender_type, sender_id, body, created_at, read_at
+       FROM messages
+       WHERE thread_id = $1 AND is_internal = false
+       ORDER BY created_at ASC`,
+      [threadId]
+    );
+
+    // Mark staff messages as read by client
+    await pool.query(
+      `UPDATE messages SET read_at = NOW()
+       WHERE thread_id = $1 AND sender_type = 'staff' AND is_internal = false AND read_at IS NULL`,
+      [threadId]
+    );
+
+    res.json({
+      thread: threadRows[0],
+      messages: msgs,
+    });
+  } catch (err) {
+    console.error('Portal /messages/:threadId error:', err);
+    res.status(500).json({ error: 'Failed to fetch thread' });
   }
 });
 
@@ -246,41 +293,74 @@ router.get('/messages', async (req, res) => {
 router.post('/messages/send', async (req, res) => {
   const personId = req.portal.personId;
   const firmId = req.portal.firmId;
-  const { subject, body, threadId } = req.body;
+  const { subject, body } = req.body;
 
   if (!body || !body.trim()) {
     return res.status(400).json({ error: 'Message body is required' });
   }
 
   try {
-    let resolvedThreadId = threadId;
+    // Find most recent open/waiting thread, or create new one
+    const { rows: existingRows } = await pool.query(
+      `SELECT id FROM message_threads
+       WHERE person_id = $1 AND status IN ('open','waiting')
+       ORDER BY last_message_at DESC
+       LIMIT 1`,
+      [personId]
+    );
 
-    if (!resolvedThreadId) {
-      // Create a new thread
-      const { rows } = await pool.query(
-        `INSERT INTO message_threads (firm_id, person_id, subject, status, created_at, updated_at)
-         VALUES ($1, $2, $3, 'open', NOW(), NOW())
-         RETURNING id`,
-        [firmId, personId, subject || 'New Message']
-      );
-      resolvedThreadId = rows[0].id;
+    let threadId;
+    let isNewThread = false;
+
+    if (existingRows.length > 0) {
+      threadId = existingRows[0].id;
     } else {
-      // Update existing thread timestamp
-      await pool.query(
-        'UPDATE message_threads SET updated_at = NOW() WHERE id = $1',
-        [resolvedThreadId]
+      // Create new thread
+      const { rows } = await pool.query(
+        `INSERT INTO message_threads (firm_id, person_id, subject, status, last_message_at)
+         VALUES ($1, $2, $3, 'open', NOW())
+         RETURNING id`,
+        [firmId, personId, subject || 'Message from client']
       );
+      threadId = rows[0].id;
+      isNewThread = true;
     }
 
     // Insert message
-    const { rows: msgRows } = await pool.query(
-      `INSERT INTO messages (thread_id, sender_type, sender_id, body, created_at)
-       VALUES ($1, 'client', $2, $3, NOW())
-       RETURNING id, thread_id, body, created_at`,
-      [resolvedThreadId, personId, body.trim()]
+    await pool.query(
+      `INSERT INTO messages (thread_id, sender_type, sender_id, body, is_internal)
+       VALUES ($1, 'client', $2, $3, false)`,
+      [threadId, personId, body.trim()]
     );
 
-    res.json({ ok: true, threadId: resolvedThreadId, message: msgRows[0] });
+    // Flip thread status to 'open' (client needs response)
+    await pool.query(
+      `UPDATE message_threads SET status = 'open', last_message_at = NOW() WHERE id = $1`,
+      [threadId]
+    );
+
+    // Classify asynchronously (non-blocking, non-fatal)
+    if (isNewThread) {
+      setImmediate(async () => {
+        try {
+          const result = await classifyMessage({ body: body.trim(), personId, firmId });
+          if (result.category) {
+            await pool.query('UPDATE message_threads SET category = $1 WHERE id = $2', [result.category, threadId]);
+          }
+          for (const c of (result.companies || [])) {
+            await pool.query(
+              `INSERT INTO thread_companies (thread_id, company_id, ai_confidence, added_by)
+               VALUES ($1, $2, $3, 'ai') ON CONFLICT (thread_id, company_id) DO NOTHING`,
+              [threadId, c.id, c.confidence]
+            );
+          }
+        } catch (e) {
+          console.error('[portal send] classification error (non-fatal):', e.message);
+        }
+      });
+    }
+
+    res.json({ ok: true, threadId });
   } catch (err) {
     if (err.code === '42P01') {
       return res.status(503).json({ error: 'Messaging is not yet available' });

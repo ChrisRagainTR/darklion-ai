@@ -201,4 +201,59 @@ async function researchAllVendors(realmId) {
   }
 }
 
-module.exports = { categorizeTransactions, researchVendor, researchAllVendors };
+// Classify a client message: which companies is it about + category
+async function classifyMessage({ body, personId, firmId }) {
+  try {
+    // Fetch the person's companies for context
+    const { rows: companies } = await pool.query(
+      `SELECT c.id, c.company_name
+       FROM person_company_access pca
+       JOIN companies c ON c.id = pca.company_id
+       WHERE pca.person_id = $1`,
+      [personId]
+    );
+
+    const companyList = companies.length > 0
+      ? companies.map(c => `- ID ${c.id}: ${c.company_name}`).join('\n')
+      : '(no companies linked to this person)';
+
+    const response = await client.messages.create({
+      model: MODEL_FAST,
+      max_tokens: 256,
+      messages: [{
+        role: 'user',
+        content: `You are classifying a client message for an accounting/advisory firm.
+
+Client message:
+"${body}"
+
+This client's companies/entities:
+${companyList}
+
+Identify:
+1. Which companies (if any) this message is about — include only those with confidence >= 0.6
+2. Category: one of 'tax', 'bookkeeping', 'billing', 'general'
+
+Respond ONLY with JSON:
+{"companies":[{"id":N,"confidence":0.0}],"category":"string"}
+
+If no companies match above 0.6 confidence, return an empty companies array.`,
+      }],
+    });
+
+    const text = response.content[0]?.text || '{}';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return { companies: [], category: 'general' };
+
+    const result = JSON.parse(jsonMatch[0]);
+    return {
+      companies: (result.companies || []).filter(c => c.confidence >= 0.6),
+      category: result.category || 'general',
+    };
+  } catch (err) {
+    console.error('[classifyMessage] error:', err.message);
+    return { companies: [], category: 'general' };
+  }
+}
+
+module.exports = { categorizeTransactions, researchVendor, researchAllVendors, classifyMessage };

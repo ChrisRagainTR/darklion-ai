@@ -649,44 +649,86 @@
     }
 
     /* ── MESSAGES ─────────────────────────────────────────── */
-    .messages-placeholder {
+    .chat-wrap {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 200px);
+      max-height: 650px;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 3rem 2rem;
-      text-align: center;
+      overflow: hidden;
     }
-
-    .messages-placeholder .mp-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
-
-    .messages-placeholder h2 {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 0.5rem;
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
     }
-
-    .messages-placeholder p {
-      color: var(--muted);
+    .chat-bubble {
+      max-width: 75%;
+      padding: 0.6rem 0.9rem;
+      border-radius: 14px;
       font-size: 0.9rem;
-      line-height: 1.6;
-      max-width: 360px;
-      margin: 0 auto;
+      line-height: 1.5;
+      word-break: break-word;
     }
-
-    .firm-contact {
-      margin-top: 1.5rem;
+    .chat-bubble.client {
+      align-self: flex-end;
+      background: var(--gold);
+      color: #0f1117;
+    }
+    .chat-bubble.staff {
+      align-self: flex-start;
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .chat-bubble-meta {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+    .chat-bubble-wrap.client { display: flex; flex-direction: column; align-items: flex-end; }
+    .chat-bubble-wrap.staff { display: flex; flex-direction: column; align-items: flex-start; }
+    .chat-input-bar {
+      padding: 0.75rem 1rem;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-end;
+    }
+    .chat-input-bar textarea {
+      flex: 1;
+      resize: none;
       background: var(--input-bg);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.85rem 1rem;
-      display: inline-block;
-      font-size: 0.85rem;
       color: var(--text);
+      border-radius: 8px;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.9rem;
+      font-family: inherit;
+      min-height: 42px;
+      max-height: 120px;
     }
-
-    .firm-contact a { color: var(--gold); text-decoration: none; }
-    .firm-contact a:hover { text-decoration: underline; }
+    .chat-input-bar textarea:focus { outline: none; border-color: var(--gold); }
+    .chat-send-btn {
+      background: var(--gold);
+      color: #0f1117;
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      align-self: flex-end;
+    }
+    .chat-send-btn:hover { opacity: 0.9; }
+    .chat-empty { text-align: center; color: var(--muted); padding: 2rem; font-size: 0.9rem; }
+    .unread-badge-tab { display: inline-flex; align-items: center; justify-content: center; background: var(--gold); color: #0f1117; border-radius: 10px; padding: 0.1rem 0.45rem; font-size: 0.68rem; font-weight: 700; margin-left: 0.4rem; }
   </style>
 </head>
 <body>
@@ -776,12 +818,13 @@
 
     <!-- ── MESSAGES TAB ───────────────────────────────────── -->
     <div class="tab-panel" id="tab-messages">
-      <div class="messages-placeholder">
-        <div class="mp-icon">💬</div>
-        <h2>Secure messaging coming soon</h2>
-        <p>Direct messaging with your advisor team will be available in a future update.</p>
-        <div class="firm-contact" id="firmContactBlock" style="display:none;">
-          In the meantime, reach us at: <a href="#" id="firmEmail"></a>
+      <div class="chat-wrap" id="chatWrap">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-empty" id="chatEmpty">Loading messages…</div>
+        </div>
+        <div class="chat-input-bar">
+          <textarea id="chatInput" placeholder="Write a message to your advisor…" rows="1" onkeydown="chatKeydown(event)"></textarea>
+          <button class="chat-send-btn" onclick="sendChatMessage()">Send</button>
         </div>
       </div>
     </div>
@@ -868,6 +911,7 @@
         btn.classList.add('active');
         document.getElementById(`tab-${tab}`).classList.add('active');
         if (tab === 'organizers' && _stanford === null) loadOrganizers();
+        if (tab === 'messages') initChat();
       });
     });
 
@@ -895,11 +939,6 @@
           const fi = await fetch('/portal-auth/firm-info').then(r => r.json());
           if (fi.firmName) {
             document.getElementById('navFirm').textContent = fi.firmName;
-            document.getElementById('firmEmail').textContent = fi.contactEmail || fi.firmName;
-            if (fi.contactEmail) {
-              document.getElementById('firmEmail').href = `mailto:${fi.contactEmail}`;
-              document.getElementById('firmContactBlock').style.display = 'inline-block';
-            }
           }
         } catch (e) { /* silent */ }
 
@@ -1274,6 +1313,115 @@
         btn.textContent = 'Upload';
       }
     });
+
+    // ── Chat / Messages ───────────────────────────────────
+    let _chatLoaded = false;
+    let _chatAllMessages = [];
+
+    async function initChat() {
+      if (_chatLoaded) return;
+      _chatLoaded = true;
+      await loadAllMessages();
+    }
+
+    async function loadAllMessages() {
+      const token = localStorage.getItem('portalToken');
+      if (!token) return;
+      try {
+        // Load all threads
+        const threadsRes = await fetch('/portal/messages', { headers: { 'Authorization': 'Bearer ' + token } });
+        const threads = await threadsRes.json();
+
+        if (!threads.length) {
+          document.getElementById('chatEmpty').style.display = 'block';
+          document.getElementById('chatEmpty').textContent = 'No messages yet. Send a message below to get started!';
+          return;
+        }
+
+        // Load all thread messages and flatten into one conversation
+        _chatAllMessages = [];
+        for (const thread of threads) {
+          const res = await fetch(`/portal/messages/${thread.id}`, { headers: { 'Authorization': 'Bearer ' + token } });
+          const data = await res.json();
+          if (data.messages) {
+            _chatAllMessages.push(...data.messages.map(m => ({ ...m, threadSubject: thread.subject })));
+          }
+        }
+
+        // Sort by date
+        _chatAllMessages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+        renderChatMessages();
+
+        // Update tab unread badge
+        const unread = threads.reduce((acc, t) => acc + (t.unreadCount || 0), 0);
+        updateChatBadge(unread);
+      } catch (e) {
+        document.getElementById('chatEmpty').textContent = 'Failed to load messages.';
+      }
+    }
+
+    function renderChatMessages() {
+      const container = document.getElementById('chatMessages');
+      if (!_chatAllMessages.length) {
+        container.innerHTML = '<div class="chat-empty">No messages yet. Send a message below!</div>';
+        return;
+      }
+      container.innerHTML = _chatAllMessages.map(m => {
+        const isClient = m.sender_type === 'client';
+        const side = isClient ? 'client' : 'staff';
+        const time = new Date(m.created_at).toLocaleString();
+        return `<div class="chat-bubble-wrap ${side}">
+          <div class="chat-bubble ${side}">${chatEsc(m.body)}</div>
+          <div class="chat-bubble-meta">${time}</div>
+        </div>`;
+      }).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    async function sendChatMessage() {
+      const input = document.getElementById('chatInput');
+      const body = input.value.trim();
+      if (!body) return;
+      const token = localStorage.getItem('portalToken');
+      try {
+        input.value = '';
+        input.disabled = true;
+        await fetch('/portal/messages/send', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ body }),
+        });
+        _chatLoaded = false; // Reset to reload
+        await loadAllMessages();
+      } catch (e) {
+        alert('Failed to send message. Please try again.');
+      } finally {
+        input.disabled = false;
+        input.focus();
+      }
+    }
+
+    function chatKeydown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+      }
+    }
+
+    function updateChatBadge(count) {
+      const btn = document.querySelector('.tab-btn[data-tab="messages"]');
+      if (!btn) return;
+      const existing = btn.querySelector('.unread-badge-tab');
+      if (existing) existing.remove();
+      if (count > 0) {
+        btn.insertAdjacentHTML('beforeend', `<span class="unread-badge-tab">${count}</span>`);
+      }
+    }
+
+    function chatEsc(s) {
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    }
 
     // ── KICK OFF ─────────────────────────────────────────
     init();

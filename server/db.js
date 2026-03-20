@@ -392,6 +392,39 @@ async function initDB() {
       viewed_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    -- ===================== SECURE MESSAGING =====================
+    CREATE TABLE IF NOT EXISTS message_threads (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER REFERENCES firms(id),
+      person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+      subject TEXT DEFAULT '',
+      status TEXT DEFAULT 'open' CHECK(status IN ('open','waiting','resolved')),
+      category TEXT DEFAULT 'general',
+      assigned_to INTEGER REFERENCES firm_users(id),
+      last_message_at TIMESTAMPTZ DEFAULT NOW(),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS thread_companies (
+      id SERIAL PRIMARY KEY,
+      thread_id INTEGER NOT NULL REFERENCES message_threads(id) ON DELETE CASCADE,
+      company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+      ai_confidence REAL DEFAULT 1.0,
+      added_by TEXT DEFAULT 'ai',
+      UNIQUE(thread_id, company_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS messages (
+      id SERIAL PRIMARY KEY,
+      thread_id INTEGER NOT NULL REFERENCES message_threads(id) ON DELETE CASCADE,
+      sender_type TEXT NOT NULL CHECK(sender_type IN ('staff','client','agent')),
+      sender_id INTEGER NOT NULL,
+      body TEXT NOT NULL,
+      is_internal BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      read_at TIMESTAMPTZ
+    );
   `);
 }
 
