@@ -1,9 +1,12 @@
 <%- include('partials/shell-top', { title: title, activeNav: activeNav }) %>
 
 <style>
+    /* Messages needs the main area to be a side-by-side flex row */
+    .main { display: flex; flex-direction: row; height: calc(100vh - var(--header-h)); overflow: hidden; }
+
     .inbox-panel {
       width: 300px; flex-shrink: 0; border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; height: calc(100vh - 60px); overflow: hidden;
+      display: flex; flex-direction: column; height: 100%; overflow: hidden;
     }
     .inbox-header {
       padding: 1.25rem 1rem 0.75rem;
@@ -44,7 +47,7 @@
 
     /* ── THREAD DETAIL ── */
     .detail-panel {
-      flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+      flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden;
     }
     .detail-header {
       padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--card);
