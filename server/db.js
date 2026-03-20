@@ -526,6 +526,40 @@ async function initDB() {
       ALTER TABLE firm_users ADD COLUMN IF NOT EXISTS credentials TEXT DEFAULT '';
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
+
+    -- ===================== TAX RETURN DELIVERIES =====================
+    CREATE TABLE IF NOT EXISTS tax_deliveries (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER REFERENCES firms(id),
+      company_id INTEGER REFERENCES companies(id),
+      tax_year TEXT NOT NULL DEFAULT '',
+      title TEXT DEFAULT '',
+      intro_note TEXT DEFAULT '',
+      tax_summary JSONB DEFAULT '{}',
+      review_doc_id INTEGER REFERENCES documents(id),
+      signature_doc_id INTEGER REFERENCES documents(id),
+      status TEXT DEFAULT 'draft' CHECK(status IN ('draft','sent','approved','needs_changes','signed','complete')),
+      needs_changes_note TEXT DEFAULT '',
+      pipeline_job_id INTEGER REFERENCES pipeline_jobs(id),
+      created_by INTEGER REFERENCES firm_users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS tax_delivery_signers (
+      id SERIAL PRIMARY KEY,
+      delivery_id INTEGER NOT NULL REFERENCES tax_deliveries(id) ON DELETE CASCADE,
+      person_id INTEGER NOT NULL REFERENCES people(id),
+      approved_at TIMESTAMPTZ,
+      approved_ip TEXT DEFAULT '',
+      signed_at TIMESTAMPTZ,
+      signed_ip TEXT DEFAULT '',
+      signature_data TEXT DEFAULT '',
+      signature_type TEXT DEFAULT 'drawn' CHECK(signature_type IN ('drawn','typed')),
+      needs_changes_at TIMESTAMPTZ,
+      needs_changes_note TEXT DEFAULT '',
+      UNIQUE(delivery_id, person_id)
+    );
   `);
 }
 

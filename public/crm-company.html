@@ -1161,13 +1161,324 @@
         </div>
       </div>`;
     }
-    html += `<div class="placeholder-section">
-      <div class="ph-icon">📋</div>
-      <div class="ph-title">Tax Workflows</div>
-      <div class="ph-desc">Tax return delivery coming soon.</div>
-    </div>`;
+
+    // ── Tax Return Deliveries ─────────────────────────────────────────────
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+      <h3 style="font-size:1rem;font-weight:800;margin:0;">Tax Return Deliveries</h3>
+      <button class="btn btn-gold btn-sm" onclick="openNewDeliveryModal()">+ New Delivery</button>
+    </div>
+    <div id="tax-deliveries-list"><div class="loading-spinner" style="margin:1rem auto;display:block;"></div></div>`;
+
     c.innerHTML = html;
+    loadTaxDeliveries();
   }
+
+  let _taxDeliveries = [];
+  let _taxCompanyDocs = [];
+  let _taxCompanyPeople = [];
+  let _taxCompanyJobs = [];
+
+  async function loadTaxDeliveries() {
+    const el = document.getElementById('tax-deliveries-list');
+    if (!el) return;
+    try {
+      const rows = await apiFetch(`/api/tax-deliveries?company_id=${companyId}`);
+      _taxDeliveries = rows;
+      if (!rows.length) {
+        el.innerHTML = '<p style="color:var(--muted);font-size:0.88rem;">No deliveries yet. Click "+ New Delivery" to create one.</p>';
+        return;
+      }
+      const statusColors = { draft:'#888', sent:'#2196f3', approved:'#4caf50', needs_changes:'#f44336', signed:'#c9a84c', complete:'#4caf50' };
+      el.innerHTML = `<div class="table-wrap"><table>
+        <thead><tr><th>Tax Year</th><th>Title</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+        <tbody>${rows.map(d => `
+          <tr>
+            <td>${esc(d.tax_year)}</td>
+            <td>${esc(d.title||'—')}</td>
+            <td><span style="padding:2px 10px;border-radius:20px;font-size:0.78rem;font-weight:700;background:${statusColors[d.status]||'#888'}22;color:${statusColors[d.status]||'#888'};">${esc(d.status)}</span></td>
+            <td style="color:var(--muted);font-size:0.82rem;">${new Date(d.created_at).toLocaleDateString()}</td>
+            <td style="white-space:nowrap;">
+              <button class="btn btn-outline btn-sm" onclick="viewDelivery(${d.id})">View</button>
+              ${['sent','approved','needs_changes'].includes(d.status) ? `<button class="btn btn-outline btn-sm" style="margin-left:4px;" onclick="cancelDelivery(${d.id})">Cancel</button>` : ''}
+              ${d.status === 'draft' ? `<button class="btn btn-outline btn-sm" style="margin-left:4px;color:#f44336;border-color:#f44336;" onclick="deleteDelivery(${d.id})">Delete</button>` : ''}
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>`;
+    } catch(e) {
+      if (el) el.innerHTML = '<p style="color:var(--muted);font-size:0.88rem;">Failed to load deliveries.</p>';
+    }
+  }
+
+  async function viewDelivery(id) {
+    const d = _taxDeliveries.find(x => x.id === id);
+    if (!d) return;
+    const signers = d.signers || [];
+    const statusColors = { draft:'#888', sent:'#2196f3', approved:'#4caf50', needs_changes:'#f44336', signed:'#c9a84c', complete:'#4caf50' };
+    let signerRows = signers.map(s => {
+      const name = `${s.first_name||''} ${s.last_name||''}`.trim();
+      const approved = s.approved_at ? `✅ ${new Date(s.approved_at).toLocaleDateString()}` : '—';
+      const signed = s.signed_at ? `✅ ${new Date(s.signed_at).toLocaleDateString()}` : '—';
+      const nc = s.needs_changes_at ? `⚠️ ${new Date(s.needs_changes_at).toLocaleDateString()}` : '—';
+      return `<tr><td>${esc(name)}</td><td>${esc(s.email||'')}</td><td>${approved}</td><td>${signed}</td><td>${nc}</td></tr>`;
+    }).join('');
+    let html = `<div style="margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+        <h3 style="margin:0;font-size:1.1rem;">${esc(d.tax_year)} — ${esc(d.title||'Untitled')}</h3>
+        <span style="padding:2px 10px;border-radius:20px;font-size:0.78rem;font-weight:700;background:${statusColors[d.status]||'#888'}22;color:${statusColors[d.status]||'#888'};">${esc(d.status)}</span>
+      </div>`;
+    if (d.intro_note) html += `<p style="color:var(--muted);font-size:0.88rem;margin-bottom:0.75rem;">${esc(d.intro_note)}</p>`;
+    if (d.status === 'needs_changes' && d.needs_changes_note) {
+      html += `<div style="background:#f4433622;border:1px solid #f44336;border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;"><strong>Changes Requested:</strong> ${esc(d.needs_changes_note)}</div>`;
+    }
+    if (signers.length) {
+      html += `<div class="table-wrap" style="margin-top:0.75rem;margin-bottom:1rem;"><table>
+        <thead><tr><th>Signer</th><th>Email</th><th>Approved</th><th>Signed</th><th>Changes</th></tr></thead>
+        <tbody>${signerRows}</tbody>
+      </table></div>`;
+    }
+    html += `<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">`;
+    if (d.status === 'draft') {
+      html += `<button class="btn btn-gold btn-sm" onclick="sendDelivery(${d.id});closeModal('delivery-detail-modal')">Send to Client</button>`;
+    }
+    if (['sent','approved','needs_changes'].includes(d.status)) {
+      html += `<button class="btn btn-outline btn-sm" onclick="cancelDelivery(${d.id});closeModal('delivery-detail-modal')">Cancel (back to draft)</button>`;
+      html += `<button class="btn btn-gold btn-sm" onclick="sendDelivery(${d.id});closeModal('delivery-detail-modal')">Re-send</button>`;
+    }
+    html += `</div></div>`;
+    showModal('delivery-detail-modal', 'Delivery Detail', html);
+  }
+  window.viewDelivery = viewDelivery;
+
+  async function sendDelivery(id) {
+    try {
+      await apiFetch(`/api/tax-deliveries/${id}/send`, { method: 'POST' });
+      toast('Sent to client');
+      loadTaxDeliveries();
+    } catch(e) { toast('Failed to send', 'error'); }
+  }
+  window.sendDelivery = sendDelivery;
+
+  async function cancelDelivery(id) {
+    if (!confirm('Cancel this delivery? It will return to draft status.')) return;
+    try {
+      await apiFetch(`/api/tax-deliveries/${id}/cancel`, { method: 'POST' });
+      toast('Delivery cancelled');
+      loadTaxDeliveries();
+    } catch(e) { toast('Failed to cancel', 'error'); }
+  }
+  window.cancelDelivery = cancelDelivery;
+
+  async function deleteDelivery(id) {
+    if (!confirm('Delete this draft delivery?')) return;
+    try {
+      await apiFetch(`/api/tax-deliveries/${id}`, { method: 'DELETE' });
+      toast('Deleted');
+      loadTaxDeliveries();
+    } catch(e) { toast('Failed to delete', 'error'); }
+  }
+  window.deleteDelivery = deleteDelivery;
+
+  // ── New Delivery Modal ────────────────────────────────────────────────────
+  async function openNewDeliveryModal() {
+    // Load company docs, people with access, and pipeline jobs in parallel
+    try {
+      const [docs, people, jobs] = await Promise.all([
+        apiFetch(`/api/documents?owner_type=company&owner_id=${companyId}`).catch(() => []),
+        apiFetch(`/api/people`).catch(() => []),
+        apiFetch(`/api/pipelines/instances`).catch(() => []),
+      ]);
+      _taxCompanyDocs = Array.isArray(docs) ? docs : [];
+      // Filter people to those with portal access
+      _taxCompanyPeople = Array.isArray(people) ? people.filter(p => p.portal_enabled) : [];
+      _taxCompanyJobs = Array.isArray(jobs) ? jobs : [];
+    } catch(e) {
+      _taxCompanyDocs = []; _taxCompanyPeople = []; _taxCompanyJobs = [];
+    }
+
+    const docOptions = _taxCompanyDocs.map(d =>
+      `<option value="${d.id}">${esc(d.display_name||d.doc_type)} (${esc(d.year||'?')})</option>`
+    ).join('');
+    const personOptions = _taxCompanyPeople.map(p =>
+      `<label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;cursor:pointer;">
+        <input type="checkbox" name="signer_ids" value="${p.id}"> ${esc(p.first_name||'')} ${esc(p.last_name||'')}
+        <span style="color:var(--muted);font-size:0.8rem;">${esc(p.email||'')}</span>
+      </label>`
+    ).join('');
+    // For pipeline jobs, show active instances
+    const jobOptions = _taxCompanyJobs.map(j =>
+      `<option value="${j.id}">${esc(j.name||j.tax_year||j.id)}</option>`
+    ).join('');
+
+    const html = `
+      <div style="display:grid;gap:0.9rem;">
+        <div class="form-row">
+          <label class="form-label">Tax Year *</label>
+          <input id="nd-tax-year" type="text" class="form-input" placeholder="2024" value="${new Date().getFullYear()-1}">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Title</label>
+          <input id="nd-title" type="text" class="form-input" placeholder="2024 Federal & State Returns">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Intro Note</label>
+          <textarea id="nd-intro" class="form-input" rows="3" placeholder="Message to the client about their return..."></textarea>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Tax Summary (optional)</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.4rem;">
+            <input id="nd-federal" type="number" class="form-input" placeholder="Federal amount (+ = refund)">
+            <input id="nd-state" type="number" class="form-input" placeholder="State amount (+ = refund)">
+          </div>
+          <input id="nd-due-date" type="text" class="form-input" placeholder="Due date (e.g. April 15, 2025)">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Review Copy (PDF)</label>
+          <select id="nd-review-doc" class="form-input">
+            <option value="">— Select from existing documents —</option>
+            ${docOptions}
+          </select>
+          <div style="margin-top:0.4rem;">
+            <input type="file" id="nd-review-file" accept="application/pdf" style="font-size:0.82rem;color:var(--muted);">
+            <span style="font-size:0.78rem;color:var(--muted);margin-left:0.25rem;">Or upload a new file</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Signature Pages (PDF)</label>
+          <select id="nd-sig-doc" class="form-input">
+            <option value="">— Select from existing documents —</option>
+            ${docOptions}
+          </select>
+          <div style="margin-top:0.4rem;">
+            <input type="file" id="nd-sig-file" accept="application/pdf" style="font-size:0.82rem;color:var(--muted);">
+            <span style="font-size:0.78rem;color:var(--muted);margin-left:0.25rem;">Or upload a new file</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Signers</label>
+          ${personOptions || '<span style="color:var(--muted);font-size:0.88rem;">No people with portal access on this account.</span>'}
+        </div>
+        ${jobOptions ? `<div class="form-row">
+          <label class="form-label">Link to Pipeline Job (optional)</label>
+          <select id="nd-pipeline-job" class="form-input">
+            <option value="">— None —</option>
+            ${jobOptions}
+          </select>
+        </div>` : ''}
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:0.5rem;">
+          <button class="btn btn-outline" onclick="saveDelivery('draft')">Save as Draft</button>
+          <button class="btn btn-gold" onclick="saveDelivery('send')">Send to Client →</button>
+        </div>
+      </div>`;
+
+    showModal('new-delivery-modal', 'New Tax Return Delivery', html);
+  }
+  window.openNewDeliveryModal = openNewDeliveryModal;
+
+  async function saveDelivery(action) {
+    const taxYear = document.getElementById('nd-tax-year').value.trim();
+    if (!taxYear) { toast('Tax year is required', 'error'); return; }
+
+    const federal = document.getElementById('nd-federal')?.value;
+    const state = document.getElementById('nd-state')?.value;
+    const dueDate = document.getElementById('nd-due-date')?.value?.trim();
+    const taxSummary = {};
+    if (federal !== undefined && federal !== '') taxSummary.federal_amount = parseFloat(federal);
+    if (state !== undefined && state !== '') taxSummary.state_amount = parseFloat(state);
+    if (dueDate) taxSummary.due_date = dueDate;
+
+    const signerIds = Array.from(document.querySelectorAll('[name="signer_ids"]:checked')).map(el => parseInt(el.value));
+    const pipelineJobId = document.getElementById('nd-pipeline-job')?.value || null;
+
+    // Resolve doc IDs — may need to upload files first
+    let reviewDocId = document.getElementById('nd-review-doc')?.value || null;
+    let sigDocId = document.getElementById('nd-sig-doc')?.value || null;
+
+    // Upload review file if provided
+    const reviewFile = document.getElementById('nd-review-file')?.files[0];
+    if (reviewFile) {
+      try {
+        const fd = new FormData();
+        fd.append('file', reviewFile);
+        fd.append('year', taxYear);
+        fd.append('doc_type', 'tax');
+        fd.append('display_name', reviewFile.name);
+        fd.append('owner_type', 'company');
+        fd.append('owner_id', companyId);
+        const r = await fetch(`/api/documents`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('dl_token')}` }, body: fd });
+        if (r.ok) { const d = await r.json(); reviewDocId = d.id; }
+      } catch(e) { console.error('Review file upload error', e); }
+    }
+
+    // Upload sig file if provided
+    const sigFile = document.getElementById('nd-sig-file')?.files[0];
+    if (sigFile) {
+      try {
+        const fd = new FormData();
+        fd.append('file', sigFile);
+        fd.append('year', taxYear);
+        fd.append('doc_type', 'tax');
+        fd.append('display_name', sigFile.name);
+        fd.append('owner_type', 'company');
+        fd.append('owner_id', companyId);
+        const r = await fetch(`/api/documents`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('dl_token')}` }, body: fd });
+        if (r.ok) { const d = await r.json(); sigDocId = d.id; }
+      } catch(e) { console.error('Sig file upload error', e); }
+    }
+
+    try {
+      const body = {
+        company_id: companyId,
+        tax_year: taxYear,
+        title: document.getElementById('nd-title')?.value?.trim() || '',
+        intro_note: document.getElementById('nd-intro')?.value?.trim() || '',
+        tax_summary: taxSummary,
+        review_doc_id: reviewDocId ? parseInt(reviewDocId) : null,
+        signature_doc_id: sigDocId ? parseInt(sigDocId) : null,
+        signer_person_ids: signerIds,
+        pipeline_job_id: pipelineJobId ? parseInt(pipelineJobId) : null,
+      };
+      const delivery = await apiFetch('/api/tax-deliveries', { method: 'POST', body: JSON.stringify(body) });
+
+      if (action === 'send') {
+        await apiFetch(`/api/tax-deliveries/${delivery.id}/send`, { method: 'POST' });
+        toast('Delivery sent to client');
+      } else {
+        toast('Draft saved');
+      }
+      closeModal('new-delivery-modal');
+      loadTaxDeliveries();
+    } catch(e) { toast(e.message || 'Failed to save delivery', 'error'); }
+  }
+  window.saveDelivery = saveDelivery;
+
+  // ── Generic modal helpers (lightweight) ──────────────────────────────────
+  function showModal(id, title, bodyHtml) {
+    let el = document.getElementById(id);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = id;
+      el.className = 'modal-overlay';
+      el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:8000;display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto;';
+      el.innerHTML = `<div style="background:var(--card,#1a1d27);border:1px solid var(--border,#2a2d3a);border-radius:14px;width:100%;max-width:640px;padding:2rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+          <h2 class="modal-title" style="font-size:1.1rem;font-weight:800;margin:0;">${esc(title)}</h2>
+          <button onclick="closeModal('${id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.5rem;line-height:1;">×</button>
+        </div>
+        <div class="modal-body-content"></div>
+      </div>`;
+      document.body.appendChild(el);
+    } else {
+      el.querySelector('.modal-title').textContent = title;
+    }
+    el.querySelector('.modal-body-content').innerHTML = bodyHtml;
+    el.style.display = 'flex';
+  }
+  function closeModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  }
+  window.closeModal = closeModal;
 
   async function promptStanfordUrl() {
     const url = prompt('Enter Stanford Tax URL:');

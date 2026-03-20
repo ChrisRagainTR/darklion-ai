@@ -5,6 +5,8 @@ const multer = require('multer');
 const { pool } = require('../db');
 const { getSignedDownloadUrl, uploadFile, buildKey, sanitizeFilename } = require('../services/s3');
 const { classifyMessage } = require('../services/claude');
+const { sendEmail, sendPortalNotification } = require('../services/email');
+const { advancePipelineJob } = require('./tax-delivery');
 // Lazy require to avoid circular dependency
 function cancelPendingNotification(personId) {
   try { require('./messages').cancelPendingNotification(personId); } catch(e) { /* non-fatal */ }
@@ -579,6 +581,253 @@ router.get('/attachments/:documentId/download', async (req, res) => {
   } catch (err) {
     console.error('Portal /attachments/:documentId/download error:', err);
     res.status(500).json({ error: 'Failed to generate download URL' });
+  }
+});
+
+// ── TAX DELIVERY PORTAL ENDPOINTS ────────────────────────────────────────
+
+// ── Helper: verify signer access ─────────────────────────────────────────
+async function getSignerForDelivery(deliveryId, personId) {
+  const { rows } = await pool.query(
+    'SELECT * FROM tax_delivery_signers WHERE delivery_id = $1 AND person_id = $2',
+    [deliveryId, personId]
+  );
+  return rows[0] || null;
+}
+
+// --- GET /portal/tax-deliveries ---
+router.get('/tax-deliveries', async (req, res) => {
+  const personId = req.portal.personId;
+  try {
+    const { rows } = await pool.query(
+      `SELECT td.id, td.title, td.tax_year, td.status, td.intro_note, td.tax_summary,
+              co.company_name,
+              tds.approved_at, tds.signed_at, tds.needs_changes_at, tds.needs_changes_note
+       FROM tax_deliveries td
+       JOIN tax_delivery_signers tds ON tds.delivery_id = td.id
+       JOIN companies co ON co.id = td.company_id
+       WHERE tds.person_id = $1
+         AND td.status IN ('sent','approved','needs_changes')
+       ORDER BY td.created_at DESC`,
+      [personId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('[portal] GET /tax-deliveries error:', err);
+    res.status(500).json({ error: 'Failed to fetch tax deliveries' });
+  }
+});
+
+// --- GET /portal/tax-deliveries/:id/download-review ---
+router.get('/tax-deliveries/:id/download-review', async (req, res) => {
+  const personId = req.portal.personId;
+  const id = parseInt(req.params.id);
+  try {
+    const signer = await getSignerForDelivery(id, personId);
+    if (!signer) return res.status(403).json({ error: 'Access denied' });
+
+    const { rows } = await pool.query(
+      `SELECT d.s3_key, d.s3_bucket FROM tax_deliveries td
+       JOIN documents d ON d.id = td.review_doc_id
+       WHERE td.id = $1`,
+      [id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Review document not found' });
+
+    const url = await getSignedDownloadUrl({ key: rows[0].s3_key, bucket: rows[0].s3_bucket });
+    res.json({ url });
+  } catch (err) {
+    console.error('[portal] GET /tax-deliveries/:id/download-review error:', err);
+    res.status(500).json({ error: 'Failed to generate download URL' });
+  }
+});
+
+// --- GET /portal/tax-deliveries/:id/download-signature ---
+router.get('/tax-deliveries/:id/download-signature', async (req, res) => {
+  const personId = req.portal.personId;
+  const id = parseInt(req.params.id);
+  try {
+    const signer = await getSignerForDelivery(id, personId);
+    if (!signer) return res.status(403).json({ error: 'Access denied' });
+
+    const { rows } = await pool.query(
+      `SELECT d.s3_key, d.s3_bucket FROM tax_deliveries td
+       JOIN documents d ON d.id = td.signature_doc_id
+       WHERE td.id = $1`,
+      [id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Signature document not found' });
+
+    const url = await getSignedDownloadUrl({ key: rows[0].s3_key, bucket: rows[0].s3_bucket });
+    res.json({ url });
+  } catch (err) {
+    console.error('[portal] GET /tax-deliveries/:id/download-signature error:', err);
+    res.status(500).json({ error: 'Failed to generate download URL' });
+  }
+});
+
+// --- POST /portal/tax-deliveries/:id/approve ---
+router.post('/tax-deliveries/:id/approve', async (req, res) => {
+  const personId = req.portal.personId;
+  const id = parseInt(req.params.id);
+  try {
+    const signer = await getSignerForDelivery(id, personId);
+    if (!signer) return res.status(403).json({ error: 'Access denied' });
+
+    await pool.query(
+      `UPDATE tax_delivery_signers SET approved_at = NOW(), approved_ip = $1
+       WHERE delivery_id = $2 AND person_id = $3`,
+      [req.ip, id, personId]
+    );
+
+    await pool.query(
+      'UPDATE people SET portal_last_login_at = NOW() WHERE id = $1',
+      [personId]
+    );
+
+    // Check if ALL signers have now approved
+    const { rows: allSigners } = await pool.query(
+      'SELECT approved_at FROM tax_delivery_signers WHERE delivery_id = $1',
+      [id]
+    );
+    const allApproved = allSigners.every(s => s.approved_at);
+    if (allApproved) {
+      await pool.query(
+        "UPDATE tax_deliveries SET status = 'approved', updated_at = NOW() WHERE id = $1",
+        [id]
+      );
+      console.log(`[tax-delivery] All signers approved delivery ${id} — status → approved`);
+    }
+
+    res.json({ ok: true, allApproved });
+  } catch (err) {
+    console.error('[portal] POST /tax-deliveries/:id/approve error:', err);
+    res.status(500).json({ error: 'Failed to approve delivery' });
+  }
+});
+
+// --- POST /portal/tax-deliveries/:id/needs-changes ---
+router.post('/tax-deliveries/:id/needs-changes', async (req, res) => {
+  const personId = req.portal.personId;
+  const id = parseInt(req.params.id);
+  const { note } = req.body;
+  if (!note) return res.status(400).json({ error: 'note is required' });
+
+  try {
+    const signer = await getSignerForDelivery(id, personId);
+    if (!signer) return res.status(403).json({ error: 'Access denied' });
+
+    await pool.query(
+      `UPDATE tax_delivery_signers SET needs_changes_at = NOW(), needs_changes_note = $1
+       WHERE delivery_id = $2 AND person_id = $3`,
+      [note, id, personId]
+    );
+
+    await pool.query(
+      "UPDATE tax_deliveries SET status = 'needs_changes', needs_changes_note = $1, updated_at = NOW() WHERE id = $2",
+      [note, id]
+    );
+
+    // Fetch delivery and person info for notification
+    const { rows: deliveryRows } = await pool.query(
+      `SELECT td.tax_year, td.firm_id, co.company_name,
+              p.first_name, p.last_name,
+              f.email AS firm_email, f.name AS firm_name
+       FROM tax_deliveries td
+       JOIN companies co ON co.id = td.company_id
+       JOIN people p ON p.id = $2
+       JOIN firms f ON f.id = td.firm_id
+       WHERE td.id = $1`,
+      [id, personId]
+    );
+    if (deliveryRows[0]) {
+      const d = deliveryRows[0];
+      const clientName = `${d.first_name} ${d.last_name}`.trim();
+      try {
+        await sendEmail({
+          to: d.firm_email,
+          subject: `Changes Requested: ${d.tax_year} Return for ${d.company_name}`,
+          html: `<p><strong>${clientName}</strong> has requested changes to their ${d.tax_year} tax return for ${d.company_name}:</p><blockquote>${note}</blockquote><p>Log in to DarkLion to review.</p>`,
+        });
+      } catch (emailErr) {
+        console.error('[portal] needs-changes email error:', emailErr);
+      }
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[portal] POST /tax-deliveries/:id/needs-changes error:', err);
+    res.status(500).json({ error: 'Failed to submit changes request' });
+  }
+});
+
+// --- POST /portal/tax-deliveries/:id/sign ---
+router.post('/tax-deliveries/:id/sign', async (req, res) => {
+  const personId = req.portal.personId;
+  const id = parseInt(req.params.id);
+  const { signature_data, signature_type = 'drawn' } = req.body;
+  if (!signature_data) return res.status(400).json({ error: 'signature_data is required' });
+
+  try {
+    const signer = await getSignerForDelivery(id, personId);
+    if (!signer) return res.status(403).json({ error: 'Access denied' });
+    if (!signer.approved_at) return res.status(400).json({ error: 'You must approve the return before signing' });
+
+    await pool.query(
+      `UPDATE tax_delivery_signers SET
+         signed_at = NOW(), signed_ip = $1, signature_data = $2, signature_type = $3
+       WHERE delivery_id = $4 AND person_id = $5`,
+      [req.ip, signature_data, signature_type, id, personId]
+    );
+
+    // Check if ALL signers have now signed
+    const { rows: allSigners } = await pool.query(
+      'SELECT signed_at FROM tax_delivery_signers WHERE delivery_id = $1',
+      [id]
+    );
+    const allSigned = allSigners.every(s => s.signed_at);
+
+    if (allSigned) {
+      await pool.query(
+        "UPDATE tax_deliveries SET status = 'signed', updated_at = NOW() WHERE id = $1",
+        [id]
+      );
+
+      // Fetch delivery info for notifications and pipeline advance
+      const { rows: deliveryRows } = await pool.query(
+        `SELECT td.*, co.company_name, f.email AS firm_email, f.name AS firm_name
+         FROM tax_deliveries td
+         JOIN companies co ON co.id = td.company_id
+         JOIN firms f ON f.id = td.firm_id
+         WHERE td.id = $1`,
+        [id]
+      );
+
+      if (deliveryRows[0]) {
+        const d = deliveryRows[0];
+
+        // Advance pipeline job if linked
+        if (d.pipeline_job_id) {
+          await advancePipelineJob(d.pipeline_job_id);
+        }
+
+        // Notify firm
+        try {
+          await sendEmail({
+            to: d.firm_email,
+            subject: `All Signed: ${d.tax_year} Return for ${d.company_name}`,
+            html: `<p>All parties have signed the ${d.tax_year} tax return for <strong>${d.company_name}</strong>. Ready to e-file.</p>`,
+          });
+        } catch (emailErr) {
+          console.error('[portal] sign complete email error:', emailErr);
+        }
+      }
+    }
+
+    res.json({ ok: true, allSigned });
+  } catch (err) {
+    console.error('[portal] POST /tax-deliveries/:id/sign error:', err);
+    res.status(500).json({ error: 'Failed to submit signature' });
   }
 });
 

@@ -777,6 +777,10 @@
     <button class="tab-btn" data-tab="documents">📁 Personal Documents</button>
     <button class="tab-btn" data-tab="organizers">🔗 Organizers</button>
     <button class="tab-btn" data-tab="messages">💬 Messages</button>
+    <button class="tab-btn" data-tab="review-sign" id="review-sign-tab" style="display:none;">
+      ✍️ Review &amp; Sign
+      <span class="unread-badge-tab" id="review-sign-badge" style="display:none;"></span>
+    </button>
     <!-- Company doc tabs injected here by JS after init -->
     <div id="company-tabs" style="display:contents;"></div>
   </div>
@@ -877,10 +881,29 @@
       </div>
     </div>
 
+    <!-- ── REVIEW & SIGN TAB ──────────────────────────────── -->
+    <div class="tab-panel" id="tab-review-sign">
+      <div id="review-sign-content" style="padding:1.5rem 0;">
+        <div class="loading-state" id="review-sign-loading"><div class="loading-spinner"></div></div>
+        <div id="review-sign-list" style="display:none;"></div>
+      </div>
+    </div>
+
     <!-- Company doc tab panels injected by JS -->
     <div id="company-tab-panels"></div>
 
   </main>
+
+  <!-- ── TAX DELIVERY FLOW OVERLAY ───────────────────────────────────────── -->
+  <div id="tax-delivery-overlay" style="display:none;position:fixed;inset:0;background:var(--bg,#0f1117);z-index:9000;overflow-y:auto;">
+    <div style="max-width:720px;margin:0 auto;padding:2rem 1rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+        <div id="tdo-step-label" style="font-size:0.82rem;color:var(--muted);font-weight:600;letter-spacing:0.05em;text-transform:uppercase;"></div>
+        <button onclick="closeTaxDeliveryFlow()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.5rem;line-height:1;">×</button>
+      </div>
+      <div id="tdo-content"></div>
+    </div>
+  </div>
 
   <!-- UPLOAD MODAL -->
   <div class="modal-overlay hidden" id="uploadModal">
@@ -962,6 +985,7 @@
         document.getElementById(`tab-${tab}`).classList.add('active');
         if (tab === 'organizers' && _stanford === null) loadOrganizers();
         if (tab === 'messages') initChat();
+        if (tab === 'review-sign') loadTaxDeliveries();
       });
     });
 
@@ -1015,6 +1039,9 @@
         renderOverview();
         renderDocuments();
         buildCompanyTabs();
+
+        // Load tax deliveries (show tab if any pending)
+        loadTaxDeliveriesInit().catch(() => {});
 
         document.getElementById('overview-loading').style.display = 'none';
         document.getElementById('overview-content').style.display = 'block';
@@ -2004,6 +2031,367 @@
     init().catch(function(e) {
       console.error('[portal] init error:', e);
     });
+
+  })();
+  </script>
+
+  <!-- ── TAX DELIVERY REVIEW & SIGN FLOW ─────────────────────────────────── -->
+  <script>
+  (function() {
+    'use strict';
+
+    const portalToken = () => localStorage.getItem('portalToken') || '';
+    const authHeader = () => ({ 'Authorization': 'Bearer ' + portalToken(), 'Content-Type': 'application/json' });
+
+    let _taxDeliveries = [];
+    let _currentDelivery = null;
+    let _signatureCanvas = null;
+    let _isDrawing = false;
+    let _firmNameCache = null;
+
+    async function getFirmName() {
+      if (_firmNameCache) return _firmNameCache;
+      try {
+        const r = await fetch('/portal-auth/firm-info');
+        const d = await r.json();
+        _firmNameCache = d.firmName || 'your advisor';
+      } catch(e) { _firmNameCache = 'your advisor'; }
+      return _firmNameCache;
+    }
+
+    async function loadTaxDeliveriesInit() {
+      try {
+        const res = await fetch('/portal/tax-deliveries', { headers: authHeader() });
+        if (!res.ok) return;
+        _taxDeliveries = await res.json();
+        if (_taxDeliveries.length > 0) {
+          const tab = document.getElementById('review-sign-tab');
+          const badge = document.getElementById('review-sign-badge');
+          if (tab) { tab.style.display = ''; }
+          if (badge) { badge.textContent = _taxDeliveries.length; badge.style.display = ''; }
+        }
+      } catch(e) { console.error('[tax-delivery] loadTaxDeliveriesInit error:', e); }
+    }
+    window.loadTaxDeliveriesInit = loadTaxDeliveriesInit;
+
+    async function loadTaxDeliveries() {
+      const list = document.getElementById('review-sign-list');
+      const loading = document.getElementById('review-sign-loading');
+      if (!list) return;
+      loading.style.display = '';
+      list.style.display = 'none';
+
+      try {
+        const res = await fetch('/portal/tax-deliveries', { headers: authHeader() });
+        if (!res.ok) throw new Error('Failed');
+        _taxDeliveries = await res.json();
+      } catch(e) {
+        loading.innerHTML = '<p style="color:var(--muted);text-align:center;">Unable to load. Please refresh.</p>';
+        return;
+      }
+
+      loading.style.display = 'none';
+      list.style.display = '';
+
+      if (_taxDeliveries.length === 0) {
+        list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:2rem;">No documents require your signature at this time.</p>';
+        return;
+      }
+
+      list.innerHTML = _taxDeliveries.map(d => {
+        const myStatus = d.signed_at ? 'complete' : d.approved_at ? 'awaiting-sign' : d.needs_changes_at ? 'needs-changes' : 'needs-review';
+        const badgeMap = {
+          'needs-review': { label: 'Needs Review', color: '#c9a84c' },
+          'approved': { label: 'Approved', color: '#4caf50' },
+          'awaiting-sign': { label: 'Awaiting Signature', color: '#2196f3' },
+          'needs-changes': { label: 'Changes Requested', color: '#f44336' },
+          'complete': { label: 'Complete', color: '#4caf50' },
+        };
+        const badge = badgeMap[myStatus] || badgeMap['needs-review'];
+        const statusBadge = badgeMap[d.status] || { label: d.status, color: '#888' };
+        return `
+          <div class="card" style="margin-bottom:1rem;padding:1.25rem 1.5rem;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
+              <div>
+                <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">${esc(d.company_name)} — ${esc(d.tax_year)}</div>
+                <div style="color:var(--muted);font-size:0.88rem;margin-bottom:0.5rem;">${esc(d.title || '')}</div>
+                <span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:0.78rem;font-weight:700;background:${badge.color}22;color:${badge.color};">${badge.label}</span>
+              </div>
+              <button class="btn btn-gold btn-sm" onclick="openTaxDeliveryFlow(${d.id})">Review &amp; Sign →</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+    window.loadTaxDeliveries = loadTaxDeliveries;
+
+    function esc(s) {
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function openTaxDeliveryFlow(deliveryId) {
+      _currentDelivery = _taxDeliveries.find(d => d.id === deliveryId);
+      if (!_currentDelivery) return;
+      document.getElementById('tax-delivery-overlay').style.display = '';
+      await renderTDStep1();
+    }
+    window.openTaxDeliveryFlow = openTaxDeliveryFlow;
+
+    function closeTaxDeliveryFlow() {
+      document.getElementById('tax-delivery-overlay').style.display = 'none';
+      _currentDelivery = null;
+      // Refresh the list
+      loadTaxDeliveries().catch(() => {});
+      // Update badge
+      loadTaxDeliveriesInit().catch(() => {});
+    }
+    window.closeTaxDeliveryFlow = closeTaxDeliveryFlow;
+
+    async function renderTDStep1() {
+      const d = _currentDelivery;
+      document.getElementById('tdo-step-label').textContent = 'Step 1 of 4 — Introduction';
+      const firmName = await getFirmName();
+      let summaryHtml = '';
+      const ts = d.tax_summary || {};
+      if (ts.federal_amount || ts.state_amount || ts.due_date) {
+        summaryHtml = `<div style="background:var(--card,#1a1d27);border:1px solid var(--border,#2a2d3a);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem;">
+          <div style="font-weight:700;margin-bottom:0.5rem;font-size:0.88rem;color:var(--muted);">TAX SUMMARY</div>`;
+        if (ts.federal_amount !== undefined && ts.federal_amount !== '') {
+          const amt = parseFloat(ts.federal_amount);
+          summaryHtml += `<div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;"><span>Federal</span><span style="font-weight:700;color:${amt >= 0 ? '#4caf50' : '#f44336'};">${amt >= 0 ? 'Refund' : 'Owed'}: $${Math.abs(amt).toLocaleString()}</span></div>`;
+        }
+        if (ts.state_amount !== undefined && ts.state_amount !== '') {
+          const amt = parseFloat(ts.state_amount);
+          summaryHtml += `<div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;"><span>State</span><span style="font-weight:700;color:${amt >= 0 ? '#4caf50' : '#f44336'};">${amt >= 0 ? 'Refund' : 'Owed'}: $${Math.abs(amt).toLocaleString()}</span></div>`;
+        }
+        if (ts.due_date) {
+          summaryHtml += `<div style="display:flex;justify-content:space-between;"><span>Due Date</span><span style="font-weight:600;">${esc(ts.due_date)}</span></div>`;
+        }
+        summaryHtml += '</div>';
+      }
+      document.getElementById('tdo-content').innerHTML = `
+        <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:0.5rem;">${esc(d.company_name)} — ${esc(d.tax_year)} Tax Return</h2>
+        <p style="color:var(--muted);margin-bottom:1.25rem;">From ${esc(firmName)}</p>
+        ${summaryHtml}
+        ${d.intro_note ? `<div style="background:var(--card,#1a1d27);border:1px solid var(--border,#2a2d3a);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:0.95rem;line-height:1.6;">${esc(d.intro_note)}</div>` : ''}
+        <button class="btn btn-gold" onclick="renderTDStep2()">Review the Return →</button>
+      `;
+    }
+    window.renderTDStep1 = renderTDStep1;
+
+    async function renderTDStep2() {
+      document.getElementById('tdo-step-label').textContent = 'Step 2 of 4 — Review the Return';
+      const d = _currentDelivery;
+      document.getElementById('tdo-content').innerHTML = `
+        <h2 style="font-size:1.2rem;font-weight:800;margin-bottom:0.75rem;">Review Your Tax Return</h2>
+        <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1.25rem;">Please review your complete tax return carefully before approving.</p>
+        <div id="tdo-pdf-area" style="margin-bottom:1.5rem;"></div>
+        <div id="tdo-changes-area" style="display:none;margin-bottom:1.25rem;">
+          <label style="display:block;font-weight:600;margin-bottom:0.5rem;">Describe the changes needed:</label>
+          <textarea id="tdo-changes-note" rows="4" style="width:100%;background:var(--card,#1a1d27);border:1px solid var(--border,#2a2d3a);border-radius:8px;padding:0.75rem;color:var(--text);font-size:0.9rem;resize:vertical;" placeholder="Please explain what changes are needed..."></textarea>
+          <div style="margin-top:0.75rem;">
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('tdo-changes-area').style.display='none'">Cancel</button>
+            <button class="btn btn-gold btn-sm" style="margin-left:0.5rem;" onclick="submitNeedsChanges()">Submit Changes Request</button>
+          </div>
+        </div>
+        <div id="tdo-approve-btns" style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <button class="btn btn-outline" onclick="document.getElementById('tdo-changes-area').style.display='';document.getElementById('tdo-approve-btns').style.display='none';">Request Changes</button>
+          <button class="btn btn-gold" onclick="submitApprove()">Approve Return ✓</button>
+        </div>
+      `;
+      // Load signed URL for review doc
+      try {
+        const res = await fetch(`/portal/tax-deliveries/${d.id}/download-review`, { headers: authHeader() });
+        if (res.ok) {
+          const { url } = await res.json();
+          document.getElementById('tdo-pdf-area').innerHTML =
+            `<div style="margin-bottom:0.75rem;">
+              <a href="${url}" target="_blank" class="btn btn-outline" style="display:inline-flex;align-items:center;gap:0.5rem;">📄 Open Review Copy</a>
+            </div>
+            <iframe src="${url}" style="width:100%;height:500px;border:1px solid var(--border,#2a2d3a);border-radius:8px;" title="Tax Return Review Copy"></iframe>`;
+        }
+      } catch(e) {
+        document.getElementById('tdo-pdf-area').innerHTML = '<p style="color:var(--muted);font-size:0.88rem;">Unable to load PDF. You can still approve or request changes.</p>';
+      }
+    }
+    window.renderTDStep2 = renderTDStep2;
+
+    async function submitApprove() {
+      const d = _currentDelivery;
+      try {
+        const res = await fetch(`/portal/tax-deliveries/${d.id}/approve`, {
+          method: 'POST', headers: authHeader(), body: JSON.stringify({})
+        });
+        if (!res.ok) { alert('Failed to submit approval. Please try again.'); return; }
+        _currentDelivery.approved_at = new Date().toISOString();
+        renderTDStep3();
+      } catch(e) { alert('Network error. Please try again.'); }
+    }
+    window.submitApprove = submitApprove;
+
+    async function submitNeedsChanges() {
+      const d = _currentDelivery;
+      const note = document.getElementById('tdo-changes-note').value.trim();
+      if (!note) { alert('Please describe the changes needed.'); return; }
+      try {
+        const res = await fetch(`/portal/tax-deliveries/${d.id}/needs-changes`, {
+          method: 'POST', headers: authHeader(), body: JSON.stringify({ note })
+        });
+        if (!res.ok) { alert('Failed to submit. Please try again.'); return; }
+        document.getElementById('tdo-step-label').textContent = 'Changes Requested';
+        document.getElementById('tdo-content').innerHTML = `
+          <div style="text-align:center;padding:2rem 0;">
+            <div style="font-size:3rem;margin-bottom:1rem;">✅</div>
+            <h2 style="font-size:1.2rem;font-weight:800;margin-bottom:0.75rem;">Changes Requested</h2>
+            <p style="color:var(--muted);">Your advisor has been notified and will reach out to you with updated documents.</p>
+            <button class="btn btn-outline" style="margin-top:1.5rem;" onclick="closeTaxDeliveryFlow()">Close</button>
+          </div>`;
+      } catch(e) { alert('Network error. Please try again.'); }
+    }
+    window.submitNeedsChanges = submitNeedsChanges;
+
+    async function renderTDStep3() {
+      document.getElementById('tdo-step-label').textContent = 'Step 3 of 4 — Sign';
+      const d = _currentDelivery;
+      const firmName = await getFirmName();
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      document.getElementById('tdo-content').innerHTML = `
+        <h2 style="font-size:1.2rem;font-weight:800;margin-bottom:0.75rem;">Sign Your Return</h2>
+        <div id="tdo-sig-pdf-area" style="margin-bottom:1.25rem;"></div>
+        <p style="font-size:0.88rem;color:var(--muted);margin-bottom:1.25rem;line-height:1.6;">
+          By signing below, I confirm I have reviewed my tax return and authorize ${esc(firmName)} to e-file on my behalf.
+        </p>
+        <div style="margin-bottom:0.75rem;display:flex;gap:0.5rem;">
+          <button class="btn btn-outline btn-sm" id="tdo-sig-tab-draw" onclick="switchSigTab('draw')" style="font-weight:700;">Draw</button>
+          <button class="btn btn-outline btn-sm" id="tdo-sig-tab-type" onclick="switchSigTab('type')">Type</button>
+        </div>
+        <div id="tdo-sig-draw-area">
+          <div style="position:relative;border:2px dashed var(--border,#2a2d3a);border-radius:8px;background:var(--card,#1a1d27);margin-bottom:0.5rem;">
+            <canvas id="tdo-sig-canvas" width="620" height="160" style="width:100%;height:160px;display:block;touch-action:none;cursor:crosshair;border-radius:8px;"></canvas>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="clearSigCanvas()">Clear</button>
+        </div>
+        <div id="tdo-sig-type-area" style="display:none;">
+          <input id="tdo-sig-typed" type="text" placeholder="Type your full name" style="width:100%;background:var(--card,#1a1d27);border:1px solid var(--border,#2a2d3a);border-radius:8px;padding:0.75rem;color:var(--text);font-size:1.6rem;font-family:cursive;margin-bottom:0.5rem;" />
+        </div>
+        <div style="margin:1rem 0;font-size:0.88rem;color:var(--muted);">Date: <strong>${today}</strong></div>
+        <button class="btn btn-gold" onclick="submitSignature()">Submit Signature →</button>
+      `;
+
+      // Load signature pages PDF
+      try {
+        const res = await fetch(`/portal/tax-deliveries/${d.id}/download-signature`, { headers: authHeader() });
+        if (res.ok) {
+          const { url } = await res.json();
+          document.getElementById('tdo-sig-pdf-area').innerHTML =
+            `<a href="${url}" target="_blank" class="btn btn-outline btn-sm" style="display:inline-flex;align-items:center;gap:0.5rem;">📄 View Signature Pages</a>`;
+        }
+      } catch(e) {}
+
+      // Set up canvas
+      initSigCanvas();
+    }
+    window.renderTDStep3 = renderTDStep3;
+
+    function switchSigTab(tab) {
+      const draw = document.getElementById('tdo-sig-draw-area');
+      const type = document.getElementById('tdo-sig-type-area');
+      const btnDraw = document.getElementById('tdo-sig-tab-draw');
+      const btnType = document.getElementById('tdo-sig-tab-type');
+      if (tab === 'draw') {
+        draw.style.display = ''; type.style.display = 'none';
+        btnDraw.style.fontWeight = '700'; btnType.style.fontWeight = '';
+      } else {
+        draw.style.display = 'none'; type.style.display = '';
+        btnDraw.style.fontWeight = ''; btnType.style.fontWeight = '700';
+      }
+    }
+    window.switchSigTab = switchSigTab;
+
+    function initSigCanvas() {
+      const canvas = document.getElementById('tdo-sig-canvas');
+      if (!canvas) return;
+      _signatureCanvas = canvas;
+      const ctx = canvas.getContext('2d');
+      ctx.strokeStyle = '#e8e8e8';
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        if (e.touches) {
+          return { x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY };
+        }
+        return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+      }
+
+      canvas.addEventListener('mousedown', e => { _isDrawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+      canvas.addEventListener('mousemove', e => { if (!_isDrawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+      canvas.addEventListener('mouseup', () => _isDrawing = false);
+      canvas.addEventListener('mouseleave', () => _isDrawing = false);
+      canvas.addEventListener('touchstart', e => { e.preventDefault(); _isDrawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }, { passive: false });
+      canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!_isDrawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }, { passive: false });
+      canvas.addEventListener('touchend', () => _isDrawing = false);
+    }
+
+    function clearSigCanvas() {
+      if (!_signatureCanvas) return;
+      _signatureCanvas.getContext('2d').clearRect(0, 0, _signatureCanvas.width, _signatureCanvas.height);
+    }
+    window.clearSigCanvas = clearSigCanvas;
+
+    async function submitSignature() {
+      const d = _currentDelivery;
+      const typeArea = document.getElementById('tdo-sig-type-area');
+      const isTyped = typeArea && typeArea.style.display !== 'none';
+      let sigData, sigType;
+
+      if (isTyped) {
+        sigData = (document.getElementById('tdo-sig-typed').value || '').trim();
+        sigType = 'typed';
+        if (!sigData) { alert('Please type your name to sign.'); return; }
+      } else {
+        const canvas = document.getElementById('tdo-sig-canvas');
+        if (!canvas) { alert('Signature canvas not found.'); return; }
+        sigData = canvas.toDataURL('image/png');
+        sigType = 'drawn';
+        // Check if canvas is empty
+        const blank = document.createElement('canvas');
+        blank.width = canvas.width; blank.height = canvas.height;
+        if (canvas.toDataURL() === blank.toDataURL()) { alert('Please draw your signature first.'); return; }
+      }
+
+      try {
+        const res = await fetch(`/portal/tax-deliveries/${d.id}/sign`, {
+          method: 'POST', headers: authHeader(),
+          body: JSON.stringify({ signature_data: sigData, signature_type: sigType })
+        });
+        if (!res.ok) {
+          const e = await res.json().catch(() => ({}));
+          alert(e.error || 'Failed to submit signature. Please try again.');
+          return;
+        }
+        const result = await res.json();
+        renderTDStep4(result.allSigned);
+      } catch(e) { alert('Network error. Please try again.'); }
+    }
+    window.submitSignature = submitSignature;
+
+    async function renderTDStep4(allSigned) {
+      document.getElementById('tdo-step-label').textContent = 'Step 4 of 4 — Complete';
+      const d = _currentDelivery;
+      document.getElementById('tdo-content').innerHTML = `
+        <div style="text-align:center;padding:2rem 0;">
+          <div style="font-size:3.5rem;margin-bottom:1rem;">🎉</div>
+          <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:0.75rem;">Thank You!</h2>
+          <p style="color:var(--muted);font-size:0.95rem;margin-bottom:0.75rem;">Your signature has been received.</p>
+          ${!allSigned ? `<p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.5rem;">Your spouse will also need to sign before we can proceed.</p>` : ''}
+          ${allSigned ? `<p style="color:#4caf50;font-size:0.88rem;margin-bottom:1.5rem;font-weight:600;">All signers have completed. Your advisor will proceed with e-filing.</p>` : ''}
+          <button class="btn btn-gold" onclick="closeTaxDeliveryFlow()">Done</button>
+        </div>`;
+    }
+    window.renderTDStep4 = renderTDStep4;
 
   })();
   </script>
