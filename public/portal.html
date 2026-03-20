@@ -774,9 +774,11 @@
   <!-- TAB BAR -->
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="overview">📋 Overview</button>
-    <button class="tab-btn" data-tab="documents">📁 Documents</button>
+    <button class="tab-btn" data-tab="documents">📁 My Docs</button>
     <button class="tab-btn" data-tab="organizers">🔗 Organizers</button>
     <button class="tab-btn" data-tab="messages">💬 Messages</button>
+    <!-- Company doc tabs injected here by JS after init -->
+    <div id="company-tabs" style="display:contents;"></div>
   </div>
 
   <main>
@@ -868,6 +870,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Company doc tab panels injected by JS -->
+    <div id="company-tab-panels"></div>
 
   </main>
 
@@ -988,6 +993,7 @@
 
         renderOverview();
         renderDocuments();
+        buildCompanyTabs();
 
         document.getElementById('overview-loading').style.display = 'none';
         document.getElementById('overview-content').style.display = 'block';
@@ -1001,6 +1007,135 @@
     }
 
     // ── OVERVIEW ─────────────────────────────────────────
+    function buildCompanyTabs() {
+      if (!_companies || !_companies.length) return;
+      const tabBar = document.getElementById('company-tabs');
+      const panelContainer = document.getElementById('company-tab-panels');
+      tabBar.innerHTML = '';
+      panelContainer.innerHTML = '';
+
+      _companies.forEach(co => {
+        const tabKey = `co-${co.id || co.company_id}`;
+        const coId = co.id || co.company_id;
+        const coName = co.company_name || co.name || `Company`;
+        // Short name for tab (truncate if long)
+        const shortName = coName.length > 18 ? coName.slice(0, 16) + '…' : coName;
+
+        // Tab button
+        const btn = document.createElement('button');
+        btn.className = 'tab-btn';
+        btn.dataset.tab = tabKey;
+        btn.innerHTML = `🏢 ${escHtml(shortName)}`;
+        btn.title = coName;
+        tabBar.appendChild(btn);
+
+        // Tab panel
+        const panel = document.createElement('div');
+        panel.className = 'tab-panel';
+        panel.id = `tab-${tabKey}`;
+        panel.innerHTML = `<div id="co-docs-${coId}"><div class="loading-state"><div class="loading-spinner"></div><div>Loading documents…</div></div></div>`;
+        panelContainer.appendChild(panel);
+      });
+
+      // Wire tab clicks for company tabs
+      document.getElementById('company-tabs').querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tab = btn.dataset.tab;
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById(`tab-${tab}`).classList.add('active');
+          // Load company docs if not yet loaded
+          const coId = parseInt(tab.replace('co-', ''));
+          loadCompanyDocs(coId);
+        });
+      });
+    }
+
+    async function loadCompanyDocs(coId) {
+      const container = document.getElementById(`co-docs-${coId}`);
+      if (!container || container.dataset.loaded) return;
+      container.dataset.loaded = '1';
+      try {
+        const token = localStorage.getItem('portalToken');
+        const res = await fetch(`/portal/documents`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!res.ok) throw new Error('Failed');
+        const allDocs = await res.json();
+        const coDocs = allDocs.filter(d => d.owner_type === 'company' && (d.owner_id === coId || d.owner_id === String(coId)));
+
+        // Render using same side-by-side structure but company categories
+        const co = _companies.find(c => (c.id || c.company_id) === coId);
+        const coName = co ? (co.company_name || co.name) : `Company #${coId}`;
+
+        const curYear = new Date().getFullYear();
+        const years = [];
+        for (let y = curYear; y >= 2018; y--) years.push(String(y));
+        const recentYears = years.slice(0, 2);
+        const prevYears = years.slice(2);
+        const COMPANY_CATS = [
+          { key: 'tax', label: 'Tax', icon: '🧾' },
+          { key: 'bookkeeping', label: 'Bookkeeping', icon: '📒' },
+          { key: 'other', label: 'Other', icon: '📎' },
+        ];
+
+        function renderCoSection(sectionKey, sectionLabel, sectionIcon) {
+          const secDocs = coDocs.filter(d => (d.folder_section || '') === sectionKey);
+          let s = `<div style="margin-bottom:1.5rem;">
+            <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${secDocs.length})</span></div>`;
+
+          function renderCoYear(yr) {
+            const yrDocs = secDocs.filter(d => (d.year||'') === yr);
+            const open = yrDocs.length > 0;
+            let y = `<div class="year-folder${open?' open':''}" style="margin-bottom:0.4rem;">
+              <div class="year-header"><span class="yr-label">📅 ${yr} <span class="yr-count">${yrDocs.length}</span></span><span class="yr-chevron">▼</span></div>
+              <div class="year-body" style="padding-left:1rem;">`;
+            COMPANY_CATS.forEach(cat => {
+              const catDocs = yrDocs.filter(d => (d.folder_category||'other') === cat.key);
+              y += `<div style="margin-bottom:0.5rem;"><div style="font-size:0.82rem;font-weight:700;color:var(--text);padding:0.4rem 0.5rem;margin-bottom:0.25rem;border-left:3px solid var(--gold);background:rgba(201,168,76,0.06);">${cat.icon} ${cat.label} <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${catDocs.length})</span></div><div style="padding-left:0.5rem;">`;
+              if (!catDocs.length) {
+                y += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;">Empty</div>`;
+              } else {
+                catDocs.forEach(doc => {
+                  const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
+                  const isNew = !doc.viewed_at;
+                  y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
+                });
+              }
+              y += `</div></div>`;
+            });
+            y += `</div></div>`;
+            return y;
+          }
+
+          recentYears.forEach(yr => { s += renderCoYear(yr); });
+          const prevCount = prevYears.reduce((n,yr) => n + secDocs.filter(d=>(d.year||'')===yr).length, 0);
+          s += `<div class="year-folder" style="margin-bottom:0.4rem;"><div class="year-header"><span class="yr-label">📂 Previous Years <span class="yr-count">${prevCount}</span></span><span class="yr-chevron">▼</span></div><div class="year-body" style="padding-left:0.5rem;">${prevYears.map(yr=>renderCoYear(yr)).join('')}</div></div>`;
+          s += `</div>`;
+          return s;
+        }
+
+        let html = `<h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem;padding-bottom:0.4rem;border-bottom:2px solid var(--border);">🏢 ${escHtml(coName)}</h2>`;
+        html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">`;
+        html += renderCoSection('firm_uploaded', 'Delivered by Your Advisor', '📁');
+        html += renderCoSection('client_uploaded', 'Uploaded by You', '📤');
+        html += `</div>`;
+        container.innerHTML = html;
+
+        // Wire year toggles and download
+        container.querySelectorAll('.year-header').forEach(h => {
+          h.addEventListener('click', () => h.closest('.year-folder').classList.toggle('open'));
+        });
+        container.querySelectorAll('.doc-name-link').forEach(el => {
+          el.addEventListener('click', e => { e.stopPropagation(); const btn = el.closest('.doc-row').querySelector('.btn-dl'); downloadDoc(parseInt(el.dataset.docid), btn || {}); });
+        });
+        container.querySelectorAll('.btn-dl').forEach(btn => {
+          btn.addEventListener('click', e => { e.stopPropagation(); downloadDoc(parseInt(btn.dataset.docid), btn); });
+        });
+      } catch(e) {
+        container.innerHTML = `<div style="color:var(--muted);padding:2rem;text-align:center;">Failed to load documents.</div>`;
+      }
+    }
+
     function renderOverview() {
       const firstName = _me.firstName || 'there';
       document.getElementById('welcomeHeading').textContent = `Welcome back, ${firstName}`;
@@ -1056,14 +1191,23 @@
       if (_companies.length > 0) {
         const grid = document.getElementById('companyGrid');
         grid.innerHTML = _companies.map(c => `
-          <div class="company-card">
+          <div class="company-card" data-co-id="${c.id||c.company_id}" style="cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor=''">
             <div class="co-name">${escHtml(c.company_name)}</div>
             <div class="co-meta">${escHtml(c.entity_type || '')}${c.ownership_pct ? ` · ${c.ownership_pct}% ownership` : ''}</div>
             <div class="co-badges">
               <span class="badge badge-muted">${escHtml(c.access_level || 'full access')}</span>
+              <span style="font-size:0.72rem;color:var(--gold);">View Docs →</span>
             </div>
           </div>
         `).join('');
+        // Wire company card clicks to their doc tabs
+        grid.querySelectorAll('.company-card[data-co-id]').forEach(card => {
+          card.addEventListener('click', () => {
+            const coId = card.dataset.coId;
+            const btn = document.querySelector(`#company-tabs .tab-btn[data-tab="co-${coId}"]`);
+            if (btn) btn.click();
+          });
+        });
         document.getElementById('companiesCard').style.display = 'block';
       }
     }
