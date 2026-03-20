@@ -334,6 +334,14 @@ async function initDB() {
 
     CREATE UNIQUE INDEX IF NOT EXISTS firms_slug_unique ON firms(slug) WHERE slug != '';
 
+    -- ===================== BACKFILL: set slug for firms that don't have one =====================
+    DO $$ BEGIN
+      UPDATE firms
+      SET slug = LOWER(REGEXP_REPLACE(REGEXP_REPLACE(name, '[^a-zA-Z0-9 ]', '', 'g'), '\s+', '', 'g'))
+      WHERE slug IS NULL OR slug = '';
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END $$;
+
     -- ===================== BACKFILL: create relationships for existing companies =====================
     DO $$ BEGIN
       INSERT INTO relationships (firm_id, name, created_at, updated_at)
