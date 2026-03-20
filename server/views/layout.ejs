@@ -167,7 +167,7 @@
     <a class="nav-item <%= activeNav==='people'?'active':'' %>" href="/crm?tab=people">👤 <span>People</span></a>
     <a class="nav-item <%= activeNav==='companies'?'active':'' %>" href="/crm?tab=companies">🏢 <span>Companies</span></a>
     <div class="nav-section" style="margin-top:0.5rem;">Work</div>
-    <a class="nav-item nav-dim">📋 <span>Pipelines</span></a>
+    <a class="nav-item <%- activeNav==='pipelines'?'active':'' %>" href="/pipelines">📋 <span>Pipelines</span></a>
     <a class="nav-item <%= activeNav==='messages'?'active':'' %>" href="/messages">💬 <span>Messages</span></a>
     <a class="nav-item <%= activeNav==='statements-calendar'?'active':'' %>" href="/dashboard?section=statements-calendar">📅 <span>Statement Calendar</span></a>
   </aside>
