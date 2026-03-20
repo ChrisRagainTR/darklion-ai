@@ -508,11 +508,12 @@ router.post('/upload', upload.single('file'), async (req, res) => {
   const filename = sanitizeFilename(req.file.originalname || 'upload');
   const docType = ['tax', 'bookkeeping', 'other'].includes(folder_category) ? folder_category : 'other';
 
+  const safeYear = year || String(new Date().getFullYear());
   const key = buildKey({
     firmId,
     ownerType: 'person',
     ownerId: personId,
-    year: year || '',
+    year: safeYear,
     docType,
     filename,
   });
@@ -530,14 +531,14 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     const { rows } = await pool.query(
       `INSERT INTO documents
          (firm_id, owner_type, owner_id, doc_type, display_name,
-          mime_type, size_bytes, s3_key, s3_bucket,
+          mime_type, size_bytes, s3_key, s3_bucket, year,
           folder_section, folder_category, uploaded_by_type, uploaded_by_id,
           is_delivered, created_at)
-       VALUES ($1, 'person', $2, $3, $4, $5, $6, $7, $8, 'client_uploaded', 'other', 'client', $2, false, NOW())
+       VALUES ($1, 'person', $2, $3, $4, $5, $6, $7, $8, $9, 'client_uploaded', $10, 'client', $2, false, NOW())
        RETURNING id, firm_id, owner_type, owner_id, doc_type, display_name,
-                 mime_type, size_bytes, folder_section, is_delivered, created_at`,
+                 mime_type, size_bytes, year, folder_section, folder_category, is_delivered, created_at`,
       [firmId, personId, docType, displayName,
-       req.file.mimetype, req.file.size, key, bucket]
+       req.file.mimetype, req.file.size, key, bucket, safeYear, docType]
     );
 
     res.json({ ok: true, document: rows[0] });
