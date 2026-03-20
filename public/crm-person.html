@@ -282,6 +282,9 @@
           <div style="display:flex;flex-direction:column;gap:0.5rem;">
             <button class="btn btn-outline btn-sm" onclick="openEditModal()">✏️ Edit Person</button>
             <button class="btn btn-outline btn-sm" id="invite-btn" onclick="sendPortalInvite()" style="display:none;">📧 Send Portal Invite</button>
+            <button class="btn btn-outline btn-sm" id="resend-invite-btn" onclick="sendPortalInvite()" style="display:none;">🔄 Reset Portal Password</button>
+            <button class="btn btn-outline btn-sm" id="disable-portal-btn" onclick="disablePortal()" style="display:none;">🚫 Disable Portal</button>
+            <a href="/portal-login" target="_blank" class="btn btn-outline btn-sm">🔗 Open Portal Login</a>
           </div>
         </div>
       </div>
@@ -553,6 +556,10 @@
 
     // Invite button
     if (!p.portal_enabled) document.getElementById('invite-btn').style.display = '';
+    if (p.portal_enabled) {
+      document.getElementById('resend-invite-btn').style.display = '';
+      document.getElementById('disable-portal-btn').style.display = '';
+    }
 
     // Left column
     const left = document.getElementById('overview-left');
@@ -842,9 +849,21 @@
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Portal invite sent! Client will receive an email shortly.');
-      const btn = document.getElementById('invite-btn');
-      if (btn) btn.textContent = '✅ Invite Sent';
+      loadPerson(); // refresh to update portal status buttons
     } catch(e) { toast('Could not send invite: ' + e.message, 'error'); }
+  }
+
+  async function disablePortal() {
+    if (!confirm('Disable portal access for this person? They will not be able to log in until re-invited.')) return;
+    try {
+      const res = await apiFetch(`/api/people/${personId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ portal_enabled: false })
+      });
+      if (!res.ok) throw new Error('Failed');
+      toast('Portal access disabled.');
+      loadPerson();
+    } catch(e) { toast('Could not disable portal: ' + e.message, 'error'); }
   }
 
   // ── Edit Modal ──
