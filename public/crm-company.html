@@ -2589,6 +2589,62 @@
   document.addEventListener('click', (e) => {
     if (hcdOpen && !e.target.closest('.header-search-wrap')) closeHeaderSearch();
   });
+
+  // ── Page-level drag-and-drop: drop anywhere when Docs tab is active ──
+  let dragCounter = 0;
+  const pageDragOverlay = document.createElement('div');
+  pageDragOverlay.id = 'page-drag-overlay';
+  pageDragOverlay.style.cssText = `
+    display:none;position:fixed;inset:0;z-index:9999;
+    background:rgba(201,168,76,0.08);border:3px dashed var(--gold);
+    pointer-events:none;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.5rem;color:var(--gold);font-weight:700;
+  `;
+  pageDragOverlay.innerHTML = '📄 Drop to upload document';
+  pageDragOverlay.style.display = 'none';
+  document.body.appendChild(pageDragOverlay);
+
+  function isDocTabActive() {
+    return document.getElementById('tab-docs')?.classList.contains('active');
+  }
+
+  document.addEventListener('dragenter', (e) => {
+    if (!isDocTabActive()) return;
+    dragCounter++;
+    pageDragOverlay.style.display = 'flex';
+  });
+
+  document.addEventListener('dragleave', (e) => {
+    if (!isDocTabActive()) return;
+    dragCounter--;
+    if (dragCounter <= 0) { dragCounter = 0; pageDragOverlay.style.display = 'none'; }
+  });
+
+  document.addEventListener('dragover', (e) => {
+    if (!isDocTabActive()) return;
+    e.preventDefault();
+  });
+
+  document.addEventListener('drop', (e) => {
+    if (!isDocTabActive()) return;
+    e.preventDefault();
+    dragCounter = 0;
+    pageDragOverlay.style.display = 'none';
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    openUploadModal();
+    // Pre-load the dropped file into the modal
+    setTimeout(() => {
+      uploadFile = file;
+      showUploadFile(file);
+      // Pre-fill display name from filename
+      const nameInput = document.getElementById('upload-display-name');
+      if (nameInput && !nameInput.value) {
+        nameInput.value = file.name.replace(/\.[^/.]+$/, '');
+      }
+    }, 50);
+  });
 </script>
 </body>
 </html>
