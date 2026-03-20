@@ -359,6 +359,19 @@ async function initDB() {
     EXCEPTION WHEN OTHERS THEN NULL;
     END $$;
 
+    -- Add notes to companies (idempotent)
+    DO $$ BEGIN
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    -- Add folder_section and folder_category to documents (idempotent)
+    DO $$ BEGIN
+      ALTER TABLE documents ADD COLUMN IF NOT EXISTS folder_section TEXT DEFAULT 'firm_uploaded';
+      ALTER TABLE documents ADD COLUMN IF NOT EXISTS folder_category TEXT DEFAULT 'other';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
     -- ===================== DOCUMENTS =====================
     CREATE TABLE IF NOT EXISTS documents (
       id SERIAL PRIMARY KEY,

@@ -838,7 +838,7 @@ function renderRelationships(list) {
       <th>Name</th><th>Service Tier</th><th>Companies</th><th>People</th><th>Billing</th><th>Actions</th>
     </tr></thead>
     <tbody>${list.map(r => `
-      <tr onclick="openRelationship(${r.id})">
+      <tr onclick="window.location.href='/crm/relationship/'+r.id">
         <td style="font-weight:600;">${esc(r.name)}</td>
         <td>${tierBadge(r.service_tier)}</td>
         <td>${r.company_count ?? 0}</td>
@@ -1024,7 +1024,7 @@ function renderPeople(list) {
       <th>Name</th><th>Email</th><th>Relationship</th><th>Filing Status</th><th>Portal</th><th>Actions</th>
     </tr></thead>
     <tbody>${list.map(p => `
-      <tr onclick="openPerson(${p.id})">
+      <tr onclick="window.location.href='/crm/person/${p.id}'">
         <td style="font-weight:600;">${esc(p.first_name)} ${esc(p.last_name)}</td>
         <td style="color:var(--muted);">${p.email ? esc(p.email) : '—'}</td>
         <td>${p.relationship_name ? `<span style="color:var(--gold);">${esc(p.relationship_name)}</span>` : '—'}</td>
@@ -1381,7 +1381,7 @@ function renderCompanies(list) {
   c.innerHTML = `<div class="table-wrap"><table class="data-table">
     <thead><tr><th>Company</th><th>Entity Type</th><th>Relationship</th><th>Status</th></tr></thead>
     <tbody>${list.map(co => `
-      <tr onclick="openCompanyDetail(${co.id||co.company_id||0})">
+      <tr onclick="window.location.href='/crm/company/'+(co.id||co.company_id||0)">
         <td style="font-weight:600;">${esc(co.display_name||co.company_name||co.name||'Unknown')}</td>
         <td>${co.entity_type ? `<span class="badge badge-muted">${esc(co.entity_type)}</span>` : '—'}</td>
         <td>${co.relationship_name ? `<span style="color:var(--gold);">${esc(co.relationship_name)}</span>` : '—'}</td>
@@ -1518,15 +1518,12 @@ function globalSearchKeydown(e) {
 
 function searchNavigate(type, id) {
   document.getElementById('search-dropdown').classList.remove('open');
-  document.getElementById('header-search-bar').value = '';
   if (type === 'relationships') {
-    switchTab('relationships', null);
-    setTimeout(() => openRelationship(id), 100);
+    window.location.href = '/crm/relationship/' + id;
   } else if (type === 'people') {
-    switchTab('people', null);
-    setTimeout(() => openPerson(id), 100);
+    window.location.href = '/crm/person/' + id;
   } else if (type === 'companies') {
-    switchTab('companies', null);
+    window.location.href = '/crm/company/' + id;
   }
 }
 

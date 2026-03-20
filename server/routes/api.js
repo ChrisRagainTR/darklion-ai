@@ -155,6 +155,95 @@ router.get('/companies', async (req, res) => {
   res.json(enriched);
 });
 
+// GET /api/companies/:id — get single company by integer id (firm-scoped)
+router.get('/companies/:id([0-9]+)', async (req, res) => {
+  const firmId = req.firm?.id;
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, company_name, entity_type, ein_encrypted, tax_year_end, stanford_tax_url,
+              status, relationship_id, realm_id, connected_at, last_sync_at, notes, firm_id
+       FROM companies
+       WHERE id = $1 AND (firm_id = $2 OR firm_id IS NULL)`,
+      [id, firmId]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Company not found' });
+    const co = { ...rows[0] };
+    co.has_ein = !!(co.ein_encrypted && co.ein_encrypted !== '');
+    delete co.ein_encrypted;
+
+    // Include relationship info
+    if (co.relationship_id) {
+      const { rows: relRows } = await pool.query(
+        'SELECT id, name FROM relationships WHERE id = $1',
+        [co.relationship_id]
+      );
+      co.relationship = relRows[0] || null;
+    } else {
+      co.relationship = null;
+    }
+
+    // Include people with access
+    const { rows: peopleRows } = await pool.query(
+      `SELECT pca.person_id, pca.access_level, pca.ownership_pct,
+              p.first_name, p.last_name, p.email, p.portal_enabled
+       FROM person_company_access pca
+       JOIN people p ON p.id = pca.person_id
+       WHERE pca.company_id = $1
+       ORDER BY p.last_name ASC, p.first_name ASC`,
+      [id]
+    );
+    co.people = peopleRows;
+
+    res.json(co);
+  } catch (err) {
+    console.error('GET /api/companies/:id error:', err);
+    res.status(500).json({ error: 'Failed to fetch company' });
+  }
+});
+
+// PUT /api/companies/:id — update company fields (firm-scoped)
+router.put('/companies/:id([0-9]+)', async (req, res) => {
+  const firmId = req.firm?.id;
+  const { id } = req.params;
+  const { company_name, entity_type, tax_year_end, stanford_tax_url, status, relationship_id, notes } = req.body;
+  try {
+    const { rows: existing } = await pool.query(
+      'SELECT id FROM companies WHERE id = $1 AND (firm_id = $2 OR firm_id IS NULL)',
+      [id, firmId]
+    );
+    if (existing.length === 0) return res.status(404).json({ error: 'Company not found' });
+
+    const { rows } = await pool.query(
+      `UPDATE companies SET
+         company_name = COALESCE($1, company_name),
+         entity_type = COALESCE($2, entity_type),
+         tax_year_end = COALESCE($3, tax_year_end),
+         stanford_tax_url = COALESCE($4, stanford_tax_url),
+         status = COALESCE($5, status),
+         relationship_id = COALESCE($6, relationship_id),
+         notes = COALESCE($7, notes)
+       WHERE id = $8 AND (firm_id = $9 OR firm_id IS NULL)
+       RETURNING id, company_name, entity_type, tax_year_end, stanford_tax_url, status, relationship_id, realm_id, notes`,
+      [
+        company_name || null,
+        entity_type || null,
+        tax_year_end || null,
+        stanford_tax_url !== undefined ? stanford_tax_url : null,
+        status || null,
+        relationship_id || null,
+        notes !== undefined ? notes : null,
+        id,
+        firmId,
+      ]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('PUT /api/companies/:id error:', err);
+    res.status(500).json({ error: 'Failed to update company' });
+  }
+});
+
 // Disconnect a company (firm-scoped)
 router.delete('/companies/:realmId', async (req, res) => {
   try {

@@ -157,6 +157,9 @@ app.get('/dashboard', (req, res) => res.sendFile(path.join(publicDir, 'dashboard
 app.get('/dashboard.html', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
 app.get('/crm', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
 app.get('/crm.html', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
+app.get('/crm/person/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-person.html')));
+app.get('/crm/company/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-company.html')));
+app.get('/crm/relationship/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-relationship.html')));
 
 // Redirect route (previously required Basic Auth)
 app.get('/redirect', (req, res) => res.sendFile(path.join(publicDir, 'redirect.html')));
