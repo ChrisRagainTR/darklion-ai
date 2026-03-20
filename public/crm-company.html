@@ -994,11 +994,12 @@
 
       years.forEach(yr => {
         const yrDocs = secDocs.filter(d => (d.year||'') === yr);
+        const yrOpen = yrDocs.length > 0; // auto-expand years that have files
         html += `<div style="margin-bottom:0.5rem;">
-          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;padding:0.4rem 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
-            📅 ${yr} <span style="font-weight:400;">(${yrDocs.length})</span>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;padding:0.4rem 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;" onclick="const next=this.nextElementSibling;next.style.display=next.style.display==='none'?'':'none';this.querySelector('.yr-arrow').textContent=next.style.display===''?'▾':'▸'">
+            📅 ${yr} <span style="font-weight:400;">(${yrDocs.length})</span> <span class="yr-arrow" style="float:right;">${yrOpen?'▾':'▸'}</span>
           </div>
-          <div style="padding-left:1rem;">`;
+          <div style="padding-left:1rem;display:${yrOpen?'':'none'}">`;
 
         DOC_CATEGORIES.forEach(cat => {
           const catDocs = yrDocs.filter(d => (d.folder_category||'other') === cat.key);
