@@ -39,6 +39,14 @@
   .status-needs_changes { background: rgba(237,137,54,0.12); color: var(--orange); }
   .status-approved { background: rgba(201,168,76,0.12); color: var(--gold); }
 
+  /* ── File drop zone (portal-matched) ── */
+  .file-drop { border: 2px dashed var(--border); border-radius: 9px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; color: var(--muted); font-size: 0.88rem; position: relative; }
+  .file-drop:hover, .file-drop.drag-over { border-color: var(--gold); background: rgba(201,168,76,0.04); }
+  .file-drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .selected-file { margin-top: 0.5rem; font-size: 0.8rem; color: var(--gold); font-weight: 600; }
+  .upload-err { font-size: 0.8rem; color: var(--red); margin-top: 0.5rem; }
+  .upload-msg { font-size: 0.8rem; color: var(--green); margin-top: 0.5rem; }
+
   /* ── Docs tab — portal-matched styles ── */
   .docs-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 1.5rem; }
   @media (max-width: 900px) { .docs-layout { grid-template-columns: 1fr; } }
@@ -121,34 +129,43 @@
   </div>
   <div id="docs-content"><div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div></div>
 
-  <!-- Upload Modal -->
+  <!-- Upload Modal (portal-matched) -->
   <div class="modal-overlay" id="upload-modal">
-    <div class="modal" onclick="event.stopPropagation()" style="max-width:500px;">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">
       <h2>Upload Document</h2>
-      <div id="upload-error" style="display:none;color:var(--red);font-size:0.82rem;margin-bottom:0.75rem;"></div>
-      <div style="border:2px dashed var(--border);border-radius:8px;padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;" id="upload-dropzone"
-        onclick="document.getElementById('upload-file-input').click()"
-        ondragover="event.preventDefault();this.style.borderColor='var(--gold)'"
-        ondragleave="this.style.borderColor='var(--border)'"
-        ondrop="event.preventDefault();this.style.borderColor='var(--border)';handleDropFile(event.dataTransfer.files[0])">
-        <div id="upload-dropzone-text" style="color:var(--muted);">Click or drag a file here</div>
-        <div id="upload-file-name" style="display:none;font-weight:600;color:var(--gold);"></div>
+      <div class="form-group">
+        <label>Tax Year</label>
+        <select class="form-control" id="upload-year"></select>
       </div>
-      <input type="file" id="upload-file-input" style="display:none;" onchange="handleDropFile(this.files[0])">
-      <div class="form-group"><label>Display Name</label><input type="text" class="form-control" id="upload-display-name" placeholder="Document name"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
-        <div class="form-group"><label>Year</label><input type="text" class="form-control" id="upload-year" placeholder="2024"></div>
-        <div class="form-group"><label>Type</label>
-          <select class="form-control" id="upload-doc-type">
-            <option value="tax">Tax</option>
-            <option value="bookkeeping">Bookkeeping</option>
-            <option value="other">Other</option>
-          </select>
+      <div class="form-group">
+        <label>Category</label>
+        <select class="form-control" id="upload-doc-type">
+          <option value="tax">🧾 Tax</option>
+          <option value="bookkeeping">📒 Bookkeeping</option>
+          <option value="private">🔒 Private</option>
+          <option value="other">📎 Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Section</label>
+        <select class="form-control" id="upload-section">
+          <option value="firm_uploaded">Delivered by Advisor</option>
+          <option value="private">Private (staff only)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>File</label>
+        <div class="file-drop" id="upload-file-drop">
+          <input type="file" id="upload-file-input">
+          <span id="upload-drop-text">Click to select or drag a file here</span>
+          <div class="selected-file" id="upload-selected-name"></div>
         </div>
       </div>
+      <div class="upload-err" id="upload-error" style="display:none;"></div>
+      <div class="upload-msg" id="upload-msg" style="display:none;"></div>
       <div class="modal-actions">
-        <button class="btn btn-outline" onclick="closeUploadModal()">Cancel</button>
-        <button class="btn btn-gold" onclick="submitUpload()">Upload</button>
+        <button class="btn btn-outline" id="upload-cancel-btn">Cancel</button>
+        <button class="btn btn-gold" id="upload-submit-btn" disabled>Upload</button>
       </div>
     </div>
   </div>
@@ -481,47 +498,92 @@
     </div>`;
   }
 
-  function openUploadModal() { document.getElementById('upload-modal').classList.add('open'); }
-  function closeUploadModal() { document.getElementById('upload-modal').classList.remove('open'); }
+  // ── Upload modal wiring (portal-matched) ──
+  (function() {
+    const CURRENT_YEAR = new Date().getFullYear();
+    const yearSel = document.getElementById('upload-year');
+    for (let y = CURRENT_YEAR; y >= 2018; y--) {
+      const o = document.createElement('option');
+      o.value = String(y);
+      o.textContent = String(y);
+      if (y === CURRENT_YEAR - 1) o.selected = true;
+      yearSel.appendChild(o);
+    }
 
-  let uploadFile = null;
+    let _uploadFile = null;
+    const modal = document.getElementById('upload-modal');
+    const fileDrop = document.getElementById('upload-file-drop');
+    const fileInput = document.getElementById('upload-file-input');
+    const submitBtn = document.getElementById('upload-submit-btn');
+    const errEl = document.getElementById('upload-error');
+    const msgEl = document.getElementById('upload-msg');
 
-  function handleDropFile(f) {
-    if (!f) return;
-    uploadFile = f;
-    document.getElementById('upload-dropzone-text').style.display = 'none';
-    document.getElementById('upload-file-name').style.display = '';
-    document.getElementById('upload-file-name').textContent = f.name;
-    if (!document.getElementById('upload-display-name').value)
-      document.getElementById('upload-display-name').value = f.name.replace(/\.[^.]+$/,'');
-  }
+    function setFile(f) {
+      _uploadFile = f;
+      document.getElementById('upload-selected-name').textContent = f.name;
+      submitBtn.disabled = false;
+    }
 
-  async function submitUpload() {
-    if (!uploadFile) { document.getElementById('upload-error').textContent='Select a file first.'; document.getElementById('upload-error').style.display=''; return; }
-    const fd = new FormData();
-    fd.append('file', uploadFile);
-    fd.append('owner_type', 'company');
-    fd.append('owner_id', companyId);
-    fd.append('display_name', document.getElementById('upload-display-name').value || uploadFile.name);
-    fd.append('year', document.getElementById('upload-year').value || String(new Date().getFullYear()));
-    fd.append('doc_type', document.getElementById('upload-doc-type').value);
-    fd.append('folder_section', 'firm_uploaded');
-    fd.append('folder_category', document.getElementById('upload-doc-type').value);
-    try {
-      const res = await fetch('/api/documents/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
-      if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Upload failed'); }
-      closeUploadModal();
-      uploadFile = null;
-      document.getElementById('upload-display-name').value = '';
-      document.getElementById('upload-file-name').style.display = 'none';
-      document.getElementById('upload-dropzone-text').style.display = '';
-      toast('Document uploaded');
-      // Reload docs
-      const el = document.getElementById('docs-content');
-      delete el.dataset.loaded;
-      loadDocs();
-    } catch(e) { document.getElementById('upload-error').textContent=e.message; document.getElementById('upload-error').style.display=''; }
-  }
+    fileDrop.addEventListener('click', () => fileInput.click());
+    fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('drag-over'); });
+    fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('drag-over'));
+    fileDrop.addEventListener('drop', e => { e.preventDefault(); fileDrop.classList.remove('drag-over'); if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+    // Allow page-wide drop to pre-load file
+    modal.addEventListener('preload-file', e => { if (e.detail && e.detail.file) setFile(e.detail.file); });
+
+    document.getElementById('upload-cancel-btn').addEventListener('click', closeUploadModal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeUploadModal(); });
+
+    submitBtn.addEventListener('click', async () => {
+      if (!_uploadFile) return;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Uploading…';
+      errEl.style.display = 'none';
+      msgEl.style.display = 'none';
+      try {
+        const fd = new FormData();
+        fd.append('file', _uploadFile);
+        fd.append('owner_type', 'company');
+        fd.append('owner_id', companyId);
+        fd.append('year', yearSel.value);
+        fd.append('doc_type', document.getElementById('upload-doc-type').value);
+        fd.append('folder_category', document.getElementById('upload-doc-type').value);
+        fd.append('folder_section', document.getElementById('upload-section').value);
+        const res = await fetch('/api/documents/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+        msgEl.textContent = '✓ File uploaded successfully!';
+        msgEl.style.display = 'block';
+        const el = document.getElementById('docs-content');
+        delete el.dataset.loaded;
+        loadDocs();
+        setTimeout(() => {
+          closeUploadModal();
+          toast('Document uploaded');
+        }, 1000);
+      } catch(e) {
+        errEl.textContent = e.message;
+        errEl.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Upload';
+      }
+    });
+
+    window.openUploadModal = function(preloadFile) {
+      _uploadFile = null;
+      document.getElementById('upload-selected-name').textContent = '';
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Upload';
+      errEl.style.display = 'none';
+      msgEl.style.display = 'none';
+      modal.classList.add('open');
+      if (preloadFile) setFile(preloadFile);
+    };
+
+    window.closeUploadModal = function() { modal.classList.remove('open'); };
+  })();
 
   async function downloadDoc(id) {
     try {
@@ -784,8 +846,7 @@
       dragOverlay.style.display = 'none';
       const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
       if (!file) return;
-      handleDropFile(file);
-      openUploadModal();
+      openUploadModal(file);
     });
   })();
 
