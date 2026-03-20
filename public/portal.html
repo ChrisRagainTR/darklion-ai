@@ -1428,13 +1428,6 @@
       }
     }
 
-    function chatKeydown(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendChatMessage();
-      }
-    }
-
     function updateChatBadge(count) {
       const btn = document.querySelector('.tab-btn[data-tab="messages"]');
       if (!btn) return;
@@ -1449,21 +1442,30 @@
       return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
     }
 
-    // ── KICK OFF ─────────────────────────────────────────
-    init();
+    // ── Wire UI events first (independent of init, always safe) ─────
+    (function wireEvents() {
+      const chatInput = document.getElementById('chatInput');
+      const chatSendBtn = document.getElementById('chatSendBtn');
 
-    // Wire up chat send button and Enter key (must be inside IIFE for scope access)
-    document.addEventListener('DOMContentLoaded', () => {}, false); // no-op, DOM already ready
-    const _chatInput = document.getElementById('chatInput');
-    const _chatSendBtn = document.getElementById('chatSendBtn');
-    if (_chatInput) {
-      _chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
-      });
-    }
-    if (_chatSendBtn) {
-      _chatSendBtn.addEventListener('click', () => sendChatMessage());
-    }
+      if (chatInput) {
+        chatInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendChatMessage();
+          }
+        });
+      }
+      if (chatSendBtn) {
+        chatSendBtn.addEventListener('click', function() {
+          sendChatMessage();
+        });
+      }
+    })();
+
+    // ── KICK OFF ─────────────────────────────────────────
+    init().catch(function(e) {
+      console.error('[portal] init error:', e);
+    });
 
   })();
   </script>
