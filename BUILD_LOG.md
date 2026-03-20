@@ -169,16 +169,17 @@ Relationship  →  the household/group (top-level billing unit)
 
 ---
 
-### ⏳ Phase 8 — Secure Messaging
-**Plan:**
-- DB tables: `message_threads`, `messages`, `email_log` (all in schema)
-- Staff unified inbox — all open threads across all clients
-- Thread status: open → waiting → resolved
-- Viktor auto-tags thread category (bookkeeping/tax/general/billing)
-- Client sends message → thread goes to `open`, appears in team inbox
-- Staff replies → flips to `waiting`
-- `is_internal` flag on messages — staff-only notes never shown to client
-- Email notification to client when staff sends (via Resend)
+### ✅ Phase 8 — Secure Messaging (COMPLETE — 2026-03-20)
+**What was built:**
+- DB tables: `message_threads`, `thread_companies` (multi-company tagging), `messages`
+- `server/routes/messages.js` — full staff API: inbox, thread detail, create, reply, status/assign, company tagging, mark read
+- `server/services/claude.js` — `classifyMessage()` added — Haiku classifies message content against person's companies, non-fatal
+- `server/routes/portal.js` — real portal messaging: thread list, thread detail (marks read), send message (triggers classification, flips to 'open')
+- `public/messages.html` — firm inbox: split-panel, filter tabs (Active/Open/Waiting/Resolved/All), search, internal note toggle, company tag management
+- `public/portal.html` — real chat UI: bubbles (client right / staff left), unread badge, Enter to send
+- `public/crm-person.html` — Communication tab: live thread list + detail + reply with internal note toggle
+- `public/crm-company.html` — Communication tab: company-scoped threads + person picker for new threads
+- 💬 Messages link added to Work section on all sidebars
 
 ---
 
