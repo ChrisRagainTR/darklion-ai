@@ -1047,8 +1047,8 @@
       ];
 
       // Render a full folder section with year/category hierarchy
-      function renderSection(sectionKey, sectionLabel, sectionIcon) {
-        const sectionDocs = (_docs || []).filter(d => (d.folder_section || 'firm_uploaded') === sectionKey);
+      function renderSection(sectionKey, sectionLabel, sectionIcon, sourceDocs) {
+        const sectionDocs = (sourceDocs || _docs || []).filter(d => (d.folder_section || 'firm_uploaded') === sectionKey);
         let s = `<div style="margin-bottom:1.5rem;">
           <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
 
@@ -1095,8 +1095,37 @@
         return s;
       }
 
-      let html = renderSection('firm_uploaded', 'Delivered by Your Advisor', '📁');
-      html += renderSection('client_uploaded', 'Uploaded by You', '📤');
+      let html = '';
+
+      // Personal docs first
+      const personalDocs = (_docs || []).filter(d => d.owner_type === 'person');
+      const companyDocs = (_docs || []).filter(d => d.owner_type === 'company');
+
+      if (personalDocs.length > 0 || true) { // always show personal sections
+        html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;">👤 My Documents</div>`;
+        html += renderSection('firm_uploaded', 'Delivered by Your Advisor', '📁', personalDocs);
+        html += renderSection('client_uploaded', 'Uploaded by You', '📤', personalDocs);
+      }
+
+      // Group company docs by company
+      const byCompany = {};
+      companyDocs.forEach(d => {
+        const cid = d.owner_id;
+        if (!byCompany[cid]) byCompany[cid] = [];
+        byCompany[cid].push(d);
+      });
+
+      Object.entries(byCompany).forEach(([cid, docs]) => {
+        const co = _companies.find(c => c.id == cid || c.company_id == cid);
+        const coName = co ? (co.company_name || co.name) : `Company #${cid}`;
+        html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin:1.25rem 0 0.5rem;">🏢 ${escHtml(coName)}</div>`;
+        html += renderSection('firm_uploaded', 'Delivered by Your Advisor', '📁', docs);
+        html += renderSection('client_uploaded', 'Uploaded by You', '📤', docs);
+      });
+
+      if (!html) {
+        html = '<div class="empty-state"><div class="ei">📁</div><div>No documents yet. Your advisor will deliver documents here.</div></div>';
+      }
 
       container.innerHTML = html;
 
