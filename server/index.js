@@ -154,6 +154,7 @@ app.get('/invite/:token', (req, res) => res.sendFile(path.join(publicDir, 'invit
 // --- Dashboard (JWT auth; falls back to Basic Auth for dev) ---
 // Note: the HTML page itself is served publicly; the page JS will redirect if no token
 app.get('/dashboard', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
+app.get('/theme-preview', (req, res) => res.sendFile(path.join(publicDir, 'theme-preview.html')));
 app.get('/dashboard.html', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
 // Team page — redirect to dashboard team section for now
 app.get('/team', (req, res) => res.redirect('/dashboard?section=team'));

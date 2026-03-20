@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DarkLion Theme Preview</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:    #0f1923;
+      --shell:   #141d26;
+      --card:    #1a2535;
+      --gold:    #c9a84c;
+      --gold-lt: #e2c068;
+      --text:    #e8edf2;
+      --muted:   #8fa3b8;
+      --border:  rgba(201,168,76,0.22);
+      --sidebar-w: 220px;
+      --header-h:  58px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--navy);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── TOP HEADER ─────────────────────────────────────── */
+    .top-header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-h);
+      background: var(--shell);
+      border-bottom: 2px solid var(--gold);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0 1.25rem 0 1.25rem;
+      z-index: 300;
+    }
+
+    /* Logo (left side of header — sits above the sidebar) */
+    .header-logo {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+      padding-right: 1rem;
+    }
+    .header-logo img { width: 30px; height: 30px; border-radius: 6px; flex-shrink: 0; }
+    .header-logo .logo-name { font-size: 1.1rem; font-weight: 800; color: var(--text); }
+    .header-logo .logo-name span { color: var(--gold); }
+
+    /* Gold divider between logo and search */
+    .header-divider {
+      width: 1px;
+      height: 32px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    /* Search bar (centered) */
+    .header-search-wrap {
+      flex: 1;
+      max-width: 540px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .header-search-bar {
+      width: 100%;
+      height: 38px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0 1rem 0 2.4rem;
+      font-size: 0.88rem;
+      outline: none;
+    }
+    .header-search-bar::placeholder { color: var(--muted); }
+    .header-search-icon {
+      position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%);
+      color: var(--muted); font-size: 0.9rem; pointer-events: none;
+    }
+
+    /* User avatar (right side) */
+    .header-user {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+    .user-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: #fff;
+      color: #1a1a2e;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.82rem;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .user-info { text-align: right; }
+    .user-name { font-size: 0.82rem; font-weight: 700; line-height: 1.2; }
+    .user-firm { font-size: 0.68rem; color: var(--muted); line-height: 1.2; }
+
+    /* ── LEFT SIDEBAR ───────────────────────────────────── */
+    .sidebar {
+      position: fixed;
+      top: var(--header-h);
+      left: 0;
+      bottom: 0;
+      width: var(--sidebar-w);
+      background: var(--shell);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      z-index: 200;
+      padding: 0.5rem 0 1rem;
+    }
+
+    .nav-section {
+      padding: 0.85rem 1rem 0.2rem;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.52rem 1rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all 0.12s;
+      cursor: pointer;
+    }
+    .nav-item:hover { color: var(--text); background: rgba(201,168,76,0.05); }
+    .nav-item.active {
+      color: var(--gold);
+      border-left-color: var(--gold);
+      background: rgba(201,168,76,0.08);
+      font-weight: 600;
+    }
+    .nav-item.muted { opacity: 0.4; pointer-events: none; }
+
+    /* ── MAIN CONTENT ───────────────────────────────────── */
+    .main {
+      margin-left: var(--sidebar-w);
+      margin-top: var(--header-h);
+      min-height: calc(100vh - var(--header-h));
+      padding: 2rem 2.5rem;
+    }
+
+    /* Preview content styling */
+    .preview-label {
+      display: inline-block;
+      background: rgba(201,168,76,0.12);
+      border: 1px dashed var(--gold);
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.75rem;
+      color: var(--gold);
+      margin-bottom: 1.5rem;
+    }
+    .preview-content {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0.75rem;
+      text-align: center;
+    }
+    .preview-content h1 { font-size: 1.4rem; font-weight: 800; }
+    .preview-content p { color: var(--muted); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header class="top-header">
+    <!-- Logo — sits in the width of the sidebar -->
+    <a class="header-logo" href="#">
+      <img src="/lion-logo.png" alt="DL">
+      <div class="logo-name">Dark<span>Lion</span></div>
+    </a>
+
+    <div class="header-divider"></div>
+
+    <!-- Unified search -->
+    <div class="header-search-wrap">
+      <span class="header-search-icon">🔍</span>
+      <input type="text" class="header-search-bar" placeholder="Search relationships, companies, people…">
+    </div>
+
+    <!-- User -->
+    <div class="header-user">
+      <div class="user-info">
+        <div class="user-name">Christopher G. Ragain</div>
+        <div class="user-firm">Sentinel Wealth &amp; Tax</div>
+      </div>
+      <div class="user-avatar">CR</div>
+    </div>
+  </header>
+
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar">
+    <div class="nav-section">Clients</div>
+    <a class="nav-item active" href="#">👥 <span>Relationships</span></a>
+    <a class="nav-item" href="#">👤 <span>People</span></a>
+    <a class="nav-item" href="#">🏢 <span>Companies</span></a>
+
+    <div class="nav-section" style="margin-top:0.5rem;">Work</div>
+    <a class="nav-item muted" href="#">📋 <span>Pipelines</span></a>
+    <a class="nav-item" href="#">💬 <span>Messages</span></a>
+    <a class="nav-item" href="#">📅 <span>Statement Calendar</span></a>
+  </aside>
+
+  <!-- MAIN CONTENT AREA -->
+  <main class="main">
+    <div class="preview-label">✦ Theme Preview — this is where page content goes</div>
+    <div class="preview-content">
+      <h1>Page Content Area</h1>
+      <p>Every page's unique content renders here.<br>The header and sidebar above never change.</p>
+      <p style="font-size:0.78rem;margin-top:0.5rem;color:#c9a84c;">Approve this layout → then I wire it to all pages.</p>
+    </div>
+  </main>
+
+</body>
+</html>
