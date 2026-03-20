@@ -1,11 +1,18 @@
 'use strict';
 
 const { Router } = require('express');
+const multer = require('multer');
 const { pool } = require('../db');
 const { classifyMessage } = require('../services/claude');
 const { sendPortalNotification } = require('../services/email');
+const { uploadFile, buildKey, sanitizeFilename, getSignedDownloadUrl } = require('../services/s3');
 
 const router = Router();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024, files: 8 },
+});
 
 const APP_URL = (process.env.APP_URL || 'https://darklion.ai').replace(/\/+$/, '');
 
@@ -134,7 +141,8 @@ router.get('/', async (req, res) => {
          mt.person_id, mt.assigned_to,
          p.first_name, p.last_name, p.email,
          (SELECT body FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) AS last_body,
-         (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) AS unread_count
+         (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) AS unread_count,
+         EXISTS(SELECT 1 FROM messages m JOIN message_attachments ma ON ma.message_id = m.id WHERE m.thread_id = mt.id LIMIT 1) AS has_attachments
        FROM message_threads mt
        JOIN people p ON p.id = mt.person_id
        WHERE mt.firm_id = $1 AND mt.${statusFilter}
@@ -176,6 +184,7 @@ router.get('/', async (req, res) => {
       lastPreview: t.last_body ? t.last_body.slice(0, 80) : '',
       unreadCount: parseInt(t.unread_count, 10) || 0,
       assignedTo: t.assigned_to,
+      hasAttachments: t.has_attachments || false,
     }));
 
     res.json(result);
@@ -292,6 +301,27 @@ router.get('/company/:companyId', async (req, res) => {
   }
 });
 
+// ── GET /messages/attachments/:documentId/download ────────────────────────────
+// NOTE: Must be registered BEFORE /:threadId to avoid being caught by the wildcard route
+router.get('/attachments/:documentId/download', async (req, res) => {
+  const firmId = req.firm.id;
+  const documentId = parseInt(req.params.documentId);
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, s3_key, s3_bucket, firm_id FROM documents WHERE id = $1 AND firm_id = $2',
+      [documentId, firmId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Document not found' });
+
+    const url = await getSignedDownloadUrl({ key: rows[0].s3_key, bucket: rows[0].s3_bucket });
+    res.json({ url });
+  } catch (err) {
+    console.error('[GET /messages/attachments/:documentId/download] error:', err);
+    res.status(500).json({ error: 'Failed to generate download URL' });
+  }
+});
+
 // ── GET /messages/:threadId ───────────────────────────────────────────────────
 router.get('/:threadId', async (req, res) => {
   const firmId = req.firm.id;
@@ -346,6 +376,29 @@ router.get('/:threadId', async (req, res) => {
       userMap[u.id] = u.display_name || u.name || 'Staff';
     }
 
+    // Fetch attachments for each message
+    const msgIds = msgs.map(m => m.id);
+    const attachmentMap = {};
+    if (msgIds.length > 0) {
+      const { rows: attRows } = await pool.query(
+        `SELECT ma.message_id, ma.id, d.display_name, d.mime_type, d.size_bytes, ma.document_id
+         FROM message_attachments ma
+         JOIN documents d ON d.id = ma.document_id
+         WHERE ma.message_id = ANY($1)`,
+        [msgIds]
+      );
+      for (const att of attRows) {
+        if (!attachmentMap[att.message_id]) attachmentMap[att.message_id] = [];
+        attachmentMap[att.message_id].push({
+          id: att.id,
+          documentId: att.document_id,
+          displayName: att.display_name,
+          mimeType: att.mime_type,
+          sizeBytes: att.size_bytes,
+        });
+      }
+    }
+
     const messages = msgs.map(m => ({
       id: m.id,
       senderType: m.sender_type,
@@ -356,6 +409,7 @@ router.get('/:threadId', async (req, res) => {
       isInternal: m.is_internal,
       createdAt: m.created_at,
       readAt: m.read_at,
+      attachments: attachmentMap[m.id] || [],
     }));
 
     res.json({
@@ -433,7 +487,7 @@ router.post('/', async (req, res) => {
 });
 
 // ── POST /messages/:threadId/reply ───────────────────────────────────────────
-router.post('/:threadId/reply', async (req, res) => {
+router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
   const firmId = req.firm.id;
   let userId = req.firm.userId;
   if (!userId) {
@@ -443,9 +497,13 @@ router.post('/:threadId/reply', async (req, res) => {
     } catch(e) { /* silent */ }
   }
   const threadId = parseInt(req.params.threadId);
-  const { body, is_internal } = req.body;
+  const body = (req.body.body || '').trim();
+  const is_internal = req.body.is_internal === 'true';
+  const files = req.files || [];
 
-  if (!body || !body.trim()) return res.status(400).json({ error: 'body is required' });
+  if (!body && files.length === 0) {
+    return res.status(400).json({ error: 'Message body or at least one file is required' });
+  }
 
   try {
     // Verify thread belongs to this firm
@@ -465,8 +523,38 @@ router.post('/:threadId/reply', async (req, res) => {
       `INSERT INTO messages (thread_id, sender_type, sender_id, body, is_internal)
        VALUES ($1, 'staff', $2, $3, $4)
        RETURNING id, created_at`,
-      [threadId, userId, body.trim(), is_internal ? true : false]
+      [threadId, userId, body || '', is_internal]
     );
+    const messageId = msgRows[0].id;
+
+    // Upload files and create document + attachment records
+    if (files.length > 0) {
+      const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
+      const year = String(new Date().getFullYear());
+      for (const f of files) {
+        const key = buildKey({
+          firmId,
+          ownerType: 'person',
+          ownerId: thread.person_id,
+          year,
+          docType: 'message_docs',
+          filename: f.originalname,
+        });
+        await uploadFile({ buffer: f.buffer, key, mimeType: f.mimetype, bucket });
+        const { rows: docRows } = await pool.query(
+          `INSERT INTO documents (firm_id, owner_type, owner_id, doc_type, display_name, mime_type, size_bytes,
+            s3_key, s3_bucket, year, folder_section, folder_category, uploaded_by_type, uploaded_by_id,
+            is_delivered, created_at)
+           VALUES ($1, 'person', $2, 'other', $3, $4, $5, $6, $7, $8, 'firm_uploaded', 'message_docs', 'staff', $9, true, NOW())
+           RETURNING id`,
+          [firmId, thread.person_id, f.originalname, f.mimetype, f.size, key, bucket, year, userId]
+        );
+        await pool.query(
+          'INSERT INTO message_attachments (message_id, document_id) VALUES ($1, $2)',
+          [messageId, docRows[0].id]
+        );
+      }
+    }
 
     // Update thread status + last_message_at (only for non-internal)
     if (!is_internal) {
@@ -485,7 +573,7 @@ router.post('/:threadId/reply', async (req, res) => {
       });
     }
 
-    res.json({ ok: true, messageId: msgRows[0].id });
+    res.json({ ok: true, messageId });
   } catch (err) {
     console.error('[POST /messages/:threadId/reply] error:', err);
     res.status(500).json({ error: 'Failed to send reply' });

@@ -431,6 +431,13 @@ async function initDB() {
       created_at TIMESTAMPTZ DEFAULT NOW(),
       read_at TIMESTAMPTZ
     );
+
+    CREATE TABLE IF NOT EXISTS message_attachments (
+      id SERIAL PRIMARY KEY,
+      message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+      document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
 }
 

@@ -333,7 +333,12 @@
             </select>
           </div>
           <textarea id="comm-reply-body" rows="3" class="form-control" placeholder="Reply…" style="margin-bottom:0.5rem;"></textarea>
-          <button class="btn btn-gold btn-sm" onclick="sendReply()">Send Reply</button>
+          <div id="comm-attach-chips" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.4rem;"></div>
+          <input type="file" id="comm-attach-input" multiple style="display:none;" onchange="handleCommAttach(this.files)">
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <button class="btn btn-gold btn-sm" onclick="sendReply()">Send Reply</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('comm-attach-input').click()" title="Attach files">📎 Attach</button>
+          </div>
         </div>
       </div>
       <!-- New thread compose -->
@@ -458,10 +463,15 @@
 
   let personData = null;
 
-  function authHeaders() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }; }
+  function authHeaders(opts = {}) {
+    const isFormData = opts.body instanceof FormData;
+    return isFormData
+      ? { 'Authorization': 'Bearer ' + token }
+      : { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+  }
 
   async function apiFetch(url, opts = {}) {
-    const res = await fetch(url, { ...opts, headers: { ...authHeaders(), ...(opts.headers||{}) } });
+    const res = await fetch(url, { ...opts, headers: { ...authHeaders(opts), ...(opts.headers||{}) } });
     if (res.status === 401) { window.location.href = '/login'; }
     return res;
   }
@@ -945,6 +955,7 @@
   // ── Communication Tab ──────────────────────────────────────────────────────
   let commPersonId = null;
   let commActiveThreadId = null;
+  let commAttachFiles = [];
 
   function initComm(pid) {
     commPersonId = pid;
@@ -1000,10 +1011,16 @@
       msgEl.innerHTML = data.messages.map(m => {
         const isStaff = m.senderType === 'staff';
         const isInternal = m.isInternal;
+        const attachmentsHtml = (m.attachments || []).length > 0
+          ? `<div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.4rem;">${(m.attachments).map(a => {
+              const size = a.sizeBytes ? ' (' + commFormatBytes(a.sizeBytes) + ')' : '';
+              return `<a href="#" onclick="commDownloadAttachment(${a.documentId});return false;" style="display:inline-flex;align-items:center;gap:0.3rem;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:0.15rem 0.5rem;font-size:0.73rem;color:inherit;text-decoration:none;">📎 ${esc(a.displayName)}${esc(size)}</a>`;
+            }).join('')}</div>`
+          : '';
         return `<div style="display:flex;flex-direction:column;align-items:${isStaff ? 'flex-end' : 'flex-start'};">
           <div style="max-width:80%;padding:0.5rem 0.75rem;border-radius:8px;background:${isInternal ? 'rgba(255,200,0,0.1)' : isStaff ? 'var(--gold)' : 'var(--charcoal)'};color:${isStaff && !isInternal ? 'var(--navy)' : 'var(--text)'};border:${isInternal ? '1px dashed var(--gold)' : 'none'};">
             ${isInternal ? '<div style="font-size:0.65rem;color:var(--gold);margin-bottom:0.2rem;">🔒 Internal note</div>' : ''}
-            <div style="font-size:0.85rem;">${esc(m.body)}</div>
+            <div style="font-size:0.85rem;">${m.body ? esc(m.body) : ''}${attachmentsHtml}</div>
           </div>
           <div style="font-size:0.68rem;color:var(--muted);margin-top:0.15rem;">${m.senderName} · ${relTime(m.createdAt)}</div>
         </div>`;
@@ -1014,14 +1031,58 @@
     }
   }
 
+  function commFormatBytes(b) {
+    if (!b) return '0 B';
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+    return (b/1048576).toFixed(1) + ' MB';
+  }
+
+  function handleCommAttach(fileList) {
+    for (const f of Array.from(fileList)) {
+      if (commAttachFiles.length >= 8) { alert('Maximum 8 files per message'); break; }
+      commAttachFiles.push(f);
+    }
+    document.getElementById('comm-attach-input').value = '';
+    renderCommAttachChips();
+  }
+
+  function removeCommAttachFile(idx) {
+    commAttachFiles.splice(idx, 1);
+    renderCommAttachChips();
+  }
+
+  function renderCommAttachChips() {
+    const el = document.getElementById('comm-attach-chips');
+    if (!el) return;
+    el.innerHTML = commAttachFiles.map((f, i) =>
+      `<span style="display:inline-flex;align-items:center;gap:0.3rem;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:4px;padding:0.15rem 0.5rem;font-size:0.75rem;color:var(--text);">📎 ${esc(f.name)} <button onclick="removeCommAttachFile(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;padding:0;line-height:1;">×</button></span>`
+    ).join('');
+  }
+
+  async function commDownloadAttachment(documentId) {
+    try {
+      const res = await apiFetch(`/api/messages/attachments/${documentId}/download`);
+      const data = await res.json();
+      if (data.url) window.open(data.url, '_blank');
+      else alert('Download failed');
+    } catch(e) { alert('Failed to download attachment'); }
+  }
+
   async function sendReply() {
     const body = document.getElementById('comm-reply-body').value.trim();
-    if (!body || !commActiveThreadId) return;
+    if ((!body && commAttachFiles.length === 0) || !commActiveThreadId) return;
     const isInternal = document.getElementById('comm-internal-toggle').checked;
     try {
-      await apiFetch(`/api/messages/${commActiveThreadId}/reply`, { method: 'POST', body: JSON.stringify({ body, is_internal: isInternal }) });
+      const fd = new FormData();
+      fd.append('body', body);
+      fd.append('is_internal', isInternal ? 'true' : 'false');
+      commAttachFiles.forEach(f => fd.append('files', f));
+      await apiFetch(`/api/messages/${commActiveThreadId}/reply`, { method: 'POST', body: fd });
       document.getElementById('comm-reply-body').value = '';
       document.getElementById('comm-internal-toggle').checked = false;
+      commAttachFiles = [];
+      renderCommAttachChips();
       await loadThread(commActiveThreadId);
       await loadThreads();
     } catch(e) { alert('Failed to send reply'); }

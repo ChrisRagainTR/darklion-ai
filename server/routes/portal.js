@@ -281,9 +281,32 @@ router.get('/messages/:threadId', async (req, res) => {
       [threadId]
     );
 
+    // Fetch attachments for each message
+    const msgIds = msgs.map(m => m.id);
+    const attachmentMap = {};
+    if (msgIds.length > 0) {
+      const { rows: attRows } = await pool.query(
+        `SELECT ma.message_id, ma.id, d.display_name, d.mime_type, d.size_bytes, ma.document_id
+         FROM message_attachments ma
+         JOIN documents d ON d.id = ma.document_id
+         WHERE ma.message_id = ANY($1)`,
+        [msgIds]
+      );
+      for (const att of attRows) {
+        if (!attachmentMap[att.message_id]) attachmentMap[att.message_id] = [];
+        attachmentMap[att.message_id].push({
+          id: att.id,
+          documentId: att.document_id,
+          displayName: att.display_name,
+          mimeType: att.mime_type,
+          sizeBytes: att.size_bytes,
+        });
+      }
+    }
+
     res.json({
       thread: threadRows[0],
-      messages: msgs,
+      messages: msgs.map(m => ({ ...m, attachments: attachmentMap[m.id] || [] })),
     });
   } catch (err) {
     console.error('Portal /messages/:threadId error:', err);
@@ -292,13 +315,15 @@ router.get('/messages/:threadId', async (req, res) => {
 });
 
 // --- POST /portal/messages/send ---
-router.post('/messages/send', async (req, res) => {
+router.post('/messages/send', upload.array('files', 8), async (req, res) => {
   const personId = req.portal.personId;
   const firmId = req.portal.firmId;
-  const { subject, body } = req.body;
+  const body = (req.body.body || '').trim();
+  const subject = req.body.subject || '';
+  const files = req.files || [];
 
-  if (!body || !body.trim()) {
-    return res.status(400).json({ error: 'Message body is required' });
+  if (!body && files.length === 0) {
+    return res.status(400).json({ error: 'Message body or at least one file is required' });
   }
 
   try {
@@ -329,11 +354,42 @@ router.post('/messages/send', async (req, res) => {
     }
 
     // Insert message
-    await pool.query(
+    const { rows: msgRows } = await pool.query(
       `INSERT INTO messages (thread_id, sender_type, sender_id, body, is_internal)
-       VALUES ($1, 'client', $2, $3, false)`,
-      [threadId, personId, body.trim()]
+       VALUES ($1, 'client', $2, $3, false)
+       RETURNING id`,
+      [threadId, personId, body || '']
     );
+    const messageId = msgRows[0].id;
+
+    // Upload files and create document + attachment records
+    if (files.length > 0) {
+      const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
+      const year = String(new Date().getFullYear());
+      for (const f of files) {
+        const key = buildKey({
+          firmId,
+          ownerType: 'person',
+          ownerId: personId,
+          year,
+          docType: 'message_docs',
+          filename: f.originalname,
+        });
+        await uploadFile({ buffer: f.buffer, key, mimeType: f.mimetype, bucket });
+        const { rows: docRows } = await pool.query(
+          `INSERT INTO documents (firm_id, owner_type, owner_id, doc_type, display_name, mime_type, size_bytes,
+            s3_key, s3_bucket, year, folder_section, folder_category, uploaded_by_type, uploaded_by_id,
+            is_delivered, created_at)
+           VALUES ($1, 'person', $2, 'other', $3, $4, $5, $6, $7, $8, 'client_uploaded', 'message_docs', 'client', $2, false, NOW())
+           RETURNING id`,
+          [firmId, personId, f.originalname, f.mimetype, f.size, key, bucket, year]
+        );
+        await pool.query(
+          'INSERT INTO message_attachments (message_id, document_id) VALUES ($1, $2)',
+          [messageId, docRows[0].id]
+        );
+      }
+    }
 
     // Flip thread status to 'open' (client needs response)
     await pool.query(
@@ -345,10 +401,10 @@ router.post('/messages/send', async (req, res) => {
     cancelPendingNotification(personId);
 
     // Classify asynchronously (non-blocking, non-fatal)
-    if (isNewThread) {
+    if (isNewThread && body) {
       setImmediate(async () => {
         try {
-          const result = await classifyMessage({ body: body.trim(), personId, firmId });
+          const result = await classifyMessage({ body, personId, firmId });
           if (result.category) {
             await pool.query('UPDATE message_threads SET category = $1 WHERE id = $2', [result.category, threadId]);
           }
@@ -372,6 +428,40 @@ router.post('/messages/send', async (req, res) => {
     }
     console.error('Portal /messages/send error:', err);
     res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+// --- GET /portal/attachments/:documentId/download ---
+router.get('/attachments/:documentId/download', async (req, res) => {
+  const personId = req.portal.personId;
+  const documentId = parseInt(req.params.documentId);
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, s3_key, s3_bucket, owner_type, owner_id FROM documents WHERE id = $1',
+      [documentId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Document not found' });
+    const doc = rows[0];
+
+    // Verify access: must belong to this person directly, or to a company the person has access to
+    let hasAccess = false;
+    if (doc.owner_type === 'person' && doc.owner_id === personId) {
+      hasAccess = true;
+    } else if (doc.owner_type === 'company') {
+      const { rows: accessRows } = await pool.query(
+        'SELECT 1 FROM person_company_access WHERE person_id = $1 AND company_id = $2',
+        [personId, doc.owner_id]
+      );
+      hasAccess = accessRows.length > 0;
+    }
+    if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
+
+    const url = await getSignedDownloadUrl({ key: doc.s3_key, bucket: doc.s3_bucket });
+    res.json({ url });
+  } catch (err) {
+    console.error('Portal /attachments/:documentId/download error:', err);
+    res.status(500).json({ error: 'Failed to generate download URL' });
   }
 });
 

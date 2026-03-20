@@ -728,6 +728,16 @@
     }
     .chat-send-btn:hover { opacity: 0.9; }
     .chat-empty { text-align: center; color: var(--muted); padding: 2rem; font-size: 0.9rem; }
+    .chat-attach-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 0.5rem 0.7rem; font-size: 1rem; cursor: pointer; align-self: flex-end; transition: all 0.15s; }
+    .chat-attach-btn:hover { color: var(--text); border-color: var(--gold); }
+    .chat-attach-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; padding: 0.4rem 1rem 0; }
+    .chat-attach-chip { display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(255,255,255,0.07); border: 1px solid var(--border); border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.75rem; color: var(--text); }
+    .chat-attach-chip button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; padding: 0; line-height: 1; }
+    .chat-attach-chip button:hover { color: #e55; }
+    .msg-attachments { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+    .attachment-chip { display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.75rem; color: var(--text); text-decoration: none; }
+    .attachment-chip:hover { border-color: var(--gold); color: var(--gold); }
+    .att-size { color: var(--muted); font-size: 0.7rem; }
     .unread-badge-tab { display: inline-flex; align-items: center; justify-content: center; background: var(--gold); color: #0f1117; border-radius: 10px; padding: 0.1rem 0.45rem; font-size: 0.68rem; font-weight: 700; margin-left: 0.4rem; }
   </style>
 </head>
@@ -822,7 +832,10 @@
         <div class="chat-messages" id="chatMessages">
           <div class="chat-empty" id="chatEmpty">Loading messages…</div>
         </div>
+        <div class="chat-attach-chips" id="chatAttachChips"></div>
+        <input type="file" id="chatAttachInput" multiple style="display:none;" onchange="handleChatAttach(this.files)">
         <div class="chat-input-bar">
+          <button class="chat-attach-btn" onclick="document.getElementById('chatAttachInput').click()" title="Attach files">📎</button>
           <textarea id="chatInput" placeholder="Write a message to your advisor…" rows="1"></textarea>
           <button class="chat-send-btn" id="chatSendBtn">Send</button>
         </div>
@@ -1337,6 +1350,7 @@
     // ── Chat / Messages ───────────────────────────────────
     let _chatLoaded = false;
     let _chatAllMessages = [];
+    let _chatAttachFiles = [];
 
     async function initChat() {
       if (_chatLoaded) return;
@@ -1383,6 +1397,47 @@
       }
     }
 
+    function chatFormatBytes(b) {
+      if (!b) return '0 B';
+      if (b < 1024) return b + ' B';
+      if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+      return (b/1048576).toFixed(1) + ' MB';
+    }
+
+    function handleChatAttach(fileList) {
+      for (const f of Array.from(fileList)) {
+        if (_chatAttachFiles.length >= 8) { alert('Maximum 8 files per message'); break; }
+        _chatAttachFiles.push(f);
+      }
+      document.getElementById('chatAttachInput').value = '';
+      renderChatAttachChips();
+    }
+
+    function removeChatAttachFile(idx) {
+      _chatAttachFiles.splice(idx, 1);
+      renderChatAttachChips();
+    }
+
+    function renderChatAttachChips() {
+      const el = document.getElementById('chatAttachChips');
+      if (!el) return;
+      el.innerHTML = _chatAttachFiles.map((f, i) =>
+        `<span class="chat-attach-chip">📎 ${chatEsc(f.name)} <button onclick="removeChatAttachFile(${i})">×</button></span>`
+      ).join('');
+    }
+
+    async function downloadPortalAttachment(documentId) {
+      const token = localStorage.getItem('portalToken');
+      try {
+        const res = await fetch(`/portal/attachments/${documentId}/download`, {
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        const data = await res.json();
+        if (data.url) window.open(data.url, '_blank');
+        else alert('Download failed');
+      } catch(e) { alert('Failed to download attachment'); }
+    }
+
     function renderChatMessages() {
       const container = document.getElementById('chatMessages');
       if (!_chatAllMessages.length) {
@@ -1393,8 +1448,14 @@
         const isClient = m.sender_type === 'client';
         const side = isClient ? 'client' : 'staff';
         const time = new Date(m.created_at).toLocaleString();
+        const attachmentsHtml = (m.attachments || []).length > 0
+          ? `<div class="msg-attachments">${(m.attachments).map(a => {
+              const size = a.sizeBytes ? ' <span class="att-size">(' + chatFormatBytes(a.sizeBytes) + ')</span>' : '';
+              return `<a class="attachment-chip" href="#" onclick="downloadPortalAttachment(${a.documentId});return false;">📎 ${chatEsc(a.displayName)}${size}</a>`;
+            }).join('')}</div>`
+          : '';
         return `<div class="chat-bubble-wrap ${side}">
-          <div class="chat-bubble ${side}">${chatEsc(m.body)}</div>
+          <div class="chat-bubble ${side}">${m.body ? chatEsc(m.body) : ''}${attachmentsHtml}</div>
           <div class="chat-bubble-meta">${time}</div>
         </div>`;
       }).join('');
@@ -1404,20 +1465,25 @@
     async function sendChatMessage() {
       const input = document.getElementById('chatInput');
       const body = input.value.trim();
-      if (!body) return;
+      if (!body && _chatAttachFiles.length === 0) return;
       const token = localStorage.getItem('portalToken');
       try {
         input.disabled = true;
+        const fd = new FormData();
+        fd.append('body', body);
+        _chatAttachFiles.forEach(f => fd.append('files', f));
         const res = await fetch('/portal/messages/send', {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ body }),
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: fd,
         });
         if (!res.ok) {
           const d = await res.json().catch(() => ({}));
           throw new Error(d.error || `Server error ${res.status}`);
         }
         input.value = '';
+        _chatAttachFiles = [];
+        renderChatAttachChips();
         _chatLoaded = false;
         await loadAllMessages();
       } catch (e) {

@@ -141,6 +141,18 @@
     .btn-outline:hover { color: var(--text); border-color: var(--gold); }
     .btn-sm { padding: 0.3rem 0.65rem; font-size: 0.77rem; }
 
+    /* ── ATTACHMENT CHIPS ── */
+    .attach-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.4rem; }
+    .attach-chip-input { display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(255,255,255,0.07); border: 1px solid var(--border); border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.75rem; color: var(--text); }
+    .attach-chip-input button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; padding: 0; line-height: 1; }
+    .attach-chip-input button:hover { color: #e55; }
+    .btn-attach { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0.4rem 0.7rem; font-size: 0.82rem; cursor: pointer; transition: all 0.15s; }
+    .btn-attach:hover { color: var(--text); border-color: var(--gold); }
+    .msg-attachments { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+    .attachment-chip { display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(255,255,255,0.07); border: 1px solid var(--border); border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.75rem; color: var(--text); text-decoration: none; }
+    .attachment-chip:hover { border-color: var(--gold); color: var(--gold); }
+    .att-size { color: var(--muted); font-size: 0.7rem; }
+
     /* ── EMPTY STATE ── */
     .no-thread-selected {
       flex: 1; display: flex; align-items: center; justify-content: center;
@@ -228,8 +240,11 @@
           <div style="flex:1;"></div>
         </div>
         <textarea id="replyBody" placeholder="Write a reply…" rows="3"></textarea>
+        <div class="attach-chips" id="attachChips"></div>
+        <input type="file" id="attachFileInput" multiple style="display:none;" onchange="handleAttachFiles(this.files)">
         <div class="reply-box-actions">
           <button class="btn btn-gold btn-sm" onclick="sendReply()">Send Reply</button>
+          <button class="btn-attach" onclick="document.getElementById('attachFileInput').click()">📎 Attach</button>
           <button class="btn btn-outline btn-sm" onclick="markResolved()">✅ Resolve</button>
         </div>
       </div>
@@ -245,13 +260,16 @@ let allThreads = [];
 let activeFilter = 'active';
 let activeThreadId = null;
 let firmUsers = [];
+let attachedFiles = [];
 
 async function apiFetch(url, opts = {}) {
+  // If body is FormData, don't set Content-Type (browser sets multipart boundary)
+  const isFormData = opts.body instanceof FormData;
   return fetch(url, {
     ...opts,
     headers: {
       'Authorization': 'Bearer ' + token,
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(opts.headers || {}),
     },
   });
@@ -329,9 +347,10 @@ function renderInbox() {
   document.getElementById('inboxList').innerHTML = threads.map(t => {
     const name = esc((t.person?.firstName || '') + ' ' + (t.person?.lastName || ''));
     const companies = (t.companies || []).map(c => `<span class="co-tag">${esc(c.name)}</span>`).join('');
+    const hasAttachments = t.hasAttachments;
     return `<div class="thread-card${t.id === activeThreadId ? ' active' : ''}" onclick="loadThread(${t.id})">
       <div class="thread-card-name">
-        <span>${name}</span>
+        <span>${name}${hasAttachments ? ' 📎' : ''}</span>
         <span style="font-size:0.7rem;color:var(--muted);">${relTime(t.lastMessageAt)}</span>
       </div>
       <div class="thread-card-subject">${esc(t.subject || '(no subject)')}</div>
@@ -409,9 +428,15 @@ async function loadThread(threadId) {
         const isInternal = m.isInternal;
         const side = isStaff ? 'staff' : 'client';
         const bubbleClass = isInternal ? 'internal' : side;
+        const attachmentsHtml = (m.attachments || []).length > 0
+          ? `<div class="msg-attachments">${(m.attachments).map(a => {
+              const size = a.sizeBytes ? ' <span class="att-size">(' + formatBytes(a.sizeBytes) + ')</span>' : '';
+              return `<a class="attachment-chip" href="#" onclick="downloadAttachment(${a.documentId});return false;">📎 ${esc(a.displayName)}${size}</a>`;
+            }).join('')}</div>`
+          : '';
         return `<div class="msg-bubble-wrap ${side}">
           ${isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
-          <div class="msg-bubble ${bubbleClass}">${esc(m.body).replace(/\n/g,'<br>')}</div>
+          <div class="msg-bubble ${bubbleClass}">${m.body ? esc(m.body).replace(/\n/g,'<br>') : ''}${attachmentsHtml}</div>
           <div class="msg-meta">${esc(m.senderName || '')} · ${relTime(m.createdAt)}</div>
         </div>`;
       }).join('');
@@ -419,23 +444,70 @@ async function loadThread(threadId) {
     }
 
     document.getElementById('replyBody').value = '';
+    attachedFiles = [];
+    renderAttachChips();
   } catch(e) {
     document.getElementById('detailMessages').innerHTML = '<div style="color:var(--muted);padding:1rem;">Failed to load thread.</div>';
   }
 }
 
+function handleAttachFiles(fileList) {
+  for (const f of Array.from(fileList)) {
+    if (attachedFiles.length >= 8) { alert('Maximum 8 files per message'); break; }
+    attachedFiles.push(f);
+  }
+  // Reset input so same file can be re-selected
+  document.getElementById('attachFileInput').value = '';
+  renderAttachChips();
+}
+
+function removeAttachFile(idx) {
+  attachedFiles.splice(idx, 1);
+  renderAttachChips();
+}
+
+function renderAttachChips() {
+  const el = document.getElementById('attachChips');
+  if (!el) return;
+  el.innerHTML = attachedFiles.map((f, i) =>
+    `<span class="attach-chip-input">📎 ${esc(f.name)} <button onclick="removeAttachFile(${i})">×</button></span>`
+  ).join('');
+}
+
+function formatBytes(b) {
+  if (!b) return '0 B';
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+async function downloadAttachment(documentId) {
+  try {
+    const res = await apiFetch(`/api/messages/attachments/${documentId}/download`);
+    const data = await res.json();
+    if (data.url) window.open(data.url, '_blank');
+    else alert('Download failed');
+  } catch(e) { alert('Failed to download attachment'); }
+}
+
 async function sendReply() {
   if (!activeThreadId) return;
   const body = document.getElementById('replyBody').value.trim();
-  if (!body) return;
+  if (!body && attachedFiles.length === 0) return;
   const isInternal = document.getElementById('internalToggle').checked;
   try {
+    const fd = new FormData();
+    fd.append('body', body);
+    fd.append('is_internal', isInternal ? 'true' : 'false');
+    attachedFiles.forEach(f => fd.append('files', f));
     await apiFetch(`/api/messages/${activeThreadId}/reply`, {
       method: 'POST',
-      body: JSON.stringify({ body, is_internal: isInternal }),
+      body: fd,
     });
     document.getElementById('replyBody').value = '';
     document.getElementById('internalToggle').checked = false;
+    attachedFiles = [];
+    renderAttachChips();
     await loadThread(activeThreadId);
     await loadInbox();
   } catch(e) { alert('Failed to send reply'); }
