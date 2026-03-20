@@ -5,6 +5,10 @@ const multer = require('multer');
 const { pool } = require('../db');
 const { getSignedDownloadUrl, uploadFile, buildKey, sanitizeFilename } = require('../services/s3');
 const { classifyMessage } = require('../services/claude');
+// Lazy require to avoid circular dependency
+function cancelPendingNotification(personId) {
+  try { require('./messages').cancelPendingNotification(personId); } catch(e) { /* non-fatal */ }
+}
 
 const router = Router();
 
@@ -336,6 +340,9 @@ router.post('/messages/send', async (req, res) => {
       `UPDATE message_threads SET status = 'open', last_message_at = NOW() WHERE id = $1`,
       [threadId]
     );
+
+    // Cancel any pending notification timer — client is actively messaging
+    cancelPendingNotification(personId);
 
     // Classify asynchronously (non-blocking, non-fatal)
     if (isNewThread) {

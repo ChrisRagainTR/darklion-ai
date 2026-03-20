@@ -372,6 +372,12 @@ async function initDB() {
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
 
+    -- Add last_notification_sent_at to people (for smart message notifications)
+    DO $$ BEGIN
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS last_notification_sent_at TIMESTAMPTZ;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
     -- ===================== DOCUMENTS =====================
     CREATE TABLE IF NOT EXISTS documents (
       id SERIAL PRIMARY KEY,

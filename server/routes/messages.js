@@ -7,6 +7,95 @@ const { sendPortalNotification } = require('../services/email');
 
 const router = Router();
 
+const APP_URL = (process.env.APP_URL || 'https://darklion.ai').replace(/\/+$/, '');
+
+// Track pending notification timers keyed by personId
+const _pendingNotifications = new Map();
+
+/**
+ * Smart notification scheduler:
+ * - Waits 5 minutes before sending
+ * - Cancels if client sends a message during that window (they're engaged)
+ * - Cancels if client was active in portal in last 30 minutes
+ * - Enforces 2-hour cooldown between notifications to same person
+ */
+function scheduleClientNotification({ threadId, personId, toEmail, toName, firmName }) {
+  if (!toEmail) return;
+
+  // Clear any existing pending timer for this person (staff sent multiple messages quickly)
+  if (_pendingNotifications.has(personId)) {
+    clearTimeout(_pendingNotifications.get(personId));
+  }
+
+  const timer = setTimeout(async () => {
+    _pendingNotifications.delete(personId);
+    try {
+      const { rows } = await pool.query(
+        `SELECT portal_last_login_at, last_notification_sent_at FROM people WHERE id = $1`,
+        [personId]
+      );
+      if (!rows[0]) return;
+      const { portal_last_login_at, last_notification_sent_at } = rows[0];
+      const now = Date.now();
+
+      // Cancel: client was active in portal in last 30 minutes
+      if (portal_last_login_at && (now - new Date(portal_last_login_at).getTime()) < 30 * 60 * 1000) {
+        console.log(`[notify] skipped — client ${personId} was active recently`);
+        return;
+      }
+
+      // Cancel: client sent a message since we queued this notification (check thread activity)
+      const { rows: recentMsgs } = await pool.query(
+        `SELECT 1 FROM messages m
+         JOIN message_threads mt ON mt.id = m.thread_id
+         WHERE mt.person_id = $1 AND m.sender_type = 'client'
+         AND m.created_at > NOW() - INTERVAL '5 minutes'
+         LIMIT 1`,
+        [personId]
+      );
+      if (recentMsgs.length > 0) {
+        console.log(`[notify] skipped — client ${personId} replied in last 5 min`);
+        return;
+      }
+
+      // Cancel: notified within last 2 hours
+      if (last_notification_sent_at && (now - new Date(last_notification_sent_at).getTime()) < 2 * 60 * 60 * 1000) {
+        console.log(`[notify] skipped — already notified ${personId} within 2 hours`);
+        return;
+      }
+
+      // Send notification
+      await sendPortalNotification({
+        to: toEmail,
+        name: toName,
+        firmName,
+        message: 'You have a new message from your advisor. Log in to view it.',
+        portalUrl: APP_URL + '/portal',
+      });
+
+      // Update cooldown timestamp
+      await pool.query(
+        `UPDATE people SET last_notification_sent_at = NOW() WHERE id = $1`,
+        [personId]
+      );
+      console.log(`[notify] sent to ${toEmail} (person ${personId})`);
+    } catch (e) {
+      console.error('[notify] error (non-fatal):', e.message);
+    }
+  }, 5 * 60 * 1000); // 5 minute delay
+
+  _pendingNotifications.set(personId, timer);
+}
+
+// Helper: cancel pending notification when client sends (they're engaged)
+function cancelPendingNotification(personId) {
+  if (_pendingNotifications.has(personId)) {
+    clearTimeout(_pendingNotifications.get(personId));
+    _pendingNotifications.delete(personId);
+    console.log(`[notify] cancelled for person ${personId} — client replied`);
+  }
+}
+
 // Helper: apply classification results to a thread
 async function applyClassification(threadId, firmId, personId, body) {
   try {
@@ -386,18 +475,14 @@ router.post('/:threadId/reply', async (req, res) => {
         [threadId]
       );
 
-      // Send email notification to client (non-fatal)
-      try {
-        await sendPortalNotification({
-          to: thread.email,
-          name: `${thread.first_name} ${thread.last_name}`,
-          firmName: thread.firm_name,
-          message: 'You have a new message from your advisor. Log in to view it.',
-          portalUrl: (process.env.APP_URL || 'https://darklion.ai') + '/portal',
-        });
-      } catch (emailErr) {
-        console.error('[reply] email notification error (non-fatal):', emailErr.message);
-      }
+      // Smart notification: delay 5 min, cancel if client responds or is online, 2hr cooldown
+      scheduleClientNotification({
+        threadId,
+        personId: thread.person_id,
+        toEmail: thread.email,
+        toName: `${thread.first_name} ${thread.last_name}`,
+        firmName: thread.firm_name,
+      });
     }
 
     res.json({ ok: true, messageId: msgRows[0].id });
@@ -527,3 +612,4 @@ router.put('/:threadId/read', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.cancelPendingNotification = cancelPendingNotification;
