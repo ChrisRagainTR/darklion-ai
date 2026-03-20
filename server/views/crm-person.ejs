@@ -13,9 +13,43 @@
   .ph-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
   .ph-desc { font-size: 0.86rem; }
   .portal-btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
-</style>
 
-<main class="main">
+  /* ── Docs: folder hierarchy (portal-matched) ── */
+  .docs-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1.5rem; }
+  @media (max-width: 800px) { .docs-layout { grid-template-columns: 1fr; } }
+  .docs-col-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+  .year-folder { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 0.75rem; overflow: hidden; }
+  .year-header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; cursor: pointer; user-select: none; transition: background 0.15s; }
+  .year-header:hover { background: rgba(255,255,255,0.03); }
+  .yr-label { font-weight: 700; font-size: 0.95rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
+  .yr-count { font-size: 0.72rem; background: rgba(201,168,76,0.12); color: var(--gold); border: 1px solid rgba(201,168,76,0.25); border-radius: 20px; padding: 0.1rem 0.5rem; font-weight: 600; }
+  .yr-chevron { color: var(--muted); font-size: 0.8rem; transition: transform 0.2s; }
+  .year-folder.open .yr-chevron { transform: rotate(180deg); }
+  .year-body { display: none; border-top: 1px solid var(--border); }
+  .year-folder.open .year-body { display: block; }
+  .doc-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.1rem; border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+  .doc-row:hover { background: rgba(255,255,255,0.03); }
+  .doc-info { flex: 1; min-width: 0; }
+  .doc-name { font-weight: 600; font-size: 0.9rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.25rem; }
+  .doc-badge { font-size: 0.68rem; border-radius: 20px; padding: 0.1rem 0.45rem; font-weight: 600; }
+  .doc-badge-type { background: rgba(138,143,168,0.12); color: var(--muted); border: 1px solid rgba(138,143,168,0.2); }
+  .doc-badge-new { background: rgba(201,168,76,0.16); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
+  .btn-dl { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; border-radius: 6px; padding: 0.3rem 0.65rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; flex-shrink: 0; white-space: nowrap; }
+  .btn-dl:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-dl:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Upload modal ── */
+  .upload-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+  .upload-modal-overlay.hidden { display: none; }
+  .upload-modal { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem; width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+  .upload-modal h2 { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 1.25rem; }
+  .file-drop { border: 2px dashed var(--border); border-radius: 9px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; color: var(--muted); font-size: 0.88rem; position: relative; }
+  .file-drop:hover, .file-drop.drag-over { border-color: var(--gold); background: rgba(201,168,76,0.04); }
+  .file-drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .upload-err { font-size: 0.8rem; color: var(--red); margin-top: 0.5rem; display: none; }
+  .upload-msg { font-size: 0.8rem; color: var(--green); margin-top: 0.5rem; display: none; }
+</style>
 
 <div class="entity-header">
   <a href="/crm/people" class="entity-back">← People</a>
@@ -53,7 +87,50 @@
 </div>
 
 <div id="tab-docs" class="tab-content">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem 0;">
+    <div style="font-size:0.85rem;color:var(--muted);">Drag a file anywhere on the page to upload.</div>
+    <button class="btn btn-gold btn-sm" onclick="openUploadModal()">↑ Upload Document</button>
+  </div>
   <div id="docs-content"><div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div></div>
+</div>
+
+<!-- Upload Modal -->
+<div class="upload-modal-overlay hidden" id="upload-modal">
+  <div class="upload-modal" onclick="event.stopPropagation()">
+    <h2>Upload Document</h2>
+    <div class="form-group">
+      <label class="form-group" style="font-size:0.8rem;color:var(--muted);margin-bottom:0.35rem;display:block;">Year</label>
+      <select class="form-control" id="upload-year"></select>
+    </div>
+    <div class="form-group">
+      <label style="font-size:0.8rem;color:var(--muted);margin-bottom:0.35rem;display:block;">Category</label>
+      <select class="form-control" id="upload-doc-type">
+        <option value="tax">Tax</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label style="font-size:0.8rem;color:var(--muted);margin-bottom:0.35rem;display:block;">Section</label>
+      <select class="form-control" id="upload-section">
+        <option value="firm_uploaded">Delivered by Advisor</option>
+        <option value="client_uploaded">Client Uploaded</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label style="font-size:0.8rem;color:var(--muted);margin-bottom:0.35rem;display:block;">File</label>
+      <div class="file-drop" id="upload-file-drop">
+        <input type="file" id="upload-file-input">
+        <span id="upload-drop-text">Click to select or drag a file here</span>
+        <div id="upload-selected-name" style="margin-top:0.4rem;font-size:0.82rem;color:var(--text);font-weight:600;"></div>
+      </div>
+    </div>
+    <div class="upload-err" id="upload-error"></div>
+    <div class="upload-msg" id="upload-msg"></div>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1.25rem;">
+      <button class="btn btn-outline" id="upload-cancel-btn">Cancel</button>
+      <button class="btn btn-gold" id="upload-submit-btn" disabled>Upload</button>
+    </div>
+  </div>
 </div>
 
 <div id="tab-tax" class="tab-content">
@@ -209,6 +286,74 @@
     left.innerHTML = html;
   }
 
+  // ── Docs: helpers ──
+  function fileTypeBadge(mimeType, displayName) {
+    const mime = (mimeType || '').toLowerCase();
+    const name = (displayName || '').toLowerCase();
+    const ext = name.includes('.') ? name.split('.').pop() : '';
+    if (mime === 'application/pdf' || ext === 'pdf') return { label: 'PDF', color: '#e53e3e' };
+    if (mime.includes('spreadsheet') || mime.includes('excel') || ext === 'xlsx' || ext === 'xls' || ext === 'csv')
+      return { label: ext === 'csv' ? 'CSV' : 'Excel', color: '#38a169' };
+    if (mime.includes('word') || ext === 'docx' || ext === 'doc')
+      return { label: 'Word', color: '#3182ce' };
+    if (mime.includes('presentation') || mime.includes('powerpoint') || ext === 'pptx' || ext === 'ppt')
+      return { label: 'PPT', color: '#dd6b20' };
+    if (mime.startsWith('image/') || ['jpg','jpeg','png','gif','webp','heic'].includes(ext))
+      return { label: 'Image', color: '#805ad5' };
+    if (mime.includes('zip') || ext === 'zip') return { label: 'ZIP', color: '#718096' };
+    if (mime.startsWith('text/') || ext === 'txt') return { label: 'TXT', color: '#718096' };
+    return { label: ext ? ext.toUpperCase().slice(0, 4) : 'FILE', color: '#718096' };
+  }
+
+  function fmtBytes(b) {
+    if (!b) return '';
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+
+  let docsData = [];
+  const PERSON_CATS = [{ key: 'tax', label: 'Tax', icon: '🧾' }, { key: 'other', label: 'Other', icon: '📎' }];
+  const DOCS_YEARS = (() => { const a = []; for (let y = new Date().getFullYear(); y >= 2018; y--) a.push(String(y)); return a; })();
+
+  function buildDocsSection(docs, sectionKey, sectionTitle, sectionIcon) {
+    const sectionDocs = docs.filter(d => (d.folder_section || 'firm_uploaded') === sectionKey);
+    let s = `<div class="docs-col-title">${sectionIcon} ${sectionTitle} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
+    const recentYears = DOCS_YEARS.slice(0, 2);
+    const prevYears = DOCS_YEARS.slice(2);
+
+    function renderOneYear(yr) {
+      const yrDocs = sectionDocs.filter(d => (d.year || '') === yr);
+      const open = yrDocs.length > 0;
+      let y = `<div class="year-folder${open ? ' open' : ''}" style="margin-bottom:0.4rem;">
+        <div class="year-header"><span class="yr-label">📅 ${yr} <span class="yr-count">${yrDocs.length}</span></span><span class="yr-chevron">▼</span></div>
+        <div class="year-body" style="padding-left:1rem;">`;
+      PERSON_CATS.forEach(cat => {
+        const catDocs = yrDocs.filter(d => (d.folder_category || 'other') === cat.key);
+        y += `<div style="margin-bottom:0.5rem;"><div style="font-size:0.82rem;font-weight:700;color:var(--text);padding:0.4rem 0.5rem;margin-bottom:0.25rem;border-left:3px solid var(--gold);background:rgba(201,168,76,0.06);">${cat.icon} ${cat.label} <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${catDocs.length})</span></div><div style="padding-left:0.5rem;">`;
+        if (!catDocs.length) {
+          y += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`;
+        } else {
+          catDocs.forEach(doc => {
+            const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
+            y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(doc.display_name || 'Document')}</div><div class="doc-badges">${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
+          });
+        }
+        y += `</div></div>`;
+      });
+      y += `</div></div>`;
+      return y;
+    }
+
+    recentYears.forEach(yr => { s += renderOneYear(yr); });
+    const prevCount = prevYears.reduce((n, yr) => n + sectionDocs.filter(d => (d.year || '') === yr).length, 0);
+    s += `<div class="year-folder" style="margin-bottom:0.4rem;">
+      <div class="year-header"><span class="yr-label">📂 Prior Years <span class="yr-count">${prevCount}</span></span><span class="yr-chevron">▼</span></div>
+      <div class="year-body" style="padding-left:0.5rem;">${prevYears.map(yr => renderOneYear(yr)).join('')}</div>
+    </div>`;
+    return s;
+  }
+
   async function loadDocs() {
     const el = document.getElementById('docs-content');
     if (el.dataset.loaded) return;
@@ -216,24 +361,159 @@
     el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading documents…</div></div>';
     try {
       const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${personId}`);
-      const docs = await res.json();
-      if (!docs.length) { el.innerHTML = '<div class="empty-state">No documents yet.</div>'; return; }
-      el.innerHTML = docs.map(d => `<div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 1.5rem;border-bottom:1px solid rgba(255,255,255,0.04);">
-        <div style="flex:1;min-width:0;font-size:0.86rem;font-weight:600;">${esc(d.display_name||'Untitled')}</div>
-        <span class="badge badge-muted">${esc(d.folder_category||'')}</span>
-        <span style="font-size:0.78rem;color:var(--muted);">${d.year||''}</span>
-        <button class="btn btn-ghost btn-xs" onclick="downloadDoc(${d.id})">⬇</button>
-      </div>`).join('');
+      docsData = await res.json();
+      renderDocs();
     } catch(e) { el.innerHTML = '<div class="empty-state">Failed to load documents.</div>'; }
   }
 
-  async function downloadDoc(id) {
+  function renderDocs() {
+    const el = document.getElementById('docs-content');
+    el.innerHTML = `<div class="docs-layout">
+      <div>${buildDocsSection(docsData, 'firm_uploaded', 'Delivered by Advisor', '📁')}</div>
+      <div>${buildDocsSection(docsData, 'client_uploaded', 'Uploaded by Client', '📤')}</div>
+    </div>`;
+    // Wire year folder toggles
+    el.querySelectorAll('.year-header').forEach(h => {
+      h.addEventListener('click', () => h.closest('.year-folder').classList.toggle('open'));
+    });
+    // Wire doc name click to open
+    el.querySelectorAll('.doc-name-link').forEach(nameEl => {
+      nameEl.addEventListener('click', e => {
+        e.stopPropagation();
+        const btn = nameEl.closest('.doc-row').querySelector('.btn-dl');
+        downloadDoc(parseInt(nameEl.dataset.docid), btn);
+      });
+    });
+    // Wire download buttons
+    el.querySelectorAll('.btn-dl').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        downloadDoc(parseInt(btn.dataset.docid), btn);
+      });
+    });
+  }
+
+  async function downloadDoc(id, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
     try {
       const res = await apiFetch(`/api/documents/${id}/url`);
       const data = await res.json();
       if (data.url) window.open(data.url, '_blank');
     } catch(e) { toast('Failed to get download link', 'error'); }
+    if (btn) { btn.disabled = false; btn.textContent = '⬇ Download'; }
   }
+
+  // ── Upload modal wiring ──
+  (function() {
+    var modal     = document.getElementById('upload-modal');
+    var yearSel   = document.getElementById('upload-year');
+    var fileDrop  = document.getElementById('upload-file-drop');
+    var fileInput = document.getElementById('upload-file-input');
+    var submitBtn = document.getElementById('upload-submit-btn');
+    var cancelBtn = document.getElementById('upload-cancel-btn');
+    var errEl     = document.getElementById('upload-error');
+    var msgEl     = document.getElementById('upload-msg');
+    if (!modal) return;
+
+    var _uploadFile = null;
+    var CY = new Date().getFullYear();
+    for (var y = CY; y >= 2018; y--) {
+      var o = document.createElement('option');
+      o.value = String(y); o.textContent = String(y);
+      if (y === CY - 1) o.selected = true;
+      yearSel.appendChild(o);
+    }
+
+    function setFile(f) {
+      _uploadFile = f;
+      document.getElementById('upload-selected-name').textContent = f.name;
+      submitBtn.disabled = false;
+    }
+
+    fileDrop.addEventListener('click', function() { fileInput.click(); });
+    fileDrop.addEventListener('dragover', function(e) { e.preventDefault(); fileDrop.classList.add('drag-over'); });
+    fileDrop.addEventListener('dragleave', function() { fileDrop.classList.remove('drag-over'); });
+    fileDrop.addEventListener('drop', function(e) { e.preventDefault(); fileDrop.classList.remove('drag-over'); if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
+    fileInput.addEventListener('change', function() { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+    cancelBtn.addEventListener('click', function() { window.closeUploadModal(); });
+    modal.addEventListener('click', function(e) { if (e.target === modal) window.closeUploadModal(); });
+
+    submitBtn.addEventListener('click', async function() {
+      if (!_uploadFile) return;
+      submitBtn.disabled = true; submitBtn.textContent = 'Uploading…';
+      errEl.style.display = 'none'; msgEl.style.display = 'none';
+      try {
+        var fd = new FormData();
+        fd.append('file', _uploadFile);
+        fd.append('owner_type', 'person');
+        fd.append('owner_id', personId);
+        fd.append('year', yearSel.value);
+        fd.append('doc_type', document.getElementById('upload-doc-type').value);
+        fd.append('folder_category', document.getElementById('upload-doc-type').value);
+        fd.append('folder_section', document.getElementById('upload-section').value);
+        var res = await fetch('/api/documents/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+        msgEl.textContent = 'Uploaded!'; msgEl.style.display = 'block';
+        var docEl = document.getElementById('docs-content');
+        delete docEl.dataset.loaded;
+        docsData = [];
+        await loadDocs();
+        setTimeout(function() { window.closeUploadModal(); toast('Document uploaded'); }, 800);
+      } catch(e2) {
+        errEl.textContent = e2.message; errEl.style.display = 'block';
+        submitBtn.disabled = false; submitBtn.textContent = 'Upload';
+      }
+    });
+
+    window.openUploadModal = function(preloadFile) {
+      _uploadFile = null;
+      document.getElementById('upload-selected-name').textContent = '';
+      submitBtn.disabled = true; submitBtn.textContent = 'Upload';
+      errEl.style.display = 'none'; msgEl.style.display = 'none';
+      modal.classList.remove('hidden');
+      if (preloadFile) setFile(preloadFile);
+    };
+    window.closeUploadModal = function() { modal.classList.add('hidden'); };
+  })();
+
+  // ── Page-wide drag-and-drop (opens upload modal when Docs tab active) ──
+  (function() {
+    var dragCounter = 0;
+    var dragOverlay = document.createElement('div');
+    dragOverlay.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(201,168,76,0.08);border:3px dashed var(--gold);pointer-events:none;align-items:center;justify-content:center;font-size:1.5rem;color:var(--gold);font-weight:700;';
+    dragOverlay.textContent = '📄 Drop to upload document';
+    document.body.appendChild(dragOverlay);
+
+    function isDocsTabActive() {
+      var t = document.getElementById('tab-docs');
+      return t && t.classList.contains('active');
+    }
+
+    document.addEventListener('dragenter', function(e) {
+      if (!isDocsTabActive()) return;
+      dragCounter++;
+      dragOverlay.style.display = 'flex';
+    });
+    document.addEventListener('dragleave', function(e) {
+      if (!isDocsTabActive()) return;
+      dragCounter--;
+      if (dragCounter <= 0) { dragCounter = 0; dragOverlay.style.display = 'none'; }
+    });
+    document.addEventListener('dragover', function(e) {
+      if (!isDocsTabActive()) return;
+      e.preventDefault();
+    });
+    document.addEventListener('drop', function(e) {
+      if (!isDocsTabActive()) return;
+      e.preventDefault();
+      dragCounter = 0;
+      dragOverlay.style.display = 'none';
+      var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!file) return;
+      window.openUploadModal(file);
+    });
+  })();
 
   async function autoSaveNotes(val) {
     try {
