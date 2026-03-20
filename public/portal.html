@@ -883,7 +883,6 @@
         <label>Category</label>
         <select id="uploadCategory">
           <option value="tax">Tax</option>
-          <option value="bookkeeping">Bookkeeping</option>
           <option value="other">Other</option>
         </select>
       </div>
@@ -1155,19 +1154,63 @@
       }
 
       // Render two sections side-by-side
+      const PERSONAL_CATS = [{ key: 'tax', label: 'Tax', icon: '🧾' }, { key: 'other', label: 'Other', icon: '📎' }];
+      const COMPANY_CATS = [{ key: 'tax', label: 'Tax', icon: '🧾' }, { key: 'bookkeeping', label: 'Bookkeeping', icon: '📒' }, { key: 'other', label: 'Other', icon: '📎' }];
+
       function renderSideBySide(sourceDocs, includeBookkeeping) {
-        if (!includeBookkeeping) {
-          // Override categories for personal — no bookkeeping
-          const origCats = DOC_CATEGORIES;
-          DOC_CATEGORIES = [{ key: 'tax', label: 'Tax', icon: '🧾' }, { key: 'other', label: 'Other', icon: '📎' }];
-          const left = renderSection('firm_uploaded', 'Delivered by Your Advisor', '📁', sourceDocs);
-          const right = renderSection('client_uploaded', 'Uploaded by You', '📤', sourceDocs);
-          DOC_CATEGORIES = origCats;
-          return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">${left}${right}</div>`;
-        }
-        const left = renderSection('firm_uploaded', 'Delivered by Your Advisor', '📁', sourceDocs);
-        const right = renderSection('client_uploaded', 'Uploaded by You', '📤', sourceDocs);
+        const cats = includeBookkeeping ? COMPANY_CATS : PERSONAL_CATS;
+        const left = renderSectionWithCats('firm_uploaded', 'Delivered by Your Advisor', '📁', sourceDocs, cats);
+        const right = renderSectionWithCats('client_uploaded', 'Uploaded by You', '📤', sourceDocs, cats);
         return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">${left}${right}</div>`;
+      }
+
+      function renderSectionWithCats(sectionKey, sectionLabel, sectionIcon, sourceDocs, cats) {
+        const sectionDocs = (sourceDocs || []).filter(d => (d.folder_section || '') === sectionKey);
+        let s = `<div style="margin-bottom:1.5rem;">
+          <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
+
+        const recentYears = years.slice(0, 2);
+        const prevYears = years.slice(2);
+
+        function renderOneYearWithCats(yr) {
+          const yrDocs = sectionDocs.filter(d => (d.year || '') === yr);
+          const hasNew = yrDocs.some(d => !d.viewed_at);
+          const open = yrDocs.length > 0;
+          let y = `<div class="year-folder${open ? ' open' : ''}" style="margin-bottom:0.4rem;">
+            <div class="year-header">
+              <span class="yr-label">📅 ${yr} <span class="yr-count">${yrDocs.length}</span>${hasNew ? ' <span style="color:var(--gold);font-size:0.65rem;">NEW</span>' : ''}</span>
+              <span class="yr-chevron">▼</span>
+            </div>
+            <div class="year-body" style="padding-left:1rem;">`;
+          cats.forEach(cat => {
+            const catDocs = yrDocs.filter(d => (d.folder_category || 'other') === cat.key);
+            y += `<div style="margin-bottom:0.5rem;"><div style="font-size:0.82rem;font-weight:700;color:var(--text);padding:0.4rem 0.5rem;margin-bottom:0.25rem;border-left:3px solid var(--gold);background:rgba(201,168,76,0.06);">${cat.icon} ${cat.label} <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${catDocs.length})</span></div><div style="padding-left:0.5rem;">`;
+            if (catDocs.length === 0) {
+              y += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`;
+            } else {
+              catDocs.forEach(doc => {
+                const isNew = !doc.viewed_at;
+                const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
+                y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
+              });
+            }
+            y += `</div></div>`;
+          });
+          y += `</div></div>`;
+          return y;
+        }
+
+        recentYears.forEach(yr => { s += renderOneYearWithCats(yr); });
+        const prevCount = prevYears.reduce((n, yr) => n + sectionDocs.filter(d => (d.year||'') === yr).length, 0);
+        s += `<div class="year-folder" style="margin-bottom:0.4rem;">
+          <div class="year-header">
+            <span class="yr-label">📂 Previous Years <span class="yr-count">${prevCount}</span></span>
+            <span class="yr-chevron">▼</span>
+          </div>
+          <div class="year-body" style="padding-left:0.5rem;">${prevYears.map(yr => renderOneYearWithCats(yr)).join('')}</div>
+        </div>`;
+        s += `</div>`;
+        return s;
       }
 
       let html = '';
@@ -1176,7 +1219,7 @@
       const personalDocs = (_docs || []).filter(d => d.owner_type === 'person');
       const companyDocs = (_docs || []).filter(d => d.owner_type === 'company');
 
-      html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;">👤 My Documents</div>`;
+      html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.25rem;border-bottom:2px solid var(--border);">👤 My Documents</div>`;
       html += renderSideBySide(personalDocs, false);
 
       // Group company docs by company — include bookkeeping
