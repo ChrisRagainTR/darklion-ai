@@ -16,13 +16,7 @@
     fetch('/partials/sidebar.html')
       .then(function(r) { return r.text(); })
       .then(function(html) {
-        // Inject brand header
-        const brand = `
-          <a class="sidebar-brand" href="/dashboard">
-            <img src="/lion-logo.png" alt="DL" width="32" height="32" style="flex-shrink:0;border-radius:6px;">
-            <div class="nav-name">Dark<span>Lion</span></div>
-          </a>`;
-        mount.innerHTML = brand + html;
+        mount.innerHTML = html;
 
         // Highlight active item
         if (activeKey) {
