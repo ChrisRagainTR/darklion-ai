@@ -33,6 +33,7 @@
           mount.querySelectorAll('[data-nav]').forEach(function(a) {
             const nav = a.dataset.nav;
             if (
+              (nav === 'pipelines' && path.startsWith('/pipelines')) ||
               (nav === 'messages' && path.startsWith('/messages')) ||
               (nav === 'relationships' && path.includes('relationship')) ||
               (nav === 'people' && path.includes('/crm/person')) ||
@@ -44,10 +45,10 @@
           });
         }
 
-        // Add logout link at bottom
+        // Add logout link at bottom (inside the aside, styled)
         mount.insertAdjacentHTML('beforeend', `
-          <div class="sidebar-footer">
-            <a href="#" id="sidebar-logout">Logout</a>
+          <div style="margin-top:auto;padding:1rem;border-top:1px solid rgba(201,168,76,0.2);">
+            <a href="#" id="sidebar-logout" style="display:block;text-align:center;color:#8fa3b8;font-size:0.82rem;text-decoration:none;">Logout</a>
           </div>`);
 
         const logoutBtn = document.getElementById('sidebar-logout');

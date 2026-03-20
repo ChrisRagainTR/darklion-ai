@@ -438,6 +438,62 @@ async function initDB() {
       document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    -- ===================== PIPELINES =====================
+    CREATE TABLE IF NOT EXISTS pipeline_templates (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER REFERENCES firms(id),
+      name TEXT NOT NULL DEFAULT '',
+      entity_type TEXT NOT NULL DEFAULT 'company' CHECK(entity_type IN ('company','person','relationship')),
+      description TEXT DEFAULT '',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS pipeline_stages (
+      id SERIAL PRIMARY KEY,
+      template_id INTEGER NOT NULL REFERENCES pipeline_templates(id) ON DELETE CASCADE,
+      name TEXT NOT NULL DEFAULT '',
+      position INTEGER NOT NULL DEFAULT 0,
+      color TEXT DEFAULT '#c9a84c',
+      is_terminal BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS pipeline_instances (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER REFERENCES firms(id),
+      template_id INTEGER REFERENCES pipeline_templates(id),
+      name TEXT NOT NULL DEFAULT '',
+      tax_year TEXT DEFAULT '',
+      status TEXT DEFAULT 'active' CHECK(status IN ('active','archived')),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS pipeline_jobs (
+      id SERIAL PRIMARY KEY,
+      instance_id INTEGER NOT NULL REFERENCES pipeline_instances(id) ON DELETE CASCADE,
+      entity_type TEXT NOT NULL DEFAULT 'company' CHECK(entity_type IN ('company','person','relationship')),
+      entity_id INTEGER NOT NULL,
+      current_stage_id INTEGER REFERENCES pipeline_stages(id),
+      assigned_to INTEGER REFERENCES firm_users(id),
+      notes TEXT DEFAULT '',
+      priority TEXT DEFAULT 'normal' CHECK(priority IN ('normal','high','urgent')),
+      due_date DATE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS pipeline_job_history (
+      id SERIAL PRIMARY KEY,
+      job_id INTEGER NOT NULL REFERENCES pipeline_jobs(id) ON DELETE CASCADE,
+      from_stage_id INTEGER REFERENCES pipeline_stages(id),
+      to_stage_id INTEGER REFERENCES pipeline_stages(id),
+      moved_by INTEGER REFERENCES firm_users(id),
+      moved_at TIMESTAMPTZ DEFAULT NOW(),
+      note TEXT DEFAULT ''
+    );
   `);
 }
 
