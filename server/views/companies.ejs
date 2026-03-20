@@ -60,6 +60,8 @@
   </div>
 </div>
 
+<%- include('partials/shell-globals') %>
+
 <script>
 let allItems = [];
 document.getElementById('search').addEventListener('input', function(){ filterList(this.value); });
@@ -121,4 +123,4 @@ async function createCompany() {
 loadList();
 </script>
 
-<%- include('partials/shell-bottom') %>
+<%- include('partials/shell-close') %>

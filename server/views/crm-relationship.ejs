@@ -91,6 +91,8 @@
     .sidebar-nav li a.nav-coming-soon { opacity: 0.4; cursor: default; pointer-events: none; }
 </style>
 
+<%- include('partials/shell-globals') %>
+
 <script>
   const relId = location.pathname.split('/').pop();
   const token = localStorage.getItem('dl_token');
@@ -312,4 +314,4 @@
 
 </script>
 
-<%- include('partials/shell-bottom') %>
+<%- include('partials/shell-close') %>

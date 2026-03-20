@@ -1,0 +1,153 @@
+
+
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- SHARED JS: auth, search, user menu -->
+  <script>
+  (function() {
+    'use strict';
+    var token = localStorage.getItem('dl_token');
+    if (!token) { window.location.replace('/login'); return; }
+
+    function apiFetch(url, opts) {
+      opts = opts || {};
+      var headers = { 'Authorization': 'Bearer ' + token };
+      if (!(opts.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+      return fetch(url, Object.assign({}, opts, { headers: Object.assign(headers, opts.headers || {}) }))
+        .then(function(res) {
+          if (res.status === 401) { localStorage.removeItem('dl_token'); window.location.replace('/login?expired=1'); throw new Error('Unauthorized'); }
+          return res;
+        });
+    }
+
+    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    // ── User menu ──
+    var userDropdown = document.getElementById('user-dropdown');
+    var headerUserBtn = document.getElementById('header-user-btn');
+    headerUserBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      userDropdown.classList.toggle('open');
+    });
+    document.addEventListener('click', function() { userDropdown.classList.remove('open'); });
+
+    // ── Populate user info from JWT ──
+    try {
+      var payload = JSON.parse(atob(token.split('.')[1]));
+      var name = payload.name || payload.email || '?';
+      var firmName = payload.firmName || '';
+      document.getElementById('user-menu-name').innerHTML = esc(name) + ' <span class="user-caret">▼</span>';
+      document.getElementById('user-menu-firm').textContent = firmName;
+      var initials = name.split(' ').map(function(w){return w[0];}).join('').toUpperCase().slice(0,2);
+      document.getElementById('user-avatar').textContent = initials || '?';
+      // Load avatar
+      if (payload.userId) {
+        apiFetch('/firms/team/' + payload.userId + '/avatar').then(function(r){return r.json();}).then(function(d){
+          if (d.url) {
+            var av = document.getElementById('user-avatar');
+            var img = document.createElement('img');
+            img.src = d.url;
+            img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+            img.onerror = function(){img.remove();};
+            av.textContent = '';
+            av.appendChild(img);
+          }
+        }).catch(function(){});
+      }
+    } catch(e) {}
+
+    // ── Logout ──
+    document.getElementById('header-logout-btn').addEventListener('click', function(e) {
+      e.preventDefault();
+      localStorage.removeItem('dl_token');
+      localStorage.removeItem('dl_firm');
+      window.location.replace('/login');
+    });
+
+    // ── Unified search ──
+    var searchTimer = null;
+    var searchResults = [];
+    var hcdOpen = false;
+    var searchBar = document.getElementById('header-search-bar');
+    var searchDropdown = document.getElementById('header-client-dropdown');
+
+    function openSearch() {
+      hcdOpen = true;
+      searchBar.removeAttribute('readonly');
+      searchBar.placeholder = 'Search…';
+      searchBar.value = '';
+      searchDropdown.classList.add('open');
+      renderSearchResults();
+    }
+    function closeSearch() {
+      hcdOpen = false;
+      searchDropdown.classList.remove('open');
+      searchBar.setAttribute('readonly','');
+      searchBar.value = '';
+      searchBar.placeholder = 'Search relationships, companies, people…';
+    }
+    function renderSearchResults() {
+      var list = document.getElementById('hcd-list');
+      var footer = document.getElementById('hcd-footer');
+      if (!searchResults.length) {
+        list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Type to search…</div>';
+        footer.textContent = '';
+        return;
+      }
+      list.innerHTML = searchResults.map(function(r,i){
+        var icon = r._type==='relationship'?'👥':r._type==='company'?'🏢':'👤';
+        return '<div class="hcd-option" data-idx="'+i+'">' +
+          '<span style="font-size:1rem;">'+icon+'</span>' +
+          '<span class="hcd-info"><span class="hcd-name">'+esc(r._label)+'</span>' +
+          '<span class="hcd-meta" style="display:block;">'+esc(r._sub)+'</span></span></div>';
+      }).join('');
+      footer.textContent = searchResults.length + ' result' + (searchResults.length!==1?'s':'');
+      list.querySelectorAll('.hcd-option').forEach(function(el,i){
+        el.addEventListener('click', function(){
+          var r = searchResults[i];
+          closeSearch();
+          if (r._type==='relationship') window.location.href='/crm/relationship/'+r.id;
+          else if (r._type==='company') window.location.href='/crm/company/'+r.id;
+          else window.location.href='/crm/person/'+r.id;
+        });
+      });
+    }
+    searchBar.addEventListener('focus', openSearch);
+    searchBar.addEventListener('input', function() {
+      var q = searchBar.value.trim();
+      clearTimeout(searchTimer);
+      if (q.length < 2) { searchResults=[]; renderSearchResults(); return; }
+      searchTimer = setTimeout(function(){
+        apiFetch('/api/search?q='+encodeURIComponent(q)).then(function(r){return r.json();}).then(function(d){
+          searchResults = [].concat(
+            (d.relationships||[]).map(function(r){return Object.assign({},r,{_type:'relationship',_label:r.name,_sub:'Relationship'});}),
+            (d.companies||[]).map(function(c){return Object.assign({},c,{_type:'company',_label:c.name||c.company_name,_sub:c.entity_type||'Company'});}),
+            (d.people||[]).map(function(p){return Object.assign({},p,{_type:'person',_label:(p.first_name||'')+' '+(p.last_name||''),_sub:p.relationship_name||'Person'});})
+          );
+          renderSearchResults();
+        }).catch(function(){});
+      }, 200);
+    });
+    searchBar.addEventListener('keydown', function(e) {
+      if (e.key==='Escape') closeSearch();
+    });
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.header-search-wrap')) closeSearch();
+    });
+
+    // ── Toast ──
+    window.toast = function(msg, type) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show' + (type==='error'?' error':'');
+      clearTimeout(t._timer);
+      t._timer = setTimeout(function(){ t.className='toast'; }, 3000);
+    };
+
+    // ── apiFetch exposed globally for page scripts ──
+    window.apiFetch = apiFetch;
+    window.esc = esc;
+  })();
+  </script>

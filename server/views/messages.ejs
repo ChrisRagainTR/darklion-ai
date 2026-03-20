@@ -139,6 +139,8 @@
     .sidebar-nav li a.nav-coming-soon { opacity: 0.4; cursor: default; pointer-events: none; }
 </style>
 
+<%- include('partials/shell-globals') %>
+
 <script>
 const token = localStorage.getItem('dl_token');
 if (!token) window.location.href = '/login';
@@ -444,4 +446,4 @@ async function addCompanyTag(threadId) {
 loadInbox();
 </script>
 
-<%- include('partials/shell-bottom') %>
+<%- include('partials/shell-close') %>
