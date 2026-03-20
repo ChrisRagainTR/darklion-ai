@@ -1381,13 +1381,20 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Upload failed');
 
-        msgEl.textContent = '✓ File uploaded successfully!';
+        // Check for duplicate name
+        const yr = yearSel.value;
+        const cat = document.getElementById('uploadCategory').value;
+        const isDuplicate = _docs.some(d => d.display_name === _selectedFile.name && d.year === yr && (d.folder_category||'other') === cat);
+        msgEl.textContent = isDuplicate
+          ? `✓ Uploaded (a file with this name already exists in ${yr} / ${cat} — both are saved)`
+          : '✓ File uploaded successfully!';
         msgEl.style.display = 'block';
 
-        // Refresh docs
+        // Refresh docs — immediate, no delay
+        _docs = await api('/portal/documents').catch(() => _docs);
+        renderDocuments();
+
         setTimeout(async () => {
-          _docs = await api('/portal/documents').catch(() => _docs);
-          renderDocuments();
           modal.classList.add('hidden');
         }, 1200);
       } catch (err) {
