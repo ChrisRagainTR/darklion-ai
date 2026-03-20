@@ -662,50 +662,8 @@
   <script src="/partials/sidebar.js"></script>
 
   <!-- Top Header Bar -->
-  <header class="top-header" id="top-header">
-    <!-- Logo -->
-    <a class="header-logo" href="/dashboard">
-      <img src="/lion-logo.png" alt="DarkLion" width="38" height="38" style="display:block;flex-shrink:0;border:none;outline:none;">
-      <span class="hl-name">Dark<span>Lion</span></span>
-    </a>
-    <!-- Client Search (centered) -->
-    <div class="header-search-wrap">
-      <span class="header-search-icon">🔍</span>
-      <input type="text" class="header-search-bar" id="header-search-bar"
-        placeholder="Search relationships, companies, people…"
-        autocomplete="off"
-        oninput="headerSearchInput(this.value)"
-        onfocus="openHeaderSearch()"
-        onkeydown="handleHeaderSearchKey(event)"
-        readonly>
-      <div class="header-client-dropdown" id="header-client-dropdown">
-        <div class="hcd-list" id="hcd-list"></div>
-        <div class="hcd-footer" id="hcd-footer"></div>
-      </div>
-    </div>
-
-    <!-- Refresh button -->
-    <button onclick="reloadCurrentSection()" title="Refresh current page" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:0.4rem 0.7rem;border-radius:7px;cursor:pointer;font-size:0.85rem;transition:all 0.15s;flex-shrink:0;" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">↻</button>
-
-    <!-- User Avatar Menu -->
-    <div class="user-menu-wrap">
-      <button class="user-menu-trigger" id="user-menu-trigger" onclick="toggleUserMenu()" type="button">
-        <div class="user-avatar" id="user-avatar">?</div>
-        <div class="user-menu-info">
-          <div class="user-menu-name" id="user-menu-name">User</div>
-          <div class="user-menu-firm" id="user-menu-firm"></div>
-        </div>
-        <span class="user-menu-chevron">▼</span>
-      </button>
-      <div class="user-menu-dropdown" id="user-menu-dropdown">
-        <a class="umd-item" href="#" onclick="closeUserMenu();showSection('team',document.querySelector('[data-section=team]'))">
-          👥 Team
-        </a>
-        <div class="umd-divider"></div>
-        <a class="umd-item danger" href="#" onclick="logout()">Sign Out</a>
-      </div>
-    </div>
-  </header>
+  <div id="header-mount"></div>
+  <script src="/partials/header.js"></script>
 
   <!-- Main content -->
   <div class="main">
