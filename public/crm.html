@@ -1347,23 +1347,20 @@ async function deletePerson(id) {
 // =====================================================================
 async function loadCompanies() {
   try {
-    const res = await apiFetch('/api/relationships');
-    // We have relationship data; now fetch companies from each or use a global companies endpoint
-    // Try a general companies endpoint first
+    // Load all relationships first to get relationship names
+    const relRes = await apiFetch('/api/relationships');
+    const rels = await relRes.json();
     let companies = [];
-    const coRes = await fetch('/api/companies', { headers: authHeaders() });
-    if (coRes.ok) {
-      companies = await coRes.json();
-    } else {
-      // Aggregate from all relationships
-      const rels = await res.json();
-      for (const rel of rels.slice(0, 20)) {
-        try {
-          const r = await apiFetch(`/api/relationships/${rel.id}/companies`);
-          const co = await r.json();
-          co.forEach(c => { if (!companies.find(x => x.id === c.id)) companies.push({ ...c, relationship_name: rel.name }); });
-        } catch(e) {}
-      }
+    for (const rel of rels) {
+      try {
+        const r = await apiFetch(`/api/relationships/${rel.id}/companies`);
+        const cos = await r.json();
+        cos.forEach(c => {
+          if (!companies.find(x => x.id === c.id)) {
+            companies.push({ ...c, relationship_name: rel.name });
+          }
+        });
+      } catch(e) {}
     }
     allCompanies = companies;
     renderCompanies(companies);
@@ -1381,11 +1378,11 @@ function renderCompanies(list) {
   c.innerHTML = `<div class="table-wrap"><table class="data-table">
     <thead><tr><th>Company</th><th>Entity Type</th><th>Relationship</th><th>Status</th></tr></thead>
     <tbody>${list.map(co => `
-      <tr onclick="window.location.href='/crm/company/'+(co.id||co.company_id||0)">
+      <tr onclick="window.location.href='/crm/company/${co.id||co.company_id||0}'" style="cursor:pointer;">
         <td style="font-weight:600;">${esc(co.display_name||co.company_name||co.name||'Unknown')}</td>
         <td>${co.entity_type ? `<span class="badge badge-muted">${esc(co.entity_type)}</span>` : '—'}</td>
         <td>${co.relationship_name ? `<span style="color:var(--gold);">${esc(co.relationship_name)}</span>` : '—'}</td>
-        <td>${co.active !== false ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-muted">Inactive</span>'}</td>
+        <td>${co.status === 'inactive' ? '<span class="badge badge-muted">Inactive</span>' : '<span class="badge badge-green">Active</span>'}</td>
       </tr>`).join('')}
     </tbody></table></div>`;
 }
