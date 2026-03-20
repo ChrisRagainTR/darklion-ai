@@ -1188,7 +1188,11 @@
         qs('#user-menu-name').textContent = name;
         const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
         qs('#user-avatar').textContent = initials || '?';
-        if (!qs('#user-menu-firm').textContent) {
+        // Firm name: prefer firmName from JWT, fallback to stored firm
+        const firmName = payload.firmName || '';
+        if (firmName) {
+          qs('#user-menu-firm').textContent = firmName;
+        } else if (!qs('#user-menu-firm').textContent) {
           const firm = JSON.parse(localStorage.getItem('dl_firm') || '{}');
           qs('#user-menu-firm').textContent = firm.name || '';
         }

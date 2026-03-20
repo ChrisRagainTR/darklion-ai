@@ -65,13 +65,16 @@ async function auditLog(firmId, action, detail, ip) {
 
 // --- Build JWT payload from firm_users row + firm row ---
 function buildToken(firmUser, firmName) {
+  // Prefer display_name, then name — but if name matches firm name, use email prefix
+  const personalName = firmUser.display_name || firmUser.name || '';
   return jwt.sign(
     {
       firmId: firmUser.firm_id,
       userId: firmUser.id,
       role: firmUser.role,
       email: firmUser.email,
-      name: firmUser.name || firmName || '',
+      name: personalName || '',
+      firmName: firmName || '',
     },
     process.env.JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }

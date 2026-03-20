@@ -1,0 +1,34 @@
+<header class="top-header" id="top-header">
+  <!-- Logo -->
+  <a class="header-logo" href="/dashboard">
+    <img src="/lion-logo.png" alt="DarkLion" width="38" height="38" style="display:block;flex-shrink:0;border:none;outline:none;">
+    <span class="hl-name">Dark<span>Lion</span></span>
+  </a>
+  <!-- Search bar (centered) -->
+  <div class="header-search-wrap">
+    <span class="header-search-icon">🔍</span>
+    <input type="text" class="header-search-bar" id="header-search-bar"
+      placeholder="Search relationships, companies, people…"
+      autocomplete="off" readonly>
+    <div class="header-client-dropdown" id="header-client-dropdown">
+      <div class="hcd-list" id="hcd-list"></div>
+      <div class="hcd-footer" id="hcd-footer"></div>
+    </div>
+  </div>
+  <!-- User menu -->
+  <div class="user-menu-wrap">
+    <button class="user-menu-trigger" id="user-menu-trigger" type="button">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <div class="user-menu-info">
+        <div class="user-menu-name" id="user-menu-name">User</div>
+        <div class="user-menu-firm" id="user-menu-firm"></div>
+      </div>
+      <span class="user-menu-chevron">▼</span>
+    </button>
+    <div class="user-menu-dropdown" id="user-menu-dropdown">
+      <a class="umd-item" href="/team">👥 Team</a>
+      <div class="umd-divider"></div>
+      <a class="umd-item danger" id="header-logout-btn">Sign Out</a>
+    </div>
+  </div>
+</header>

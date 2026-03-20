@@ -306,25 +306,10 @@
 <script src="/partials/sidebar.js"></script>
 
 <!-- ── Header ── -->
+<div id="header-mount"></div>
+<script src="/partials/header.js"></script>
+
 <div class="main">
-  <header class="top-header">
-    <div class="top-header-title">CRM</div>
-    <div class="header-search-wrap">
-      <span class="header-search-icon">🔍</span>
-      <input type="text" class="header-search-bar" id="header-search-bar"
-        placeholder="Search relationships, companies, people…"
-        autocomplete="off"
-        oninput="headerSearchInput(this.value)"
-        onfocus="openHeaderSearch()"
-        onkeydown="handleHeaderSearchKey(event)"
-        readonly>
-      <div class="header-client-dropdown" id="header-client-dropdown">
-        <div class="hcd-list" id="hcd-list"></div>
-        <div class="hcd-footer" id="hcd-footer"></div>
-      </div>
-    </div>
-    <button class="header-logout" onclick="logout()">Logout</button>
-  </header>
 
   <!-- ── Content ── -->
   <div class="content">
