@@ -1071,7 +1071,7 @@
           const hasNew = yrDocs.some(d => !d.viewed_at);
           const open = yrDocs.length > 0;
           let y = `<div class="year-folder${open ? ' open' : ''}" style="margin-bottom:0.4rem;">
-            <div class="year-header" onclick="this.closest('.year-folder').classList.toggle('open')">
+            <div class="year-header">
               <span class="yr-label">📅 ${yr} <span class="yr-count">${yrDocs.length}</span>${hasNew ? ' <span style="color:var(--gold);font-size:0.65rem;">NEW</span>' : ''}</span>
               <span class="yr-chevron">▼</span>
             </div>
@@ -1101,7 +1101,7 @@
         // Previous Years
         const prevCount = prevYears.reduce((n, yr) => n + sectionDocs.filter(d => (d.year||'') === yr).length, 0);
         s += `<div class="year-folder" style="margin-bottom:0.4rem;">
-          <div class="year-header" onclick="this.closest('.year-folder').classList.toggle('open')">
+          <div class="year-header">
             <span class="yr-label">📂 Previous Years <span class="yr-count">${prevCount}</span></span>
             <span class="yr-chevron">▼</span>
           </div>
