@@ -3314,8 +3314,9 @@
       // Handle ?section= query param for deep linking from other pages
       const section = new URLSearchParams(window.location.search).get('section');
       if (section) {
+        // link may be null if sidebar no longer has data-section attrs — showSection handles null gracefully
         const link = document.querySelector(`[data-section="${section}"]`);
-        if (link) showSection(section, link);
+        showSection(section, link || null);
       }
     });
   </script>
