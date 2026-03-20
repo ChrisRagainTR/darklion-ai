@@ -1033,83 +1033,70 @@
     function renderDocuments() {
       const container = document.getElementById('docsContainer');
 
-      if (!_docs || _docs.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="ei">📁</div><div>No documents available yet. Your advisor team will deliver documents here.</div></div>';
-        return;
-      }
-
       // Build company name map
       const coMap = {};
       _companies.forEach(c => { coMap[c.id] = c.company_name; });
 
-      // Separate by folder_section
-      const firmDocs = _docs.filter(d => d.folder_section !== 'client_uploaded');
-      const clientDocs = _docs.filter(d => d.folder_section === 'client_uploaded');
+      const currentYear = new Date().getFullYear();
+      const years = [];
+      for (let y = currentYear; y >= 2018; y--) years.push(String(y));
 
-      let html = '';
+      const DOC_CATEGORIES = [
+        { key: 'tax', label: 'Tax', icon: '🧾' },
+        { key: 'other', label: 'Other', icon: '📎' },
+      ];
 
-      // Render a section of docs grouped by year
-      function renderSection(docs, sectionLabel) {
-        if (!docs.length) return '';
-        // Group by year
-        const byYear = {};
-        docs.forEach(d => {
-          const yr = d.year || 'Other';
-          if (!byYear[yr]) byYear[yr] = [];
-          byYear[yr].push(d);
-        });
-        // Sort years DESC, 'Other' last
-        const years = Object.keys(byYear).sort((a, b) => {
-          if (a === 'Other') return 1;
-          if (b === 'Other') return -1;
-          return b.localeCompare(a);
-        });
+      // Render a full folder section with year/category hierarchy
+      function renderSection(sectionKey, sectionLabel, sectionIcon) {
+        const sectionDocs = (_docs || []).filter(d => (d.folder_section || 'firm_uploaded') === sectionKey);
+        let s = `<div style="margin-bottom:1.5rem;">
+          <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
 
-        let s = `<div class="section-heading">${escHtml(sectionLabel)}</div>`;
         years.forEach(yr => {
-          const yDocs = byYear[yr];
-          const hasNew = yDocs.some(d => !d.viewed_at);
-          const openByDefault = hasNew;
-          s += `
-            <div class="year-folder${openByDefault ? ' open' : ''}" data-yr="${escHtml(yr)}">
-              <div class="year-header">
-                <span class="yr-label">
-                  ${escHtml(yr)}
-                  <span class="yr-count">${yDocs.length}</span>
-                  ${hasNew ? '<span class="badge badge-gold" style="font-size:0.65rem;">NEW</span>' : ''}
-                </span>
-                <span class="yr-chevron">▼</span>
-              </div>
-              <div class="year-body">
-                ${yDocs.map(doc => {
-                  const isNew = !doc.viewed_at;
-                  const ownerLabel = doc.owner_type === 'company' ? (coMap[doc.owner_id] || 'Company') : null;
-                  return `
-                    <div class="doc-row">
-                      <span class="doc-icon">${docIcon(doc.doc_type)}</span>
-                      <div class="doc-info">
-                        <div class="doc-name">${escHtml(doc.display_name || 'Document')}</div>
-                        <div class="doc-badges">
-                          ${doc.doc_type ? `<span class="doc-badge doc-badge-type">${escHtml(doc.doc_type)}</span>` : ''}
-                          ${ownerLabel ? `<span class="doc-badge doc-badge-type">🏢 ${escHtml(ownerLabel)}</span>` : ''}
-                          ${isNew ? '<span class="doc-badge doc-badge-new">✦ NEW</span>' : '<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}
-                          ${doc.folder_section === 'client_uploaded' ? '<span class="doc-badge doc-badge-client">Uploaded by you</span>' : ''}
-                          ${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}
-                        </div>
-                      </div>
-                      <button class="btn-dl" data-docid="${doc.id}">⬇ Download</button>
-                    </div>`;
-                }).join('')}
-              </div>
-            </div>`;
+          const yrDocs = sectionDocs.filter(d => (d.year || '') === yr);
+          const hasNew = yrDocs.some(d => !d.viewed_at);
+          const open = yrDocs.length > 0;
+          s += `<div class="year-folder${open ? ' open' : ''}" style="margin-bottom:0.4rem;">
+            <div class="year-header" onclick="this.closest('.year-folder').classList.toggle('open')">
+              <span class="yr-label">📅 ${yr} <span class="yr-count">${yrDocs.length}</span>${hasNew ? ' <span style="color:var(--gold);font-size:0.65rem;">NEW</span>' : ''}</span>
+              <span class="yr-chevron">▼</span>
+            </div>
+            <div class="year-body" style="padding-left:1rem;">`;
+
+          DOC_CATEGORIES.forEach(cat => {
+            const catDocs = yrDocs.filter(d => (d.folder_category || 'other') === cat.key);
+            s += `<div style="margin-bottom:0.25rem;">
+              <div style="font-size:0.72rem;font-weight:600;color:var(--muted);padding:0.2rem 0;">${cat.icon} ${cat.label} (${catDocs.length})</div>
+              <div style="padding-left:0.75rem;">`;
+            if (catDocs.length === 0) {
+              s += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`;
+            } else {
+              catDocs.forEach(doc => {
+                const isNew = !doc.viewed_at;
+                s += `<div class="doc-row">
+                  <span class="doc-icon">${docIcon(doc.doc_type)}</span>
+                  <div class="doc-info">
+                    <div class="doc-name">${escHtml(doc.display_name || 'Document')}</div>
+                    <div class="doc-badges">
+                      ${isNew ? '<span class="doc-badge doc-badge-new">✦ NEW</span>' : '<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}
+                      ${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}
+                    </div>
+                  </div>
+                  <button class="btn-dl" data-docid="${doc.id}">⬇ Download</button>
+                </div>`;
+              });
+            }
+            s += `</div></div>`;
+          });
+
+          s += `</div></div>`;
         });
+        s += `</div>`;
         return s;
       }
 
-      html += renderSection(firmDocs, 'Delivered by Your Advisor');
-      if (clientDocs.length > 0) {
-        html += renderSection(clientDocs, 'Uploaded by You');
-      }
+      let html = renderSection('firm_uploaded', 'Delivered by Your Advisor', '📁');
+      html += renderSection('client_uploaded', 'Uploaded by You', '📤');
 
       container.innerHTML = html;
 
@@ -1385,17 +1372,21 @@
       if (!body) return;
       const token = localStorage.getItem('portalToken');
       try {
-        input.value = '';
         input.disabled = true;
-        await fetch('/portal/messages/send', {
+        const res = await fetch('/portal/messages/send', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
           body: JSON.stringify({ body }),
         });
-        _chatLoaded = false; // Reset to reload
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d.error || `Server error ${res.status}`);
+        }
+        input.value = '';
+        _chatLoaded = false;
         await loadAllMessages();
       } catch (e) {
-        alert('Failed to send message. Please try again.');
+        alert('Failed to send message: ' + e.message);
       } finally {
         input.disabled = false;
         input.focus();
