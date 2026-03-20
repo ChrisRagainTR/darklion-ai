@@ -18,9 +18,43 @@
 
 <div class="page-header">
   <h1>People</h1>
-  <div class="search-bar-wrap">
-    <span class="search-icon">🔍</span>
-    <input type="text" class="search-bar" id="search" placeholder="Search people…" oninput="filterList(this.value)">
+  <div style="display:flex;gap:0.75rem;align-items:center;">
+    <div class="search-bar-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-bar" id="search" placeholder="Search people…" oninput="filterList(this.value)">
+    </div>
+    <button class="btn btn-gold btn-sm" onclick="openNewModal()">+ New Person</button>
+  </div>
+</div>
+
+<!-- New Person Modal -->
+<div class="modal-overlay" id="new-modal" style="display:none;" onclick="if(event.target===this)closeModal()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
+    <h2>New Person</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+      <div class="form-group"><label>First Name *</label><input type="text" class="form-control" id="f-fname"></div>
+      <div class="form-group"><label>Last Name *</label><input type="text" class="form-control" id="f-lname"></div>
+    </div>
+    <div class="form-group"><label>Relationship *</label>
+      <select class="form-control" id="f-rel"><option value="">Loading…</option></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+      <div class="form-group"><label>Email</label><input type="email" class="form-control" id="f-email"></div>
+      <div class="form-group"><label>Phone</label><input type="text" class="form-control" id="f-phone"></div>
+    </div>
+    <div class="form-group"><label>Filing Status</label>
+      <select class="form-control" id="f-filing">
+        <option value="">—</option>
+        <option value="single">Single</option>
+        <option value="mfj">Married Filing Jointly</option>
+        <option value="mfs">Married Filing Separately</option>
+        <option value="hoh">Head of Household</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="createPerson()">Create</button>
+    </div>
   </div>
 </div>
 
@@ -70,6 +104,38 @@ function renderList(items) {
 function filterList(q) {
   const f = q.toLowerCase();
   renderList(f ? allItems.filter(p => ((p.first_name||'')+' '+(p.last_name||'')+' '+(p.email||'')).toLowerCase().includes(f)) : allItems);
+}
+
+async function openNewModal() {
+  const sel = document.getElementById('f-rel');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  try {
+    const res = await window.apiFetch('/api/relationships');
+    const rels = await res.json();
+    sel.innerHTML = '<option value="">Select relationship…</option>' + rels.map(r => `<option value="${r.id}">${window.esc(r.name)}</option>`).join('');
+  } catch(e) { sel.innerHTML = '<option value="">Failed to load</option>'; }
+  document.getElementById('new-modal').style.display='flex';
+}
+function closeModal() { document.getElementById('new-modal').style.display='none'; }
+
+async function createPerson() {
+  const fname = document.getElementById('f-fname').value.trim();
+  const lname = document.getElementById('f-lname').value.trim();
+  const rel = document.getElementById('f-rel').value;
+  if (!fname || !lname) { alert('First and last name required'); return; }
+  if (!rel) { alert('Relationship required'); return; }
+  try {
+    const res = await window.apiFetch('/api/people', { method:'POST', body: JSON.stringify({
+      first_name: fname, last_name: lname, relationship_id: parseInt(rel),
+      email: document.getElementById('f-email').value.trim(),
+      phone: document.getElementById('f-phone').value.trim(),
+      filing_status: document.getElementById('f-filing').value
+    })});
+    if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Failed'); }
+    const p = await res.json();
+    closeModal();
+    window.location.href = `/crm/person/${p.id}`;
+  } catch(e) { window.toast(e.message,'error'); }
 }
 
 loadList();

@@ -155,6 +155,27 @@ router.get('/companies', async (req, res) => {
   res.json(enriched);
 });
 
+// POST /api/companies — create a new company (firm-scoped)
+router.post('/companies', async (req, res) => {
+  const firmId = req.firm?.id;
+  const { company_name, relationship_id, entity_type } = req.body;
+  if (!company_name) return res.status(400).json({ error: 'company_name is required' });
+  if (!relationship_id) return res.status(400).json({ error: 'relationship_id is required' });
+  try {
+    const { rows: rel } = await pool.query('SELECT id FROM relationships WHERE id = $1 AND firm_id = $2', [relationship_id, firmId]);
+    if (!rel.length) return res.status(404).json({ error: 'Relationship not found' });
+    const { rows } = await pool.query(
+      `INSERT INTO companies (firm_id, company_name, relationship_id, entity_type, realm_id, access_token, refresh_token, token_expires_at)
+       VALUES ($1, $2, $3, $4, '', '', '', 0) RETURNING id, company_name, entity_type, relationship_id, firm_id`,
+      [firmId, company_name, relationship_id, entity_type || 'other']
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('POST /companies error:', err);
+    res.status(500).json({ error: 'Failed to create company' });
+  }
+});
+
 // GET /api/companies/:id — get single company by integer id (firm-scoped)
 router.get('/companies/:id([0-9]+)', async (req, res) => {
   const firmId = req.firm?.id;

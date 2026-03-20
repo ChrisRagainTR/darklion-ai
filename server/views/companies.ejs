@@ -18,9 +18,38 @@
 
 <div class="page-header">
   <h1>Companies</h1>
-  <div class="search-bar-wrap">
-    <span class="search-icon">🔍</span>
-    <input type="text" class="search-bar" id="search" placeholder="Search companies…" oninput="filterList(this.value)">
+  <div style="display:flex;gap:0.75rem;align-items:center;">
+    <div class="search-bar-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-bar" id="search" placeholder="Search companies…" oninput="filterList(this.value)">
+    </div>
+    <button class="btn btn-gold btn-sm" onclick="openNewModal()">+ New Company</button>
+  </div>
+</div>
+
+<!-- New Company Modal -->
+<div class="modal-overlay" id="new-modal" style="display:none;" onclick="if(event.target===this)closeModal()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">
+    <h2>New Company</h2>
+    <div class="form-group"><label>Company Name *</label><input type="text" class="form-control" id="f-name" placeholder="e.g. Ragain LLC"></div>
+    <div class="form-group"><label>Relationship *</label>
+      <select class="form-control" id="f-rel"><option value="">Loading…</option></select>
+    </div>
+    <div class="form-group"><label>Entity Type</label>
+      <select class="form-control" id="f-type">
+        <option value="other">Other</option>
+        <option value="1040">1040 (Individual)</option>
+        <option value="s_corp">S-Corp</option>
+        <option value="llc">LLC</option>
+        <option value="partnership">Partnership</option>
+        <option value="trust">Trust</option>
+        <option value="sole_prop">Sole Proprietorship</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="createCompany()">Create</button>
+    </div>
   </div>
 </div>
 
@@ -80,6 +109,35 @@ function renderList(items) {
 function filterList(q) {
   const f = q.toLowerCase();
   renderList(f ? allItems.filter(c => (c.company_name||'').toLowerCase().includes(f) || (c.relationship_name||'').toLowerCase().includes(f)) : allItems);
+}
+
+async function openNewModal() {
+  const sel = document.getElementById('f-rel');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  try {
+    const res = await window.apiFetch('/api/relationships');
+    const rels = await res.json();
+    sel.innerHTML = '<option value="">Select relationship…</option>' + rels.map(r => `<option value="${r.id}">${window.esc(r.name)}</option>`).join('');
+  } catch(e) { sel.innerHTML = '<option value="">Failed to load</option>'; }
+  document.getElementById('new-modal').style.display='flex';
+}
+function closeModal() { document.getElementById('new-modal').style.display='none'; }
+
+async function createCompany() {
+  const name = document.getElementById('f-name').value.trim();
+  const rel = document.getElementById('f-rel').value;
+  if (!name) { alert('Company name required'); return; }
+  if (!rel) { alert('Relationship required'); return; }
+  try {
+    const res = await window.apiFetch('/api/companies', { method:'POST', body: JSON.stringify({
+      company_name: name, relationship_id: parseInt(rel),
+      entity_type: document.getElementById('f-type').value
+    })});
+    if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Failed'); }
+    const c = await res.json();
+    closeModal();
+    window.location.href = `/crm/company/${c.id}`;
+  } catch(e) { window.toast(e.message,'error'); }
 }
 
 loadList();
