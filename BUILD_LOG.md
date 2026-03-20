@@ -113,14 +113,14 @@ Relationship  →  the household/group (top-level billing unit)
 
 ---
 
-### ⏳ Phase 4 — Document Management
-**Plan:**
-- `documents` table (in schema, not yet populated)
-- S3 upload endpoint — signed upload URLs, store key in DB
-- Download endpoint — generate signed S3 URL (15-min expiry), never expose key to client
-- Organized by: owner (company or person) → year → doc type
-- Staff UI: upload, categorize, tag for delivery
-- Categories: tax_return, w2, 1099, engagement_letter, organizer, statement, other
+### ✅ Phase 4 — Document Management (COMPLETE — 2026-03-20)
+**What was built:**
+- `server/services/s3.js` — uploadFile, getSignedDownloadUrl (15-min expiry), deleteFile, key builder
+- `server/routes/documents.js` — list, upload (50MB, memory storage), download (signed URL), update metadata, deliver to client, delete from S3+DB. s3_key never returned.
+- `server/db.js` — documents table added (idempotent)
+- `server/routes/portal.js` — `GET /portal/documents/:id/download` — verifies access, generates signed URL, marks viewed_at on first view
+- `public/crm.html` — real documents tab in Person Detail Panel (Personal + By Company sub-tabs), drag-and-drop upload modal, deliver toggle, delete. Also docs tab in Relationship Detail Panel.
+- `public/portal.html` — client document view grouped by year/owner, download button, viewed indicator
 
 ---
 
