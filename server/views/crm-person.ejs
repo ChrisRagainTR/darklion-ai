@@ -152,11 +152,63 @@
 </div>
 
 <div id="tab-communication" class="tab-content">
-  <div class="empty-state">Communication — coming soon</div>
+  <div id="comm-content" style="display:flex;gap:1.5rem;max-width:1100px;">
+    <div id="comm-thread-list" style="width:280px;flex-shrink:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.05em;">Messages</div>
+        <button class="btn btn-gold btn-sm" onclick="openNewThread()">+ New Message</button>
+      </div>
+      <div id="comm-threads"><div class="loading-state"><div class="loading-spinner"></div></div></div>
+    </div>
+    <div id="comm-thread-detail" style="flex:1;display:none;">
+      <div id="comm-thread-header" style="margin-bottom:1rem;"></div>
+      <div id="comm-messages-list" style="display:flex;flex-direction:column;gap:0.75rem;max-height:420px;overflow-y:auto;padding:0.5rem;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;margin-bottom:1rem;"></div>
+      <div class="card" style="padding:1rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+          <label style="font-size:0.8rem;color:var(--muted);display:flex;align-items:center;gap:0.3rem;cursor:pointer;">
+            <input type="checkbox" id="comm-internal-toggle" style="cursor:pointer;"> Internal note
+          </label>
+          <div style="flex:1;"></div>
+          <select id="comm-status-select" onchange="updateThreadStatus()" style="font-size:0.78rem;background:var(--charcoal);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:0.2rem 0.4rem;">
+            <option value="open">Open</option>
+            <option value="waiting">Waiting</option>
+            <option value="resolved">Resolved</option>
+          </select>
+        </div>
+        <textarea id="comm-reply-body" rows="3" class="form-control" placeholder="Reply…" style="margin-bottom:0.5rem;"></textarea>
+        <div id="comm-attach-chips" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.4rem;"></div>
+        <input type="file" id="comm-attach-input" multiple style="display:none;" onchange="handleCommAttach(this.files)">
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <button class="btn btn-gold btn-sm" onclick="sendReply()">Send Reply</button>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('comm-attach-input').click()" title="Attach files">📎 Attach</button>
+        </div>
+      </div>
+    </div>
+    <div id="comm-compose" style="flex:1;display:none;">
+      <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:1rem;">New Message</div>
+      <div class="form-group" style="margin-bottom:0.75rem;">
+        <label>Subject</label>
+        <input type="text" id="comm-new-subject" class="form-control" placeholder="Subject…">
+      </div>
+      <div class="form-group" style="margin-bottom:0.75rem;">
+        <label>Message</label>
+        <textarea id="comm-new-body" rows="5" class="form-control" placeholder="Write your message…"></textarea>
+      </div>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn btn-gold btn-sm" onclick="sendNewThread()">Send</button>
+        <button class="btn btn-outline btn-sm" onclick="closeCompose()">Cancel</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="tab-organizers" class="tab-content">
-  <div class="placeholder-section"><div class="ph-icon">📝</div><div class="ph-title">Organizers</div><div class="ph-desc">Coming soon.</div></div>
+  <div class="placeholder-section">
+    <div class="ph-icon">📝</div>
+    <div class="ph-title">Tax Organizers</div>
+    <div class="ph-desc">Tax organizers coming soon.</div>
+    <div id="org-stanford-link" style="margin-top:1rem;"></div>
+  </div>
 </div>
 
 <div id="tab-workflow" class="tab-content">
@@ -228,6 +280,11 @@
     const tc = document.getElementById('tab-' + name);
     if (tc) tc.classList.add('active');
     if (name === 'docs') loadDocs();
+    if (name === 'communication' && personData) initComm(personData.id || personId);
+    if (name === 'organizers' && personData && personData.stanford_tax_url) {
+      const el = document.getElementById('org-stanford-link');
+      if (el) el.innerHTML = `<a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
+    }
     if (name === 'notes' && personData) document.getElementById('notes-ta-full').value = personData.notes || '';
   }
 
@@ -596,6 +653,161 @@
       await loadPerson();
     } catch(e) { toast(e.message, 'error'); }
   }
+
+  // ── Communication JS ──
+  let commPersonId = null;
+  let commActiveThreadId = null;
+  let commAttachFiles = [];
+
+  function initComm(pid) {
+    commPersonId = pid;
+    loadThreads();
+  }
+
+  async function loadThreads() {
+    const el = document.getElementById('comm-threads');
+    if (!el) return;
+    el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    try {
+      const res = await apiFetch(`/api/messages/person/${commPersonId}`);
+      const threads = await res.json();
+      if (!threads.length) {
+        el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0;">No messages yet.</div>';
+        return;
+      }
+      el.innerHTML = threads.map(t => `
+        <div class="comm-thread-card" onclick="loadThread(${t.id})" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:6px;margin-bottom:0.5rem;cursor:pointer;background:var(--charcoal);transition:background 0.15s;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:0.82rem;font-weight:600;color:var(--text);">${esc(t.subject || '(no subject)')}</div>
+            ${t.unreadCount > 0 ? `<span style="background:var(--gold);color:var(--navy);border-radius:10px;padding:0.1rem 0.4rem;font-size:0.7rem;font-weight:700;">${t.unreadCount}</span>` : ''}
+          </div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem;">${esc(t.lastPreview)}</div>
+          <div style="display:flex;gap:0.5rem;margin-top:0.3rem;">
+            <span style="font-size:0.7rem;padding:0.1rem 0.4rem;border-radius:4px;background:${statusColor(t.status)};color:#fff;">${t.status}</span>
+            <span style="font-size:0.7rem;color:var(--muted);">${relTime(t.lastMessageAt)}</span>
+          </div>
+        </div>
+      `).join('');
+    } catch(e) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">Failed to load messages.</div>';
+    }
+  }
+
+  async function loadThread(threadId) {
+    commActiveThreadId = threadId;
+    document.getElementById('comm-compose').style.display = 'none';
+    document.getElementById('comm-thread-detail').style.display = 'flex';
+    document.getElementById('comm-thread-detail').style.flexDirection = 'column';
+    document.getElementById('comm-messages-list').innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    try {
+      const res = await apiFetch(`/api/messages/${threadId}`);
+      const data = await res.json();
+      document.getElementById('comm-thread-header').innerHTML = `
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <div style="font-size:1rem;font-weight:700;color:var(--text);">${esc(data.subject || '(no subject)')}</div>
+          <span style="font-size:0.75rem;padding:0.15rem 0.5rem;border-radius:4px;background:${statusColor(data.status)};color:#fff;">${data.status}</span>
+        </div>
+      `;
+      document.getElementById('comm-status-select').value = data.status;
+      const msgEl = document.getElementById('comm-messages-list');
+      msgEl.innerHTML = data.messages.map(m => {
+        const isStaff = m.senderType === 'staff';
+        const isInternal = m.isInternal;
+        const attachmentsHtml = (m.attachments || []).length > 0
+          ? `<div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.4rem;">${(m.attachments).map(a => {
+              const size = a.sizeBytes ? ' (' + commFormatBytes(a.sizeBytes) + ')' : '';
+              return `<a href="#" onclick="commDownloadAttachment(${a.documentId});return false;" style="display:inline-flex;align-items:center;gap:0.3rem;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:0.15rem 0.5rem;font-size:0.73rem;color:inherit;text-decoration:none;">📎 ${esc(a.displayName)}${esc(size)}</a>`;
+            }).join('')}</div>`
+          : '';
+        return `<div style="display:flex;flex-direction:column;align-items:${isStaff ? 'flex-end' : 'flex-start'};">
+          <div style="max-width:80%;padding:0.5rem 0.75rem;border-radius:8px;background:${isInternal ? 'rgba(255,200,0,0.1)' : isStaff ? 'var(--gold)' : 'var(--charcoal)'};color:${isStaff && !isInternal ? 'var(--navy)' : 'var(--text)'};border:${isInternal ? '1px dashed var(--gold)' : 'none'};">
+            ${isInternal ? '<div style="font-size:0.65rem;color:var(--gold);margin-bottom:0.2rem;">🔒 Internal note</div>' : ''}
+            <div style="font-size:0.85rem;">${m.body ? esc(m.body) : ''}${attachmentsHtml}</div>
+          </div>
+          <div style="font-size:0.68rem;color:var(--muted);margin-top:0.15rem;">${m.senderName} · ${relTime(m.createdAt)}</div>
+        </div>`;
+      }).join('');
+      msgEl.scrollTop = msgEl.scrollHeight;
+    } catch(e) {
+      document.getElementById('comm-messages-list').innerHTML = '<div style="color:var(--muted);">Failed to load thread.</div>';
+    }
+  }
+
+  function commFormatBytes(b) {
+    if (!b) return '0 B';
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+    return (b/1048576).toFixed(1) + ' MB';
+  }
+
+  function handleCommAttach(fileList) {
+    for (const f of Array.from(fileList)) {
+      if (commAttachFiles.length >= 8) { alert('Maximum 8 files per message'); break; }
+      commAttachFiles.push(f);
+    }
+    document.getElementById('comm-attach-input').value = '';
+    renderCommAttachChips();
+  }
+
+  function removeCommAttachFile(idx) {
+    commAttachFiles.splice(idx, 1);
+    renderCommAttachChips();
+  }
+
+  function renderCommAttachChips() {
+    const el = document.getElementById('comm-attach-chips');
+    if (!el) return;
+    el.innerHTML = commAttachFiles.map((f, i) =>
+      `<span style="display:inline-flex;align-items:center;gap:0.3rem;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:4px;padding:0.15rem 0.5rem;font-size:0.75rem;color:var(--text);">📎 ${esc(f.name)} <button onclick="removeCommAttachFile(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;padding:0;line-height:1;">×</button></span>`
+    ).join('');
+  }
+
+  async function commDownloadAttachment(documentId) {
+    try {
+      const res = await apiFetch(`/api/messages/attachments/${documentId}/download`);
+      const data = await res.json();
+      if (data.url) window.open(data.url, '_blank');
+      else alert('Download failed');
+    } catch(e) { alert('Failed to download attachment'); }
+  }
+
+  async function sendReply() {
+    const body = document.getElementById('comm-reply-body').value.trim();
+    if ((!body && commAttachFiles.length === 0) || !commActiveThreadId) return;
+    const isInternal = document.getElementById('comm-internal-toggle').checked;
+    try {
+      const fd = new FormData();
+      fd.append('body', body);
+      fd.append('is_internal', isInternal ? 'true' : 'false');
+      commAttachFiles.forEach(f => fd.append('files', f));
+      await apiFetch(`/api/messages/${commActiveThreadId}/reply`, { method: 'POST', body: fd });
+      document.getElementById('comm-reply-body').value = '';
+      document.getElementById('comm-internal-toggle').checked = false;
+      commAttachFiles = [];
+      renderCommAttachChips();
+      await loadThread(commActiveThreadId);
+      await loadThreads();
+    } catch(e) { alert('Failed to send reply'); }
+  }
+
+  async function updateThreadStatus() {
+    if (!commActiveThreadId) return;
+    const status = document.getElementById('comm-status-select').value;
+    await apiFetch(`/api/messages/${commActiveThreadId}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
+    await loadThreads();
+  }
+
+  function openNewThread() {
+    document.getElementById('comm-thread-detail').style.display = 'none';
+    document.getElementById('comm-compose').style.display = 'block';
+    document.getElementById('comm-new-subject').value = '';
+    document.getElementById('comm-new-body').value = '';
+  }
+
+  function closeCompose() {
+    document.getElementById('comm-compose').style.display = 'none';
+  }
+
 
   loadPerson();
 </script>
