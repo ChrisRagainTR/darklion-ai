@@ -98,15 +98,18 @@ Relationship  →  the household/group (top-level billing unit)
 
 ---
 
-### 🔄 Phase 3 — Internal CRM UI (IN PROGRESS — 2026-03-20)
-**Building now:**
-- `public/crm.html` — staff CRM page at `/crm`
-- Three tabs: Relationships, People, Companies
-- Relationship detail panel (slide-in): people list, companies list, notes
-- Person detail panel — the **360° view**: contact info, StanfordTax link, company access, spouse link, portal status, send invite button
-- Unified search in header (all three entity types)
-- New/edit forms for relationships and people
-- CRM link added to main dashboard sidebar
+### ✅ Phase 3 — Internal CRM UI (COMPLETE — 2026-03-20)
+**What was built:**
+- `public/crm.html` — staff CRM page at `/crm` (1,500+ lines, fully self-contained)
+- Three-tab layout: Relationships, People, Companies
+- Relationship detail panel (slide-in right): people list, companies list, notes with auto-save
+- Person detail panel — the **360° view**: contact info, DOB masked, SSN indicator, spouse link, StanfordTax URL button, inline notes, portal invite button, company access with grant/revoke
+- Modal forms: New/Edit Relationship, New/Edit Person (all fields, searchable dropdowns)
+- Unified header search across all three entity types (grouped results, click to open detail)
+- Toast notifications, loading states, empty states, error messages
+- Mobile-responsive sidebar
+- CRM link (🗂️) added to main dashboard sidebar
+- `/crm` route added to `server/index.js`
 
 ---
 
