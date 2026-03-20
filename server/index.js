@@ -203,12 +203,12 @@ const { requirePortal } = require('./middleware/requirePortal');
 // Public portal auth (no middleware)
 app.use('/portal-auth', portalAuthRouter);
 
-// Protected portal API routes
-app.use('/portal', requirePortal, apiLimiter, portalRouter);
-
-// Portal HTML pages (public)
-app.get('/portal-login', (req, res) => res.sendFile(path.join(publicDir, 'portal-login.html')));
+// Portal HTML pages (public — must come BEFORE the requirePortal middleware)
 app.get('/portal', (req, res) => res.sendFile(path.join(publicDir, 'portal.html')));
+app.get('/portal-login', (req, res) => res.sendFile(path.join(publicDir, 'portal-login.html')));
+
+// Protected portal API routes (sub-paths like /portal/me, /portal/documents, etc.)
+app.use('/portal', requirePortal, apiLimiter, portalRouter);
 
 // --- Global error handler ---
 app.use((err, req, res, next) => {
