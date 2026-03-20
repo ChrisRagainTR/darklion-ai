@@ -303,11 +303,11 @@
 
 <!-- ── Sidebar ── -->
 <aside class="sidebar" id="sidebar-mount" data-active=""></aside>
-<script src="/partials/sidebar.js"></script>
+<script src="/partials/sidebar.js?v=2"></script>
 
 <!-- ── Header ── -->
 <div id="header-mount"></div>
-<script src="/partials/header.js"></script>
+<script src="/partials/header.js?v=2"></script>
 
 <div class="main">
 
@@ -708,7 +708,6 @@ let currentPersonId = null;
 let editingRelId = null;   // null = creating new
 let editingPersonId = null;
 let relSearchTimer = null;
-let searchTimer = null;
 
 // Searchable select state
 const ssData = { rel: [], spouse: [] };
@@ -729,7 +728,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCompanies();
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllPanels(); });
   document.addEventListener('click', e => {
-    if (hcdOpen && !e.target.closest('.header-search-wrap')) { closeHeaderSearch(); }
     // Close searchable selects
     if (!e.target.closest('.searchable-select-wrap')) {
       document.querySelectorAll('.searchable-select-options.open').forEach(el => el.classList.remove('open'));
@@ -1447,88 +1445,6 @@ function selectSearchableOption(key, id, label) {
   document.getElementById(`ss-${key}-options`).classList.remove('open');
 }
 
-// =====================================================================
-//  HEADER SEARCH (unified dashboard-style)
-// =====================================================================
-let hcdOpen = false;
-let hcdFocusIdx = -1;
-let searchResults = [];
-
-function openHeaderSearch() {
-  const bar = document.getElementById('header-search-bar');
-  bar.removeAttribute('readonly');
-  bar.placeholder = 'Search relationships, companies, people…';
-  bar.value = '';
-  hcdOpen = true;
-  searchResults = [];
-  renderHcd();
-  document.getElementById('header-client-dropdown').classList.add('open');
-}
-
-function closeHeaderSearch() {
-  hcdOpen = false;
-  document.getElementById('header-client-dropdown').classList.remove('open');
-  document.getElementById('header-search-bar').setAttribute('readonly', '');
-  document.getElementById('header-search-bar').placeholder = 'Search…';
-  document.getElementById('header-search-bar').value = '';
-}
-
-function headerSearchInput(query) {
-  clearTimeout(searchTimer);
-  if (!query || query.length < 2) { searchResults = []; renderHcd(); return; }
-  searchTimer = setTimeout(async () => {
-    try {
-      const res = await apiFetch(`/api/search?q=${encodeURIComponent(query)}`);
-      const data = await res.json();
-      searchResults = [
-        ...(data.relationships||[]).map(r => ({ ...r, _type: 'relationship', _label: r.name, _sub: 'Relationship' })),
-        ...(data.companies||[]).map(c => ({ ...c, _type: 'company', _label: c.name||c.company_name, _sub: c.entity_type || 'Company' })),
-        ...(data.people||[]).map(p => ({ ...p, _type: 'person', _label: (p.first_name||'') + ' ' + (p.last_name||''), _sub: p.relationship_name || 'Person' })),
-      ];
-      renderHcd();
-    } catch(e) { /* silent */ }
-  }, 200);
-}
-
-function searchNavigate(type, id) {
-  closeHeaderSearch();
-  if (type === 'relationship') window.location.href = `/crm/relationship/${id}`;
-  else if (type === 'company') window.location.href = `/crm/company/${id}`;
-  else if (type === 'person') window.location.href = `/crm/person/${id}`;
-}
-
-function renderHcd() {
-  const list = document.getElementById('hcd-list');
-  if (!searchResults.length) {
-    list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Type to search relationships, companies, and people…</div>';
-  } else {
-    list.innerHTML = searchResults.map((r, i) => {
-      const typeIcon = r._type === 'relationship' ? '👥' : r._type === 'company' ? '🏢' : '👤';
-      return `<div class="hcd-option" data-idx="${i}" onclick="searchNavigate('${r._type}', ${r.id})" onmouseenter="setHcdFocus(${i})">
-        <span style="font-size:1rem;">${typeIcon}</span>
-        <span class="hcd-info">
-          <span class="hcd-name">${esc(r._label||'')}</span>
-          <span class="hcd-meta">${esc(r._sub||'')}</span>
-        </span>
-      </div>`;
-    }).join('');
-  }
-  document.getElementById('hcd-footer').textContent = searchResults.length ? `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''}` : '';
-}
-
-function setHcdFocus(idx) {
-  hcdFocusIdx = idx;
-  document.querySelectorAll('.hcd-option').forEach((el, i) => el.classList.toggle('focused', i === idx));
-}
-
-function handleHeaderSearchKey(e) {
-  if (!hcdOpen) return;
-  if (e.key === 'ArrowDown') { e.preventDefault(); hcdFocusIdx = Math.min(hcdFocusIdx+1, searchResults.length-1); setHcdFocus(hcdFocusIdx); document.querySelector(`.hcd-option[data-idx="${hcdFocusIdx}"]`)?.scrollIntoView({block:'nearest'}); }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); hcdFocusIdx = Math.max(hcdFocusIdx-1, 0); setHcdFocus(hcdFocusIdx); document.querySelector(`.hcd-option[data-idx="${hcdFocusIdx}"]`)?.scrollIntoView({block:'nearest'}); }
-  else if (e.key === 'Enter' && hcdFocusIdx >= 0 && searchResults[hcdFocusIdx]) { searchNavigate(searchResults[hcdFocusIdx]._type, searchResults[hcdFocusIdx].id); }
-  else if (e.key === 'Escape') { closeHeaderSearch(); }
-}
-
 function openRelByName(name) {
   const rel = allRelationships.find(r => r.name === name);
   if (rel) { switchTab('relationships', null); openRelationship(rel.id); }
@@ -1584,10 +1500,7 @@ function showFormError(elId, msg) {
   el.style.display = '';
 }
 
-function logout() {
-  localStorage.removeItem('dl_token');
-  window.location.href = '/login';
-}
+
 
 // =====================================================================
 //  DOCUMENTS

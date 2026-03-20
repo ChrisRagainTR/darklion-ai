@@ -659,11 +659,11 @@
 
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar-mount" data-active=""></aside>
-  <script src="/partials/sidebar.js"></script>
+  <script src="/partials/sidebar.js?v=2"></script>
 
   <!-- Top Header Bar -->
   <div id="header-mount"></div>
-  <script src="/partials/header.js"></script>
+  <script src="/partials/header.js?v=2"></script>
 
   <!-- Main content -->
   <div class="main">
@@ -1131,163 +1131,23 @@
 
     function qs(sel) { return document.querySelector(sel); }
 
-    // ===== HEADER INIT (firm/user display) =====
-    try {
-      const firm = JSON.parse(localStorage.getItem('dl_firm') || '{}');
-      if (firm.name) qs('#user-menu-firm').textContent = firm.name;
-    } catch(e) {}
-
-    // Parse JWT for user name/initials
-    try {
-      const token = localStorage.getItem('dl_token');
-      if (token) {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const name = payload.name || payload.email || '?';
-        qs('#user-menu-name').textContent = name;
-        const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-        qs('#user-avatar').textContent = initials || '?';
-        // Firm name: prefer firmName from JWT, fallback to stored firm
-        const firmName = payload.firmName || '';
-        if (firmName) {
-          qs('#user-menu-firm').textContent = firmName;
-        } else if (!qs('#user-menu-firm').textContent) {
-          const firm = JSON.parse(localStorage.getItem('dl_firm') || '{}');
-          qs('#user-menu-firm').textContent = firm.name || '';
-        }
-        // Load user's own avatar
-        if (payload.userId) {
-          apiFetch(`/firms/team/${payload.userId}/avatar`).then(r => r.json()).then(d => {
-            if (d.url) {
-              const av = qs('#user-avatar');
-              const img = document.createElement('img');
-              img.src = d.url;
-              img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
-              img.onerror = () => img.remove();
-              av.textContent = '';
-              av.appendChild(img);
-            }
-          }).catch(() => {});
-        }
-      }
-    } catch(e) {}
-
-    // ===== HEADER CLIENT SEARCH =====
-    let hcdOpen = false;
-    let hcdFiltered = [];
-    let hcdFocusIdx = -1;
-
+    // ===== HEADER CLIENT SEARCH (dashboard-specific: update bar placeholder on client select) =====
     function updateHeaderClient(c) {
       const bar = qs('#header-search-bar');
+      if (!bar) return;
       if (c) {
         bar.value = '';
         bar.placeholder = c.company_name || c.realm_id;
         bar.setAttribute('data-realm', c.realm_id);
       } else {
         bar.value = '';
-        bar.placeholder = 'Search clients…';
+        bar.placeholder = 'Search relationships, companies, people…';
         bar.removeAttribute('data-realm');
       }
     }
 
-    let searchTimer = null;
-    let searchResults = [];
-
-    function openHeaderSearch() {
-      const bar = qs('#header-search-bar');
-      bar.removeAttribute('readonly');
-      bar.placeholder = 'Search relationships, companies, people…';
-      bar.value = '';
-      hcdOpen = true;
-      searchResults = [];
-      renderHcd();
-      qs('#header-client-dropdown').classList.add('open');
-    }
-
-    function closeHeaderSearch() {
-      hcdOpen = false;
-      qs('#header-client-dropdown').classList.remove('open');
-      qs('#header-search-bar').setAttribute('readonly', '');
-      qs('#header-search-bar').placeholder = 'Search…';
-      qs('#header-search-bar').value = '';
-    }
-
-    function headerSearchInput(query) {
-      clearTimeout(searchTimer);
-      if (!query || query.length < 2) { searchResults = []; renderHcd(); return; }
-      searchTimer = setTimeout(async () => {
-        try {
-          const res = await apiFetch(`/api/search?q=${encodeURIComponent(query)}`);
-          const data = await res.json();
-          searchResults = [
-            ...(data.relationships||[]).map(r => ({ ...r, _type: 'relationship', _label: r.name, _sub: 'Relationship' })),
-            ...(data.companies||[]).map(c => ({ ...c, _type: 'company', _label: c.name||c.company_name, _sub: c.entity_type || 'Company' })),
-            ...(data.people||[]).map(p => ({ ...p, _type: 'person', _label: (p.first_name||'') + ' ' + (p.last_name||''), _sub: p.relationship_name || 'Person' })),
-          ];
-          renderHcd();
-        } catch(e) { /* silent */ }
-      }, 200);
-    }
-
-    function searchNavigate(type, id) {
-      closeHeaderSearch();
-      if (type === 'relationship') window.location.href = `/crm/relationship/${id}`;
-      else if (type === 'company') window.location.href = `/crm/company/${id}`;
-      else if (type === 'person') window.location.href = `/crm/person/${id}`;
-    }
-
-    function renderHcd() {
-      const list = qs('#hcd-list');
-      if (!searchResults.length) {
-        list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Type to search relationships, companies, and people…</div>';
-      } else {
-        list.innerHTML = searchResults.map((r, i) => {
-          const typeIcon = r._type === 'relationship' ? '👥' : r._type === 'company' ? '🏢' : '👤';
-          return `<div class="hcd-option" data-idx="${i}" onclick="searchNavigate('${r._type}', ${r.id})" onmouseenter="setHcdFocus(${i})">
-            <span style="font-size:1rem;">${typeIcon}</span>
-            <span class="hcd-info">
-              <span class="hcd-name">${esc(r._label||'')}</span>
-              <span class="hcd-meta">${esc(r._sub||'')}</span>
-            </span>
-          </div>`;
-        }).join('');
-      }
-      qs('#hcd-footer').textContent = searchResults.length ? `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''}` : '';
-    }
-
-    function setHcdFocus(idx) {
-      hcdFocusIdx = idx;
-      document.querySelectorAll('.hcd-option').forEach((el, i) => el.classList.toggle('focused', i === idx));
-    }
-
-    function handleHeaderSearchKey(e) {
-      if (!hcdOpen) return;
-      if (e.key === 'ArrowDown') { e.preventDefault(); hcdFocusIdx = Math.min(hcdFocusIdx+1, hcdFiltered.length-1); setHcdFocus(hcdFocusIdx); qs(`.hcd-option[data-idx="${hcdFocusIdx}"]`)?.scrollIntoView({block:'nearest'}); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); hcdFocusIdx = Math.max(hcdFocusIdx-1, 0); setHcdFocus(hcdFocusIdx); qs(`.hcd-option[data-idx="${hcdFocusIdx}"]`)?.scrollIntoView({block:'nearest'}); }
-      else if (e.key === 'Enter' && hcdFocusIdx >= 0 && hcdFiltered[hcdFocusIdx]) { selectClientFromHeader(hcdFiltered[hcdFocusIdx].realm_id); }
-      else if (e.key === 'Escape') { closeHeaderSearch(); }
-    }
-
     function selectClientFromHeader(realmId) {
-      closeHeaderSearch();
       selectCompany(realmId);
-    }
-
-    document.addEventListener('click', (e) => {
-      if (hcdOpen && !qs('.header-search-wrap').contains(e.target)) closeHeaderSearch();
-      if (qs('#user-menu-dropdown')?.classList.contains('open') && !qs('.user-menu-wrap').contains(e.target)) closeUserMenu();
-    });
-
-    // ===== USER MENU =====
-    function toggleUserMenu() {
-      const dd = qs('#user-menu-dropdown');
-      const trigger = qs('#user-menu-trigger');
-      const isOpen = dd.classList.contains('open');
-      dd.classList.toggle('open', !isOpen);
-      trigger.classList.toggle('open', !isOpen);
-    }
-    function closeUserMenu() {
-      qs('#user-menu-dropdown').classList.remove('open');
-      qs('#user-menu-trigger').classList.remove('open');
     }
 
     function updateClientTrigger() {
