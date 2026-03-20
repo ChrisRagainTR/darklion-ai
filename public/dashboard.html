@@ -403,9 +403,10 @@
     .user-menu-trigger:hover { background: rgba(201,168,76,0.08); }
     .user-avatar {
       width: 36px; height: 36px; border-radius: 50%;
-      background: var(--gold); color: var(--navy);
+      background: #ffffff; color: #1a1a2e;
       display: flex; align-items: center; justify-content: center;
       font-size: 0.82rem; font-weight: 800; flex-shrink: 0;
+      overflow: hidden;
     }
     .user-menu-info { text-align: left; }
     .user-menu-name { font-size: 0.8rem; font-weight: 700; line-height: 1.2; }
@@ -2549,8 +2550,8 @@
         const initials = (u.name || u.email || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
         const avatarHtml = u.avatar_url
           ? `<img id="avatar-img-${u.id}" data-user-id="${u.id}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;vertical-align:middle;display:none;" alt="${esc(initials)}">`
-            + `<div id="avatar-init-${u.id}" style="width:36px;height:36px;border-radius:50%;background:var(--gold);color:#0f1117;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;flex-shrink:0;">${initials}</div>`
-          : `<div style="width:36px;height:36px;border-radius:50%;background:var(--gold);color:#0f1117;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;flex-shrink:0;">${initials}</div>`;
+            + `<div id="avatar-init-${u.id}" style="width:36px;height:36px;border-radius:50%;background:#ffffff;color:#1a1a2e;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;flex-shrink:0;">${initials}</div>`
+          : `<div style="width:36px;height:36px;border-radius:50%;background:#ffffff;color:#1a1a2e;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;flex-shrink:0;">${initials}</div>`;
         const uploadBtn = `<label style="cursor:pointer;font-size:0.72rem;color:var(--gold);white-space:nowrap;"><input type="file" accept="image/*" style="display:none;" onchange="uploadAvatar(${u.id}, this)"> 📷 Photo</label>`;
 
         const credInput = `<input type="text" value="${esc(u.credentials||'')}" placeholder="e.g. CPA/PFS" 

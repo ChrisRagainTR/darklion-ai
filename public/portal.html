@@ -653,16 +653,16 @@
     .chat-contacts { width: 280px; flex-shrink: 0; border-right: 1px solid var(--border); overflow-y: auto; background: var(--card); border: 1px solid var(--border); border-radius: 12px 0 0 12px; }
     .chat-contact-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; cursor: pointer; transition: background 0.12s; border-bottom: 1px solid rgba(255,255,255,0.04); }
     .chat-contact-row:hover, .chat-contact-row.active { background: rgba(201,168,76,0.08); }
-    .chat-contact-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--gold); color: #0f1117; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; }
+    .chat-contact-avatar { width: 40px; height: 40px; border-radius: 50%; background: #ffffff; color: #1a1a2e; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; }
     .chat-contact-info { flex: 1; min-width: 0; }
     .chat-contact-name { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .chat-contact-preview { font-size: 0.75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.1rem; }
     .chat-contact-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem; flex-shrink: 0; }
     .chat-contact-time { font-size: 0.7rem; color: var(--muted); }
-    .chat-unread-badge { background: var(--gold); color: #0f1117; border-radius: 10px; padding: 0.1rem 0.4rem; font-size: 0.68rem; font-weight: 700; }
+    .chat-unread-badge { background: #ffffff; color: #1a1a2e; border-radius: 10px; padding: 0.1rem 0.4rem; font-size: 0.68rem; font-weight: 700; }
     .chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--card); border: 1px solid var(--border); border-left: none; border-radius: 0 12px 12px 0; overflow: hidden; }
     .chat-main-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; }
-    .chat-main-header .hdr-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--gold); color: #0f1117; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+    .chat-main-header .hdr-avatar { width: 36px; height: 36px; border-radius: 50%; background: #ffffff; color: #1a1a2e; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
     .chat-main-header .hdr-name { font-weight: 700; font-size: 0.95rem; }
     .chat-empty-contacts { padding: 2rem 1rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
     .chat-wrap {
@@ -754,7 +754,7 @@
     .attachment-chip { display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.75rem; color: var(--text); text-decoration: none; }
     .attachment-chip:hover { border-color: var(--gold); color: var(--gold); }
     .att-size { color: var(--muted); font-size: 0.7rem; }
-    .unread-badge-tab { display: inline-flex; align-items: center; justify-content: center; background: var(--gold); color: #0f1117; border-radius: 10px; padding: 0.1rem 0.45rem; font-size: 0.68rem; font-weight: 700; margin-left: 0.4rem; }
+    .unread-badge-tab { display: inline-flex; align-items: center; justify-content: center; background: #ffffff; color: #1a1a2e; border-radius: 10px; padding: 0.1rem 0.45rem; font-size: 0.68rem; font-weight: 700; margin-left: 0.4rem; }
   </style>
 </head>
 <body>
@@ -1174,8 +1174,8 @@
           const initials = fullName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
           const avatarHtml = m.avatar_url
             ? `<img src="${escHtml(m.avatar_url)}" alt="${escHtml(initials)}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-               <div style="display:none;width:52px;height:52px;border-radius:50%;background:var(--gold);color:#0f1117;align-items:center;justify-content:center;font-weight:700;font-size:1rem;">${escHtml(initials)}</div>`
-            : `<div style="display:flex;width:52px;height:52px;border-radius:50%;background:var(--gold);color:#0f1117;align-items:center;justify-content:center;font-weight:700;font-size:1rem;">${escHtml(initials)}</div>`;
+               <div style="display:none;width:52px;height:52px;border-radius:50%;background:#ffffff;color:#1a1a2e;align-items:center;justify-content:center;font-weight:700;font-size:1rem;">${escHtml(initials)}</div>`
+            : `<div style="display:flex;width:52px;height:52px;border-radius:50%;background:#ffffff;color:#1a1a2e;align-items:center;justify-content:center;font-weight:700;font-size:1rem;">${escHtml(initials)}</div>`;
           const credLine = m.credentials ? `<div style="font-size:0.6rem;color:var(--gold);font-weight:600;">${escHtml(m.credentials)}</div>` : '';
           return `<div style="display:flex;flex-direction:column;align-items:center;gap:0.2rem;text-align:center;min-width:64px;max-width:80px;">
             ${avatarHtml}
