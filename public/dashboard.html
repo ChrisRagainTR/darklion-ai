@@ -3330,7 +3330,14 @@
       }
     }
 
-    init();
+    init().then(() => {
+      // Handle ?section= query param for deep linking from other pages
+      const section = new URLSearchParams(window.location.search).get('section');
+      if (section) {
+        const link = document.querySelector(`[data-section="${section}"]`);
+        if (link) showSection(section, link);
+      }
+    });
   </script>
 </body>
 </html>
