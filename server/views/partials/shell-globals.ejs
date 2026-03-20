@@ -153,16 +153,29 @@
     // ── Dynamic tab-bar sticky offset (adjusts to entity-header height) ──
     function updateTabBarTop() {
       var eh = document.querySelector('.entity-header');
-      if (eh) {
-        var top = eh.offsetHeight + parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 116;
-        document.documentElement.style.setProperty('--tab-bar-top', top + 'px');
-      }
+      if (!eh) return;
+      var headerH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 58;
+      document.documentElement.style.setProperty('--tab-bar-top', (headerH + eh.offsetHeight) + 'px');
     }
+    // Run on load
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', updateTabBarTop);
     } else {
       updateTabBarTop();
     }
     window.addEventListener('resize', updateTabBarTop);
+    // Re-run whenever entity-header resizes (e.g. after data loads in)
+    if (window.ResizeObserver) {
+      var _ehObserver = new ResizeObserver(updateTabBarTop);
+      function _observeEntityHeader() {
+        var eh = document.querySelector('.entity-header');
+        if (eh) _ehObserver.observe(eh);
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _observeEntityHeader);
+      } else {
+        _observeEntityHeader();
+      }
+    }
   })();
   </script>
