@@ -377,14 +377,20 @@
     left.innerHTML = html;
   }
 
-  function docTypeBadge(mime) {
-    if (!mime) return '<span class="doc-type-badge other">FILE</span>';
-    if (mime.includes('pdf')) return '<span class="doc-type-badge pdf">PDF</span>';
-    if (mime.includes('excel') || mime.includes('spreadsheet') || mime.includes('xls')) return '<span class="doc-type-badge xls">XLS</span>';
-    if (mime.includes('word') || mime.includes('doc')) return '<span class="doc-type-badge doc">DOC</span>';
-    if (mime.includes('image')) return '<span class="doc-type-badge img">IMG</span>';
-    const ext = mime.split('/').pop().toUpperCase().slice(0,4);
-    return `<span class="doc-type-badge other">${ext}</span>`;
+  function docTypeBadge(mimeType, displayName) {
+    const mime = (mimeType || '').toLowerCase();
+    const name = (displayName || '').toLowerCase();
+    const ext = name.includes('.') ? name.split('.').pop() : '';
+    let label, color;
+    if (mime === 'application/pdf' || ext === 'pdf') { label = 'PDF'; color = '#e53e3e'; }
+    else if (mime.includes('spreadsheet') || mime.includes('excel') || ext === 'xlsx' || ext === 'xls' || ext === 'csv') { label = ext === 'csv' ? 'CSV' : 'Excel'; color = '#38a169'; }
+    else if (mime.includes('word') || ext === 'docx' || ext === 'doc') { label = 'Word'; color = '#3182ce'; }
+    else if (mime.includes('presentation') || mime.includes('powerpoint') || ext === 'pptx' || ext === 'ppt') { label = 'PPT'; color = '#dd6b20'; }
+    else if (mime.startsWith('image/') || ['jpg','jpeg','png','gif','webp','heic'].includes(ext)) { label = 'Image'; color = '#805ad5'; }
+    else if (mime.includes('zip') || ext === 'zip') { label = 'ZIP'; color = '#718096'; }
+    else if (mime.startsWith('text/') || ext === 'txt') { label = 'TXT'; color = '#718096'; }
+    else { label = ext ? ext.toUpperCase().slice(0,4) : 'FILE'; color = '#718096'; }
+    return `<span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${color};letter-spacing:0.03em;">${label}</span>`;
   }
 
   function formatBytes(b) {
@@ -442,7 +448,7 @@
             ${files.length === 0
               ? `<div class="cat-empty-msg">No ${cat.label.toLowerCase()} documents for ${yr}</div>`
               : files.map(f => `<div class="doc-row">
-                  ${docTypeBadge(f.mime_type)}
+                  ${docTypeBadge(f.mime_type, f.display_name)}
                   <div class="doc-info">
                     <div class="doc-name" onclick="downloadDoc(${f.id})">${esc(f.display_name||'Untitled')}</div>
                     <div class="doc-badges">
@@ -832,7 +838,7 @@
       dragOverlay.style.display = 'none';
       const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
       if (!file) return;
-      openUploadModal(file);
+      window.openUploadModal(file);
     });
   })();
 
