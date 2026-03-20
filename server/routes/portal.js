@@ -86,10 +86,9 @@ router.get('/documents', async (req, res) => {
 
       if (companyIds.length > 0) {
         query = `
-          SELECT id, firm_id, owner_type, owner_id, company_id, doc_type,
-                 display_name, file_name, mime_type, size_bytes, is_delivered,
-                 delivered_at, viewed_at, tax_year AS year, notes,
-                 folder_section, created_at, updated_at
+          SELECT id, firm_id, owner_type, owner_id, doc_type,
+                 display_name, mime_type, size_bytes, is_delivered,
+                 delivered_at, viewed_at, year, folder_section, folder_category, created_at
           FROM documents
           WHERE is_delivered = true
             AND (
@@ -101,10 +100,9 @@ router.get('/documents', async (req, res) => {
         params = [personId, companyIds];
       } else {
         query = `
-          SELECT id, firm_id, owner_type, owner_id, company_id, doc_type,
-                 display_name, file_name, mime_type, size_bytes, is_delivered,
-                 delivered_at, viewed_at, tax_year AS year, notes,
-                 folder_section, created_at, updated_at
+          SELECT id, firm_id, owner_type, owner_id, doc_type,
+                 display_name, mime_type, size_bytes, is_delivered,
+                 delivered_at, viewed_at, year, folder_section, folder_category, created_at
           FROM documents
           WHERE is_delivered = true
             AND owner_type = 'person'
@@ -403,14 +401,14 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
     const { rows } = await pool.query(
       `INSERT INTO documents
-         (firm_id, owner_type, owner_id, doc_type, display_name, file_name,
+         (firm_id, owner_type, owner_id, doc_type, display_name,
           mime_type, size_bytes, s3_key, s3_bucket,
-          folder_section, uploaded_by_type, uploaded_by_id,
-          is_delivered, created_at, updated_at)
-       VALUES ($1, 'person', $2, $3, $4, $5, $6, $7, $8, $9, 'client_uploaded', 'client', $2, true, NOW(), NOW())
-       RETURNING id, firm_id, owner_type, owner_id, doc_type, display_name, file_name,
+          folder_section, folder_category, uploaded_by_type, uploaded_by_id,
+          is_delivered, created_at)
+       VALUES ($1, 'person', $2, $3, $4, $5, $6, $7, $8, 'client_uploaded', 'other', 'client', $2, false, NOW())
+       RETURNING id, firm_id, owner_type, owner_id, doc_type, display_name,
                  mime_type, size_bytes, folder_section, is_delivered, created_at`,
-      [firmId, personId, docType, displayName, filename,
+      [firmId, personId, docType, displayName,
        req.file.mimetype, req.file.size, key, bucket]
     );
 
