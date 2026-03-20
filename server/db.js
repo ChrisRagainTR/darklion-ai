@@ -231,6 +231,117 @@ async function initDB() {
     SELECT id, name, email, password_hash, 'owner', NOW()
     FROM firms
     ON CONFLICT (firm_id, email) DO NOTHING;
+
+    -- ===================== FIRM USERS: display_name + expanded roles =====================
+    ALTER TABLE firm_users ADD COLUMN IF NOT EXISTS display_name TEXT DEFAULT '';
+
+    DO $$ BEGIN
+      ALTER TABLE firm_users DROP CONSTRAINT IF EXISTS firm_users_role_check;
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END $$;
+
+    DO $$ BEGIN
+      ALTER TABLE firm_users ADD CONSTRAINT firm_users_role_check CHECK (role IN ('owner','admin','staff','agent'));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+
+    -- ===================== RELATIONSHIPS =====================
+    CREATE TABLE IF NOT EXISTS relationships (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER REFERENCES firms(id),
+      name TEXT NOT NULL DEFAULT '',
+      service_tier TEXT DEFAULT 'standard',
+      stripe_customer_id TEXT DEFAULT '',
+      stripe_subscription_id TEXT DEFAULT '',
+      billing_status TEXT DEFAULT 'active',
+      notes TEXT DEFAULT '',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    -- ===================== COMPANIES: new columns =====================
+    DO $$ BEGIN
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS relationship_id INTEGER REFERENCES relationships(id);
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    DO $$ BEGIN
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS entity_type TEXT DEFAULT 'other';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    DO $$ BEGIN
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS ein_encrypted TEXT DEFAULT '';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    DO $$ BEGIN
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS tax_year_end TEXT DEFAULT '12/31';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    DO $$ BEGIN
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS stanford_tax_url TEXT DEFAULT '';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    DO $$ BEGIN
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    -- ===================== PEOPLE =====================
+    CREATE TABLE IF NOT EXISTS people (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER REFERENCES firms(id),
+      relationship_id INTEGER REFERENCES relationships(id),
+      first_name TEXT NOT NULL DEFAULT '',
+      last_name TEXT NOT NULL DEFAULT '',
+      email TEXT DEFAULT '',
+      phone TEXT DEFAULT '',
+      date_of_birth_encrypted TEXT DEFAULT '',
+      ssn_last4 TEXT DEFAULT '',
+      ssn_encrypted TEXT DEFAULT '',
+      filing_status TEXT DEFAULT '',
+      spouse_id INTEGER REFERENCES people(id),
+      portal_enabled BOOLEAN DEFAULT FALSE,
+      portal_password_hash TEXT,
+      portal_invite_token TEXT UNIQUE,
+      portal_invite_expires_at TIMESTAMPTZ,
+      portal_last_login_at TIMESTAMPTZ,
+      stanford_tax_url TEXT DEFAULT '',
+      notes TEXT DEFAULT '',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    -- ===================== PERSON_COMPANY_ACCESS =====================
+    CREATE TABLE IF NOT EXISTS person_company_access (
+      id SERIAL PRIMARY KEY,
+      person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+      company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+      access_level TEXT NOT NULL DEFAULT 'full',
+      ownership_pct NUMERIC(5,2),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(person_id, company_id)
+    );
+
+    -- ===================== BACKFILL: create relationships for existing companies =====================
+    DO $$ BEGIN
+      INSERT INTO relationships (firm_id, name, created_at, updated_at)
+      SELECT DISTINCT c.firm_id, c.company_name, NOW(), NOW()
+      FROM companies c
+      WHERE c.relationship_id IS NULL AND c.company_name IS NOT NULL AND c.company_name != ''
+      ON CONFLICT DO NOTHING;
+
+      UPDATE companies c
+      SET relationship_id = r.id
+      FROM relationships r
+      WHERE c.relationship_id IS NULL
+        AND r.firm_id = c.firm_id
+        AND r.name = c.company_name;
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END $$;
   `);
 }
 

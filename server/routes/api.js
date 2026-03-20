@@ -57,6 +57,50 @@ async function getUserAllowedRealms(userId) {
 
 // --- Dashboard data ---
 
+// --- Unified search ---
+router.get('/search', async (req, res) => {
+  const firmId = req.firm.id;
+  const q = (req.query.q || '').trim();
+  if (!q) return res.json({ relationships: [], companies: [], people: [] });
+
+  const like = `%${q}%`;
+  try {
+    const [relRes, compRes, peopleRes] = await Promise.all([
+      pool.query(`
+        SELECT id, name, service_tier, billing_status, 'relationship' AS type
+        FROM relationships
+        WHERE firm_id = $1 AND name ILIKE $2
+        LIMIT 5
+      `, [firmId, like]),
+
+      pool.query(`
+        SELECT id, company_name AS name, entity_type, realm_id, relationship_id, status, 'company' AS type
+        FROM companies
+        WHERE firm_id = $1 AND company_name ILIKE $2
+        LIMIT 5
+      `, [firmId, like]),
+
+      pool.query(`
+        SELECT id, first_name, last_name,
+               (first_name || ' ' || last_name) AS name,
+               email, relationship_id, filing_status, 'person' AS type
+        FROM people
+        WHERE firm_id = $1 AND (first_name ILIKE $2 OR last_name ILIKE $2 OR (first_name || ' ' || last_name) ILIKE $2 OR email ILIKE $2)
+        LIMIT 5
+      `, [firmId, like]),
+    ]);
+
+    res.json({
+      relationships: relRes.rows,
+      companies: compRes.rows,
+      people: peopleRes.rows,
+    });
+  } catch (err) {
+    console.error('GET /api/search error:', err);
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
 // List connected companies scoped to this firm (filtered by user access)
 router.get('/companies', async (req, res) => {
   const firmId = req.firm?.id;

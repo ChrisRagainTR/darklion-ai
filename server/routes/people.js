@@ -1,0 +1,311 @@
+const { Router } = require('express');
+const { pool } = require('../db');
+const { encrypt, decrypt } = require('../utils/encryption');
+
+const router = Router();
+
+// Strip sensitive fields and add computed flags for GET responses
+function sanitizePerson(row) {
+  const person = { ...row };
+  delete person.ssn_encrypted;
+  delete person.date_of_birth_encrypted;
+  delete person.portal_password_hash;
+  person.has_ssn = !!(row.ssn_encrypted && row.ssn_encrypted !== '');
+  person.has_dob = !!(row.date_of_birth_encrypted && row.date_of_birth_encrypted !== '');
+  return person;
+}
+
+// GET / — list all people for this firm (with relationship name)
+router.get('/', async (req, res) => {
+  const firmId = req.firm.id;
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        p.*,
+        r.name AS relationship_name
+      FROM people p
+      LEFT JOIN relationships r ON r.id = p.relationship_id
+      WHERE p.firm_id = $1
+      ORDER BY p.last_name ASC, p.first_name ASC
+    `, [firmId]);
+    res.json(rows.map(sanitizePerson));
+  } catch (err) {
+    console.error('GET /people error:', err);
+    res.status(500).json({ error: 'Failed to fetch people' });
+  }
+});
+
+// POST / — create a person
+router.post('/', async (req, res) => {
+  const firmId = req.firm.id;
+  const {
+    relationship_id,
+    first_name = '',
+    last_name = '',
+    email = '',
+    phone = '',
+    filing_status = '',
+    spouse_id = null,
+    portal_enabled = false,
+    stanford_tax_url = '',
+    notes = '',
+    ssn,
+    date_of_birth,
+  } = req.body;
+
+  if (!relationship_id) return res.status(400).json({ error: 'relationship_id is required' });
+
+  try {
+    // Verify relationship belongs to this firm
+    const { rows: relRows } = await pool.query(
+      'SELECT id FROM relationships WHERE id = $1 AND firm_id = $2',
+      [relationship_id, firmId]
+    );
+    if (relRows.length === 0) return res.status(404).json({ error: 'Relationship not found' });
+
+    const ssn_last4 = ssn ? String(ssn).slice(-4) : '';
+    const ssn_encrypted = ssn ? encrypt(ssn) : '';
+    const date_of_birth_encrypted = date_of_birth ? encrypt(date_of_birth) : '';
+
+    const { rows } = await pool.query(`
+      INSERT INTO people (
+        firm_id, relationship_id, first_name, last_name, email, phone,
+        date_of_birth_encrypted, ssn_last4, ssn_encrypted,
+        filing_status, spouse_id, portal_enabled, stanford_tax_url, notes,
+        created_at, updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
+      RETURNING *
+    `, [
+      firmId, relationship_id, first_name, last_name, email, phone,
+      date_of_birth_encrypted, ssn_last4, ssn_encrypted,
+      filing_status, spouse_id, portal_enabled, stanford_tax_url, notes,
+    ]);
+
+    res.status(201).json(sanitizePerson(rows[0]));
+  } catch (err) {
+    console.error('POST /people error:', err);
+    res.status(500).json({ error: 'Failed to create person' });
+  }
+});
+
+// GET /:id — get a person with company access list
+router.get('/:id', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM people WHERE id = $1 AND firm_id = $2',
+      [id, firmId]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Person not found' });
+
+    const person = sanitizePerson(rows[0]);
+
+    // Include company access list
+    const { rows: accessRows } = await pool.query(`
+      SELECT
+        pca.id,
+        pca.company_id,
+        pca.access_level,
+        pca.ownership_pct,
+        pca.created_at,
+        c.company_name,
+        c.entity_type,
+        c.realm_id
+      FROM person_company_access pca
+      JOIN companies c ON c.id = pca.company_id
+      WHERE pca.person_id = $1
+      ORDER BY c.company_name ASC
+    `, [id]);
+
+    person.company_access = accessRows;
+    res.json(person);
+  } catch (err) {
+    console.error('GET /people/:id error:', err);
+    res.status(500).json({ error: 'Failed to fetch person' });
+  }
+});
+
+// PUT /:id — update a person
+router.put('/:id', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+  const {
+    relationship_id,
+    first_name,
+    last_name,
+    email,
+    phone,
+    filing_status,
+    spouse_id,
+    portal_enabled,
+    stanford_tax_url,
+    notes,
+    ssn,
+    date_of_birth,
+  } = req.body;
+
+  try {
+    const { rows: existing } = await pool.query(
+      'SELECT * FROM people WHERE id = $1 AND firm_id = $2',
+      [id, firmId]
+    );
+    if (existing.length === 0) return res.status(404).json({ error: 'Person not found' });
+
+    // If relationship_id is being updated, verify it belongs to this firm
+    if (relationship_id) {
+      const { rows: relRows } = await pool.query(
+        'SELECT id FROM relationships WHERE id = $1 AND firm_id = $2',
+        [relationship_id, firmId]
+      );
+      if (relRows.length === 0) return res.status(404).json({ error: 'Relationship not found' });
+    }
+
+    // Build SSN fields only if SSN provided
+    const ssn_last4 = ssn !== undefined ? String(ssn).slice(-4) : undefined;
+    const ssn_encrypted = ssn !== undefined ? encrypt(ssn) : undefined;
+    const date_of_birth_encrypted = date_of_birth !== undefined ? encrypt(date_of_birth) : undefined;
+
+    const current = existing[0];
+
+    const { rows } = await pool.query(`
+      UPDATE people
+      SET
+        relationship_id = COALESCE($1, relationship_id),
+        first_name = COALESCE($2, first_name),
+        last_name = COALESCE($3, last_name),
+        email = COALESCE($4, email),
+        phone = COALESCE($5, phone),
+        filing_status = COALESCE($6, filing_status),
+        spouse_id = COALESCE($7, spouse_id),
+        portal_enabled = COALESCE($8, portal_enabled),
+        stanford_tax_url = COALESCE($9, stanford_tax_url),
+        notes = COALESCE($10, notes),
+        ssn_last4 = CASE WHEN $11::TEXT IS NOT NULL THEN $11 ELSE ssn_last4 END,
+        ssn_encrypted = CASE WHEN $12::TEXT IS NOT NULL THEN $12 ELSE ssn_encrypted END,
+        date_of_birth_encrypted = CASE WHEN $13::TEXT IS NOT NULL THEN $13 ELSE date_of_birth_encrypted END,
+        updated_at = NOW()
+      WHERE id = $14 AND firm_id = $15
+      RETURNING *
+    `, [
+      relationship_id || null,
+      first_name || null,
+      last_name || null,
+      email !== undefined ? email : null,
+      phone !== undefined ? phone : null,
+      filing_status || null,
+      spouse_id !== undefined ? spouse_id : null,
+      portal_enabled !== undefined ? portal_enabled : null,
+      stanford_tax_url !== undefined ? stanford_tax_url : null,
+      notes !== undefined ? notes : null,
+      ssn_last4 !== undefined ? ssn_last4 : null,
+      ssn_encrypted !== undefined ? ssn_encrypted : null,
+      date_of_birth_encrypted !== undefined ? date_of_birth_encrypted : null,
+      id,
+      firmId,
+    ]);
+
+    res.json(sanitizePerson(rows[0]));
+  } catch (err) {
+    console.error('PUT /people/:id error:', err);
+    res.status(500).json({ error: 'Failed to update person' });
+  }
+});
+
+// DELETE /:id — delete only if no portal activity
+router.delete('/:id', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+
+  try {
+    const { rows: existing } = await pool.query(
+      'SELECT * FROM people WHERE id = $1 AND firm_id = $2',
+      [id, firmId]
+    );
+    if (existing.length === 0) return res.status(404).json({ error: 'Person not found' });
+
+    const person = existing[0];
+    if (person.portal_last_login_at) {
+      return res.status(409).json({ error: 'Cannot delete person with portal login history' });
+    }
+
+    // Remove company access first (cascade handles this, but explicit for clarity)
+    await pool.query('DELETE FROM person_company_access WHERE person_id = $1', [id]);
+    await pool.query('DELETE FROM people WHERE id = $1 AND firm_id = $2', [id, firmId]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('DELETE /people/:id error:', err);
+    res.status(500).json({ error: 'Failed to delete person' });
+  }
+});
+
+// POST /:id/company-access — grant company access
+router.post('/:id/company-access', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+  const { company_id, access_level = 'full', ownership_pct } = req.body;
+
+  if (!company_id) return res.status(400).json({ error: 'company_id is required' });
+
+  try {
+    // Verify person belongs to this firm
+    const { rows: personRows } = await pool.query(
+      'SELECT id FROM people WHERE id = $1 AND firm_id = $2',
+      [id, firmId]
+    );
+    if (personRows.length === 0) return res.status(404).json({ error: 'Person not found' });
+
+    // Verify company belongs to this firm
+    const { rows: companyRows } = await pool.query(
+      'SELECT id FROM companies WHERE id = $1 AND firm_id = $2',
+      [company_id, firmId]
+    );
+    if (companyRows.length === 0) return res.status(404).json({ error: 'Company not found' });
+
+    const { rows } = await pool.query(`
+      INSERT INTO person_company_access (person_id, company_id, access_level, ownership_pct, created_at)
+      VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT (person_id, company_id) DO UPDATE
+        SET access_level = EXCLUDED.access_level,
+            ownership_pct = EXCLUDED.ownership_pct
+      RETURNING *
+    `, [id, company_id, access_level, ownership_pct || null]);
+
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('POST /people/:id/company-access error:', err);
+    res.status(500).json({ error: 'Failed to grant company access' });
+  }
+});
+
+// DELETE /:id/company-access/:companyId — revoke company access
+router.delete('/:id/company-access/:companyId', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id, companyId } = req.params;
+
+  try {
+    // Verify person belongs to this firm
+    const { rows: personRows } = await pool.query(
+      'SELECT id FROM people WHERE id = $1 AND firm_id = $2',
+      [id, firmId]
+    );
+    if (personRows.length === 0) return res.status(404).json({ error: 'Person not found' });
+
+    const { rowCount } = await pool.query(
+      'DELETE FROM person_company_access WHERE person_id = $1 AND company_id = $2',
+      [id, companyId]
+    );
+
+    if (rowCount === 0) return res.status(404).json({ error: 'Access record not found' });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('DELETE /people/:id/company-access/:companyId error:', err);
+    res.status(500).json({ error: 'Failed to revoke company access' });
+  }
+});
+
+module.exports = router;

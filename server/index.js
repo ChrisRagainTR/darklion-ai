@@ -179,6 +179,11 @@ app.use('/auth', authRouter);
 // --- API routes (JWT required) ---
 app.use('/api', requireFirm, apiLimiter, apiRouter);
 
+const relationshipsRouter = require('./routes/relationships');
+const peopleRouter = require('./routes/people');
+app.use('/api/relationships', requireFirm, apiLimiter, relationshipsRouter);
+app.use('/api/people', requireFirm, apiLimiter, peopleRouter);
+
 // --- Global error handler ---
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
