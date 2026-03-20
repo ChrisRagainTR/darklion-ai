@@ -1350,11 +1350,11 @@
       try {
         // Load all threads
         const threadsRes = await fetch('/portal/messages', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!threadsRes.ok) throw new Error(`Messages API error ${threadsRes.status}`);
         const threads = await threadsRes.json();
-
-        if (!threads.length) {
-          document.getElementById('chatEmpty').style.display = 'block';
-          document.getElementById('chatEmpty').textContent = 'No messages yet. Send a message below to get started!';
+        if (!Array.isArray(threads) || !threads.length) {
+          const el = document.getElementById('chatEmpty');
+          if (el) { el.style.display = 'block'; el.textContent = 'No messages yet. Send a message below to get started!'; }
           return;
         }
 
@@ -1377,7 +1377,9 @@
         const unread = threads.reduce((acc, t) => acc + (t.unreadCount || 0), 0);
         updateChatBadge(unread);
       } catch (e) {
-        document.getElementById('chatEmpty').textContent = 'Failed to load messages.';
+        console.error('[portal messages] load error:', e);
+        const el = document.getElementById('chatEmpty');
+        if (el) el.textContent = 'Error: ' + e.message;
       }
     }
 
