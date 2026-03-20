@@ -1772,7 +1772,10 @@
         }
       }
       const hdrName = document.getElementById('chatHdrName');
-      if (hdrName) hdrName.textContent = contact.name || 'Advisor';
+      // Show first name + credentials in header (e.g. "Christopher" or "Christopher, CPA/PFS")
+      const firstName = (contact.name || 'Advisor').split(' ')[0];
+      const creds = contact.credentials ? `, ${contact.credentials}` : '';
+      if (hdrName) hdrName.textContent = firstName + creds;
       _chatLoaded = false;
       _chatAllMessages = [];
       loadAllMessages();
