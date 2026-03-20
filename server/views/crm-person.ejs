@@ -14,19 +14,20 @@
   .ph-desc { font-size: 0.86rem; }
   .portal-btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
 
-  /* ── Docs: folder hierarchy (portal-matched) ── */
+  /* ── Docs: folder hierarchy (exact portal match) ── */
   .docs-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1.5rem; }
   @media (max-width: 800px) { .docs-layout { grid-template-columns: 1fr; } }
   .docs-col-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
   .year-folder { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 0.75rem; overflow: hidden; }
   .year-header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; cursor: pointer; user-select: none; transition: background 0.15s; }
   .year-header:hover { background: rgba(255,255,255,0.03); }
-  .yr-label { font-weight: 700; font-size: 0.95rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
+  .year-header .yr-label { font-weight: 700; font-size: 0.95rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
   .yr-count { font-size: 0.72rem; background: rgba(201,168,76,0.12); color: var(--gold); border: 1px solid rgba(201,168,76,0.25); border-radius: 20px; padding: 0.1rem 0.5rem; font-weight: 600; }
   .yr-chevron { color: var(--muted); font-size: 0.8rem; transition: transform 0.2s; }
   .year-folder.open .yr-chevron { transform: rotate(180deg); }
   .year-body { display: none; border-top: 1px solid var(--border); }
   .year-folder.open .year-body { display: block; }
+  .section-heading { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 0.6rem 1.1rem 0.3rem; }
   .doc-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.1rem; border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
   .doc-row:hover { background: rgba(255,255,255,0.03); }
   .doc-info { flex: 1; min-width: 0; }
@@ -41,16 +42,27 @@
   .btn-dl:hover { border-color: var(--gold); color: var(--gold); }
   .btn-dl:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* ── Upload modal ── */
-  .upload-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
-  .upload-modal-overlay.hidden { display: none; }
-  .upload-modal { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem; width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
-  .upload-modal h2 { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 1.25rem; }
+  /* ── Upload modal (exact portal match) ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+  .modal-overlay.hidden { display: none; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem 1.75rem; width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+  .modal h2 { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 1.25rem; }
+  .modal .form-group { margin-bottom: 1rem; }
+  .modal .form-group label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.35rem; letter-spacing: 0.03em; }
+  .modal .form-group select { width: 100%; background: var(--charcoal); border: 1px solid var(--border); border-radius: 7px; color: var(--text); font-size: 0.93rem; padding: 0.6rem 0.8rem; outline: none; transition: border-color 0.2s; appearance: none; }
+  .modal .form-group select:focus { border-color: var(--gold); }
   .file-drop { border: 2px dashed var(--border); border-radius: 9px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; color: var(--muted); font-size: 0.88rem; position: relative; }
   .file-drop:hover, .file-drop.drag-over { border-color: var(--gold); background: rgba(201,168,76,0.04); }
   .file-drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-  .upload-err { font-size: 0.8rem; color: var(--red); margin-top: 0.5rem; display: none; }
-  .upload-msg { font-size: 0.8rem; color: var(--green); margin-top: 0.5rem; display: none; }
+  .selected-file { margin-top: 0.5rem; font-size: 0.8rem; color: var(--gold); }
+  .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
+  .btn-cancel { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.88rem; border-radius: 7px; padding: 0.55rem 1rem; cursor: pointer; }
+  .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+  .btn-submit { background: var(--gold); color: #0f1117; font-weight: 700; font-size: 0.88rem; border: none; border-radius: 7px; padding: 0.55rem 1.25rem; cursor: pointer; transition: background 0.2s; }
+  .btn-submit:hover { background: var(--gold-light); }
+  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+  .upload-msg { font-size: 0.8rem; color: var(--green); margin-top: 0.5rem; }
+  .upload-err { font-size: 0.8rem; color: var(--red); margin-top: 0.5rem; }
 </style>
 
 <div class="entity-header">
@@ -96,41 +108,41 @@
   <div id="docs-content"><div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div></div>
 </div>
 
-<!-- Upload Modal -->
-<div class="upload-modal-overlay hidden" id="upload-modal">
-  <div class="upload-modal" onclick="event.stopPropagation()">
-    <h2>Upload Document</h2>
+<!-- Upload Modal (portal-matched) -->
+<div class="modal-overlay hidden" id="upload-modal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2>Upload a Document</h2>
     <div class="form-group">
-      <label class="form-group" style="font-size:0.8rem;color:var(--muted);margin-bottom:0.35rem;display:block;">Year</label>
-      <select class="form-control" id="upload-year"></select>
+      <label>Tax Year</label>
+      <select id="upload-year"></select>
     </div>
     <div class="form-group">
-      <label style="font-size:0.8rem;color:var(--muted);margin-bottom:0.35rem;display:block;">Category</label>
-      <select class="form-control" id="upload-doc-type">
+      <label>Category</label>
+      <select id="upload-doc-type">
         <option value="tax">Tax</option>
         <option value="other">Other</option>
       </select>
     </div>
     <div class="form-group">
-      <label style="font-size:0.8rem;color:var(--muted);margin-bottom:0.35rem;display:block;">Section</label>
-      <select class="form-control" id="upload-section">
+      <label>Section</label>
+      <select id="upload-section">
         <option value="firm_uploaded">Delivered by Advisor</option>
         <option value="client_uploaded">Client Uploaded</option>
       </select>
     </div>
     <div class="form-group">
-      <label style="font-size:0.8rem;color:var(--muted);margin-bottom:0.35rem;display:block;">File</label>
+      <label>File</label>
       <div class="file-drop" id="upload-file-drop">
         <input type="file" id="upload-file-input">
-        <span id="upload-drop-text">Click to select or drag a file here</span>
-        <div id="upload-selected-name" style="margin-top:0.4rem;font-size:0.82rem;color:var(--text);font-weight:600;"></div>
+        <span>Click to select or drag a file here</span>
+        <div class="selected-file" id="upload-selected-name"></div>
       </div>
     </div>
-    <div class="upload-err" id="upload-error"></div>
-    <div class="upload-msg" id="upload-msg"></div>
-    <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1.25rem;">
-      <button class="btn btn-outline" id="upload-cancel-btn">Cancel</button>
-      <button class="btn btn-gold" id="upload-submit-btn" disabled>Upload</button>
+    <div class="upload-err" id="upload-error" style="display:none;"></div>
+    <div class="upload-msg" id="upload-msg" style="display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="upload-cancel-btn">Cancel</button>
+      <button class="btn-submit" id="upload-submit-btn" disabled>Upload</button>
     </div>
   </div>
 </div>
