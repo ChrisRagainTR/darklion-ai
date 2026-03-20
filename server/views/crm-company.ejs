@@ -498,25 +498,27 @@
     </div>`;
   }
 
+
   // ── Upload modal wiring (portal-matched) ──
   (function() {
-    const CURRENT_YEAR = new Date().getFullYear();
-    const yearSel = document.getElementById('upload-year');
-    for (let y = CURRENT_YEAR; y >= 2018; y--) {
-      const o = document.createElement('option');
-      o.value = String(y);
-      o.textContent = String(y);
-      if (y === CURRENT_YEAR - 1) o.selected = true;
+    var modal    = document.getElementById('upload-modal');
+    var yearSel  = document.getElementById('upload-year');
+    var fileDrop = document.getElementById('upload-file-drop');
+    var fileInput= document.getElementById('upload-file-input');
+    var submitBtn= document.getElementById('upload-submit-btn');
+    var cancelBtn= document.getElementById('upload-cancel-btn');
+    var errEl    = document.getElementById('upload-error');
+    var msgEl    = document.getElementById('upload-msg');
+    if (!modal) return;
+
+    var _uploadFile = null;
+    var CY = new Date().getFullYear();
+    for (var y = CY; y >= 2018; y--) {
+      var o = document.createElement('option');
+      o.value = String(y); o.textContent = String(y);
+      if (y === CY - 1) o.selected = true;
       yearSel.appendChild(o);
     }
-
-    let _uploadFile = null;
-    const modal = document.getElementById('upload-modal');
-    const fileDrop = document.getElementById('upload-file-drop');
-    const fileInput = document.getElementById('upload-file-input');
-    const submitBtn = document.getElementById('upload-submit-btn');
-    const errEl = document.getElementById('upload-error');
-    const msgEl = document.getElementById('upload-msg');
 
     function setFile(f) {
       _uploadFile = f;
@@ -524,26 +526,20 @@
       submitBtn.disabled = false;
     }
 
-    fileDrop.addEventListener('click', () => fileInput.click());
-    fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('drag-over'); });
-    fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('drag-over'));
-    fileDrop.addEventListener('drop', e => { e.preventDefault(); fileDrop.classList.remove('drag-over'); if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
-    fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+    fileDrop.addEventListener('click', function() { fileInput.click(); });
+    fileDrop.addEventListener('dragover', function(e) { e.preventDefault(); fileDrop.classList.add('drag-over'); });
+    fileDrop.addEventListener('dragleave', function() { fileDrop.classList.remove('drag-over'); });
+    fileDrop.addEventListener('drop', function(e) { e.preventDefault(); fileDrop.classList.remove('drag-over'); if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
+    fileInput.addEventListener('change', function() { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+    cancelBtn.addEventListener('click', function() { window.closeUploadModal(); });
+    modal.addEventListener('click', function(e) { if (e.target === modal) window.closeUploadModal(); });
 
-    // Allow page-wide drop to pre-load file
-    modal.addEventListener('preload-file', e => { if (e.detail && e.detail.file) setFile(e.detail.file); });
-
-    document.getElementById('upload-cancel-btn').addEventListener('click', closeUploadModal);
-    modal.addEventListener('click', e => { if (e.target === modal) closeUploadModal(); });
-
-    submitBtn.addEventListener('click', async () => {
+    submitBtn.addEventListener('click', async function() {
       if (!_uploadFile) return;
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Uploading…';
-      errEl.style.display = 'none';
-      msgEl.style.display = 'none';
+      submitBtn.disabled = true; submitBtn.textContent = 'Uploading...';
+      errEl.style.display = 'none'; msgEl.style.display = 'none';
       try {
-        const fd = new FormData();
+        var fd = new FormData();
         fd.append('file', _uploadFile);
         fd.append('owner_type', 'company');
         fd.append('owner_id', companyId);
@@ -551,37 +547,27 @@
         fd.append('doc_type', document.getElementById('upload-doc-type').value);
         fd.append('folder_category', document.getElementById('upload-doc-type').value);
         fd.append('folder_section', document.getElementById('upload-section').value);
-        const res = await fetch('/api/documents/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
-        const data = await res.json();
+        var res = await fetch('/api/documents/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
+        var data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Upload failed');
-        msgEl.textContent = '✓ File uploaded successfully!';
-        msgEl.style.display = 'block';
-        const el = document.getElementById('docs-content');
-        delete el.dataset.loaded;
-        loadDocs();
-        setTimeout(() => {
-          closeUploadModal();
-          toast('Document uploaded');
-        }, 1000);
-      } catch(e) {
-        errEl.textContent = e.message;
-        errEl.style.display = 'block';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Upload';
+        msgEl.textContent = 'Uploaded!'; msgEl.style.display = 'block';
+        var el = document.getElementById('docs-content');
+        delete el.dataset.loaded; loadDocs();
+        setTimeout(function() { window.closeUploadModal(); toast('Document uploaded'); }, 1000);
+      } catch(e2) {
+        errEl.textContent = e2.message; errEl.style.display = 'block';
+        submitBtn.disabled = false; submitBtn.textContent = 'Upload';
       }
     });
 
     window.openUploadModal = function(preloadFile) {
       _uploadFile = null;
       document.getElementById('upload-selected-name').textContent = '';
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Upload';
-      errEl.style.display = 'none';
-      msgEl.style.display = 'none';
+      submitBtn.disabled = true; submitBtn.textContent = 'Upload';
+      errEl.style.display = 'none'; msgEl.style.display = 'none';
       modal.classList.add('open');
       if (preloadFile) setFile(preloadFile);
     };
-
     window.closeUploadModal = function() { modal.classList.remove('open'); };
   })();
 
