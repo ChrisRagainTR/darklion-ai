@@ -8,7 +8,7 @@ const { auditLog } = require('./firms');
 const { requireFirm } = require('../middleware/requireFirm');
 const { sendPortalInvite, sendPasswordReset } = require('../services/email');
 
-const APP_URL = process.env.APP_URL || 'https://darklion.ai';
+const APP_URL = (process.env.APP_URL || 'https://darklion.ai').replace(/\/+$/, '');
 
 const router = Router();
 
