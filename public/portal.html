@@ -1105,7 +1105,7 @@
             <div class="year-body" style="padding-left:1rem;">`;
           DOC_CATEGORIES.forEach(cat => {
             const catDocs = yrDocs.filter(d => (d.folder_category || 'other') === cat.key);
-            y += `<div style="margin-bottom:0.25rem;"><div style="font-size:0.72rem;font-weight:600;color:var(--muted);padding:0.2rem 0;">${cat.icon} ${cat.label} (${catDocs.length})</div><div style="padding-left:0.75rem;">`;
+            y += `<div style="margin-bottom:0.5rem;"><div style="font-size:0.82rem;font-weight:700;color:var(--text);padding:0.4rem 0.5rem;margin-bottom:0.25rem;border-left:3px solid var(--gold);background:rgba(201,168,76,0.06);">${cat.icon} ${cat.label} <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${catDocs.length})</span></div><div style="padding-left:0.5rem;">`;
             if (catDocs.length === 0) {
               y += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`;
             } else {
