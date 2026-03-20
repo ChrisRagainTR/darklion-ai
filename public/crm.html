@@ -658,6 +658,11 @@ const ssFiltered = { rel: [], spouse: [] };
 // =====================================================================
 document.addEventListener('DOMContentLoaded', () => {
   if (!token) { window.location.href = '/login'; return; }
+  // Honor ?tab= query param from sidebar links
+  const urlTab = new URLSearchParams(window.location.search).get('tab');
+  if (urlTab && ['relationships','people','companies'].includes(urlTab)) {
+    switchTab(urlTab, document.querySelector(`[data-tab="${urlTab}"]`));
+  }
   loadRelationships();
   loadPeople();
   loadCompanies();

@@ -80,6 +80,7 @@
     }
     .sidebar-nav li a:hover { color: var(--text); background: rgba(201,168,76,0.05); }
     .sidebar-nav li a.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); font-weight: 600; }
+    .sidebar-nav li a.coming-soon { opacity: 0.4; cursor: default; pointer-events: none; }
 
     /* Main */
     .main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; }
@@ -658,35 +659,30 @@
 
 
     <nav>
-      <div class="sidebar-section">Overview</div>
+      <div class="sidebar-section">Clients</div>
       <ul class="sidebar-nav">
-        <li><a href="#" data-section="overview" class="active" onclick="showSection('overview',this)">📊 <span>Dashboard</span></a></li>
-        <li><a href="#" data-section="statements-calendar" onclick="showSection('statements-calendar',this)">📅 <span>Statement Calendar</span></a></li>
-        <li><a href="#" data-section="companies" onclick="showSection('companies',this)">🏢 <span>Companies</span></a></li>
+        <li><a href="/crm?tab=relationships">👥 <span>Relationships</span></a></li>
+        <li><a href="/crm?tab=people">👤 <span>People</span></a></li>
+        <li><a href="/crm?tab=companies">🏢 <span>Companies</span></a></li>
       </ul>
-      <div class="sidebar-section">Client</div>
+      <div class="sidebar-section">Work</div>
       <ul class="sidebar-nav">
-        <li><a href="#" data-section="client-summary" onclick="showSection('client-summary',this)">👤 <span>Client Summary</span></a></li>
+        <li><a href="#" class="coming-soon" title="Coming soon">📋 <span>Pipelines</span></a></li>
       </ul>
-      <div class="sidebar-section">Monthly Close</div>
+      <div class="sidebar-section">Bookkeeping</div>
       <ul class="sidebar-nav">
-        <li><a href="#" data-section="uncategorized" onclick="showSection('uncategorized',this)">🔍 <span>Uncategorized</span></a></li>
+        <li><a href="#" data-section="overview" class="active" onclick="showSection('overview',this)">📊 <span>Overview</span></a></li>
         <li><a href="#" data-section="close-package" onclick="showSection('close-package',this)">📦 <span>Close Package</span></a></li>
-        <li><a href="#" data-section="statements" onclick="showSection('statements',this)">🏦 <span>Statements</span></a></li>
-      </ul>
-      <div class="sidebar-section">Analysis</div>
-      <ul class="sidebar-nav">
+        <li><a href="#" data-section="uncategorized" onclick="showSection('uncategorized',this)">🔍 <span>Uncategorized</span></a></li>
         <li><a href="#" data-section="variance" onclick="showSection('variance',this)">📈 <span>P&amp;L Variance</span></a></li>
         <li><a href="#" data-section="liability" onclick="showSection('liability',this)">⚠️ <span>Liability Health</span></a></li>
         <li><a href="#" data-section="payroll" onclick="showSection('payroll',this)">💰 <span>Payroll Check</span></a></li>
+        <li><a href="#" data-section="statements" onclick="showSection('statements',this)">🏦 <span>Statements</span></a></li>
+        <li><a href="#" data-section="statements-calendar" onclick="showSection('statements-calendar',this)">📅 <span>Statement Calendar</span></a></li>
       </ul>
       <div class="sidebar-section">Settings</div>
       <ul class="sidebar-nav">
         <li><a href="#" data-section="team" onclick="showSection('team',this)">👥 <span>Team</span></a></li>
-      </ul>
-      <div class="sidebar-section">CRM</div>
-      <ul class="sidebar-nav">
-        <li><a href="/crm">🗂️ <span>Client CRM</span></a></li>
       </ul>
     </nav>
     <div style="margin-top:auto;padding:1rem;border-top:1px solid var(--border);">
