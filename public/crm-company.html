@@ -1054,6 +1054,50 @@
       <button class="btn btn-gold btn-sm" onclick="openUploadModal()">+ Upload Document</button>
     </div>`;
 
+    // Build year rows HTML for a set of docs (recent = last 2 years shown, rest in Previous Years)
+    function renderYearRows(secDocs, secKey) {
+      const recentYears = years.slice(0, 2); // current + last year
+      const prevYears = years.slice(2);
+      let out = '';
+
+      function renderOneYear(yr) {
+        const yrDocs = secDocs.filter(d => (d.year||'') === yr);
+        const yrOpen = yrDocs.length > 0;
+        let y = `<div style="margin-bottom:0.4rem;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;padding:0.35rem 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;" onclick="const next=this.nextElementSibling;next.style.display=next.style.display==='none'?'':'none';this.querySelector('.yr-arrow').textContent=next.style.display===''?'▾':'▸'">
+            📅 ${yr} <span style="font-weight:400;">(${yrDocs.length})</span> <span class="yr-arrow" style="float:right;">${yrOpen?'▾':'▸'}</span>
+          </div>
+          <div style="padding-left:1rem;display:${yrOpen?'':'none'}">`;
+        DOC_CATEGORIES.forEach(cat => {
+          const catDocs = yrDocs.filter(d => (d.folder_category||'other') === cat.key);
+          y += `<div style="margin-bottom:0.25rem;">
+            <div style="font-size:0.71rem;font-weight:600;color:var(--muted);padding:0.3rem 0;cursor:pointer;user-select:none;display:flex;align-items:center;gap:0.3rem;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
+              ${cat.icon} ${cat.label} <span style="font-weight:400;">(${catDocs.length})</span>
+              <button class="btn btn-ghost" style="font-size:0.68rem;padding:0.1rem 0.4rem;margin-left:auto;" onclick="event.stopPropagation();openUploadModalWith('${secKey}','${cat.key}','${yr}')">+ Add</button>
+            </div>
+            <div style="padding-left:1rem;">${catDocs.length === 0 ? '<div style="color:var(--muted);font-size:0.78rem;font-style:italic;">Empty</div>' : catDocs.map(d => docRow(d)).join('')}</div>
+          </div>`;
+        });
+        y += `</div></div>`;
+        return y;
+      }
+
+      recentYears.forEach(yr => { out += renderOneYear(yr); });
+
+      // Previous Years folder
+      const prevCount = prevYears.reduce((n, yr) => n + secDocs.filter(d => (d.year||'') === yr).length, 0);
+      out += `<div style="margin-bottom:0.4rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;padding:0.35rem 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;" onclick="const next=this.nextElementSibling;next.style.display=next.style.display==='none'?'block':'none';this.querySelector('.yr-arrow').textContent=next.style.display==='block'?'▾':'▸'">
+          📂 Previous Years <span style="font-weight:400;">(${prevCount})</span> <span class="yr-arrow" style="float:right;">▸</span>
+        </div>
+        <div style="display:none;padding-left:0.5rem;">
+          ${prevYears.map(yr => renderOneYear(yr)).join('')}
+        </div>
+      </div>`;
+
+      return out;
+    }
+
     DOC_SECTIONS.forEach(sec => {
       const secDocs = allDocs.filter(d => (d.folder_section||'firm_uploaded') === sec.key);
       const totalCount = secDocs.length;
@@ -1063,40 +1107,8 @@
           <span style="font-size:0.72rem;color:var(--muted);font-weight:400;margin-left:0.5rem;">(${totalCount} file${totalCount!==1?'s':''})</span>
           <span style="font-size:0.7rem;color:var(--muted);float:right;">▾</span>
         </div>
-        <div>`;
-
-      years.forEach(yr => {
-        const yrDocs = secDocs.filter(d => (d.year||'') === yr);
-        const yrOpen = yrDocs.length > 0; // auto-expand years that have files
-        html += `<div style="margin-bottom:0.5rem;">
-          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;padding:0.4rem 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;" onclick="const next=this.nextElementSibling;next.style.display=next.style.display==='none'?'':'none';this.querySelector('.yr-arrow').textContent=next.style.display===''?'▾':'▸'">
-            📅 ${yr} <span style="font-weight:400;">(${yrDocs.length})</span> <span class="yr-arrow" style="float:right;">${yrOpen?'▾':'▸'}</span>
-          </div>
-          <div style="padding-left:1rem;display:${yrOpen?'':'none'}">`;
-
-        DOC_CATEGORIES.forEach(cat => {
-          const catDocs = yrDocs.filter(d => (d.folder_category||'other') === cat.key);
-          html += `<div style="margin-bottom:0.25rem;">
-            <div style="font-size:0.71rem;font-weight:600;color:var(--muted);padding:0.3rem 0;cursor:pointer;user-select:none;display:flex;align-items:center;gap:0.3rem;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
-              ${cat.icon} ${cat.label}
-              <span style="font-weight:400;">(${catDocs.length})</span>
-              <button class="btn btn-ghost" style="font-size:0.68rem;padding:0.1rem 0.4rem;margin-left:auto;" onclick="event.stopPropagation();openUploadModalWith('${sec.key}','${cat.key}','${yr}')">+ Add</button>
-            </div>
-            <div style="padding-left:1rem;">`;
-
-          if (catDocs.length === 0) {
-            html += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;font-style:italic;">Empty</div>`;
-          } else {
-            catDocs.forEach(d => { html += docRow(d); });
-          }
-
-          html += `</div></div>`;
-        });
-
-        html += `</div></div>`;
-      });
-
-      html += `</div></div>`;
+        <div>${renderYearRows(secDocs, sec.key)}</div>
+      </div>`;
     });
 
     c.innerHTML = html;

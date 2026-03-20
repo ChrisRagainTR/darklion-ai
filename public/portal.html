@@ -1047,50 +1047,54 @@
       ];
 
       // Render a full folder section with year/category hierarchy
+      // Recent 2 years shown, rest under "Previous Years"
       function renderSection(sectionKey, sectionLabel, sectionIcon, sourceDocs) {
         const sectionDocs = (sourceDocs || _docs || []).filter(d => (d.folder_section || 'firm_uploaded') === sectionKey);
-        let s = `<div style="margin-bottom:1.5rem;">
-          <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
+        const recentYears = years.slice(0, 2);
+        const prevYears = years.slice(2);
 
-        years.forEach(yr => {
+        function renderOneYear(yr) {
           const yrDocs = sectionDocs.filter(d => (d.year || '') === yr);
           const hasNew = yrDocs.some(d => !d.viewed_at);
           const open = yrDocs.length > 0;
-          s += `<div class="year-folder${open ? ' open' : ''}" style="margin-bottom:0.4rem;">
+          let y = `<div class="year-folder${open ? ' open' : ''}" style="margin-bottom:0.4rem;">
             <div class="year-header" onclick="this.closest('.year-folder').classList.toggle('open')">
               <span class="yr-label">📅 ${yr} <span class="yr-count">${yrDocs.length}</span>${hasNew ? ' <span style="color:var(--gold);font-size:0.65rem;">NEW</span>' : ''}</span>
               <span class="yr-chevron">▼</span>
             </div>
             <div class="year-body" style="padding-left:1rem;">`;
-
           DOC_CATEGORIES.forEach(cat => {
             const catDocs = yrDocs.filter(d => (d.folder_category || 'other') === cat.key);
-            s += `<div style="margin-bottom:0.25rem;">
-              <div style="font-size:0.72rem;font-weight:600;color:var(--muted);padding:0.2rem 0;">${cat.icon} ${cat.label} (${catDocs.length})</div>
-              <div style="padding-left:0.75rem;">`;
+            y += `<div style="margin-bottom:0.25rem;"><div style="font-size:0.72rem;font-weight:600;color:var(--muted);padding:0.2rem 0;">${cat.icon} ${cat.label} (${catDocs.length})</div><div style="padding-left:0.75rem;">`;
             if (catDocs.length === 0) {
-              s += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`;
+              y += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`;
             } else {
               catDocs.forEach(doc => {
                 const isNew = !doc.viewed_at;
-                s += `<div class="doc-row">
-                  <span class="doc-icon">${docIcon(doc.doc_type)}</span>
-                  <div class="doc-info">
-                    <div class="doc-name">${escHtml(doc.display_name || 'Document')}</div>
-                    <div class="doc-badges">
-                      ${isNew ? '<span class="doc-badge doc-badge-new">✦ NEW</span>' : '<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}
-                      ${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}
-                    </div>
-                  </div>
-                  <button class="btn-dl" data-docid="${doc.id}">⬇ Download</button>
-                </div>`;
+                y += `<div class="doc-row"><span class="doc-icon">${docIcon(doc.doc_type)}</span><div class="doc-info"><div class="doc-name">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
               });
             }
-            s += `</div></div>`;
+            y += `</div></div>`;
           });
+          y += `</div></div>`;
+          return y;
+        }
 
-          s += `</div></div>`;
-        });
+        let s = `<div style="margin-bottom:1.5rem;">
+          <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
+
+        recentYears.forEach(yr => { s += renderOneYear(yr); });
+
+        // Previous Years
+        const prevCount = prevYears.reduce((n, yr) => n + sectionDocs.filter(d => (d.year||'') === yr).length, 0);
+        s += `<div class="year-folder" style="margin-bottom:0.4rem;">
+          <div class="year-header" onclick="this.closest('.year-folder').classList.toggle('open')">
+            <span class="yr-label">📂 Previous Years <span class="yr-count">${prevCount}</span></span>
+            <span class="yr-chevron">▼</span>
+          </div>
+          <div class="year-body" style="padding-left:0.5rem;">${prevYears.map(yr => renderOneYear(yr)).join('')}</div>
+        </div>`;
+
         s += `</div>`;
         return s;
       }
