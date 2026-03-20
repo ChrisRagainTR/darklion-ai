@@ -35,6 +35,8 @@
   .doc-badge { font-size: 0.68rem; border-radius: 20px; padding: 0.1rem 0.45rem; font-weight: 600; }
   .doc-badge-type { background: rgba(138,143,168,0.12); color: var(--muted); border: 1px solid rgba(138,143,168,0.2); }
   .doc-badge-new { background: rgba(201,168,76,0.16); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
+  .doc-badge-viewed { background: rgba(62,207,142,0.1); color: var(--green); border: 1px solid rgba(62,207,142,0.25); }
+  .doc-badge-client { background: rgba(99,102,241,0.12); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.25); }
   .btn-dl { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; border-radius: 6px; padding: 0.3rem 0.65rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; flex-shrink: 0; white-space: nowrap; }
   .btn-dl:hover { border-color: var(--gold); color: var(--gold); }
   .btn-dl:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -336,7 +338,10 @@
         } else {
           catDocs.forEach(doc => {
             const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
-            y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(doc.display_name || 'Document')}</div><div class="doc-badges">${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
+            const statusBadge = sectionKey === 'firm_uploaded'
+              ? `<span class="doc-badge doc-badge-viewed">✓ Delivered</span>`
+              : `<span class="doc-badge doc-badge-client">✓ Uploaded</span>`;
+            y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(doc.display_name || 'Document')}</div><div class="doc-badges">${statusBadge}${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
           });
         }
         y += `</div></div>`;
