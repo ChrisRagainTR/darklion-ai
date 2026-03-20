@@ -1089,7 +1089,7 @@
       // Render a full folder section with year/category hierarchy
       // Recent 2 years shown, rest under "Previous Years"
       function renderSection(sectionKey, sectionLabel, sectionIcon, sourceDocs) {
-        const sectionDocs = (sourceDocs || _docs || []).filter(d => (d.folder_section || 'firm_uploaded') === sectionKey);
+        const sectionDocs = (sourceDocs || _docs || []).filter(d => (d.folder_section || '') === sectionKey);
         const recentYears = years.slice(0, 2);
         const prevYears = years.slice(2);
 
