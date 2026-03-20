@@ -1111,7 +1111,7 @@
             } else {
               catDocs.forEach(doc => {
                 const isNew = !doc.viewed_at;
-                y += `<div class="doc-row"><span class="doc-icon">${docIcon(doc.doc_type)}</span><div class="doc-info"><div class="doc-name">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
+                y += `<div class="doc-row" style="cursor:pointer;" data-docid="${doc.id}"><span class="doc-icon">${docIcon(doc.doc_type)}</span><div class="doc-info"><div class="doc-name" style="text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">📂 Open</button></div>`;
               });
             }
             y += `</div></div>`;
@@ -1188,9 +1188,12 @@
         });
       });
 
-      // Download buttons
-      container.querySelectorAll('.btn-dl').forEach(btn => {
-        btn.addEventListener('click', () => downloadDoc(parseInt(btn.dataset.docid), btn));
+      // Clicking anywhere on doc row (including button) opens the doc
+      container.querySelectorAll('.doc-row[data-docid]').forEach(row => {
+        row.addEventListener('click', (e) => {
+          const btn = row.querySelector('.btn-dl');
+          downloadDoc(parseInt(row.dataset.docid), btn || { disabled: false, textContent: '' });
+        });
       });
     }
 
@@ -1210,7 +1213,7 @@
         }, 800);
       } catch (e) {
         btn.textContent = '✕ Error';
-        setTimeout(() => { btn.disabled = false; btn.textContent = '⬇ Download'; }, 2000);
+        setTimeout(() => { btn.disabled = false; btn.textContent = '📂 Open'; }, 2000);
       }
     }
 
