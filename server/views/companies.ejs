@@ -1,0 +1,86 @@
+<%- contentFor('styles') %>
+<style>
+  .page-header { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem 2rem 1rem; flex-wrap: wrap; gap: 0.75rem; }
+  .page-header h1 { font-size: 1.3rem; font-weight: 800; }
+  .search-bar-wrap { position: relative; width: 320px; }
+  .search-bar { width: 100%; height: 38px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0 1rem 0 2.4rem; font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
+  .search-bar:focus { border-color: var(--gold); }
+  .search-bar::placeholder { color: var(--muted); }
+  .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 0.9rem; pointer-events: none; }
+  .list-table { width: 100%; border-collapse: collapse; }
+  .list-table th { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
+  .list-table td { padding: 0.85rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.88rem; }
+  .list-table tr:hover td { background: rgba(201,168,76,0.04); cursor: pointer; }
+  .list-table tr:last-child td { border-bottom: none; }
+  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 0 2rem 2rem; }
+  .empty-row td { text-align: center; color: var(--muted); padding: 3rem; }
+</style>
+
+<div class="page-header">
+  <h1>Companies</h1>
+  <div class="search-bar-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="search-bar" id="search" placeholder="Search companies…" oninput="filterList(this.value)">
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>Entity Type</th>
+        <th>Relationship</th>
+        <th>QBO</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="list-body">
+      <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">Loading…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<%- contentFor('scripts') %>
+<script>
+let allItems = [];
+
+async function loadList() {
+  try {
+    // Load all relationships then get companies from each
+    const relRes = await window.apiFetch('/api/relationships');
+    const rels = await relRes.json();
+    const items = [];
+    for (const rel of rels) {
+      try {
+        const r = await window.apiFetch(`/api/relationships/${rel.id}/companies`);
+        const cos = await r.json();
+        cos.forEach(c => { if (!items.find(x => x.id === c.id)) items.push({...c, relationship_name: rel.name}); });
+      } catch(e) {}
+    }
+    allItems = items;
+    renderList(allItems);
+  } catch(e) {
+    document.getElementById('list-body').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">Failed to load.</td></tr>';
+  }
+}
+
+function renderList(items) {
+  const tbody = document.getElementById('list-body');
+  if (!items.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No companies yet.</td></tr>'; return; }
+  tbody.innerHTML = items.map(c => `<tr onclick="window.location.href='/crm/company/${c.id}'">
+    <td style="font-weight:600;">${window.esc(c.company_name||'—')}</td>
+    <td>${c.entity_type ? `<span class="badge badge-muted">${window.esc(c.entity_type)}</span>` : '—'}</td>
+    <td>${window.esc(c.relationship_name||'—')}</td>
+    <td>${c.realm_id ? '<span class="badge badge-green">Connected</span>' : '<span class="badge badge-muted">Not Connected</span>'}</td>
+    <td>${c.status==='inactive' ? '<span class="badge badge-muted">Inactive</span>' : '<span class="badge badge-green">Active</span>'}</td>
+  </tr>`).join('');
+}
+
+function filterList(q) {
+  const f = q.toLowerCase();
+  renderList(f ? allItems.filter(c => (c.company_name||'').toLowerCase().includes(f) || (c.relationship_name||'').toLowerCase().includes(f)) : allItems);
+}
+
+loadList();
+</script>

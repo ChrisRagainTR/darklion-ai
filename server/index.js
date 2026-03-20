@@ -165,12 +165,17 @@ app.get('/dashboard.html', (req, res) => res.redirect('/dashboard'));
 app.get('/theme-preview', (req, res) => res.sendFile(path.join(publicDir, 'theme-preview.html')));
 // Team page — redirect to dashboard team section for now
 app.get('/team', (req, res) => res.redirect('/dashboard?section=team'));
+// Redirect /crm and /crm?tab=X to specific list pages
 app.get('/crm', (req, res) => {
   const tab = req.query.tab || 'relationships';
-  const navMap = { relationships: 'relationships', people: 'people', companies: 'companies' };
-  res.render('crm', { title: 'CRM', activeNav: navMap[tab] || 'relationships' });
+  if (tab === 'people') return res.redirect('/crm/people');
+  if (tab === 'companies') return res.redirect('/crm/companies');
+  return res.redirect('/crm/relationships');
 });
-app.get('/crm.html', (req, res) => res.redirect('/crm'));
+app.get('/crm.html', (req, res) => res.redirect('/crm/relationships'));
+app.get('/crm/relationships', (req, res) => res.render('relationships', { title: 'Relationships', activeNav: 'relationships' }));
+app.get('/crm/people', (req, res) => res.render('people', { title: 'People', activeNav: 'people' }));
+app.get('/crm/companies', (req, res) => res.render('companies', { title: 'Companies', activeNav: 'companies' }));
 app.get('/crm/person/:id', (req, res) => res.render('crm-person', { title: 'Person', activeNav: 'people' }));
 app.get('/crm/company/:id', (req, res) => res.render('crm-company', { title: 'Company', activeNav: 'companies' }));
 app.get('/crm/relationship/:id', (req, res) => res.render('crm-relationship', { title: 'Relationship', activeNav: 'relationships' }));

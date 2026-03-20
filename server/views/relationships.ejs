@@ -1,0 +1,121 @@
+<%- contentFor('styles') %>
+<style>
+  .page-header { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem 2rem 1rem; flex-wrap: wrap; gap: 0.75rem; }
+  .page-header h1 { font-size: 1.3rem; font-weight: 800; }
+  .search-bar-wrap { position: relative; width: 320px; }
+  .search-bar { width: 100%; height: 38px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0 1rem 0 2.4rem; font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
+  .search-bar:focus { border-color: var(--gold); }
+  .search-bar::placeholder { color: var(--muted); }
+  .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 0.9rem; pointer-events: none; }
+  .list-table { width: 100%; border-collapse: collapse; }
+  .list-table th { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
+  .list-table td { padding: 0.85rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.88rem; }
+  .list-table tr:hover td { background: rgba(201,168,76,0.04); cursor: pointer; }
+  .list-table tr:last-child td { border-bottom: none; }
+  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 0 2rem 2rem; }
+  .empty-row td { text-align: center; color: var(--muted); padding: 3rem; }
+  .loading-row td { text-align: center; color: var(--muted); padding: 2rem; }
+</style>
+
+<div class="page-header">
+  <h1>Relationships</h1>
+  <div style="display:flex;gap:0.75rem;align-items:center;">
+    <div class="search-bar-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-bar" id="search" placeholder="Search relationships…" oninput="filterList(this.value)">
+    </div>
+    <button class="btn btn-gold btn-sm" onclick="openNewModal()">+ New</button>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Service Tier</th>
+        <th>Companies</th>
+        <th>People</th>
+        <th>Billing</th>
+      </tr>
+    </thead>
+    <tbody id="list-body">
+      <tr class="loading-row"><td colspan="5">Loading…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- New Relationship Modal -->
+<div class="modal-overlay" id="new-modal" style="display:none;" onclick="if(event.target===this)closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2>New Relationship</h2>
+    <div class="form-group"><label>Name *</label><input type="text" class="form-control" id="f-name" placeholder="e.g. Ragain Family"></div>
+    <div class="form-group"><label>Service Tier</label>
+      <select class="form-control" id="f-tier">
+        <option value="standard">Standard</option>
+        <option value="full_service">Full Service</option>
+        <option value="legacy_blueprint">Legacy BluePrint</option>
+        <option value="tax_only">Tax Only</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Notes</label><textarea class="form-control" id="f-notes" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="createRelationship()">Create</button>
+    </div>
+  </div>
+</div>
+
+<%- contentFor('scripts') %>
+<script>
+let allItems = [];
+
+async function loadList() {
+  try {
+    const res = await window.apiFetch('/api/relationships');
+    allItems = await res.json();
+    renderList(allItems);
+  } catch(e) {
+    document.getElementById('list-body').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">Failed to load. Please refresh.</td></tr>';
+  }
+}
+
+function tierLabel(t) {
+  const map = { standard:'Standard', full_service:'Full Service', legacy_blueprint:'Legacy BluePrint', tax_only:'Tax Only' };
+  return map[t] || t || '—';
+}
+
+function renderList(items) {
+  const tbody = document.getElementById('list-body');
+  if (!items.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No relationships yet. Create one to get started.</td></tr>'; return; }
+  tbody.innerHTML = items.map(r => `<tr onclick="window.location.href='/crm/relationship/${r.id}'">
+    <td style="font-weight:600;">${window.esc(r.name||'—')}</td>
+    <td><span class="badge badge-muted">${window.esc(tierLabel(r.service_tier))}</span></td>
+    <td>${r.company_count||0}</td>
+    <td>${r.people_count||0}</td>
+    <td><span class="badge ${r.billing_status==='active'?'badge-green':'badge-muted'}">${window.esc(r.billing_status||'active')}</span></td>
+  </tr>`).join('');
+}
+
+function filterList(q) {
+  const f = q.toLowerCase();
+  renderList(f ? allItems.filter(r => (r.name||'').toLowerCase().includes(f)) : allItems);
+}
+
+function openNewModal() { document.getElementById('new-modal').style.display='flex'; }
+function closeModal() { document.getElementById('new-modal').style.display='none'; }
+
+async function createRelationship() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { alert('Name is required'); return; }
+  try {
+    const res = await window.apiFetch('/api/relationships', { method:'POST', body: JSON.stringify({ name, service_tier: document.getElementById('f-tier').value, notes: document.getElementById('f-notes').value }) });
+    if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Failed'); }
+    closeModal();
+    window.toast('Relationship created');
+    loadList();
+  } catch(e) { window.toast(e.message,'error'); }
+}
+
+loadList();
+</script>
