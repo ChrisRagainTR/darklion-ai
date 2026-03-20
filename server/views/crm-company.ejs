@@ -327,14 +327,20 @@
     return (b/(1024*1024)).toFixed(1) + ' MB';
   }
 
-  const DOC_CATS = [
+  const DOC_CATS_FIRM   = [
     { key: 'tax',         label: 'Tax',         icon: '🧾' },
     { key: 'bookkeeping', label: 'Bookkeeping',  icon: '📒' },
     { key: 'private',     label: 'Private',      icon: '🔒' },
     { key: 'other',       label: 'Other',        icon: '📎' },
   ];
+  const DOC_CATS_CLIENT = [
+    { key: 'tax',         label: 'Tax',         icon: '🧾' },
+    { key: 'bookkeeping', label: 'Bookkeeping',  icon: '📒' },
+    { key: 'other',       label: 'Other',        icon: '📎' },
+  ];
 
-  function buildDocsColumn(sectionDocs, title, icon) {
+  function buildDocsColumn(sectionDocs, title, icon, cats) {
+    cats = cats || DOC_CATS_FIRM;
     const CURRENT_YEAR = new Date().getFullYear();
     // Fixed year list: current year back to 2018
     const allYears = [];
@@ -363,7 +369,7 @@
           <span class="yr-chevron">▼</span>
         </div>
         <div class="year-body">
-          ${DOC_CATS.map(cat => {
+          ${cats.map(cat => {
             const files = (byYearCat[yr] || {})[cat.key] || [];
             return `<div class="cat-section-label">${cat.icon} ${cat.label} (${files.length})</div>
             ${files.length === 0
@@ -420,8 +426,8 @@
     const firmDocs = docsData.filter(d => (d.folder_section || 'firm_uploaded') === 'firm_uploaded');
     const clientDocs = docsData.filter(d => d.folder_section === 'client_uploaded');
     el.innerHTML = `<div class="docs-layout">
-      <div>${buildDocsColumn(firmDocs, 'Delivered by Advisor', '📁')}</div>
-      <div>${buildDocsColumn(clientDocs, 'Uploaded by Client', '📤')}</div>
+      <div>${buildDocsColumn(firmDocs, 'Delivered by Advisor', '📁', DOC_CATS_FIRM)}</div>
+      <div>${buildDocsColumn(clientDocs, 'Uploaded by Client', '📤', DOC_CATS_CLIENT)}</div>
     </div>`;
   }
 
