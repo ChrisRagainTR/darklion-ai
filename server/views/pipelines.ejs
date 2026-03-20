@@ -247,6 +247,120 @@
     }
 </style>
 
+  <!-- TABS -->
+  <div class="view-tabs">
+    <button class="view-tab active" data-tab="boards">Boards</button>
+    <button class="view-tab" data-tab="instances">Instances</button>
+    <button class="view-tab" data-tab="templates">Templates</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ═══════════════ BOARDS VIEW ═══════════════ -->
+    <div id="view-boards">
+      <div class="board-top">
+        <select id="instance-select" class="btn btn-ghost" style="min-width:200px;">
+          <option value="">Loading instances…</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="window.switchTab('instances')">+ New Instance</button>
+      </div>
+      <div id="board-container">
+        <div class="board-empty">
+          <div class="empty-icon">📋</div>
+          <p style="font-weight:600;">Select an instance to view its board</p>
+          <p>Or create a new instance to get started.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ INSTANCES VIEW ═══════════════ -->
+    <div id="view-instances" class="hidden">
+      <div class="instances-header">
+        <h2>Pipeline Instances</h2>
+        <button class="btn btn-gold btn-sm" onclick="openCreateInstanceModal()">+ New Instance</button>
+      </div>
+      <div id="instances-list" class="instances-list">
+        <div class="loading-state"><div class="loading-spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ TEMPLATES VIEW ═══════════════ -->
+    <div id="view-templates" class="hidden">
+      <div class="instances-header">
+        <h2>Pipeline Templates</h2>
+        <button class="btn btn-gold btn-sm" onclick="openCreateTemplateModal()">+ New Template</button>
+      </div>
+      <div id="templates-list" class="templates-list">
+        <div class="loading-state"><div class="loading-spinner"></div></div>
+      </div>
+      <div id="template-editor" class="hidden"></div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- JOB DETAIL PANEL -->
+  <div class="job-panel-overlay" id="job-panel-overlay" onclick="closeJobPanel()"></div>
+  <div class="job-panel" id="job-panel">
+    <div class="job-panel-header">
+      <div class="job-panel-title" id="panel-entity-name">Job Details</div>
+      <button class="job-panel-close" onclick="closeJobPanel()">✕</button>
+    </div>
+    <div class="job-panel-body" id="panel-body">
+      <div class="loading-state"><div class="loading-spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- CREATE INSTANCE MODAL -->
+  <div class="modal-overlay" id="create-instance-modal">
+    <div class="modal">
+      <h2>New Pipeline Instance</h2>
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="ci-name" class="form-control" placeholder="e.g. 2025 Business Tax Returns" />
+      </div>
+      <div class="form-group">
+        <label>Template</label>
+        <select id="ci-template" class="form-control"></select>
+      </div>
+      <div class="form-group">
+        <label>Tax Year (optional)</label>
+        <input type="text" id="ci-tax-year" class="form-control" placeholder="e.g. 2025" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal('create-instance-modal')">Cancel</button>
+        <button class="btn btn-gold" onclick="submitCreateInstance()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE TEMPLATE MODAL -->
+  <div class="modal-overlay" id="create-template-modal">
+    <div class="modal">
+      <h2>New Pipeline Template</h2>
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="ct-name" class="form-control" placeholder="e.g. Tax Return Workflow" />
+      </div>
+      <div class="form-group">
+        <label>Entity Type</label>
+        <select id="ct-entity-type" class="form-control">
+          <option value="company">Company</option>
+          <option value="person">Person</option>
+          <option value="relationship">Relationship</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Description (optional)</label>
+        <textarea id="ct-description" class="form-control" rows="3" placeholder="What is this workflow for?"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal('create-template-modal')">Cancel</button>
+        <button class="btn btn-gold" onclick="submitCreateTemplate()">Create</button>
+      </div>
+    </div>
+  </div>
+
 <%- include('partials/shell-globals') %>
 
 <script>
