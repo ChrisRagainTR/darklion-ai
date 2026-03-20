@@ -968,6 +968,11 @@
           api('/portal/companies').catch(() => []),
           api('/portal/documents').catch(() => []),
         ]);
+        // Load message contacts early for overview summary
+        try {
+          const mc = await fetch('/portal/messages/staff-contacts', { headers: { 'Authorization': `Bearer ${localStorage.getItem('portalToken')}` } });
+          if (mc.ok) { _contacts = await mc.json(); if (!Array.isArray(_contacts)) _contacts = []; }
+        } catch(e) { _contacts = []; }
 
         const fullName = `${_me.firstName || ''} ${_me.lastName || ''}`.trim();
         document.title = `${fullName} — Client Portal`;
@@ -1010,6 +1015,10 @@
       if (newDocs > 0) {
         badges.innerHTML += `<span class="badge badge-gold">🆕 ${newDocs} new document${newDocs > 1 ? 's' : ''}</span>`;
       }
+      const totalUnread = _contacts.reduce((n, c) => n + parseInt(c.unread_count || 0), 0);
+      if (totalUnread > 0) {
+        badges.innerHTML += `<span class="badge badge-gold">💬 ${totalUnread} unread message${totalUnread > 1 ? 's' : ''}</span>`;
+      }
       if (_companies.length > 0) {
         badges.innerHTML += `<span class="badge badge-muted">🏢 ${_companies.length} compan${_companies.length > 1 ? 'ies' : 'y'}</span>`;
       }
@@ -1026,6 +1035,12 @@
           <div class="ql-icon">🔗</div>
           <div class="ql-label">Tax Organizers</div>
           <div class="ql-desc">View &amp; complete</div>
+        </a>
+        <a class="quick-link" href="#" data-goto="messages" style="position:relative;">
+          ${totalUnread > 0 ? `<div style="position:absolute;top:0.5rem;right:0.5rem;background:var(--gold);color:#0f1117;border-radius:10px;padding:0.1rem 0.4rem;font-size:0.7rem;font-weight:700;">${totalUnread}</div>` : ''}
+          <div class="ql-icon">💬</div>
+          <div class="ql-label">Messages</div>
+          <div class="ql-desc">${totalUnread > 0 ? `${totalUnread} unread — ${_contacts.filter(c => parseInt(c.unread_count||0) > 0).map(c => escHtml(c.name)).join(', ')}` : _contacts.length > 0 ? 'View conversation' : 'No messages yet'}</div>
         </a>
       `;
 
