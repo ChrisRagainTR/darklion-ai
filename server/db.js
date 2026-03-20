@@ -326,6 +326,14 @@ async function initDB() {
       UNIQUE(person_id, company_id)
     );
 
+    -- ===================== FIRMS: slug column =====================
+    DO $$ BEGIN
+      ALTER TABLE firms ADD COLUMN IF NOT EXISTS slug TEXT DEFAULT '';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS firms_slug_unique ON firms(slug) WHERE slug != '';
+
     -- ===================== BACKFILL: create relationships for existing companies =====================
     DO $$ BEGIN
       INSERT INTO relationships (firm_id, name, created_at, updated_at)

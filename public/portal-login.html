@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <title>Client Portal — Sign In</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d27;
+      --gold: #c9a84c;
+      --gold-light: #e2c068;
+      --text: #e8e8e8;
+      --muted: #8a8fa8;
+      --border: #2a2d3a;
+      --red: #e05555;
+      --input-bg: #12151f;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+
+    .logo-wrap {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .logo-wrap img {
+      height: 48px;
+      margin-bottom: 0.75rem;
+    }
+
+    .firm-name {
+      font-size: 0.85rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      text-align: center;
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 2rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.1rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.03em;
+    }
+
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 0.65rem 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="email"]:focus,
+    input[type="password"]:focus {
+      border-color: var(--gold);
+    }
+
+    input::placeholder {
+      color: #4a4e62;
+    }
+
+    .btn-login {
+      width: 100%;
+      background: var(--gold);
+      color: #0f1117;
+      font-weight: 700;
+      font-size: 0.95rem;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .btn-login:hover { background: var(--gold-light); }
+    .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .error-msg {
+      background: rgba(224,85,85,0.12);
+      border: 1px solid rgba(224,85,85,0.35);
+      color: var(--red);
+      border-radius: 7px;
+      padding: 0.65rem 0.85rem;
+      font-size: 0.88rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .error-msg.visible { display: block; }
+
+    .forgot-link {
+      text-align: center;
+      margin-top: 1.25rem;
+      font-size: 0.84rem;
+    }
+
+    .forgot-link a {
+      color: var(--gold);
+      text-decoration: none;
+      opacity: 0.8;
+    }
+
+    .forgot-link a:hover { opacity: 1; text-decoration: underline; }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 1.75rem 0;
+    }
+
+    .footer-note {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="logo-wrap">
+      <img src="/favicon.png" alt="Logo" onerror="this.style.display='none'" />
+      <div class="firm-name" id="firmName">Client Portal</div>
+    </div>
+
+    <h1>Sign In</h1>
+    <p class="subtitle">Access your secure client portal</p>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <form id="loginForm" autocomplete="on">
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password" />
+      </div>
+
+      <button type="submit" class="btn-login" id="submitBtn">Sign In</button>
+    </form>
+
+    <div class="forgot-link">
+      <a href="#" id="forgotLink">Forgot your password?</a>
+    </div>
+
+    <div class="divider"></div>
+    <p class="footer-note">Secure portal powered by your advisory firm</p>
+  </div>
+
+  <script>
+    // Load firm name
+    (async () => {
+      try {
+        const slug = new URLSearchParams(window.location.search).get('slug') || '';
+        const url = slug ? `/portal-auth/firm-info?slug=${encodeURIComponent(slug)}` : '/portal-auth/firm-info';
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.firmName) {
+            document.getElementById('firmName').textContent = data.firmName;
+            document.title = `${data.firmName} — Client Portal`;
+          }
+        }
+      } catch (e) { /* silent */ }
+    })();
+
+    // Redirect if already logged in
+    if (localStorage.getItem('portalToken')) {
+      window.location.href = '/portal';
+    }
+
+    const form = document.getElementById('loginForm');
+    const errorMsg = document.getElementById('errorMsg');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.classList.add('visible');
+    }
+
+    function clearError() {
+      errorMsg.classList.remove('visible');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const slug = new URLSearchParams(window.location.search).get('slug') || '';
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Signing in…';
+
+      try {
+        const body = { email, password };
+        if (slug) body.firmSlug = slug;
+
+        const res = await fetch('/portal-auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showError(data.error || 'Login failed. Please try again.');
+          return;
+        }
+
+        localStorage.setItem('portalToken', data.token);
+        window.location.href = '/portal';
+      } catch (err) {
+        showError('Network error. Please check your connection and try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign In';
+      }
+    });
+
+    // Forgot password
+    document.getElementById('forgotLink').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      if (!email) {
+        showError('Enter your email address first, then click "Forgot your password?"');
+        return;
+      }
+
+      try {
+        await fetch('/portal-auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        clearError();
+        errorMsg.style.background = 'rgba(100,200,100,0.1)';
+        errorMsg.style.borderColor = 'rgba(100,200,100,0.3)';
+        errorMsg.style.color = '#6ec97e';
+        errorMsg.textContent = 'If your email is registered, you\'ll receive a reset link shortly.';
+        errorMsg.classList.add('visible');
+      } catch (err) {
+        showError('Request failed. Please try again.');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <title>My Portal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d27;
+      --gold: #c9a84c;
+      --gold-light: #e2c068;
+      --text: #e8e8e8;
+      --muted: #8a8fa8;
+      --border: #2a2d3a;
+      --green: #3ecf8e;
+      --input-bg: #12151f;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ---- TOP NAV ---- */
+    .topnav {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      height: 58px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+    }
+
+    .nav-brand img {
+      height: 30px;
+    }
+
+    .nav-brand .brand-text {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .nav-brand .brand-text span { color: var(--gold); }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .nav-user {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .btn-logout {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.82rem;
+      border-radius: 6px;
+      padding: 0.35rem 0.75rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-logout:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* ---- MAIN ---- */
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    .welcome-banner {
+      margin-bottom: 2rem;
+    }
+
+    .welcome-banner h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .welcome-banner .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 0.3rem;
+    }
+
+    /* ---- CARDS ---- */
+    .section-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .company-list {
+      list-style: none;
+    }
+
+    .company-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .company-item:last-child {
+      border-bottom: none;
+    }
+
+    .company-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .company-meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+
+    .company-badge {
+      font-size: 0.75rem;
+      background: rgba(201,168,76,0.15);
+      color: var(--gold);
+      border: 1px solid rgba(201,168,76,0.3);
+      border-radius: 20px;
+      padding: 0.15rem 0.6rem;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 1.5rem 0;
+    }
+
+    /* Loading skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, var(--border) 25%, #353845 50%, var(--border) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+      height: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    #loading { display: block; }
+    #content { display: none; }
+  </style>
+</head>
+<body>
+
+  <nav class="topnav">
+    <a class="nav-brand" href="/portal">
+      <img src="/favicon.png" alt="Logo" onerror="this.style.display='none'" />
+      <span class="brand-text">Client <span>Portal</span></span>
+    </a>
+    <div class="nav-right">
+      <span class="nav-user" id="navUser"></span>
+      <button class="btn-logout" id="logoutBtn">Sign Out</button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- Loading state -->
+    <div id="loading">
+      <div class="welcome-banner">
+        <div class="skeleton" style="width: 240px; height: 1.6rem;"></div>
+        <div class="skeleton" style="width: 160px; height: 0.9rem; margin-top: 0.5rem;"></div>
+      </div>
+      <div class="card">
+        <div class="skeleton" style="width: 120px; margin-bottom: 1rem;"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton" style="width: 80%;"></div>
+      </div>
+    </div>
+
+    <!-- Authenticated content -->
+    <div id="content">
+      <div class="welcome-banner">
+        <h1 id="welcomeHeading">Welcome back</h1>
+        <p class="subtitle" id="welcomeSubtitle">Your secure client portal</p>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Your Companies</div>
+        <ul class="company-list" id="companyList">
+          <li class="empty-state">Loading…</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem('portalToken');
+
+    if (!token) {
+      window.location.href = '/portal-login';
+    }
+
+    async function apiFetch(path) {
+      const res = await fetch(path, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.status === 401) {
+        localStorage.removeItem('portalToken');
+        window.location.href = '/portal-login';
+        throw new Error('Unauthorized');
+      }
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+      return res.json();
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('portalToken');
+      window.location.href = '/portal-login';
+    });
+
+    async function loadPortal() {
+      try {
+        const me = await apiFetch('/portal/me');
+
+        const fullName = `${me.firstName} ${me.lastName}`.trim();
+        document.title = `${fullName} — Client Portal`;
+        document.getElementById('navUser').textContent = fullName;
+        document.getElementById('welcomeHeading').textContent = `Welcome, ${me.firstName || fullName}`;
+        document.getElementById('welcomeSubtitle').textContent = me.email;
+
+        // Load companies
+        const companies = await apiFetch('/portal/companies');
+        renderCompanies(companies);
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+      } catch (err) {
+        if (err.message !== 'Unauthorized') {
+          console.error('Portal load error:', err);
+          document.getElementById('loading').innerHTML = `
+            <div style="text-align:center; color: var(--muted); padding: 3rem 0;">
+              <p>Unable to load portal. Please try refreshing.</p>
+            </div>
+          `;
+        }
+      }
+    }
+
+    function renderCompanies(companies) {
+      const list = document.getElementById('companyList');
+      if (!companies || companies.length === 0) {
+        list.innerHTML = '<li class="empty-state">No companies on file yet.</li>';
+        return;
+      }
+
+      list.innerHTML = companies.map(c => `
+        <li class="company-item">
+          <div>
+            <div class="company-name">${escHtml(c.company_name || '—')}</div>
+            <div class="company-meta">${escHtml(c.entity_type || '')}${c.ownership_pct ? ` · ${c.ownership_pct}% ownership` : ''}</div>
+          </div>
+          <span class="company-badge">${escHtml(c.access_level || 'full')}</span>
+        </li>
+      `).join('');
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    if (token) loadPortal();
+  </script>
+</body>
+</html>

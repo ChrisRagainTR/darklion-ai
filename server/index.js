@@ -184,6 +184,20 @@ const peopleRouter = require('./routes/people');
 app.use('/api/relationships', requireFirm, apiLimiter, relationshipsRouter);
 app.use('/api/people', requireFirm, apiLimiter, peopleRouter);
 
+const portalAuthRouter = require('./routes/portal-auth');
+const portalRouter = require('./routes/portal');
+const { requirePortal } = require('./middleware/requirePortal');
+
+// Public portal auth (no middleware)
+app.use('/portal-auth', portalAuthRouter);
+
+// Protected portal API routes
+app.use('/portal', requirePortal, apiLimiter, portalRouter);
+
+// Portal HTML pages (public)
+app.get('/portal-login', (req, res) => res.sendFile(path.join(publicDir, 'portal-login.html')));
+app.get('/portal', (req, res) => res.sendFile(path.join(publicDir, 'portal.html')));
+
 // --- Global error handler ---
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
