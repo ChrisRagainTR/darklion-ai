@@ -19,40 +19,32 @@
   .ph-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
   .ph-desc { font-size: 0.86rem; }
 
-  /* ── Docs tab ── */
+  /* ── Docs tab — portal-matched styles ── */
   .docs-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 1.5rem; }
   @media (max-width: 900px) { .docs-layout { grid-template-columns: 1fr; } }
-  .docs-col-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem; }
-  .year-block { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.75rem; overflow: hidden; }
-  .year-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.85rem; cursor: pointer; background: var(--card); user-select: none; }
-  .year-header:hover { background: rgba(201,168,76,0.05); }
-  .year-label { font-size: 0.85rem; font-weight: 700; flex: 1; }
-  .year-count { font-size: 0.72rem; background: rgba(255,255,255,0.1); border-radius: 10px; padding: 0.1rem 0.45rem; color: var(--muted); }
-  .year-arrow { font-size: 0.65rem; color: var(--muted); }
-  .year-body { border-top: 1px solid var(--border); }
-  .cat-block { border-bottom: 1px solid rgba(255,255,255,0.04); }
-  .cat-block:last-child { border-bottom: none; }
-  .cat-header { display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.85rem; cursor: pointer; user-select: none; background: rgba(0,0,0,0.12); }
-  .cat-header:hover { background: rgba(201,168,76,0.04); }
-  .cat-label { font-size: 0.76rem; font-weight: 600; flex: 1; color: var(--muted); }
-  .cat-count { font-size: 0.68rem; color: var(--muted); background: rgba(255,255,255,0.07); border-radius: 8px; padding: 0.08rem 0.35rem; }
-  .cat-body { }
-  .doc-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.85rem 0.45rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
-  .doc-row:last-child { border-bottom: none; }
-  .doc-type-badge { font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 3px; flex-shrink: 0; background: #e53e3e; color: #fff; }
-  .doc-type-badge.pdf { background: #e53e3e; }
-  .doc-type-badge.xls { background: #276749; }
-  .doc-type-badge.doc { background: #2b6cb0; }
-  .doc-type-badge.img { background: #744210; }
-  .doc-type-badge.other { background: var(--charcoal); color: var(--muted); }
-  .doc-name { font-size: 0.82rem; font-weight: 600; flex: 1; min-width: 0; color: var(--gold); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .doc-name:hover { text-decoration: underline; }
-  .doc-meta { font-size: 0.7rem; color: var(--muted); flex-shrink: 0; }
-  .doc-viewed { font-size: 0.68rem; color: var(--green); flex-shrink: 0; }
-  .doc-download { font-size: 0.72rem; color: var(--muted); cursor: pointer; flex-shrink: 0; padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid var(--border); background: none; }
-  .doc-download:hover { color: var(--text); border-color: var(--gold); }
-  .cat-empty { font-size: 0.75rem; color: var(--muted); font-style: italic; padding: 0.35rem 1.5rem; }
-  .docs-col-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+  .docs-col-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem; }
+  .year-folder { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 0.75rem; overflow: hidden; }
+  .year-header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; cursor: pointer; user-select: none; transition: background 0.15s; }
+  .year-header:hover { background: rgba(255,255,255,0.03); }
+  .year-header .yr-label { font-weight: 700; font-size: 0.95rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
+  .yr-count { font-size: 0.72rem; background: rgba(201,168,76,0.12); color: var(--gold); border: 1px solid rgba(201,168,76,0.25); border-radius: 20px; padding: 0.1rem 0.5rem; font-weight: 600; }
+  .yr-chevron { color: var(--muted); font-size: 0.8rem; transition: transform 0.2s; }
+  .year-folder.open .yr-chevron { transform: rotate(180deg); }
+  .year-body { display: none; border-top: 1px solid var(--border); }
+  .year-folder.open .year-body { display: block; }
+  .cat-section-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 0.6rem 1.1rem 0.3rem; font-weight: 700; border-left: 3px solid var(--gold); background: rgba(201,168,76,0.04); }
+  .doc-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.1rem; border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+  .doc-row:hover { background: rgba(255,255,255,0.03); }
+  .doc-info { flex: 1; min-width: 0; }
+  .doc-name { font-weight: 600; font-size: 0.9rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .doc-name:hover { color: var(--gold); }
+  .doc-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.25rem; }
+  .doc-badge { font-size: 0.68rem; border-radius: 20px; padding: 0.1rem 0.45rem; font-weight: 600; }
+  .doc-badge-type { background: rgba(138,143,168,0.12); color: var(--muted); border: 1px solid rgba(138,143,168,0.2); }
+  .doc-badge-viewed { background: rgba(62,207,142,0.1); color: var(--green); border: 1px solid rgba(62,207,142,0.25); }
+  .btn-dl { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; border-radius: 6px; padding: 0.3rem 0.65rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; flex-shrink: 0; white-space: nowrap; }
+  .btn-dl:hover { border-color: var(--gold); color: var(--gold); }
+  .cat-empty-msg { color: var(--muted); font-size: 0.82rem; font-style: italic; padding: 0.4rem 1.1rem; }
 </style>
 
 <main class="main">
@@ -362,57 +354,47 @@
 
     const colKey = title.replace(/\s/g, '');
 
-    function renderOneYear(yr, open) {
+    function renderOneYear(yr, openByDefault) {
       const yrDocs = sectionDocs.filter(d => (d.year || String(CURRENT_YEAR)) === yr);
-      const bodyId = `yb-${colKey}-${yr}`;
-      return `<div class="year-block">
-        <div class="year-header" onclick="var b=document.getElementById('${bodyId}');var isOpen=b.style.display!=='none';b.style.display=isOpen?'none':'block';this.querySelector('.year-arrow').textContent=isOpen?'▸':'▾';">
-          <span style="font-size:0.9rem;">📅</span>
-          <span class="year-label">${yr}</span>
-          <span class="year-count">${yrDocs.length}</span>
-          <span class="year-arrow">${open ? '▾' : '▸'}</span>
+      const openClass = openByDefault ? ' open' : '';
+      return `<div class="year-folder${openClass}">
+        <div class="year-header" onclick="this.closest('.year-folder').classList.toggle('open')">
+          <span class="yr-label">📅 ${yr} <span class="yr-count">${yrDocs.length}</span></span>
+          <span class="yr-chevron">▼</span>
         </div>
-        <div class="year-body" id="${bodyId}" style="display:${open ? 'block' : 'none'}">
+        <div class="year-body">
           ${DOC_CATS.map(cat => {
             const files = (byYearCat[yr] || {})[cat.key] || [];
-            const catId = `cb-${colKey}-${yr}-${cat.key}`;
-            return `<div class="cat-block">
-              <div class="cat-header" onclick="var b=document.getElementById('${catId}');b.style.display=b.style.display==='none'?'block':'none';">
-                <span>${cat.icon}</span>
-                <span class="cat-label">${cat.label}</span>
-                <span class="cat-count">${files.length}</span>
-              </div>
-              <div class="cat-body" id="${catId}">
-                ${files.length === 0
-                  ? '<div class="cat-empty">Empty</div>'
-                  : files.map(f => `<div class="doc-row">
-                      ${docTypeBadge(f.mime_type)}
-                      <span class="doc-name" onclick="downloadDoc(${f.id})">${esc(f.display_name||'Untitled')}</span>
-                      ${f.viewed_at ? '<span class="doc-viewed">✓</span>' : ''}
-                      <span class="doc-meta">${formatBytes(f.size_bytes)}</span>
-                      <button class="doc-download" onclick="downloadDoc(${f.id})">↓</button>
-                    </div>`).join('')
-                }
-              </div>
-            </div>`;
+            return `<div class="cat-section-label">${cat.icon} ${cat.label} (${files.length})</div>
+            ${files.length === 0
+              ? `<div class="cat-empty-msg">No ${cat.label.toLowerCase()} documents for ${yr}</div>`
+              : files.map(f => `<div class="doc-row">
+                  ${docTypeBadge(f.mime_type)}
+                  <div class="doc-info">
+                    <div class="doc-name" onclick="downloadDoc(${f.id})">${esc(f.display_name||'Untitled')}</div>
+                    <div class="doc-badges">
+                      ${f.viewed_at ? '<span class="doc-badge doc-badge-viewed">✓ Viewed</span>' : ''}
+                      ${f.size_bytes ? `<span class="doc-badge doc-badge-type">${formatBytes(f.size_bytes)}</span>` : ''}
+                    </div>
+                  </div>
+                  <button class="btn-dl" onclick="downloadDoc(${f.id})">⬇ Download</button>
+                </div>`).join('')
+            }`;
           }).join('')}
         </div>
       </div>`;
     }
 
     const priorCount = priorYears.reduce((n,y) => n + sectionDocs.filter(d => (d.year||String(CURRENT_YEAR)) === y).length, 0);
-    const priorId = `prior-${colKey}`;
 
     let html = `<div class="docs-col-title">${icon} ${title} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
     recentYears.forEach(y => { html += renderOneYear(y, true); });
-    html += `<div class="year-block">
-      <div class="year-header" onclick="var b=document.getElementById('${priorId}');var isOpen=b.style.display!=='none';b.style.display=isOpen?'none':'block';this.querySelector('.year-arrow').textContent=isOpen?'▸':'▾';">
-        <span style="font-size:0.9rem;">📂</span>
-        <span class="year-label">Prior Years</span>
-        <span class="year-count">${priorCount}</span>
-        <span class="year-arrow">▸</span>
+    html += `<div class="year-folder">
+      <div class="year-header" onclick="this.closest('.year-folder').classList.toggle('open')">
+        <span class="yr-label">📂 Prior Years <span class="yr-count">${priorCount}</span></span>
+        <span class="yr-chevron">▼</span>
       </div>
-      <div id="${priorId}" style="display:none">
+      <div class="year-body">
         ${priorYears.map(y => renderOneYear(y, false)).join('')}
       </div>
     </div>`;
