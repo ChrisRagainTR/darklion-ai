@@ -614,12 +614,7 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
   function toast(msg, type='success') {
-    const c = document.getElementById('toast-container');
-    const t = document.createElement('div');
-    t.className = 'toast ' + type;
-    t.textContent = (type==='success'?'✓ ':'✕ ') + msg;
-    c.appendChild(t);
-    setTimeout(() => t.remove(), 3500);
+    window.toast(msg, type === 'error' ? 'error' : undefined);
   }
 
 
