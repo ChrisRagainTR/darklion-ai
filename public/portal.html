@@ -1097,7 +1097,7 @@
               } else {
                 catDocs.forEach(doc => {
                   const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
-                  const isNew = !doc.viewed_at;
+                  const isNew = isDocNew(doc);
                   y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
                 });
               }
@@ -1146,7 +1146,7 @@
       if (_me.filingStatus) {
         badges.innerHTML += `<span class="badge badge-gold">📋 ${escHtml(_me.filingStatus)}</span>`;
       }
-      const newDocs = _docs.filter(d => !d.viewed_at).length;
+      const newDocs = _docs.filter(d => isDocNew(d)).length;
       if (newDocs > 0) {
         badges.innerHTML += `<span class="badge badge-gold">🆕 ${newDocs} new document${newDocs > 1 ? 's' : ''}</span>`;
       }
@@ -1214,6 +1214,19 @@
 
     // ── DOCUMENTS ────────────────────────────────────────
     // Get file type label from mime type or filename
+    // Determine if a doc should show as NEW
+    // - Client-uploaded docs: never NEW (they uploaded it)
+    // - Advisor docs: NEW until viewed OR 30 days after delivery
+    function isDocNew(doc) {
+      if (doc.folder_section === 'client_uploaded') return false;
+      if (doc.viewed_at) return false;
+      if (doc.delivered_at) {
+        const daysSinceDelivery = (Date.now() - new Date(doc.delivered_at).getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSinceDelivery > 30) return false;
+      }
+      return true;
+    }
+
     function fileTypeBadge(mimeType, displayName) {
       const mime = (mimeType || '').toLowerCase();
       const name = (displayName || '').toLowerCase();
@@ -1267,7 +1280,7 @@
 
         function renderOneYear(yr) {
           const yrDocs = sectionDocs.filter(d => (d.year || '') === yr);
-          const hasNew = yrDocs.some(d => !d.viewed_at);
+          const hasNew = yrDocs.some(d => isDocNew(d));
           const open = yrDocs.length > 0;
           let y = `<div class="year-folder${open ? ' open' : ''}" style="margin-bottom:0.4rem;">
             <div class="year-header">
@@ -1282,7 +1295,7 @@
               y += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`;
             } else {
               catDocs.forEach(doc => {
-                const isNew = !doc.viewed_at;
+                const isNew = isDocNew(doc);
                 const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
                 y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
               });
@@ -1333,7 +1346,7 @@
 
         function renderOneYearWithCats(yr) {
           const yrDocs = sectionDocs.filter(d => (d.year || '') === yr);
-          const hasNew = yrDocs.some(d => !d.viewed_at);
+          const hasNew = yrDocs.some(d => isDocNew(d));
           const open = yrDocs.length > 0;
           let y = `<div class="year-folder${open ? ' open' : ''}" style="margin-bottom:0.4rem;">
             <div class="year-header">
@@ -1348,7 +1361,7 @@
               y += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`;
             } else {
               catDocs.forEach(doc => {
-                const isNew = !doc.viewed_at;
+                const isNew = isDocNew(doc);
                 const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
                 y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
               });
