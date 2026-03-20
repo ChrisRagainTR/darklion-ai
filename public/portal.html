@@ -1510,6 +1510,59 @@
 
     // ── Wire UI events first (independent of init, always safe) ─────
     (function wireEvents() {
+      // ── Page-wide drag-and-drop when Documents tab is active ──
+      let _dragCounter = 0;
+      const _dragOverlay = document.createElement('div');
+      _dragOverlay.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(201,168,76,0.08);border:3px dashed var(--gold);pointer-events:none;align-items:center;justify-content:center;font-size:1.5rem;color:var(--gold);font-weight:700;';
+      _dragOverlay.textContent = '📄 Drop to upload document';
+      document.body.appendChild(_dragOverlay);
+
+      function isDocTabActive() {
+        return document.querySelector('.tab-btn[data-tab="documents"]')?.classList.contains('active');
+      }
+
+      document.addEventListener('dragenter', function(e) {
+        if (!isDocTabActive()) return;
+        _dragCounter++;
+        _dragOverlay.style.display = 'flex';
+      });
+      document.addEventListener('dragleave', function(e) {
+        if (!isDocTabActive()) return;
+        _dragCounter--;
+        if (_dragCounter <= 0) { _dragCounter = 0; _dragOverlay.style.display = 'none'; }
+      });
+      document.addEventListener('dragover', function(e) {
+        if (!isDocTabActive()) return;
+        e.preventDefault();
+      });
+      document.addEventListener('drop', function(e) {
+        if (!isDocTabActive()) return;
+        e.preventDefault();
+        _dragCounter = 0;
+        _dragOverlay.style.display = 'none';
+        const file = e.dataTransfer?.files?.[0];
+        if (!file) return;
+        // Open upload modal with the dropped file
+        const openBtn = document.getElementById('openUploadBtn');
+        if (openBtn) openBtn.click();
+        setTimeout(function() {
+          const fileDrop = document.getElementById('fileDrop');
+          const fileInput = document.getElementById('fileInput');
+          if (fileInput) {
+            // Can't programmatically set FileInput.files, but we can pre-load via DataTransfer
+            try {
+              const dt = new DataTransfer();
+              dt.items.add(file);
+              fileInput.files = dt.files;
+              fileInput.dispatchEvent(new Event('change'));
+            } catch(err) {
+              // DataTransfer not supported — just open modal without pre-loading
+            }
+          }
+        }, 100);
+      });
+
+      // ── Chat input wiring ──
       const chatInput = document.getElementById('chatInput');
       const chatSendBtn = document.getElementById('chatSendBtn');
 
