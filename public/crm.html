@@ -386,6 +386,7 @@
   <div class="panel-tabs">
     <div class="panel-tab active" data-ptab="rel-people" onclick="switchPanelTab('rel',this,'rel-people')">People</div>
     <div class="panel-tab" data-ptab="rel-companies" onclick="switchPanelTab('rel',this,'rel-companies')">Companies</div>
+    <div class="panel-tab" data-ptab="rel-documents" onclick="switchPanelTab('rel',this,'rel-documents')">Documents</div>
     <div class="panel-tab" data-ptab="rel-notes" onclick="switchPanelTab('rel',this,'rel-notes')">Notes</div>
   </div>
   <div class="panel-body">
@@ -398,6 +399,9 @@
     </div>
     <div id="rel-panel-content-rel-companies" style="display:none;">
       <div id="rel-companies-list"><div class="loading-state"><div class="loading-spinner"></div></div></div>
+    </div>
+    <div id="rel-panel-content-rel-documents" style="display:none;">
+      <div id="rel-docs-content"><div class="loading-state"><div class="loading-spinner"></div></div></div>
     </div>
     <div id="rel-panel-content-rel-notes" style="display:none;">
       <div class="form-group">
@@ -440,11 +444,15 @@
       <div id="p-companies-content"><div class="loading-state"><div class="loading-spinner"></div></div></div>
     </div>
     <div id="person-panel-content-p-documents" style="display:none;">
-      <div class="placeholder-section">
-        <div class="ph-icon">📄</div>
-        <div class="ph-title">Documents</div>
-        <div class="ph-desc">Documents coming in Phase 4</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+        <div style="display:flex;gap:0.4rem;">
+          <button class="btn btn-sm" id="pdoc-tab-personal" onclick="switchDocSubTab('personal')" style="background:var(--gold);color:#000;font-weight:600;border:none;border-radius:6px;padding:0.3rem 0.75rem;cursor:pointer;font-size:0.8rem;">Personal</button>
+          <button class="btn btn-sm" id="pdoc-tab-bycompany" onclick="switchDocSubTab('bycompany')" style="background:transparent;color:var(--muted);font-weight:500;border:1px solid var(--border);border-radius:6px;padding:0.3rem 0.75rem;cursor:pointer;font-size:0.8rem;">By Company</button>
+        </div>
+        <button class="btn btn-gold btn-xs" onclick="openUploadModal('person', currentPersonId)">+ Upload</button>
       </div>
+      <div id="pdoc-personal-content"><div class="loading-state"><div class="loading-spinner"></div></div></div>
+      <div id="pdoc-bycompany-content" style="display:none;"><div class="loading-state"><div class="loading-spinner"></div></div></div>
     </div>
     <div id="person-panel-content-p-messages" style="display:none;">
       <div class="placeholder-section">
@@ -459,6 +467,66 @@
         <div class="ph-title">Pipeline Jobs</div>
         <div class="ph-desc">Pipelines coming soon</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Upload Document Modal ── -->
+<div class="modal-overlay" id="upload-modal">
+  <div class="modal" style="width:480px;">
+    <div class="modal-header">
+      <div class="modal-title">Upload Document</div>
+      <button class="modal-close" onclick="closeModal('upload-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="upload-form-error" class="error-msg" style="display:none;"></div>
+      <!-- Drag & drop zone -->
+      <div id="upload-dropzone" style="border:2px dashed var(--border);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;transition:border-color 0.2s;margin-bottom:1rem;"
+           onclick="document.getElementById('upload-file-input').click()"
+           ondragover="uploadDragOver(event)"
+           ondragleave="uploadDragLeave(event)"
+           ondrop="uploadDrop(event)">
+        <div id="upload-dropzone-text" style="color:var(--muted);font-size:0.9rem;">
+          <div style="font-size:2rem;margin-bottom:0.5rem;">📂</div>
+          <div>Drag & drop a file here, or <span style="color:var(--gold);text-decoration:underline;">click to browse</span></div>
+          <div style="font-size:0.78rem;margin-top:0.4rem;">Max 50 MB</div>
+        </div>
+        <div id="upload-file-name" style="display:none;color:var(--text);font-weight:600;font-size:0.9rem;"></div>
+      </div>
+      <input type="file" id="upload-file-input" style="display:none;" onchange="uploadFileSelected(this)">
+      <div class="form-group">
+        <label class="form-label">Display Name</label>
+        <input type="text" class="form-control" id="upload-display-name" placeholder="Friendly name (auto-filled from filename)">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Year</label>
+          <input type="text" class="form-control" id="upload-year" placeholder="2024" maxlength="4">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Document Type</label>
+          <select class="form-control" id="upload-doc-type">
+            <option value="other">Other</option>
+            <option value="tax_return">Tax Return</option>
+            <option value="w2">W-2</option>
+            <option value="1099">1099</option>
+            <option value="engagement_letter">Engagement Letter</option>
+            <option value="organizer">Organizer</option>
+            <option value="statement">Statement</option>
+          </select>
+        </div>
+      </div>
+      <!-- Progress bar -->
+      <div id="upload-progress-wrap" style="display:none;margin-top:0.5rem;">
+        <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;">
+          <div id="upload-progress-bar" style="background:var(--gold);height:100%;width:0%;transition:width 0.3s;"></div>
+        </div>
+        <div id="upload-progress-label" style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;text-align:center;">Uploading…</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('upload-modal')">Cancel</button>
+      <button class="btn btn-gold" id="upload-submit-btn" onclick="submitUpload()">Upload</button>
     </div>
   </div>
 </div>
@@ -728,8 +796,10 @@ function switchPanelTab(prefix, el, tabId) {
   // Lazy load
   if (tabId === 'rel-people') loadRelPeople();
   if (tabId === 'rel-companies') loadRelCompanies();
+  if (tabId === 'rel-documents') loadRelDocuments();
   if (tabId === 'p-overview') loadPersonOverview();
   if (tabId === 'p-companies') loadPersonCompanies();
+  if (tabId === 'p-documents') loadPersonDocuments();
 }
 
 // =====================================================================
@@ -1519,6 +1589,344 @@ function logout() {
   localStorage.removeItem('dl_token');
   window.location.href = '/login';
 }
+
+// =====================================================================
+//  DOCUMENTS
+// =====================================================================
+
+const DOC_ICONS = {
+  tax_return: '📋',
+  w2: '📄',
+  '1099': '📄',
+  engagement_letter: '✍️',
+  organizer: '📝',
+  statement: '🏦',
+  other: '📎',
+};
+
+function docIcon(type) { return DOC_ICONS[type] || '📎'; }
+
+function fmtBytes(b) {
+  if (!b) return '—';
+  if (b < 1024) return b + ' B';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+  return (b / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function docCard(doc, showDeliver = true) {
+  const icon = docIcon(doc.doc_type);
+  const deliveredBadge = doc.is_delivered
+    ? '<span class="badge badge-green" style="font-size:0.7rem;">Delivered</span>'
+    : '<span class="badge badge-muted" style="font-size:0.7rem;">Not Delivered</span>';
+  const yearBadge = doc.year ? `<span class="badge badge-muted" style="font-size:0.7rem;">${esc(doc.year)}</span>` : '';
+  const typeBadge = `<span class="badge badge-muted" style="font-size:0.7rem;">${esc(doc.doc_type||'other')}</span>`;
+  const deliverToggle = showDeliver
+    ? `<button class="btn btn-ghost btn-xs" style="font-size:0.72rem;" onclick="toggleDelivered(${doc.id}, ${!doc.is_delivered})">${doc.is_delivered ? 'Undeliver' : 'Deliver'}</button>`
+    : '';
+  return `
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.7rem 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:1.4rem;flex-shrink:0;">${icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(doc.display_name||'Untitled')}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.25rem;">${yearBadge}${typeBadge}${deliveredBadge}</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem;">${fmtBytes(doc.size_bytes)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.3rem;flex-shrink:0;">
+        <button class="btn btn-ghost btn-xs" onclick="downloadDoc(${doc.id})">⬇ Download</button>
+        ${deliverToggle}
+        <button class="btn btn-danger btn-xs" onclick="deleteDoc(${doc.id})">Delete</button>
+      </div>
+    </div>`;
+}
+
+async function downloadDoc(docId) {
+  try {
+    const res = await apiFetch(`/api/documents/${docId}/download`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    window.open(data.url, '_blank');
+  } catch (e) {
+    toast('Download failed: ' + e.message, 'error');
+  }
+}
+
+async function deleteDoc(docId) {
+  if (!confirm('Delete this document? This cannot be undone.')) return;
+  try {
+    const res = await apiFetch(`/api/documents/${docId}`, { method: 'DELETE' });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+    toast('Document deleted');
+    loadPersonDocuments();
+    if (currentRelId) loadRelDocuments();
+  } catch (e) {
+    toast('Failed to delete: ' + e.message, 'error');
+  }
+}
+
+async function toggleDelivered(docId, deliver) {
+  try {
+    let res;
+    if (deliver) {
+      res = await apiFetch(`/api/documents/${docId}/deliver`, { method: 'POST' });
+    } else {
+      res = await apiFetch(`/api/documents/${docId}`, { method: 'PUT', body: JSON.stringify({ is_delivered: false }) });
+    }
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+    toast(deliver ? 'Marked as delivered' : 'Delivery revoked');
+    loadPersonDocuments();
+    if (currentRelId) loadRelDocuments();
+  } catch (e) {
+    toast('Failed: ' + e.message, 'error');
+  }
+}
+
+// Person Documents Tab
+let currentDocSubTab = 'personal';
+
+function switchDocSubTab(tab) {
+  currentDocSubTab = tab;
+  const personal = document.getElementById('pdoc-personal-content');
+  const byco = document.getElementById('pdoc-bycompany-content');
+  const btnP = document.getElementById('pdoc-tab-personal');
+  const btnC = document.getElementById('pdoc-tab-bycompany');
+  if (tab === 'personal') {
+    personal.style.display = '';
+    byco.style.display = 'none';
+    btnP.style.background = 'var(--gold)';
+    btnP.style.color = '#000';
+    btnC.style.background = 'transparent';
+    btnC.style.color = 'var(--muted)';
+    loadPersonDocsPersonal();
+  } else {
+    personal.style.display = 'none';
+    byco.style.display = '';
+    btnP.style.background = 'transparent';
+    btnP.style.color = 'var(--muted)';
+    btnC.style.background = 'var(--gold)';
+    btnC.style.color = '#000';
+    loadPersonDocsByCompany();
+  }
+}
+
+async function loadPersonDocuments() {
+  if (!currentPersonId) return;
+  switchDocSubTab(currentDocSubTab || 'personal');
+}
+
+async function loadPersonDocsPersonal() {
+  if (!currentPersonId) return;
+  const c = document.getElementById('pdoc-personal-content');
+  c.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+  try {
+    const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${currentPersonId}`);
+    const docs = await res.json();
+    if (!docs.length) {
+      c.innerHTML = '<div class="empty-state"><div class="empty-icon">📄</div><div>No personal documents yet.</div></div>';
+      return;
+    }
+    c.innerHTML = docs.map(d => docCard(d)).join('');
+  } catch (e) {
+    c.innerHTML = '<div class="error-msg">Failed to load documents.</div>';
+  }
+}
+
+async function loadPersonDocsByCompany() {
+  if (!currentPersonId) return;
+  const c = document.getElementById('pdoc-bycompany-content');
+  c.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+  try {
+    // Get companies this person has access to
+    const pRes = await apiFetch(`/api/people/${currentPersonId}`);
+    const p = await pRes.json();
+    const companies = p.company_access || p.companies || [];
+    if (!companies.length) {
+      c.innerHTML = '<div class="empty-state"><div class="empty-icon">🏢</div><div>No company access.</div></div>';
+      return;
+    }
+    let html = '';
+    for (const co of companies) {
+      const coId = co.company_id || co.id;
+      const coName = co.display_name || co.company_name || co.name || 'Unknown';
+      try {
+        const docsRes = await apiFetch(`/api/documents?owner_type=company&owner_id=${coId}`);
+        const docs = await docsRes.json();
+        html += `<div style="margin-bottom:1rem;"><div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.5rem;">${esc(coName)}</div>`;
+        if (!docs.length) {
+          html += '<div style="color:var(--muted);font-size:0.83rem;padding:0.5rem 0;">No documents.</div>';
+        } else {
+          html += docs.map(d => docCard(d)).join('');
+        }
+        html += '</div>';
+      } catch (e) {}
+    }
+    c.innerHTML = html || '<div class="empty-state">No documents found.</div>';
+  } catch (e) {
+    c.innerHTML = '<div class="error-msg">Failed to load documents.</div>';
+  }
+}
+
+// Relationship Documents Tab
+async function loadRelDocuments() {
+  if (!currentRelId) return;
+  const c = document.getElementById('rel-docs-content');
+  c.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+  try {
+    // Get people + companies in this relationship
+    const [peopleRes, companiesRes] = await Promise.all([
+      apiFetch(`/api/relationships/${currentRelId}/people`),
+      apiFetch(`/api/relationships/${currentRelId}/companies`),
+    ]);
+    const people = await peopleRes.json();
+    const companies = await companiesRes.json();
+
+    let html = '';
+
+    // Personal docs for each person
+    for (const p of people) {
+      const pName = `${p.first_name} ${p.last_name}`.trim();
+      try {
+        const docsRes = await apiFetch(`/api/documents?owner_type=person&owner_id=${p.id}`);
+        const docs = await docsRes.json();
+        html += `<div style="margin-bottom:1rem;"><div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.5rem;">👤 ${esc(pName)}</div>`;
+        if (!docs.length) {
+          html += '<div style="color:var(--muted);font-size:0.83rem;padding:0.5rem 0;">No documents.</div>';
+        } else {
+          html += docs.map(d => docCard(d)).join('');
+        }
+        html += '</div>';
+      } catch (e) {}
+    }
+
+    // Company docs
+    for (const co of companies) {
+      const coId = co.id || co.company_id;
+      const coName = co.display_name || co.company_name || co.name || 'Unknown';
+      try {
+        const docsRes = await apiFetch(`/api/documents?owner_type=company&owner_id=${coId}`);
+        const docs = await docsRes.json();
+        html += `<div style="margin-bottom:1rem;"><div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.5rem;">🏢 ${esc(coName)}</div>`;
+        if (!docs.length) {
+          html += '<div style="color:var(--muted);font-size:0.83rem;padding:0.5rem 0;">No documents.</div>';
+        } else {
+          html += docs.map(d => docCard(d)).join('');
+        }
+        html += '</div>';
+      } catch (e) {}
+    }
+
+    c.innerHTML = html || '<div class="empty-state"><div class="empty-icon">📄</div><div>No documents in this relationship.</div></div>';
+  } catch (e) {
+    c.innerHTML = '<div class="error-msg">Failed to load documents.</div>';
+  }
+}
+
+// ── Upload Modal ──────────────────────────────────────────────────────
+let uploadOwnerType = null;
+let uploadOwnerId = null;
+let uploadFile = null;
+
+function openUploadModal(ownerType, ownerId) {
+  uploadOwnerType = ownerType;
+  uploadOwnerId = ownerId;
+  uploadFile = null;
+  document.getElementById('upload-file-input').value = '';
+  document.getElementById('upload-display-name').value = '';
+  document.getElementById('upload-year').value = new Date().getFullYear().toString();
+  document.getElementById('upload-doc-type').value = 'other';
+  document.getElementById('upload-form-error').style.display = 'none';
+  document.getElementById('upload-progress-wrap').style.display = 'none';
+  document.getElementById('upload-submit-btn').disabled = false;
+  document.getElementById('upload-dropzone-text').style.display = '';
+  document.getElementById('upload-file-name').style.display = 'none';
+  document.getElementById('upload-dropzone').style.borderColor = 'var(--border)';
+  openModal('upload-modal');
+}
+
+function uploadDragOver(e) {
+  e.preventDefault();
+  document.getElementById('upload-dropzone').style.borderColor = 'var(--gold)';
+}
+
+function uploadDragLeave(e) {
+  document.getElementById('upload-dropzone').style.borderColor = 'var(--border)';
+}
+
+function uploadDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-dropzone').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) setUploadFile(file);
+}
+
+function uploadFileSelected(input) {
+  const file = input.files[0];
+  if (file) setUploadFile(file);
+}
+
+function setUploadFile(file) {
+  uploadFile = file;
+  document.getElementById('upload-dropzone-text').style.display = 'none';
+  const nameEl = document.getElementById('upload-file-name');
+  nameEl.textContent = `📎 ${file.name}  (${fmtBytes(file.size)})`;
+  nameEl.style.display = '';
+  // Auto-fill display name from filename
+  const displayName = document.getElementById('upload-display-name');
+  if (!displayName.value) {
+    displayName.value = file.name.replace(/\.[^.]+$/, '');
+  }
+}
+
+async function submitUpload() {
+  if (!uploadFile) {
+    document.getElementById('upload-form-error').textContent = 'Please select a file.';
+    document.getElementById('upload-form-error').style.display = '';
+    return;
+  }
+  document.getElementById('upload-form-error').style.display = 'none';
+  document.getElementById('upload-submit-btn').disabled = true;
+
+  const progressWrap = document.getElementById('upload-progress-wrap');
+  const progressBar = document.getElementById('upload-progress-bar');
+  const progressLabel = document.getElementById('upload-progress-label');
+  progressWrap.style.display = '';
+  progressBar.style.width = '20%';
+  progressLabel.textContent = 'Uploading…';
+
+  const formData = new FormData();
+  formData.append('file', uploadFile);
+  formData.append('owner_type', uploadOwnerType);
+  formData.append('owner_id', uploadOwnerId);
+  formData.append('year', document.getElementById('upload-year').value.trim());
+  formData.append('doc_type', document.getElementById('upload-doc-type').value);
+  formData.append('display_name', document.getElementById('upload-display-name').value.trim() || uploadFile.name);
+
+  try {
+    const token = localStorage.getItem('dl_token');
+    const res = await fetch('/api/documents/upload', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    });
+    progressBar.style.width = '90%';
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+    progressBar.style.width = '100%';
+    progressLabel.textContent = 'Done!';
+    setTimeout(() => {
+      closeModal('upload-modal');
+      toast('Document uploaded');
+      loadPersonDocuments();
+      if (currentRelId) loadRelDocuments();
+    }, 500);
+  } catch (e) {
+    document.getElementById('upload-form-error').textContent = e.message;
+    document.getElementById('upload-form-error').style.display = '';
+    document.getElementById('upload-submit-btn').disabled = false;
+    progressWrap.style.display = 'none';
+  }
+}
+
 </script>
 </body>
 </html>

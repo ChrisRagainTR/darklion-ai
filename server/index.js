@@ -186,6 +186,9 @@ const peopleRouter = require('./routes/people');
 app.use('/api/relationships', requireFirm, apiLimiter, relationshipsRouter);
 app.use('/api/people', requireFirm, apiLimiter, peopleRouter);
 
+const documentsRouter = require('./routes/documents');
+app.use('/api/documents', requireFirm, apiLimiter, documentsRouter);
+
 const portalAuthRouter = require('./routes/portal-auth');
 const portalRouter = require('./routes/portal');
 const { requirePortal } = require('./middleware/requirePortal');

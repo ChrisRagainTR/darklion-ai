@@ -1,0 +1,219 @@
+'use strict';
+
+const { Router } = require('express');
+const multer = require('multer');
+const { pool } = require('../db');
+const { uploadFile, getSignedDownloadUrl, deleteFile, buildKey, sanitizeFilename } = require('../services/s3');
+
+const router = Router();
+
+// Multer: memory storage only (no disk writes on Railway)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+});
+
+const SAFE_COLUMNS = `
+  id, firm_id, owner_type, owner_id, year, doc_type, display_name,
+  mime_type, size_bytes, uploaded_by_type, uploaded_by_id,
+  is_delivered, delivered_at, viewed_at, created_at
+`;
+
+// ── GET /documents ──────────────────────────────────────────────────
+// Query: owner_type (required), owner_id (required), year?, doc_type?, is_delivered?
+router.get('/', async (req, res) => {
+  const firmId = req.firm.id;
+  const { owner_type, owner_id, year, doc_type, is_delivered } = req.query;
+
+  if (!owner_type || !owner_id) {
+    return res.status(400).json({ error: 'owner_type and owner_id are required' });
+  }
+
+  const params = [firmId, owner_type, parseInt(owner_id)];
+  let where = 'firm_id = $1 AND owner_type = $2 AND owner_id = $3';
+
+  if (year) { params.push(year); where += ` AND year = $${params.length}`; }
+  if (doc_type) { params.push(doc_type); where += ` AND doc_type = $${params.length}`; }
+  if (is_delivered !== undefined) {
+    params.push(is_delivered === 'true' || is_delivered === '1');
+    where += ` AND is_delivered = $${params.length}`;
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT ${SAFE_COLUMNS} FROM documents WHERE ${where} ORDER BY year DESC, created_at DESC`,
+      params
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /documents error:', err);
+    res.status(500).json({ error: 'Failed to fetch documents' });
+  }
+});
+
+// ── POST /documents/upload ──────────────────────────────────────────
+router.post('/upload', upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  const firmId = req.firm.id;
+  const userId = req.firm.userId;
+  const { owner_type, owner_id, year, doc_type, display_name } = req.body;
+
+  if (!owner_type || !owner_id) {
+    return res.status(400).json({ error: 'owner_type and owner_id are required' });
+  }
+
+  const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
+  const filename = sanitizeFilename(req.file.originalname || 'upload');
+  const key = buildKey({
+    firmId,
+    ownerType: owner_type,
+    ownerId: parseInt(owner_id),
+    year: year || '',
+    docType: doc_type || 'other',
+    filename,
+  });
+
+  try {
+    await uploadFile({
+      buffer: req.file.buffer,
+      key,
+      mimeType: req.file.mimetype,
+      bucket,
+    });
+
+    const { rows } = await pool.query(
+      `INSERT INTO documents
+         (firm_id, owner_type, owner_id, year, doc_type, display_name,
+          s3_bucket, s3_key, mime_type, size_bytes, uploaded_by_type, uploaded_by_id, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW())
+       RETURNING ${SAFE_COLUMNS}`,
+      [
+        firmId,
+        owner_type,
+        parseInt(owner_id),
+        year || '',
+        doc_type || 'other',
+        display_name || filename,
+        bucket,
+        key,
+        req.file.mimetype,
+        req.file.size,
+        userId ? 'staff' : 'staff',
+        userId || null,
+      ]
+    );
+
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('POST /documents/upload error:', err);
+    res.status(500).json({ error: err.message || 'Failed to upload document' });
+  }
+});
+
+// ── GET /documents/:id/download ─────────────────────────────────────
+router.get('/:id/download', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT s3_key, s3_bucket FROM documents WHERE id = $1 AND firm_id = $2',
+      [parseInt(id), firmId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Document not found' });
+
+    const url = await getSignedDownloadUrl({ key: rows[0].s3_key, bucket: rows[0].s3_bucket });
+    res.json({ url });
+  } catch (err) {
+    console.error('GET /documents/:id/download error:', err);
+    res.status(500).json({ error: err.message || 'Failed to generate download URL' });
+  }
+});
+
+// ── PUT /documents/:id ──────────────────────────────────────────────
+router.put('/:id', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+  const { display_name, doc_type, year, is_delivered } = req.body;
+
+  const sets = [];
+  const params = [];
+
+  if (display_name !== undefined) { params.push(display_name); sets.push(`display_name = $${params.length}`); }
+  if (doc_type !== undefined)     { params.push(doc_type);     sets.push(`doc_type = $${params.length}`); }
+  if (year !== undefined)         { params.push(year);         sets.push(`year = $${params.length}`); }
+  if (is_delivered !== undefined) {
+    const val = is_delivered === true || is_delivered === 'true' || is_delivered === 1;
+    params.push(val);
+    sets.push(`is_delivered = $${params.length}`);
+    if (val) {
+      sets.push(`delivered_at = NOW()`);
+    }
+  }
+
+  if (!sets.length) return res.status(400).json({ error: 'Nothing to update' });
+
+  params.push(parseInt(id));
+  params.push(firmId);
+
+  try {
+    const { rows } = await pool.query(
+      `UPDATE documents SET ${sets.join(', ')} WHERE id = $${params.length - 1} AND firm_id = $${params.length} RETURNING ${SAFE_COLUMNS}`,
+      params
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Document not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('PUT /documents/:id error:', err);
+    res.status(500).json({ error: 'Failed to update document' });
+  }
+});
+
+// ── DELETE /documents/:id ───────────────────────────────────────────
+router.delete('/:id', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT s3_key, s3_bucket FROM documents WHERE id = $1 AND firm_id = $2',
+      [parseInt(id), firmId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Document not found' });
+
+    // Delete from S3
+    try {
+      await deleteFile({ key: rows[0].s3_key, bucket: rows[0].s3_bucket });
+    } catch (s3Err) {
+      console.error('S3 delete failed (continuing DB delete):', s3Err.message);
+    }
+
+    await pool.query('DELETE FROM documents WHERE id = $1 AND firm_id = $2', [parseInt(id), firmId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('DELETE /documents/:id error:', err);
+    res.status(500).json({ error: 'Failed to delete document' });
+  }
+});
+
+// ── POST /documents/:id/deliver ─────────────────────────────────────
+router.post('/:id/deliver', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+
+  try {
+    const { rows } = await pool.query(
+      `UPDATE documents SET is_delivered = true, delivered_at = NOW()
+       WHERE id = $1 AND firm_id = $2 RETURNING ${SAFE_COLUMNS}`,
+      [parseInt(id), firmId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Document not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('POST /documents/:id/deliver error:', err);
+    res.status(500).json({ error: 'Failed to mark as delivered' });
+  }
+});
+
+module.exports = router;

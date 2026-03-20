@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { pool } = require('../db');
+const { getSignedDownloadUrl } = require('../services/s3');
 
 const router = Router();
 
@@ -116,6 +117,52 @@ router.get('/documents', async (req, res) => {
   } catch (err) {
     console.error('Portal /documents error:', err);
     res.status(500).json({ error: 'Failed to fetch documents' });
+  }
+});
+
+// --- GET /portal/documents/:id/download ---
+// Verify the person has access to this document, generate signed URL, mark viewed
+router.get('/documents/:id/download', async (req, res) => {
+  const personId = req.portal.personId;
+  const docId = parseInt(req.params.id);
+
+  try {
+    // Get document
+    const { rows: docRows } = await pool.query(
+      'SELECT id, owner_type, owner_id, s3_key, s3_bucket, is_delivered, viewed_at FROM documents WHERE id = $1 AND is_delivered = true',
+      [docId]
+    );
+    if (!docRows[0]) return res.status(404).json({ error: 'Document not found' });
+
+    const doc = docRows[0];
+
+    // Verify access: document must belong to this person directly, or to a company they have access to
+    let hasAccess = false;
+
+    if (doc.owner_type === 'person' && doc.owner_id === personId) {
+      hasAccess = true;
+    } else if (doc.owner_type === 'company') {
+      const { rows: accessRows } = await pool.query(
+        'SELECT 1 FROM person_company_access WHERE person_id = $1 AND company_id = $2',
+        [personId, doc.owner_id]
+      );
+      hasAccess = accessRows.length > 0;
+    }
+
+    if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
+
+    // Generate signed URL
+    const url = await getSignedDownloadUrl({ key: doc.s3_key, bucket: doc.s3_bucket });
+
+    // Mark viewed_at if first view
+    if (!doc.viewed_at) {
+      await pool.query('UPDATE documents SET viewed_at = NOW() WHERE id = $1', [docId]);
+    }
+
+    res.json({ url });
+  } catch (err) {
+    console.error('Portal /documents/:id/download error:', err);
+    res.status(500).json({ error: err.message || 'Failed to generate download URL' });
   }
 });
 

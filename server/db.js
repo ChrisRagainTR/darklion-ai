@@ -358,6 +358,27 @@ async function initDB() {
         AND r.name = c.company_name;
     EXCEPTION WHEN OTHERS THEN NULL;
     END $$;
+
+    -- ===================== DOCUMENTS =====================
+    CREATE TABLE IF NOT EXISTS documents (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER REFERENCES firms(id),
+      owner_type TEXT NOT NULL DEFAULT 'company',
+      owner_id INTEGER NOT NULL,
+      year TEXT DEFAULT '',
+      doc_type TEXT DEFAULT 'other',
+      display_name TEXT DEFAULT '',
+      s3_bucket TEXT DEFAULT '',
+      s3_key TEXT DEFAULT '',
+      mime_type TEXT DEFAULT '',
+      size_bytes INTEGER DEFAULT 0,
+      uploaded_by_type TEXT DEFAULT 'staff',
+      uploaded_by_id INTEGER,
+      is_delivered BOOLEAN DEFAULT FALSE,
+      delivered_at TIMESTAMPTZ,
+      viewed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
 }
 

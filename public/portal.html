@@ -186,6 +186,86 @@
 
     #loading { display: block; }
     #content { display: none; }
+
+    /* ---- DOCS ---- */
+    .doc-group-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin: 1rem 0 0.5rem;
+    }
+
+    .doc-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .doc-item:last-child { border-bottom: none; }
+
+    .doc-icon { font-size: 1.4rem; flex-shrink: 0; }
+
+    .doc-info { flex: 1; min-width: 0; }
+
+    .doc-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .doc-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      margin-top: 0.25rem;
+    }
+
+    .doc-badge {
+      font-size: 0.7rem;
+      background: rgba(201,168,76,0.12);
+      color: var(--gold);
+      border: 1px solid rgba(201,168,76,0.25);
+      border-radius: 20px;
+      padding: 0.1rem 0.5rem;
+    }
+
+    .doc-badge.viewed {
+      background: rgba(62, 207, 142, 0.1);
+      color: var(--green);
+      border-color: rgba(62,207,142,0.25);
+    }
+
+    .doc-size { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+
+    .btn-download {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.8rem;
+      border-radius: 6px;
+      padding: 0.3rem 0.65rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .btn-download:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .docs-empty {
+      color: var(--muted);
+      font-size: 0.88rem;
+      text-align: center;
+      padding: 1.5rem 0;
+    }
   </style>
 </head>
 <body>
@@ -228,6 +308,11 @@
           <li class="empty-state">Loading…</li>
         </ul>
       </div>
+
+      <div class="card" id="docsCard">
+        <div class="section-title">Your Documents</div>
+        <div id="docsList"><div class="docs-empty">Loading documents…</div></div>
+      </div>
     </div>
   </main>
 
@@ -256,6 +341,20 @@
       window.location.href = '/portal-login';
     });
 
+    const DOC_ICONS = {
+      tax_return: '📋', w2: '📄', '1099': '📄',
+      engagement_letter: '✍️', organizer: '📝', statement: '🏦', other: '📎',
+    };
+
+    function docIcon(type) { return DOC_ICONS[type] || '📎'; }
+
+    function fmtBytes(b) {
+      if (!b) return '';
+      if (b < 1024) return b + ' B';
+      if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+      return (b / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
     async function loadPortal() {
       try {
         const me = await apiFetch('/portal/me');
@@ -266,9 +365,13 @@
         document.getElementById('welcomeHeading').textContent = `Welcome, ${me.firstName || fullName}`;
         document.getElementById('welcomeSubtitle').textContent = me.email;
 
-        // Load companies
-        const companies = await apiFetch('/portal/companies');
+        // Load companies + documents in parallel
+        const [companies, docs] = await Promise.all([
+          apiFetch('/portal/companies'),
+          apiFetch('/portal/documents').catch(() => []),
+        ]);
         renderCompanies(companies);
+        renderDocuments(docs, companies);
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('content').style.display = 'block';
@@ -281,6 +384,81 @@
             </div>
           `;
         }
+      }
+    }
+
+    function renderDocuments(docs, companies) {
+      const el = document.getElementById('docsList');
+      if (!docs || !docs.length) {
+        el.innerHTML = '<div class="docs-empty">No documents available yet.</div>';
+        return;
+      }
+
+      // Build a company name map
+      const coMap = {};
+      (companies || []).forEach(c => { coMap[c.id] = c.company_name || 'Unknown'; });
+
+      // Group by year, then by owner (Personal / company name)
+      const grouped = {};
+      docs.forEach(d => {
+        const yr = d.year || 'Other';
+        const owner = d.owner_type === 'person' ? 'Personal' : (coMap[d.owner_id] || `Company #${d.owner_id}`);
+        const key = `${yr}||${owner}`;
+        if (!grouped[key]) grouped[key] = { yr, owner, docs: [] };
+        grouped[key].docs.push(d);
+      });
+
+      // Sort keys: year DESC
+      const keys = Object.keys(grouped).sort((a, b) => {
+        const [ya] = a.split('||');
+        const [yb] = b.split('||');
+        return yb.localeCompare(ya);
+      });
+
+      let html = '';
+      keys.forEach(key => {
+        const { yr, owner, docs: groupDocs } = grouped[key];
+        html += `<div class="doc-group-title">${escHtml(yr)} — ${escHtml(owner)}</div>`;
+        groupDocs.forEach(doc => {
+          const viewed = !!doc.viewed_at;
+          html += `
+            <div class="doc-item">
+              <span class="doc-icon">${docIcon(doc.doc_type)}</span>
+              <div class="doc-info">
+                <div class="doc-name">${escHtml(doc.display_name || 'Document')}</div>
+                <div class="doc-meta">
+                  ${doc.year ? `<span class="doc-badge">${escHtml(doc.year)}</span>` : ''}
+                  <span class="doc-badge">${escHtml(doc.doc_type || 'other')}</span>
+                  ${viewed ? '<span class="doc-badge viewed">✓ Viewed</span>' : ''}
+                </div>
+                ${doc.size_bytes ? `<div class="doc-size">${fmtBytes(doc.size_bytes)}</div>` : ''}
+              </div>
+              <button class="btn-download" onclick="downloadPortalDoc(${doc.id}, this)">⬇ Download</button>
+            </div>`;
+        });
+      });
+
+      el.innerHTML = html;
+    }
+
+    async function downloadPortalDoc(docId, btn) {
+      btn.disabled = true;
+      btn.textContent = '…';
+      try {
+        const data = await apiFetch(`/portal/documents/${docId}/download`);
+        window.open(data.url, '_blank');
+        btn.textContent = '✓ Done';
+        // Refresh to update viewed badge (soft reload of docs)
+        setTimeout(async () => {
+          try {
+            const docs = await apiFetch('/portal/documents').catch(() => []);
+            const companies = await apiFetch('/portal/companies').catch(() => []);
+            renderDocuments(docs, companies);
+          } catch (e) {}
+        }, 1000);
+      } catch (e) {
+        btn.textContent = '✕ Failed';
+        setTimeout(() => { btn.disabled = false; btn.textContent = '⬇ Download'; }, 2000);
       }
     }
 
