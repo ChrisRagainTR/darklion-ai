@@ -1,20 +1,19 @@
-<%- contentFor('styles') %>
+<%- include('partials/shell-top', { title: title, activeNav: activeNav }) %>
+
 <style>
   .page-header { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem 2rem 1rem; flex-wrap: wrap; gap: 0.75rem; }
   .page-header h1 { font-size: 1.3rem; font-weight: 800; }
-  .search-bar-wrap { position: relative; width: 320px; }
+  .search-bar-wrap { position: relative; width: 300px; }
   .search-bar { width: 100%; height: 38px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0 1rem 0 2.4rem; font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
   .search-bar:focus { border-color: var(--gold); }
   .search-bar::placeholder { color: var(--muted); }
-  .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 0.9rem; pointer-events: none; }
-  .list-table { width: 100%; border-collapse: collapse; }
-  .list-table { table-layout: fixed; }
+  .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .list-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   .list-table th { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
-  .list-table td { padding: 0.85rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.88rem; }
+  .list-table td { padding: 0.85rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .list-table tr:hover td { background: rgba(201,168,76,0.04); cursor: pointer; }
   .list-table tr:last-child td { border-bottom: none; }
   .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 0 2rem 2rem; }
-  .empty-row td { text-align: center; color: var(--muted); padding: 3rem; }
 </style>
 
 <div class="page-header">
@@ -22,13 +21,25 @@
   <div style="display:flex;gap:0.75rem;align-items:center;">
     <div class="search-bar-wrap">
       <span class="search-icon">🔍</span>
-      <input type="text" class="search-bar" id="search" placeholder="Search people…" oninput="filterList(this.value)">
+      <input type="text" class="search-bar" id="search" placeholder="Search people…">
     </div>
     <button class="btn btn-gold btn-sm" onclick="openNewModal()">+ New Person</button>
   </div>
 </div>
 
-<!-- New Person Modal -->
+<div class="table-wrap">
+  <table class="list-table">
+    <thead><tr>
+      <th style="width:25%;">Name</th>
+      <th style="width:25%;">Email</th>
+      <th style="width:22%;">Relationship</th>
+      <th style="width:13%;">Filing Status</th>
+      <th style="width:15%;">Portal</th>
+    </tr></thead>
+    <tbody id="list-body"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">Loading…</td></tr></tbody>
+  </table>
+</div>
+
 <div class="modal-overlay" id="new-modal" style="display:none;" onclick="if(event.target===this)closeModal()">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
     <h2>New Person</h2>
@@ -36,17 +47,14 @@
       <div class="form-group"><label>First Name *</label><input type="text" class="form-control" id="f-fname"></div>
       <div class="form-group"><label>Last Name *</label><input type="text" class="form-control" id="f-lname"></div>
     </div>
-    <div class="form-group"><label>Relationship *</label>
-      <select class="form-control" id="f-rel"><option value="">Loading…</option></select>
-    </div>
+    <div class="form-group"><label>Relationship *</label><select class="form-control" id="f-rel"><option value="">Loading…</option></select></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
       <div class="form-group"><label>Email</label><input type="email" class="form-control" id="f-email"></div>
       <div class="form-group"><label>Phone</label><input type="text" class="form-control" id="f-phone"></div>
     </div>
     <div class="form-group"><label>Filing Status</label>
       <select class="form-control" id="f-filing">
-        <option value="">—</option>
-        <option value="single">Single</option>
+        <option value="">—</option><option value="single">Single</option>
         <option value="mfj">Married Filing Jointly</option>
         <option value="mfs">Married Filing Separately</option>
         <option value="hoh">Head of Household</option>
@@ -59,53 +67,31 @@
   </div>
 </div>
 
-<div class="table-wrap">
-  <table class="list-table">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Relationship</th>
-        <th>Filing Status</th>
-        <th>Portal</th>
-      </tr>
-    </thead>
-    <tbody id="list-body">
-      <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">Loading…</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<%- contentFor('scripts') %>
 <script>
 let allItems = [];
+document.getElementById('search').addEventListener('input', function(){ filterList(this.value); });
 
 async function loadList() {
   try {
     const res = await window.apiFetch('/api/people');
     allItems = await res.json();
     renderList(allItems);
-  } catch(e) {
-    document.getElementById('list-body').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">Failed to load.</td></tr>';
-  }
+  } catch(e) { document.getElementById('list-body').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">Failed to load.</td></tr>'; }
 }
 
 function renderList(items) {
   const tbody = document.getElementById('list-body');
-  if (!items.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No people yet.</td></tr>'; return; }
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:3rem;">No people yet.</td></tr>'; return; }
   tbody.innerHTML = items.map(p => `<tr onclick="window.location.href='/crm/person/${p.id}'">
     <td style="font-weight:600;">${window.esc((p.first_name||'')+' '+(p.last_name||''))}</td>
     <td style="color:var(--muted);">${window.esc(p.email||'—')}</td>
     <td>${window.esc(p.relationship_name||'—')}</td>
-    <td>${p.filing_status ? `<span class="badge badge-muted">${window.esc(p.filing_status)}</span>` : '—'}</td>
-    <td>${p.portal_enabled ? '<span class="badge badge-green">Active</span>' : p.portal_invite_token ? '<span class="badge badge-orange">Invited</span>' : '<span class="badge badge-muted">Not Set Up</span>'}</td>
+    <td>${p.filing_status?`<span class="badge badge-muted">${window.esc(p.filing_status)}</span>`:'—'}</td>
+    <td>${p.portal_enabled?'<span class="badge badge-green">Active</span>':p.portal_invite_token?'<span class="badge badge-orange">Invited</span>':'<span class="badge badge-muted">Not Set Up</span>'}</td>
   </tr>`).join('');
 }
 
-function filterList(q) {
-  const f = q.toLowerCase();
-  renderList(f ? allItems.filter(p => ((p.first_name||'')+' '+(p.last_name||'')+' '+(p.email||'')).toLowerCase().includes(f)) : allItems);
-}
+function filterList(q) { const f=q.toLowerCase(); renderList(f?allItems.filter(p=>((p.first_name||'')+' '+(p.last_name||'')+' '+(p.email||'')).toLowerCase().includes(f)):allItems); }
 
 async function openNewModal() {
   const sel = document.getElementById('f-rel');
@@ -113,31 +99,24 @@ async function openNewModal() {
   try {
     const res = await window.apiFetch('/api/relationships');
     const rels = await res.json();
-    sel.innerHTML = '<option value="">Select relationship…</option>' + rels.map(r => `<option value="${r.id}">${window.esc(r.name)}</option>`).join('');
+    sel.innerHTML = '<option value="">Select relationship…</option>' + rels.map(r=>`<option value="${r.id}">${window.esc(r.name)}</option>`).join('');
   } catch(e) { sel.innerHTML = '<option value="">Failed to load</option>'; }
   document.getElementById('new-modal').style.display='flex';
 }
 function closeModal() { document.getElementById('new-modal').style.display='none'; }
 
 async function createPerson() {
-  const fname = document.getElementById('f-fname').value.trim();
-  const lname = document.getElementById('f-lname').value.trim();
-  const rel = document.getElementById('f-rel').value;
-  if (!fname || !lname) { alert('First and last name required'); return; }
-  if (!rel) { alert('Relationship required'); return; }
+  const fname=document.getElementById('f-fname').value.trim(), lname=document.getElementById('f-lname').value.trim(), rel=document.getElementById('f-rel').value;
+  if(!fname||!lname){alert('First and last name required');return;}
+  if(!rel){alert('Relationship required');return;}
   try {
-    const res = await window.apiFetch('/api/people', { method:'POST', body: JSON.stringify({
-      first_name: fname, last_name: lname, relationship_id: parseInt(rel),
-      email: document.getElementById('f-email').value.trim(),
-      phone: document.getElementById('f-phone').value.trim(),
-      filing_status: document.getElementById('f-filing').value
-    })});
-    if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Failed'); }
-    const p = await res.json();
-    closeModal();
-    window.location.href = `/crm/person/${p.id}`;
-  } catch(e) { window.toast(e.message,'error'); }
+    const res = await window.apiFetch('/api/people', {method:'POST',body:JSON.stringify({first_name:fname,last_name:lname,relationship_id:parseInt(rel),email:document.getElementById('f-email').value.trim(),phone:document.getElementById('f-phone').value.trim(),filing_status:document.getElementById('f-filing').value})});
+    if(!res.ok){const d=await res.json();throw new Error(d.error||'Failed');}
+    const p=await res.json(); closeModal(); window.location.href=`/crm/person/${p.id}`;
+  } catch(e){window.toast(e.message,'error');}
 }
 
 loadList();
 </script>
+
+<%- include('partials/shell-bottom') %>

@@ -1,90 +1,5 @@
-<div class="entity-header">
-    <a href="/crm?tab=relationships" class="entity-back">← Relationships</a>
-    <div class="entity-header-content">
-      <div class="entity-name" id="entity-name">Loading…</div>
-      <div class="entity-badges" id="entity-badges"></div>
-    </div>
-    <div class="entity-actions">
-      <button class="btn btn-outline btn-sm" onclick="openEditModal()">Edit</button>
-    </div>
-  </div>
+<%- include('partials/shell-top', { title: title, activeNav: activeNav }) %>
 
-  <!-- Tab Bar: Overview · Notes · Billing -->
-  <div class="tab-bar">
-    <div class="tab-item active" onclick="switchTab('overview', this)">Overview</div>
-    <div class="tab-item" onclick="switchTab('notes', this)">Notes</div>
-    <div class="tab-item" onclick="switchTab('billing', this)">Billing</div>
-  </div>
-
-  <!-- ── Tab: Overview ── -->
-  <div id="tab-overview" class="tab-content active">
-    <div id="overview-content">
-      <div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>
-    </div>
-  </div>
-
-  <!-- ── Tab: Notes ── -->
-  <div id="tab-notes" class="tab-content">
-    <div class="card" style="max-width:800px;">
-      <div class="card-title" style="display:block;">Internal Notes</div>
-      <textarea class="form-control" id="notes-ta" rows="14" placeholder="Internal staff notes for this relationship…" onblur="autoSaveNotes(this.value)"></textarea>
-      <div style="display:flex;align-items:center;gap:1rem;margin-top:0.75rem;">
-        <button class="btn btn-gold btn-sm" onclick="autoSaveNotes(document.getElementById('notes-ta').value, true)">Save Notes</button>
-        <div class="save-indicator" id="notes-saved"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Tab: Billing ── -->
-  <div id="tab-billing" class="tab-content">
-    <div id="billing-content">
-      <div class="loading-state"><div class="loading-spinner"></div></div>
-    </div>
-  </div>
-</div>
-
-<!-- ── Edit Modal ── -->
-<div class="modal-overlay" id="edit-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Edit Relationship</div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="edit-error" class="error-msg" style="display:none;"></div>
-      <div class="form-group">
-        <label class="form-label">Name</label>
-        <input type="text" class="form-control" id="ef-name">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Service Tier</label>
-          <select class="form-control" id="ef-tier">
-            <option value="">— Select —</option>
-            <option value="standard">Standard</option>
-            <option value="legacy_blueprint">Legacy Blueprint</option>
-            <option value="tax_only">Tax Only</option>
-            <option value="full_service">Full Service</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Billing Status</label>
-          <select class="form-control" id="ef-billing">
-            <option value="active">Active</option>
-            <option value="past_due">Past Due</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-gold" id="ef-submit" onclick="submitEdit()">Save Changes</button>
-    </div>
-  </div>
-</div>
-
-<%- contentFor('styles') %>
 <style>
     .tab-bar { background: rgba(15,25,35,0.6); border-bottom: 1px solid var(--border); display: flex; gap: 0; padding: 0 1.5rem; }
     .tab-item { padding: 0.7rem 1.1rem; cursor: pointer; font-size: 0.86rem; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: all 0.15s; }
@@ -176,7 +91,6 @@
     .sidebar-nav li a.nav-coming-soon { opacity: 0.4; cursor: default; pointer-events: none; }
 </style>
 
-<%- contentFor('scripts') %>
 <script>
   const relId = location.pathname.split('/').pop();
   const token = localStorage.getItem('dl_token');
@@ -397,3 +311,5 @@
 
 
 </script>
+
+<%- include('partials/shell-bottom') %>
