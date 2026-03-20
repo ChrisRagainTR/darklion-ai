@@ -1081,7 +1081,7 @@
       const years = [];
       for (let y = currentYear; y >= 2018; y--) years.push(String(y));
 
-      const DOC_CATEGORIES = [
+      let DOC_CATEGORIES = [
         { key: 'tax', label: 'Tax', icon: '🧾' },
         { key: 'other', label: 'Other', icon: '📎' },
       ];
@@ -1139,19 +1139,32 @@
         return s;
       }
 
+      // Render two sections side-by-side
+      function renderSideBySide(sourceDocs, includeBookkeeping) {
+        if (!includeBookkeeping) {
+          // Override categories for personal — no bookkeeping
+          const origCats = DOC_CATEGORIES;
+          DOC_CATEGORIES = [{ key: 'tax', label: 'Tax', icon: '🧾' }, { key: 'other', label: 'Other', icon: '📎' }];
+          const left = renderSection('firm_uploaded', 'Delivered by Your Advisor', '📁', sourceDocs);
+          const right = renderSection('client_uploaded', 'Uploaded by You', '📤', sourceDocs);
+          DOC_CATEGORIES = origCats;
+          return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">${left}${right}</div>`;
+        }
+        const left = renderSection('firm_uploaded', 'Delivered by Your Advisor', '📁', sourceDocs);
+        const right = renderSection('client_uploaded', 'Uploaded by You', '📤', sourceDocs);
+        return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">${left}${right}</div>`;
+      }
+
       let html = '';
 
-      // Personal docs first
+      // Personal docs — no bookkeeping category
       const personalDocs = (_docs || []).filter(d => d.owner_type === 'person');
       const companyDocs = (_docs || []).filter(d => d.owner_type === 'company');
 
-      if (personalDocs.length > 0 || true) { // always show personal sections
-        html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;">👤 My Documents</div>`;
-        html += renderSection('firm_uploaded', 'Delivered by Your Advisor', '📁', personalDocs);
-        html += renderSection('client_uploaded', 'Uploaded by You', '📤', personalDocs);
-      }
+      html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;">👤 My Documents</div>`;
+      html += renderSideBySide(personalDocs, false);
 
-      // Group company docs by company
+      // Group company docs by company — include bookkeeping
       const byCompany = {};
       companyDocs.forEach(d => {
         const cid = d.owner_id;
@@ -1162,14 +1175,9 @@
       Object.entries(byCompany).forEach(([cid, docs]) => {
         const co = _companies.find(c => c.id == cid || c.company_id == cid);
         const coName = co ? (co.company_name || co.name) : `Company #${cid}`;
-        html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin:1.25rem 0 0.5rem;">🏢 ${escHtml(coName)}</div>`;
-        html += renderSection('firm_uploaded', 'Delivered by Your Advisor', '📁', docs);
-        html += renderSection('client_uploaded', 'Uploaded by You', '📤', docs);
+        html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin:1.5rem 0 0.75rem;">🏢 ${escHtml(coName)}</div>`;
+        html += renderSideBySide(docs, true);
       });
-
-      if (!html) {
-        html = '<div class="empty-state"><div class="ei">📁</div><div>No documents yet. Your advisor will deliver documents here.</div></div>';
-      }
 
       container.innerHTML = html;
 
@@ -1324,6 +1332,11 @@
       document.getElementById('selectedFileName').textContent = f.name;
       document.getElementById('doUploadBtn').disabled = false;
     }
+
+    // Handle drag-drop pre-load from page-wide drop handler
+    modal.addEventListener('preload-file', function(e) {
+      if (e.detail && e.detail.file) setFile(e.detail.file);
+    });
 
     document.getElementById('doUploadBtn').addEventListener('click', async () => {
       if (!_selectedFile) return;
@@ -1640,24 +1653,18 @@
         _dragOverlay.style.display = 'none';
         const file = e.dataTransfer?.files?.[0];
         if (!file) return;
-        // Open upload modal with the dropped file
-        const openBtn = document.getElementById('openUploadBtn');
-        if (openBtn) openBtn.click();
-        setTimeout(function() {
-          const fileDrop = document.getElementById('fileDrop');
-          const fileInput = document.getElementById('fileInput');
-          if (fileInput) {
-            // Can't programmatically set FileInput.files, but we can pre-load via DataTransfer
-            try {
-              const dt = new DataTransfer();
-              dt.items.add(file);
-              fileInput.files = dt.files;
-              fileInput.dispatchEvent(new Event('change'));
-            } catch(err) {
-              // DataTransfer not supported — just open modal without pre-loading
-            }
-          }
-        }, 100);
+        // Open upload modal and pre-load the dropped file
+        const modal = document.getElementById('uploadModal');
+        if (modal) {
+          modal.classList.remove('hidden');
+          document.getElementById('uploadErr').style.display = 'none';
+          document.getElementById('uploadMsg').style.display = 'none';
+          document.getElementById('selectedFileName').textContent = '';
+          document.getElementById('doUploadBtn').disabled = true;
+          // Pre-load file using the setFile function (defined in wireEvents scope)
+          // Use a custom event to communicate the file
+          modal.dispatchEvent(new CustomEvent('preload-file', { detail: { file } }));
+        }
       });
 
       // ── Chat input wiring ──
