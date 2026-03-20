@@ -212,4 +212,42 @@ router.get('/:id/people', async (req, res) => {
   }
 });
 
+// GET /all-companies — all CRM companies for this firm with relationship name
+router.get('/all-companies', async (req, res) => {
+  const firmId = req.firm.id;
+  try {
+    const { rows } = await pool.query(
+      `SELECT c.*, r.name AS relationship_name
+       FROM companies c
+       LEFT JOIN relationships r ON r.id = c.relationship_id
+       WHERE c.firm_id = $1
+       ORDER BY c.company_name ASC`,
+      [firmId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /relationships/all-companies error:', err);
+    res.status(500).json({ error: 'Failed to fetch companies' });
+  }
+});
+
+// GET /all-people — all CRM people for this firm with relationship name
+router.get('/all-people', async (req, res) => {
+  const firmId = req.firm.id;
+  try {
+    const { rows } = await pool.query(
+      `SELECT p.*, r.name AS relationship_name
+       FROM people p
+       LEFT JOIN relationships r ON r.id = p.relationship_id
+       WHERE p.firm_id = $1
+       ORDER BY p.last_name ASC, p.first_name ASC`,
+      [firmId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /relationships/all-people error:', err);
+    res.status(500).json({ error: 'Failed to fetch people' });
+  }
+});
+
 module.exports = router;

@@ -68,17 +68,8 @@ document.getElementById('search').addEventListener('input', function(){ filterLi
 
 async function loadList() {
   try {
-    const relRes = await window.apiFetch('/api/relationships');
-    const rels = await relRes.json();
-    const items = [];
-    for (const rel of rels) {
-      try {
-        const r = await window.apiFetch(`/api/relationships/${rel.id}/companies`);
-        const cos = await r.json();
-        cos.forEach(c => { if (!items.find(x=>x.id===c.id)) items.push({...c,relationship_name:rel.name}); });
-      } catch(e) {}
-    }
-    allItems = items;
+    const res = await window.apiFetch('/api/relationships/all-companies');
+    allItems = await res.json();
     renderList(allItems);
   } catch(e) { document.getElementById('list-body').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">Failed to load.</td></tr>'; }
 }
