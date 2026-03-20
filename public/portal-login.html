@@ -16,6 +16,7 @@
       --muted: #8a8fa8;
       --border: #2a2d3a;
       --red: #e05555;
+      --green: #3ecf8e;
       --input-bg: #12151f;
     }
 
@@ -42,23 +43,31 @@
 
     .logo-wrap {
       text-align: center;
-      margin-bottom: 2rem;
+      margin-bottom: 1.75rem;
     }
 
     .logo-wrap img {
-      height: 48px;
-      margin-bottom: 0.75rem;
+      height: 44px;
+      margin-bottom: 0.6rem;
+    }
+
+    .logo-text {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--gold);
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
     }
 
     .firm-name {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: var(--muted);
       letter-spacing: 0.05em;
       text-transform: uppercase;
     }
 
     h1 {
-      font-size: 1.4rem;
+      font-size: 1.35rem;
       font-weight: 700;
       color: var(--text);
       text-align: center;
@@ -69,7 +78,8 @@
       text-align: center;
       color: var(--muted);
       font-size: 0.88rem;
-      margin-bottom: 2rem;
+      margin-bottom: 1.75rem;
+      line-height: 1.5;
     }
 
     .form-group {
@@ -102,11 +112,15 @@
       border-color: var(--gold);
     }
 
-    input::placeholder {
-      color: #4a4e62;
+    input::placeholder { color: #4a4e62; }
+
+    .password-hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
     }
 
-    .btn-login {
+    .btn-primary {
       width: 100%;
       background: var(--gold);
       color: #0f1117;
@@ -120,13 +134,10 @@
       transition: background 0.2s, opacity 0.2s;
     }
 
-    .btn-login:hover { background: var(--gold-light); }
-    .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-primary:hover { background: var(--gold-light); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    .error-msg {
-      background: rgba(224,85,85,0.12);
-      border: 1px solid rgba(224,85,85,0.35);
-      color: var(--red);
+    .msg-box {
       border-radius: 7px;
       padding: 0.65rem 0.85rem;
       font-size: 0.88rem;
@@ -134,7 +145,19 @@
       display: none;
     }
 
-    .error-msg.visible { display: block; }
+    .msg-box.visible { display: block; }
+
+    .msg-box.error {
+      background: rgba(224,85,85,0.12);
+      border: 1px solid rgba(224,85,85,0.35);
+      color: var(--red);
+    }
+
+    .msg-box.success {
+      background: rgba(62,207,142,0.1);
+      border: 1px solid rgba(62,207,142,0.28);
+      color: var(--green);
+    }
 
     .forgot-link {
       text-align: center;
@@ -161,36 +184,103 @@
       color: var(--muted);
       font-size: 0.78rem;
     }
+
+    /* Loading state */
+    .loading-state {
+      text-align: center;
+      padding: 1.5rem 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 0.5rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="login-card">
     <div class="logo-wrap">
       <img src="/favicon.png" alt="Logo" onerror="this.style.display='none'" />
+      <div class="logo-text">DarkLion</div>
       <div class="firm-name" id="firmName">Client Portal</div>
     </div>
 
-    <h1>Sign In</h1>
-    <p class="subtitle">Access your secure client portal</p>
+    <!-- MSG BOX (shared) -->
+    <div class="msg-box error" id="errorMsg"></div>
+    <div class="msg-box success" id="successMsg"></div>
 
-    <div class="error-msg" id="errorMsg"></div>
+    <!-- LOADING STATE (for invite/reset token lookup) -->
+    <div class="loading-state" id="loadingState" style="display:none;">
+      <div class="spinner"></div><br>Loading…
+    </div>
 
-    <form id="loginForm" autocomplete="on">
-      <div class="form-group">
-        <label for="email">Email Address</label>
-        <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" />
+    <!-- ── LOGIN FORM ── -->
+    <div id="loginView">
+      <h1>Sign In</h1>
+      <p class="subtitle">Access your secure client portal</p>
+
+      <form id="loginForm" autocomplete="on">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn-primary" id="loginBtn">Sign In</button>
+      </form>
+
+      <div class="forgot-link">
+        <a href="#" id="forgotLink">Forgot your password?</a>
       </div>
+    </div>
 
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password" />
-      </div>
+    <!-- ── INVITE FORM ── -->
+    <div id="inviteView" style="display:none;">
+      <h1>Set Your Password</h1>
+      <p class="subtitle" id="inviteSubtitle">Create a password for your client portal.</p>
 
-      <button type="submit" class="btn-login" id="submitBtn">Sign In</button>
-    </form>
+      <form id="inviteForm" autocomplete="off">
+        <div class="form-group">
+          <label for="invitePassword">New Password</label>
+          <input type="password" id="invitePassword" name="password" placeholder="••••••••" required autocomplete="new-password" />
+          <div class="password-hint">Min. 8 characters, 1 uppercase letter, 1 number</div>
+        </div>
+        <div class="form-group">
+          <label for="inviteConfirm">Confirm Password</label>
+          <input type="password" id="inviteConfirm" name="confirm" placeholder="••••••••" required autocomplete="new-password" />
+        </div>
+        <button type="submit" class="btn-primary" id="inviteBtn">Create Account &amp; Sign In</button>
+      </form>
+    </div>
 
-    <div class="forgot-link">
-      <a href="#" id="forgotLink">Forgot your password?</a>
+    <!-- ── RESET FORM ── -->
+    <div id="resetView" style="display:none;">
+      <h1>Reset Your Password</h1>
+      <p class="subtitle">Choose a new password for your portal account.</p>
+
+      <form id="resetForm" autocomplete="off">
+        <div class="form-group">
+          <label for="resetPassword">New Password</label>
+          <input type="password" id="resetPassword" name="password" placeholder="••••••••" required autocomplete="new-password" />
+          <div class="password-hint">Min. 8 characters, 1 uppercase letter, 1 number</div>
+        </div>
+        <div class="form-group">
+          <label for="resetConfirm">Confirm Password</label>
+          <input type="password" id="resetConfirm" name="confirm" placeholder="••••••••" required autocomplete="new-password" />
+        </div>
+        <button type="submit" class="btn-primary" id="resetBtn">Reset Password &amp; Sign In</button>
+      </form>
     </div>
 
     <div class="divider"></div>
@@ -198,11 +288,51 @@
   </div>
 
   <script>
-    // Load firm name
+  (function () {
+    'use strict';
+
+    const params = new URLSearchParams(window.location.search);
+    const inviteToken = params.get('invite');
+    const resetToken = params.get('reset');
+    const slugParam = params.get('slug') || '';
+
+    // Already logged in → go to portal
+    if (localStorage.getItem('portalToken') && !inviteToken && !resetToken) {
+      window.location.href = '/portal';
+      return;
+    }
+
+    // ── Helpers ─────────────────────────────────────────
+    function showErr(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.classList.add('visible');
+      document.getElementById('successMsg').classList.remove('visible');
+    }
+
+    function showSuccess(msg) {
+      const el = document.getElementById('successMsg');
+      el.textContent = msg;
+      el.classList.add('visible');
+      document.getElementById('errorMsg').classList.remove('visible');
+    }
+
+    function clearMsgs() {
+      document.getElementById('errorMsg').classList.remove('visible');
+      document.getElementById('successMsg').classList.remove('visible');
+    }
+
+    function storeAndRedirect(data) {
+      localStorage.setItem('portalToken', data.token);
+      window.location.href = '/portal';
+    }
+
+    // ── Load firm name ───────────────────────────────────
     (async () => {
       try {
-        const slug = new URLSearchParams(window.location.search).get('slug') || '';
-        const url = slug ? `/portal-auth/firm-info?slug=${encodeURIComponent(slug)}` : '/portal-auth/firm-info';
+        const url = slugParam
+          ? `/portal-auth/firm-info?slug=${encodeURIComponent(slugParam)}`
+          : '/portal-auth/firm-info';
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
@@ -214,38 +344,78 @@
       } catch (e) { /* silent */ }
     })();
 
-    // Redirect if already logged in
-    if (localStorage.getItem('portalToken')) {
-      window.location.href = '/portal';
+    // ── MODE DETECTION ───────────────────────────────────
+
+    if (inviteToken) {
+      // ── INVITE MODE ──────────────────────────────────
+      showMode('loading');
+      (async () => {
+        try {
+          const res = await fetch(`/portal-auth/invite/${encodeURIComponent(inviteToken)}`);
+          const data = await res.json();
+
+          if (data.expired) {
+            showMode('login');
+            showErr('This invite link has expired. Please contact your advisor to request a new one.');
+            return;
+          }
+
+          if (data.alreadyAccepted) {
+            showMode('login');
+            showSuccess('Your account is already set up. Please sign in below.');
+            return;
+          }
+
+          if (!data.valid) {
+            showMode('login');
+            showErr('This invite link is invalid. Please contact your advisor.');
+            return;
+          }
+
+          const firstName = data.firstName || '';
+          const firmName = data.firmName || 'your advisory firm';
+          document.getElementById('inviteSubtitle').textContent =
+            `Welcome, ${firstName}! Create a password for your ${firmName} client portal.`;
+          document.getElementById('firmName').textContent = firmName;
+          document.title = `${firmName} — Set Up Your Account`;
+          showMode('invite');
+        } catch (e) {
+          showMode('login');
+          showErr('Unable to load invite. Please try again or contact your advisor.');
+        }
+      })();
+
+    } else if (resetToken) {
+      // ── RESET MODE ───────────────────────────────────
+      showMode('reset');
+
+    } else {
+      // ── LOGIN MODE ───────────────────────────────────
+      showMode('login');
     }
 
-    const form = document.getElementById('loginForm');
-    const errorMsg = document.getElementById('errorMsg');
-    const submitBtn = document.getElementById('submitBtn');
-
-    function showError(msg) {
-      errorMsg.textContent = msg;
-      errorMsg.classList.add('visible');
+    function showMode(mode) {
+      document.getElementById('loadingState').style.display = mode === 'loading' ? 'block' : 'none';
+      document.getElementById('loginView').style.display = mode === 'login' ? 'block' : 'none';
+      document.getElementById('inviteView').style.display = mode === 'invite' ? 'block' : 'none';
+      document.getElementById('resetView').style.display = mode === 'reset' ? 'block' : 'none';
     }
 
-    function clearError() {
-      errorMsg.classList.remove('visible');
-    }
-
-    form.addEventListener('submit', async (e) => {
+    // ── LOGIN FORM ───────────────────────────────────────
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      clearError();
+      clearMsgs();
 
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
-      const slug = new URLSearchParams(window.location.search).get('slug') || '';
+      const btn = document.getElementById('loginBtn');
 
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Signing in…';
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
 
       try {
         const body = { email, password };
-        if (slug) body.firmSlug = slug;
+        if (slugParam) body.firmSlug = slugParam;
 
         const res = await fetch('/portal-auth/login', {
           method: 'POST',
@@ -254,28 +424,24 @@
         });
 
         const data = await res.json();
+        if (!res.ok) { showErr(data.error || 'Login failed. Please try again.'); return; }
 
-        if (!res.ok) {
-          showError(data.error || 'Login failed. Please try again.');
-          return;
-        }
-
-        localStorage.setItem('portalToken', data.token);
-        window.location.href = '/portal';
+        storeAndRedirect(data);
       } catch (err) {
-        showError('Network error. Please check your connection and try again.');
+        showErr('Network error. Please check your connection and try again.');
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Sign In';
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
       }
     });
 
-    // Forgot password
+    // ── FORGOT PASSWORD ──────────────────────────────────
     document.getElementById('forgotLink').addEventListener('click', async (e) => {
       e.preventDefault();
+      clearMsgs();
       const email = document.getElementById('email').value.trim();
       if (!email) {
-        showError('Enter your email address first, then click "Forgot your password?"');
+        showErr('Enter your email address first, then click "Forgot your password?"');
         return;
       }
 
@@ -285,16 +451,79 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email }),
         });
-        clearError();
-        errorMsg.style.background = 'rgba(100,200,100,0.1)';
-        errorMsg.style.borderColor = 'rgba(100,200,100,0.3)';
-        errorMsg.style.color = '#6ec97e';
-        errorMsg.textContent = 'If your email is registered, you\'ll receive a reset link shortly.';
-        errorMsg.classList.add('visible');
+        showSuccess('If your email is registered, you\'ll receive a reset link shortly.');
       } catch (err) {
-        showError('Request failed. Please try again.');
+        showErr('Request failed. Please try again.');
       }
     });
+
+    // ── INVITE FORM ──────────────────────────────────────
+    document.getElementById('inviteForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearMsgs();
+
+      const password = document.getElementById('invitePassword').value;
+      const confirm = document.getElementById('inviteConfirm').value;
+      const btn = document.getElementById('inviteBtn');
+
+      if (password !== confirm) { showErr('Passwords do not match.'); return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Setting up account…';
+
+      try {
+        const res = await fetch(`/portal-auth/invite/${encodeURIComponent(inviteToken)}/accept`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) { showErr(data.error || 'Failed to create account. Please try again.'); return; }
+
+        storeAndRedirect(data);
+      } catch (err) {
+        showErr('Network error. Please try again.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Account & Sign In';
+      }
+    });
+
+    // ── RESET FORM ───────────────────────────────────────
+    document.getElementById('resetForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearMsgs();
+
+      const password = document.getElementById('resetPassword').value;
+      const confirm = document.getElementById('resetConfirm').value;
+      const btn = document.getElementById('resetBtn');
+
+      if (password !== confirm) { showErr('Passwords do not match.'); return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Resetting password…';
+
+      try {
+        const res = await fetch(`/portal-auth/reset-password/${encodeURIComponent(resetToken)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) { showErr(data.error || 'Failed to reset password. The link may have expired.'); return; }
+
+        storeAndRedirect(data);
+      } catch (err) {
+        showErr('Network error. Please try again.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Reset Password & Sign In';
+      }
+    });
+
+  })();
   </script>
 </body>
 </html>

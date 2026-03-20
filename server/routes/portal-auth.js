@@ -5,6 +5,10 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { auditLog } = require('./firms');
+const { requireFirm } = require('../middleware/requireFirm');
+const { sendPortalInvite, sendPasswordReset } = require('../services/email');
+
+const APP_URL = process.env.APP_URL || 'https://darklion.ai';
 
 const router = Router();
 
@@ -249,7 +253,21 @@ router.post('/forgot-password', async (req, res) => {
       );
 
       await auditLog(person.firm_id, 'portal_password_reset_requested', `Password reset requested: ${email}`, ip);
-      // NOTE: Email sending (Resend) to be added in a future phase
+
+      // Send reset email (graceful — don't fail if email service is down)
+      try {
+        const { rows: firmRows } = await pool.query('SELECT name FROM firms WHERE id = $1', [person.firm_id]);
+        const firmName = firmRows[0]?.name || 'Your Advisory Firm';
+        const resetUrl = `${APP_URL}/portal-login?reset=${resetToken}`;
+        await sendPasswordReset({
+          to: person.email,
+          name: `${person.first_name} ${person.last_name}`.trim(),
+          firmName,
+          resetUrl,
+        });
+      } catch (emailErr) {
+        console.error('Password reset email failed (non-fatal):', emailErr.message);
+      }
     }
 
     res.json({ ok: true });
@@ -349,6 +367,66 @@ router.get('/firm-info', async (req, res) => {
   } catch (err) {
     console.error('Firm info error:', err);
     res.status(500).json({ error: 'Failed to fetch firm info' });
+  }
+});
+
+// --- POST /portal-auth/send-invite (staff only — requires firm JWT) ---
+router.post('/send-invite', requireFirm, async (req, res) => {
+  const ip = req.ip;
+  try {
+    const { personId } = req.body;
+    if (!personId) return res.status(400).json({ error: 'personId is required' });
+
+    const firmId = req.firm.id;
+
+    // Look up person (must belong to this firm)
+    const { rows: personRows } = await pool.query(
+      `SELECT p.*, f.name as firm_name
+       FROM people p
+       JOIN firms f ON f.id = p.firm_id
+       WHERE p.id = $1 AND p.firm_id = $2`,
+      [personId, firmId]
+    );
+
+    if (personRows.length === 0) return res.status(404).json({ error: 'Person not found' });
+    const person = personRows[0];
+
+    if (!person.email) return res.status(400).json({ error: 'Person has no email address' });
+
+    // Generate invite token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    // Store token + enable portal access
+    await pool.query(
+      `UPDATE people SET
+         portal_invite_token = $1,
+         portal_invite_expires_at = $2,
+         portal_enabled = false
+       WHERE id = $3`,
+      [token, expiresAt, person.id]
+    );
+
+    await auditLog(firmId, 'portal_invite_sent', `Portal invite sent to ${person.email}`, ip);
+
+    const inviteUrl = `${APP_URL}/portal-login?invite=${token}`;
+
+    // Send invite email (non-fatal)
+    try {
+      await sendPortalInvite({
+        to: person.email,
+        name: `${person.first_name} ${person.last_name}`.trim(),
+        firmName: person.firm_name,
+        inviteUrl,
+      });
+    } catch (emailErr) {
+      console.error('Portal invite email failed (non-fatal):', emailErr.message);
+    }
+
+    res.json({ ok: true, inviteUrl });
+  } catch (err) {
+    console.error('Send invite error:', err);
+    res.status(500).json({ error: 'Failed to send invite' });
   }
 });
 
