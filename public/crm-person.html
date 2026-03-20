@@ -796,11 +796,14 @@
   // ── Portal Invite ──
   async function sendPortalInvite() {
     try {
-      const res = await apiFetch(`/api/people/${personId}/invite`, { method: 'POST' });
+      const res = await apiFetch(`/portal-auth/send-invite`, {
+        method: 'POST',
+        body: JSON.stringify({ personId })
+      });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
-      toast('Portal invite sent');
+      toast('Portal invite sent! Client will receive an email shortly.');
       const btn = document.getElementById('invite-btn');
-      if (btn) btn.style.display = 'none';
+      if (btn) btn.textContent = '✅ Invite Sent';
     } catch(e) { toast('Could not send invite: ' + e.message, 'error'); }
   }
 
