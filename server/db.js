@@ -235,6 +235,12 @@ async function initDB() {
     -- ===================== FIRM USERS: display_name + expanded roles =====================
     ALTER TABLE firm_users ADD COLUMN IF NOT EXISTS display_name TEXT DEFAULT '';
 
+    -- ===================== FIRM USERS: avatar_url =====================
+    DO $$ BEGIN
+      ALTER TABLE firm_users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT '';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
     DO $$ BEGIN
       ALTER TABLE firm_users DROP CONSTRAINT IF EXISTS firm_users_role_check;
     EXCEPTION WHEN OTHERS THEN NULL;

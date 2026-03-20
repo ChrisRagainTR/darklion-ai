@@ -1145,10 +1145,11 @@
     // API fetch with JWT
     async function apiFetch(url, opts = {}) {
       const token = localStorage.getItem('dl_token');
+      const isFormData = opts.body instanceof FormData;
       const res = await fetch(url, {
         ...opts,
         headers: {
-          'Content-Type': 'application/json',
+          ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
           ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
           ...(opts.headers || {}),
         },
@@ -2474,6 +2475,8 @@
         renderTeam();
         qs('#team-loading').style.display = 'none';
         qs('#team-content').style.display = '';
+        // Lazy-load signed avatar URLs for members with avatars
+        loadTeamAvatars();
       } catch (e) {
         qs('#team-loading').textContent = 'Failed to load team: ' + e.message;
       }
@@ -2530,14 +2533,21 @@
              </div>`
           : '<span style="color:var(--muted);font-size:0.72rem;">You</span>';
 
+        const initials = (u.name || u.email || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        const avatarHtml = u.avatar_url
+          ? `<img id="avatar-img-${u.id}" data-user-id="${u.id}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;vertical-align:middle;display:none;" alt="${esc(initials)}">`
+            + `<div id="avatar-init-${u.id}" style="width:36px;height:36px;border-radius:50%;background:var(--gold);color:#0f1117;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;flex-shrink:0;">${initials}</div>`
+          : `<div style="width:36px;height:36px;border-radius:50%;background:var(--gold);color:#0f1117;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;flex-shrink:0;">${initials}</div>`;
+        const uploadBtn = `<label style="cursor:pointer;font-size:0.72rem;color:var(--gold);white-space:nowrap;"><input type="file" accept="image/*" style="display:none;" onchange="uploadAvatar(${u.id}, this)"> 📷 Photo</label>`;
+
         return `<tr id="team-row-${u.id}">
-          <td style="font-weight:600;">${esc(u.name || '—')}</td>
+          <td style="font-weight:600;"><div style="display:flex;align-items:center;gap:0.6rem;">${avatarHtml}<span>${esc(u.name || '—')}</span></div></td>
           <td style="color:var(--muted);">${esc(u.email)}</td>
           <td style="text-align:center;">${roleCell}</td>
           <td style="text-align:center;">${companiesDisplay}</td>
           <td style="text-align:center;">${statusHtml}</td>
           <td style="color:var(--muted);font-size:0.78rem;">${lastLogin}</td>
-          <td>${actions}</td>
+          <td><div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">${actions}${uploadBtn}</div></td>
         </tr>
         <tr id="team-access-${u.id}" style="display:none;">
           <td colspan="7">${renderCompanyAccessRow(u)}</td>
@@ -2559,6 +2569,22 @@
       html += `<button class="btn btn-gold btn-sm" style="margin-top:0.75rem;" onclick="saveCompanyAccess(${u.id})">Save Access</button>`;
       html += '</div>';
       return html;
+    }
+
+    async function loadTeamAvatars() {
+      const membersWithAvatars = teamData.filter(u => u.avatar_url);
+      await Promise.all(membersWithAvatars.map(async u => {
+        try {
+          const res = await apiFetch(`/firms/team/${u.id}/avatar`);
+          if (!res.ok) return;
+          const { url } = await res.json();
+          if (!url) return;
+          const img = qs(`#avatar-img-${u.id}`);
+          const initDiv = qs(`#avatar-init-${u.id}`);
+          if (img) { img.src = url; img.style.display = ''; }
+          if (initDiv) initDiv.style.display = 'none';
+        } catch(e) { /* non-fatal */ }
+      }));
     }
 
     function toggleCompanyAccess(userId) {
@@ -2632,6 +2658,19 @@
       } catch (e) {
         toast('Failed to remove: ' + e.message);
       }
+    }
+
+    async function uploadAvatar(userId, input) {
+      const file = input.files[0];
+      if (!file) return;
+      const fd = new FormData();
+      fd.append('avatar', file);
+      try {
+        const res = await apiFetch(`/firms/team/${userId}/avatar`, { method: 'POST', body: fd });
+        const data = await res.json();
+        if (res.ok) { toast('Avatar updated'); loadTeam(); }
+        else toast('Upload failed: ' + (data.error || 'Unknown error'), 'error');
+      } catch(e) { toast('Upload failed: ' + e.message, 'error'); }
     }
 
     // Invite modal

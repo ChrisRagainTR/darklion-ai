@@ -802,10 +802,16 @@
       <!-- Loaded content -->
       <div id="overview-content" style="display:none;">
         <!-- Welcome card -->
-        <div class="welcome-card">
-          <h1 id="welcomeHeading">Welcome back</h1>
-          <p class="sub" id="welcomeSub"></p>
-          <div class="status-badges" id="statusBadges"></div>
+        <div class="welcome-card" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
+          <div>
+            <h1 id="welcomeHeading">Welcome back</h1>
+            <p class="sub" id="welcomeSub"></p>
+            <div class="status-badges" id="statusBadges"></div>
+          </div>
+          <div id="teamSection" style="display:none;">
+            <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem;">Your Team</div>
+            <div id="teamGrid" style="display:flex;gap:1rem;flex-wrap:wrap;"></div>
+          </div>
         </div>
 
         <!-- Quick links -->
@@ -965,6 +971,10 @@
       window.location.href = '/portal-login';
     });
 
+    // ── State ─────────────────────────────────────────────
+    let _firmTeam = [];
+    let _avatarMap = {};
+
     // ── INIT ─────────────────────────────────────────────
     async function init() {
       try {
@@ -973,11 +983,22 @@
           api('/portal/companies').catch(() => []),
           api('/portal/documents').catch(() => []),
         ]);
-        // Load message contacts early for overview summary
-        try {
-          const mc = await fetch('/portal/messages/staff-contacts', { headers: { 'Authorization': `Bearer ${localStorage.getItem('portalToken')}` } });
-          if (mc.ok) { _contacts = await mc.json(); if (!Array.isArray(_contacts)) _contacts = []; }
-        } catch(e) { _contacts = []; }
+        // Load message contacts and firm team in parallel
+        await Promise.all([
+          (async () => {
+            try {
+              const mc = await fetch('/portal/messages/staff-contacts', { headers: { 'Authorization': `Bearer ${localStorage.getItem('portalToken')}` } });
+              if (mc.ok) { _contacts = await mc.json(); if (!Array.isArray(_contacts)) _contacts = []; }
+            } catch(e) { _contacts = []; }
+          })(),
+          (async () => {
+            try {
+              const ft = await fetch('/portal/firm-team', { headers: { 'Authorization': `Bearer ${localStorage.getItem('portalToken')}` } });
+              if (ft.ok) { _firmTeam = await ft.json(); if (!Array.isArray(_firmTeam)) _firmTeam = []; }
+              _firmTeam.forEach(m => { if (m.avatar_url) _avatarMap[m.id] = m.avatar_url; });
+            } catch(e) { _firmTeam = []; }
+          })(),
+        ]);
 
         const fullName = `${_me.firstName || ''} ${_me.lastName || ''}`.trim();
         document.title = `${fullName} — Client Portal`;
@@ -1140,6 +1161,26 @@
       const firstName = _me.firstName || 'there';
       document.getElementById('welcomeHeading').textContent = `Welcome back, ${firstName}`;
       document.getElementById('welcomeSub').textContent = _me.email || '';
+
+      // Team grid (right side of welcome card)
+      if (_firmTeam.length > 0) {
+        const roleLabel = r => r === 'owner' ? 'Principal' : 'Advisor';
+        const grid = document.getElementById('teamGrid');
+        grid.innerHTML = _firmTeam.map(m => {
+          const firstName = (m.name || '').split(' ')[0] || m.name || '?';
+          const initials = (m.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+          const avatarHtml = m.avatar_url
+            ? `<img src="${escHtml(m.avatar_url)}" alt="${escHtml(initials)}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+               <div style="display:none;width:52px;height:52px;border-radius:50%;background:var(--gold);color:#0f1117;align-items:center;justify-content:center;font-weight:700;font-size:1rem;">${escHtml(initials)}</div>`
+            : `<div style="display:flex;width:52px;height:52px;border-radius:50%;background:var(--gold);color:#0f1117;align-items:center;justify-content:center;font-weight:700;font-size:1rem;">${escHtml(initials)}</div>`;
+          return `<div style="display:flex;flex-direction:column;align-items:center;gap:0.3rem;text-align:center;min-width:56px;">
+            ${avatarHtml}
+            <div style="font-size:0.72rem;font-weight:600;color:var(--text);">${escHtml(firstName)}</div>
+            <div style="font-size:0.62rem;color:var(--muted);">${roleLabel(m.role)}</div>
+          </div>`;
+        }).join('');
+        document.getElementById('teamSection').style.display = '';
+      }
 
       // Status badges
       const badges = document.getElementById('statusBadges');
@@ -1656,6 +1697,14 @@
         if (!res.ok) return;
         _contacts = await res.json();
         if (!Array.isArray(_contacts)) _contacts = [];
+        // Refresh avatar map from /portal/team (staff who've messaged this client)
+        try {
+          const tr = await fetch('/portal/team', { headers: { 'Authorization': 'Bearer ' + token } });
+          if (tr.ok) {
+            const team = await tr.json();
+            if (Array.isArray(team)) team.forEach(m => { if (m.avatar_url) _avatarMap[m.id] = m.avatar_url; });
+          }
+        } catch(e) { /* non-fatal */ }
         renderContacts();
         if (_contacts.length > 0 && _selectedStaffId === null) {
           selectContact(_contacts[0]);
@@ -1676,8 +1725,12 @@
         const preview = c.last_body ? chatEsc(c.last_body).slice(0, 50) : 'No messages yet';
         const unread = parseInt(c.unread_count || 0);
         const isActive = _selectedStaffId === c.id;
+        const avatarUrl = _avatarMap[c.id];
+        const avatarHtml = avatarUrl
+          ? `<img src="${avatarUrl}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt="${chatEsc(initials)}" onerror="this.outerHTML='<div class=\\'chat-contact-avatar\\'>${initials}</div>';">`
+          : `<div class="chat-contact-avatar">${initials}</div>`;
         return `<div class="chat-contact-row${isActive ? ' active' : ''}" data-staff-id="${c.id}">
-          <div class="chat-contact-avatar">${initials}</div>
+          ${avatarHtml}
           <div class="chat-contact-info">
             <div class="chat-contact-name">${chatEsc(c.name)}</div>
             <div class="chat-contact-preview">${preview}</div>
@@ -1705,7 +1758,15 @@
       const hdr = document.getElementById('chatMainHeader');
       if (hdr) hdr.style.display = '';
       const hdrAvatar = document.getElementById('chatHdrAvatar');
-      if (hdrAvatar) hdrAvatar.textContent = (contact.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+      if (hdrAvatar) {
+        const initials = (contact.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        const avatarUrl = _avatarMap[contact.id];
+        if (avatarUrl) {
+          hdrAvatar.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentElement.textContent='${initials}';">`;
+        } else {
+          hdrAvatar.textContent = initials;
+        }
+      }
       const hdrName = document.getElementById('chatHdrName');
       if (hdrName) hdrName.textContent = contact.name || 'Advisor';
       _chatLoaded = false;

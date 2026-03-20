@@ -259,6 +259,85 @@ router.get('/messages', async (req, res) => {
   }
 });
 
+// --- GET /portal/team --- staff who have messaged this client, with signed avatar URLs
+router.get('/team', async (req, res) => {
+  const personId = req.portal.personId;
+  const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
+  try {
+    const { rows } = await pool.query(
+      `SELECT DISTINCT fu.id, COALESCE(fu.display_name, fu.name, fu.email) AS name, fu.email, fu.avatar_url
+       FROM messages m
+       JOIN message_threads mt ON mt.id = m.thread_id
+       JOIN firm_users fu ON fu.id = m.sender_id
+       WHERE mt.person_id = $1 AND m.sender_type = 'staff' AND m.is_internal = false`,
+      [personId]
+    );
+    const result = await Promise.all(rows.map(async (member) => {
+      let avatar_url = null;
+      if (member.avatar_url) {
+        try { avatar_url = await getSignedDownloadUrl({ key: member.avatar_url, bucket }); } catch(e) { /* non-fatal */ }
+      }
+      return { id: member.id, name: member.name, email: member.email, avatar_url };
+    }));
+    res.json(result);
+  } catch (err) {
+    if (err.code === '42P01') return res.json([]);
+    console.error('Portal /team error:', err);
+    res.status(500).json({ error: 'Failed to fetch team' });
+  }
+});
+
+// --- GET /portal/firm-team --- up to 5 staff, priority: owner → messaged this client → others
+router.get('/firm-team', async (req, res) => {
+  const firmId = req.portal.firmId;
+  const personId = req.portal.personId;
+  const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
+  try {
+    const { rows: rawRows } = await pool.query(
+      `(SELECT fu.id, COALESCE(fu.display_name, fu.name, fu.email) AS name, fu.email, fu.avatar_url, fu.role, 0 AS sort_order
+        FROM firm_users fu
+        WHERE fu.firm_id = $1 AND fu.role = 'owner' AND fu.accepted_at IS NOT NULL
+        LIMIT 1)
+       UNION ALL
+       (SELECT fu.id, COALESCE(fu.display_name, fu.name, fu.email) AS name, fu.email, fu.avatar_url, fu.role,
+               COUNT(m.id) AS sort_order
+        FROM messages m
+        JOIN message_threads mt ON mt.id = m.thread_id
+        JOIN firm_users fu ON fu.id = m.sender_id
+        WHERE mt.person_id = $2 AND m.sender_type = 'staff' AND m.is_internal = false
+          AND fu.firm_id = $1 AND fu.role != 'owner'
+        GROUP BY fu.id, fu.display_name, fu.name, fu.email, fu.avatar_url, fu.role
+        ORDER BY COUNT(m.id) DESC
+        LIMIT 4)`,
+      [firmId, personId]
+    );
+
+    // Deduplicate by id (owner may also appear in messages half), cap at 5
+    const seen = new Set();
+    const merged = [];
+    for (const row of rawRows) {
+      if (!seen.has(row.id)) {
+        seen.add(row.id);
+        merged.push(row);
+        if (merged.length >= 5) break;
+      }
+    }
+
+    const result = await Promise.all(merged.map(async (member) => {
+      let avatar_url = null;
+      if (member.avatar_url) {
+        try { avatar_url = await getSignedDownloadUrl({ key: member.avatar_url, bucket }); } catch(e) { /* non-fatal */ }
+      }
+      return { id: member.id, name: member.name, email: member.email, role: member.role, avatar_url };
+    }));
+    res.json(result);
+  } catch (err) {
+    if (err.code === '42P01') return res.json([]);
+    console.error('Portal /firm-team error:', err);
+    res.status(500).json({ error: 'Failed to fetch firm team' });
+  }
+});
+
 // --- GET /portal/messages/staff-contacts --- staff members who have messaged this person
 router.get('/messages/staff-contacts', async (req, res) => {
   const personId = req.portal.personId;
