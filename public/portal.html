@@ -823,8 +823,8 @@
           <div class="chat-empty" id="chatEmpty">Loading messages…</div>
         </div>
         <div class="chat-input-bar">
-          <textarea id="chatInput" placeholder="Write a message to your advisor…" rows="1" onkeydown="chatKeydown(event)"></textarea>
-          <button class="chat-send-btn" onclick="sendChatMessage()">Send</button>
+          <textarea id="chatInput" placeholder="Write a message to your advisor…" rows="1"></textarea>
+          <button class="chat-send-btn" id="chatSendBtn">Send</button>
         </div>
       </div>
     </div>
@@ -1451,6 +1451,19 @@
 
     // ── KICK OFF ─────────────────────────────────────────
     init();
+
+    // Wire up chat send button and Enter key (must be inside IIFE for scope access)
+    document.addEventListener('DOMContentLoaded', () => {}, false); // no-op, DOM already ready
+    const _chatInput = document.getElementById('chatInput');
+    const _chatSendBtn = document.getElementById('chatSendBtn');
+    if (_chatInput) {
+      _chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+      });
+    }
+    if (_chatSendBtn) {
+      _chatSendBtn.addEventListener('click', () => sendChatMessage());
+    }
 
   })();
   </script>
