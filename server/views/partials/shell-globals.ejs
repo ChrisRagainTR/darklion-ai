@@ -149,5 +149,20 @@
     // ── apiFetch exposed globally for page scripts ──
     window.apiFetch = apiFetch;
     window.esc = esc;
+
+    // ── Dynamic tab-bar sticky offset (adjusts to entity-header height) ──
+    function updateTabBarTop() {
+      var eh = document.querySelector('.entity-header');
+      if (eh) {
+        var top = eh.offsetHeight + parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 116;
+        document.documentElement.style.setProperty('--tab-bar-top', top + 'px');
+      }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', updateTabBarTop);
+    } else {
+      updateTabBarTop();
+    }
+    window.addEventListener('resize', updateTabBarTop);
   })();
   </script>
