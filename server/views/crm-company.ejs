@@ -344,7 +344,7 @@
     docs.forEach(d => {
       const y = d.year || 'Unknown';
       if (!years[y]) years[y] = {};
-      const cat = d.doc_type || 'other';
+      const cat = d.folder_category || d.doc_type || 'other';
       if (!years[y][cat]) years[y][cat] = [];
       years[y][cat].push(d);
     });
@@ -368,9 +368,10 @@
           ${Object.keys(cats).sort().map(cat => {
             const files = cats[cat];
             const catId = `cb-${title.replace(/\s/g,'')}-${y}-${cat}`;
+            const catIcon = {tax:'🧾', bookkeeping:'📒', other:'📎'}[cat] || '📎';
             return `<div class="cat-block">
               <div class="cat-header" onclick="var b=document.getElementById('${catId}');var open=b.style.display!=='none';b.style.display=open?'none':'block';">
-                <span style="font-size:0.8rem;">📋</span>
+                <span style="font-size:0.8rem;">${catIcon}</span>
                 <span class="cat-label">${esc(cat.charAt(0).toUpperCase()+cat.slice(1))}</span>
                 <span class="cat-count">${files.length}</span>
               </div>
@@ -427,10 +428,10 @@
 
   function renderDocs() {
     const el = document.getElementById('docs-content');
-    const firmDocs = docsData.filter(d => d.uploaded_by_type !== 'client');
-    const clientDocs = docsData.filter(d => d.uploaded_by_type === 'client');
+    const firmDocs = docsData.filter(d => (d.folder_section || 'firm_uploaded') === 'firm_uploaded');
+    const clientDocs = docsData.filter(d => d.folder_section === 'client_uploaded');
     el.innerHTML = `<div class="docs-layout">
-      <div>${buildDocsColumn(firmDocs, 'Delivered by Advisor', '📂')}</div>
+      <div>${buildDocsColumn(firmDocs, 'Delivered by Advisor', '📁')}</div>
       <div>${buildDocsColumn(clientDocs, 'Uploaded by Client', '📤')}</div>
     </div>`;
   }
@@ -459,6 +460,8 @@
     fd.append('display_name', document.getElementById('upload-display-name').value || uploadFile.name);
     fd.append('year', document.getElementById('upload-year').value || String(new Date().getFullYear()));
     fd.append('doc_type', document.getElementById('upload-doc-type').value);
+    fd.append('folder_section', 'firm_uploaded');
+    fd.append('folder_category', document.getElementById('upload-doc-type').value);
     try {
       const res = await fetch('/api/documents/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
       if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Upload failed'); }

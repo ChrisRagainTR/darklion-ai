@@ -16,6 +16,7 @@ const upload = multer({
 const SAFE_COLUMNS = `
   id, firm_id, owner_type, owner_id, year, doc_type, display_name,
   mime_type, size_bytes, uploaded_by_type, uploaded_by_id,
+  folder_section, folder_category,
   is_delivered, delivered_at, viewed_at, created_at
 `;
 
@@ -57,7 +58,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
   const firmId = req.firm.id;
   const userId = req.firm.userId;
-  const { owner_type, owner_id, year, doc_type, display_name } = req.body;
+  const { owner_type, owner_id, year, doc_type, display_name, folder_section, folder_category } = req.body;
 
   if (!owner_type || !owner_id) {
     return res.status(400).json({ error: 'owner_type and owner_id are required' });
@@ -85,8 +86,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     const { rows } = await pool.query(
       `INSERT INTO documents
          (firm_id, owner_type, owner_id, year, doc_type, display_name,
-          s3_bucket, s3_key, mime_type, size_bytes, uploaded_by_type, uploaded_by_id, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW())
+          s3_bucket, s3_key, mime_type, size_bytes, uploaded_by_type, uploaded_by_id,
+          folder_section, folder_category, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())
        RETURNING ${SAFE_COLUMNS}`,
       [
         firmId,
@@ -101,6 +103,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         req.file.size,
         userId ? 'staff' : 'staff',
         userId || null,
+        folder_section || 'firm_uploaded',
+        folder_category || doc_type || 'other',
       ]
     );
 
