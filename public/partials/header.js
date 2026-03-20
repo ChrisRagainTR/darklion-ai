@@ -44,7 +44,7 @@
   }
 
   // ── Load header HTML then wire everything ─────────────────────────────────
-  fetch('/partials/header.html')
+  fetch('/partials/header.html?v=2')
     .then(function (r) { return r.text(); })
     .then(function (html) {
       var mount = document.getElementById('header-mount');

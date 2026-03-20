@@ -13,7 +13,7 @@
 
     const activeKey = mount.dataset.active || '';
 
-    fetch('/partials/sidebar.html')
+    fetch('/partials/sidebar.html?v=2')
       .then(function(r) { return r.text(); })
       .then(function(html) {
         mount.innerHTML = html;
