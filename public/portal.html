@@ -774,7 +774,7 @@
   <!-- TAB BAR -->
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="overview">📋 Overview</button>
-    <button class="tab-btn" data-tab="documents">📁 My Docs</button>
+    <button class="tab-btn" data-tab="documents">📁 Personal Documents</button>
     <button class="tab-btn" data-tab="organizers">🔗 Organizers</button>
     <button class="tab-btn" data-tab="messages">💬 Messages</button>
     <!-- Company doc tabs injected here by JS after init -->
@@ -1796,9 +1796,7 @@
               return `<a class="attachment-chip" href="#" onclick="downloadPortalAttachment(${a.documentId});return false;">📎 ${chatEsc(a.displayName)}${size}</a>`;
             }).join('')}</div>`
           : '';
-        const senderLabel = !isClient && m.sender_name ? `<div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">${chatEsc(m.sender_name)}</div>` : '';
         return `<div class="chat-bubble-wrap ${side}">
-          ${senderLabel}
           <div class="chat-bubble ${side}">${m.body ? chatEsc(m.body) : ''}${attachmentsHtml}</div>
           <div class="chat-bubble-meta">${time}</div>
         </div>`;
