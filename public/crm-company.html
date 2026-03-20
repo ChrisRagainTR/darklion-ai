@@ -341,42 +341,13 @@
     /* Payroll alert bar */
     .bk-payroll-alert { background: rgba(237,137,54,0.1); border: 1px solid rgba(237,137,54,0.4); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; font-size: 0.86rem; color: var(--orange); display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
     .bk-payroll-alert a { color: var(--gold); text-decoration: underline; cursor: pointer; }
+    .sidebar-nav li a.nav-coming-soon { opacity: 0.4; cursor: default; pointer-events: none; }
   </style>
 </head>
 <body>
 
-<aside class="sidebar">
-  <a class="sidebar-brand" href="/dashboard">
-    <img src="/lion-logo.png" alt="DL" width="32" height="32" style="flex-shrink:0;">
-    <div class="nav-name">Dark<span>Lion</span></div>
-  </a>
-  <nav>
-    <div class="sidebar-section">Clients</div>
-    <ul class="sidebar-nav">
-      <li><a href="/crm?tab=relationships">👥 <span>Relationships</span></a></li>
-      <li><a href="/crm?tab=people">👤 <span>People</span></a></li>
-      <li><a href="/crm?tab=companies" class="active">🏢 <span>Companies</span></a></li>
-    </ul>
-    <div class="sidebar-divider"></div>
-    <div class="sidebar-section">Work</div>
-    <ul class="sidebar-nav">
-      <li><a href="#" class="disabled" style="opacity:0.4;pointer-events:none;">📋 <span>Pipelines</span></a></li>
-      <li><a href="/messages">💬 <span>Messages</span></a></li>
-      <li><a href="/dashboard?section=statements-calendar">📅 <span>Statement Calendar</span></a></li>
-    </ul>
-    <div class="sidebar-section">Settings</div>
-    <ul class="sidebar-nav">
-      <li><a href="/dashboard?section=team">👥 <span>Team</span></a></li>
-    </ul>
-    <div class="sidebar-divider"></div>
-    <ul class="sidebar-nav">
-      <li><a href="/dashboard">← <span>Dashboard</span></a></li>
-    </ul>
-  </nav>
-  <div class="sidebar-footer">
-    <a href="#" onclick="logout();return false;">Logout</a>
-  </div>
-</aside>
+<aside class="sidebar" id="sidebar-mount" data-active="companies"></aside>
+<script src="/partials/sidebar.js"></script>
 
 <div class="main">
   <header class="top-header">

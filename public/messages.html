@@ -171,34 +171,13 @@
       .main { margin-left: 60px; }
       .inbox-panel { width: 240px; }
     }
+    .sidebar-nav li a.nav-coming-soon { opacity: 0.4; cursor: default; pointer-events: none; }
   </style>
 </head>
 <body>
 
-<aside class="sidebar">
-  <a href="/dashboard" class="sidebar-brand">
-    <img src="/lion-logo.png" alt="DL" style="width:28px;height:28px;border-radius:6px;">
-    <div class="nav-name">Dark<span>Lion</span></div>
-  </a>
-  <nav>
-    <div class="sidebar-section">Clients</div>
-    <ul class="sidebar-nav">
-      <li><a href="/crm?tab=relationships">👥 <span>Relationships</span></a></li>
-      <li><a href="/crm?tab=people">👤 <span>People</span></a></li>
-      <li><a href="/crm?tab=companies">🏢 <span>Companies</span></a></li>
-    </ul>
-    <div class="sidebar-section">Work</div>
-    <ul class="sidebar-nav">
-      <li><a href="#" style="opacity:0.4;pointer-events:none;">📋 <span>Pipelines</span></a></li>
-      <li><a href="/messages" class="active">💬 <span>Messages</span></a></li>
-      <li><a href="/dashboard?section=statements-calendar">📅 <span>Statement Calendar</span></a></li>
-    </ul>
-    <div class="sidebar-section">Settings</div>
-    <ul class="sidebar-nav">
-      <li><a href="/dashboard?section=team">👥 <span>Team</span></a></li>
-    </ul>
-  </nav>
-</aside>
+<aside class="sidebar" id="sidebar-mount" data-active="messages"></aside>
+<script src="/partials/sidebar.js"></script>
 
 <div class="main">
   <!-- Inbox panel -->

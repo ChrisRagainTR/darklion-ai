@@ -650,36 +650,15 @@
     /* Progress bar in stats */
     .cal-progress-wrap { margin-top: 0.5rem; background: var(--card); border-radius: 4px; height: 6px; overflow: hidden; }
     .cal-progress-fill { height: 100%; background: var(--gold); border-radius: 4px; transition: width 0.4s; }
+
+    .sidebar-nav li a.nav-coming-soon { opacity: 0.4; cursor: default; pointer-events: none; }
   </style>
 </head>
 <body>
 
   <!-- Sidebar -->
-  <aside class="sidebar">
-
-
-    <nav>
-      <div class="sidebar-section">Clients</div>
-      <ul class="sidebar-nav">
-        <li><a href="/crm?tab=relationships">👥 <span>Relationships</span></a></li>
-        <li><a href="/crm?tab=people">👤 <span>People</span></a></li>
-        <li><a href="/crm?tab=companies">🏢 <span>Companies</span></a></li>
-      </ul>
-      <div class="sidebar-section">Work</div>
-      <ul class="sidebar-nav">
-        <li><a href="#" class="coming-soon" title="Coming soon">📋 <span>Pipelines</span></a></li>
-        <li><a href="/messages">💬 <span>Messages</span></a></li>
-        <li><a href="#" data-section="statements-calendar" onclick="showSection('statements-calendar',this)">📅 <span>Statement Calendar</span></a></li>
-      </ul>
-      <div class="sidebar-section">Settings</div>
-      <ul class="sidebar-nav">
-        <li><a href="#" data-section="team" onclick="showSection('team',this)">👥 <span>Team</span></a></li>
-      </ul>
-    </nav>
-    <div style="margin-top:auto;padding:1rem;border-top:1px solid var(--border);">
-      <a href="#" onclick="logout()" style="display:block;text-align:center;color:var(--muted);font-size:0.82rem;text-decoration:none;">Logout</a>
-    </div>
-  </aside>
+  <aside class="sidebar" id="sidebar-mount" data-active=""></aside>
+  <script src="/partials/sidebar.js"></script>
 
   <!-- Top Header Bar -->
   <header class="top-header" id="top-header">

@@ -296,38 +296,14 @@
       .slide-panel { width: 100vw; }
       .form-row { grid-template-columns: 1fr; }
     }
+    .sidebar-nav li a.nav-coming-soon { opacity: 0.4; cursor: default; pointer-events: none; }
   </style>
 </head>
 <body>
 
 <!-- ── Sidebar ── -->
-<aside class="sidebar">
-  <a class="sidebar-brand" href="/dashboard">
-    <img src="/lion-logo.png" alt="DL" width="32" height="32" style="flex-shrink:0;">
-    <div class="nav-name">Dark<span>Lion</span></div>
-  </a>
-  <nav>
-    <div class="sidebar-section">CRM</div>
-    <ul class="sidebar-nav">
-      <li><a href="#" data-tab="relationships" class="active" onclick="switchTab('relationships',this);return false;">👥 <span>Relationships</span></a></li>
-      <li><a href="#" data-tab="people" onclick="switchTab('people',this);return false;">👤 <span>People</span></a></li>
-      <li><a href="#" data-tab="companies" onclick="switchTab('companies',this);return false;">🏢 <span>Companies</span></a></li>
-    </ul>
-    <div class="sidebar-section">Work</div>
-    <ul class="sidebar-nav">
-      <li><a href="#" style="opacity:0.4;pointer-events:none;">📋 <span>Pipelines</span></a></li>
-      <li><a href="/messages">💬 <span>Messages</span></a></li>
-      <li><a href="/dashboard?section=statements-calendar">📅 <span>Statement Calendar</span></a></li>
-    </ul>
-    <div class="sidebar-divider"></div>
-    <ul class="sidebar-nav">
-      <li><a href="/dashboard">← <span>Dashboard</span></a></li>
-    </ul>
-  </nav>
-  <div class="sidebar-footer">
-    <a href="#" onclick="logout();return false;">Logout</a>
-  </div>
-</aside>
+<aside class="sidebar" id="sidebar-mount" data-active=""></aside>
+<script src="/partials/sidebar.js"></script>
 
 <!-- ── Header ── -->
 <div class="main">
