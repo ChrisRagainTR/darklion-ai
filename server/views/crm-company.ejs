@@ -560,6 +560,7 @@
 <style>
   #tab-communication.active { display:flex !important; flex-direction:column; }
   #tab-communication { overflow:hidden; height:calc(100vh - var(--header-h, 58px) - var(--tab-bar-top, 58px) - 42px); }
+  body:has(#tab-communication.active) .main { overflow-y: hidden !important; }
   #tab-communication .crm-inbox-wrap { display:flex; flex:1; min-height:0; overflow:hidden; }
   #tab-communication .crm-thread-list { width:300px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
   #tab-communication .crm-thread-list-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }

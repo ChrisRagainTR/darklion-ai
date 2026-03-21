@@ -188,6 +188,8 @@
       overflow:hidden;
       height: calc(100vh - var(--header-h, 58px) - var(--tab-bar-top, 58px) - 42px);
     }
+    /* Prevent .main scrollbar when comm tab is active */
+    body:has(#tab-communication.active) .main { overflow-y: hidden !important; }
 
     /* Layout */
     #tab-communication .crm-inbox-wrap { display:flex; flex:1; min-height:0; overflow:hidden; }
