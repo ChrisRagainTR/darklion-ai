@@ -1825,6 +1825,9 @@
       if (hdrName) hdrName.textContent = firstName + creds;
       _chatLoaded = false;
       _chatAllMessages = [];
+      _renderedMsgIds = new Set();
+      const container = document.getElementById('chatMessages');
+      if (container) container.innerHTML = '';
       loadAllMessages();
     }
 
@@ -1918,28 +1921,48 @@
       } catch(e) { alert('Failed to download attachment'); }
     }
 
+    let _renderedMsgIds = new Set();
+
+    function buildMsgHtml(m) {
+      const isClient = m.sender_type === 'client';
+      const side = isClient ? 'client' : 'staff';
+      const time = new Date(m.created_at).toLocaleString();
+      const attachmentsHtml = (m.attachments || []).length > 0
+        ? `<div class="msg-attachments">${(m.attachments).map(a => {
+            const size = a.sizeBytes ? ' <span class="att-size">(' + chatFormatBytes(a.sizeBytes) + ')</span>' : '';
+            return `<a class="attachment-chip" href="#" onclick="downloadPortalAttachment(${a.documentId});return false;">📎 ${chatEsc(a.displayName)}${size}</a>`;
+          }).join('')}</div>`
+        : '';
+      return `<div class="chat-bubble-wrap ${side}" data-msg-id="${m.id}">
+        <div class="chat-bubble ${side}">${m.body ? chatEsc(m.body) : ''}${attachmentsHtml}</div>
+        <div class="chat-bubble-meta">${time}</div>
+      </div>`;
+    }
+
     function renderChatMessages() {
       const container = document.getElementById('chatMessages');
       if (!_chatAllMessages.length) {
-        container.innerHTML = '<div class="chat-empty">No messages yet. Send a message below!</div>';
+        if (!_renderedMsgIds.size) {
+          container.innerHTML = '<div class="chat-empty">No messages yet. Send a message below!</div>';
+        }
         return;
       }
-      container.innerHTML = _chatAllMessages.map(m => {
-        const isClient = m.sender_type === 'client';
-        const side = isClient ? 'client' : 'staff';
-        const time = new Date(m.created_at).toLocaleString();
-        const attachmentsHtml = (m.attachments || []).length > 0
-          ? `<div class="msg-attachments">${(m.attachments).map(a => {
-              const size = a.sizeBytes ? ' <span class="att-size">(' + chatFormatBytes(a.sizeBytes) + ')</span>' : '';
-              return `<a class="attachment-chip" href="#" onclick="downloadPortalAttachment(${a.documentId});return false;">📎 ${chatEsc(a.displayName)}${size}</a>`;
-            }).join('')}</div>`
-          : '';
-        return `<div class="chat-bubble-wrap ${side}">
-          <div class="chat-bubble ${side}">${m.body ? chatEsc(m.body) : ''}${attachmentsHtml}</div>
-          <div class="chat-bubble-meta">${time}</div>
-        </div>`;
-      }).join('');
-      container.scrollTop = container.scrollHeight;
+
+      // Remove "no messages" placeholder if present
+      const empty = container.querySelector('.chat-empty');
+      if (empty) empty.remove();
+
+      // Only append new messages — never replace existing DOM
+      let appended = false;
+      for (const m of _chatAllMessages) {
+        if (!_renderedMsgIds.has(m.id)) {
+          container.insertAdjacentHTML('beforeend', buildMsgHtml(m));
+          _renderedMsgIds.add(m.id);
+          appended = true;
+        }
+      }
+
+      if (appended) container.scrollTop = container.scrollHeight;
     }
 
     async function sendChatMessage() {
