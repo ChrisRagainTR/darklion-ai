@@ -159,7 +159,8 @@ Relationship  →  the household/group (top-level billing unit)
 
 ---
 
-### ⏳ Phase 7 — Tax Return Delivery + E-Signatures
+### ⚠️ Phase 7 — Tax Return Delivery + E-Signatures (BUILT, NEEDS FIX)
+**Status:** Built but not working correctly. Will revisit after Phase 6 (Pipelines).
 **Plan:**
 - Deliver a document through the portal with status tracking (delivered → viewed → signed)
 - E-signature flow for 8879s and engagement letters
@@ -286,6 +287,18 @@ Relationship  →  the household/group (top-level billing unit)
 ---
 
 *This document should be kept up to date as each phase completes.*
+
+---
+
+### ⏳ Phase 14 — Engagement Tab
+**Plan:**
+- New "Engagement" tab on the Relationship detail page (crm-relationship.html)
+- Simple upload/view for signed engagement letters — staff uploads PDFs as they come in
+- Phase 14b: AI (Claude) scans uploaded engagement letters and extracts key details:
+  - Services agreed to, fee amount, effective date, signer names
+  - Auto-populates fields on the Relationship record in the CRM
+- Storage: S3 (same as documents), tagged with folder_section = 'engagement'
+- Audit trail: who uploaded, when, what was extracted
 
 ---
 
