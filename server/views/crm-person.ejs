@@ -398,7 +398,7 @@
     if (tc) tc.classList.add('active');
     if (name === 'docs') loadDocs();
     if (name === 'tax') loadTax();
-    if (name === 'communication' && personData) initComm(personData.id || personId);
+    if (name === 'communication') initComm(personData?.id || personId);
     if (name === 'organizers' && personData && personData.stanford_tax_url) {
       const el = document.getElementById('org-stanford-link');
       if (el) el.innerHTML = `<a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
@@ -944,7 +944,10 @@
   let commAttachFiles = [];
 
   function initComm(pid) {
+    if (!pid) { console.error('[comm] initComm called with no personId'); return; }
+    if (commPersonId === pid) return; // already initialized for this person
     commPersonId = pid;
+    commActiveThreadId = null;
     commShowEmpty();
     loadThreads();
   }
@@ -972,9 +975,11 @@
   async function loadThreads() {
     const el = document.getElementById('comm-threads');
     if (!el) return;
+    if (!commPersonId) { el.innerHTML = '<div style="color:var(--muted);padding:1rem;font-size:0.84rem;">No person ID.</div>'; return; }
     el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
     try {
       const res = await apiFetch(`/api/messages/person/${commPersonId}`);
+      if (!res.ok) { const err = await res.json().catch(()=>({})); throw new Error(err.error || `HTTP ${res.status}`); }
       const threads = await res.json();
       if (!threads.length) {
         el.innerHTML = '<div style="color:var(--muted);font-size:0.84rem;padding:1.5rem 1rem;text-align:center;">No messages yet.</div>';
@@ -997,7 +1002,8 @@
         </div>`;
       }).join('');
     } catch(e) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem;">Failed to load messages.</div>';
+      console.error('[comm] loadThreads error:', e);
+      el.innerHTML = `<div style="color:#e55;font-size:0.84rem;padding:1rem;">Failed to load messages: ${e.message}</div>`;
     }
   }
 
@@ -1081,7 +1087,8 @@
 
   async function sendReply() {
     const body = document.getElementById('comm-reply-body').value.trim();
-    if ((!body && commAttachFiles.length === 0) || !commActiveThreadId) return;
+    if (!commActiveThreadId) { toast('No thread selected', 'error'); return; }
+    if (!body && commAttachFiles.length === 0) return;
     const isInternal = document.getElementById('comm-internal-toggle').checked;
     try {
       const fd = new FormData();
@@ -1095,7 +1102,7 @@
       renderCommAttachChips();
       await loadThread(commActiveThreadId);
       await loadThreads();
-    } catch(e) { alert('Failed to send reply'); }
+    } catch(e) { console.error('[comm] sendReply error:', e); toast('Failed to send reply: ' + e.message, 'error'); }
   }
 
   async function updateThreadStatus() {
