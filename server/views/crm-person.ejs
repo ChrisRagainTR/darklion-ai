@@ -199,7 +199,7 @@
     #tab-communication .thread-card-meta { display:flex; align-items:center; gap:0.4rem; margin-top:0.3rem; font-size:0.7rem; color:var(--muted); }
     #tab-communication .unread-dot { width:8px; height:8px; border-radius:50%; background:var(--gold); flex-shrink:0; }
     /* Detail panel */
-    #tab-communication .crm-detail-panel { flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; }
+    #tab-communication .crm-detail-panel { flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; position:relative; }
     #tab-communication .detail-header { padding:1rem 1.5rem; border-bottom:1px solid var(--border); background:var(--card); flex-shrink:0; }
     #tab-communication .detail-header-person { font-size:1rem; font-weight:700; color:var(--text); }
     #tab-communication .detail-header-subject { font-size:0.85rem; color:var(--muted); margin-top:0.15rem; }
@@ -255,12 +255,13 @@
     <!-- Right: same as team inbox detail panel -->
     <div class="crm-detail-panel">
       <!-- Empty state -->
-      <div class="no-thread-selected" id="comm-no-thread">
-        <div class="nts-icon">💬</div>
-        <div>Select a thread or start a new one</div>
-      </div>
-      <!-- Thread view — hidden until selected -->
-      <div id="comm-thread-view" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden;">
+      <!-- Thread view — always in DOM so scroll dimensions work -->
+      <div id="comm-thread-view" style="flex:1;flex-direction:column;min-height:0;overflow:hidden;display:flex;">
+        <!-- Empty state — shown by default, hidden when thread selected -->
+        <div class="no-thread-selected" id="comm-no-thread" style="position:absolute;inset:0;z-index:1;background:var(--navy);">
+          <div class="nts-icon">💬</div>
+          <div>Select a thread or start a new one</div>
+        </div>
         <div class="detail-header" id="comm-detail-header"></div>
         <div class="detail-messages" id="comm-detail-messages"></div>
         <div id="comm-typing-indicator" style="display:none;padding:0.3rem 1rem;font-size:0.78rem;color:var(--muted);font-style:italic;"></div>
@@ -950,19 +951,18 @@
   }
 
   function commShowEmpty() {
-    document.getElementById('comm-thread-view').style.display = 'none';
-    document.getElementById('comm-compose-view').style.display = 'none';
     document.getElementById('comm-no-thread').style.display = 'flex';
+    document.getElementById('comm-compose-view').style.display = 'none';
+    document.getElementById('comm-detail-header').innerHTML = '';
+    document.getElementById('comm-detail-messages').innerHTML = '';
   }
   function commShowDetail() {
-    document.getElementById('comm-thread-view').style.display = 'flex';
-    document.getElementById('comm-compose-view').style.display = 'none';
     document.getElementById('comm-no-thread').style.display = 'none';
+    document.getElementById('comm-compose-view').style.display = 'none';
   }
   function commShowCompose() {
-    document.getElementById('comm-thread-view').style.display = 'none';
-    document.getElementById('comm-compose-view').style.display = 'flex';
     document.getElementById('comm-no-thread').style.display = 'none';
+    document.getElementById('comm-compose-view').style.display = 'flex';
   }
   function commOpenNew() { commShowCompose(); document.getElementById('comm-new-body').value = ''; commNewAttachFiles = []; renderNewCommAttachChips(); }
   function commCloseNew() { commShowEmpty(); }
