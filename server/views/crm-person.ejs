@@ -183,7 +183,11 @@
 
 <style>
     #tab-communication.active { display:flex !important; flex-direction:column; }
-    #tab-communication { overflow:hidden; }
+    /* Height = viewport minus top header, entity header, and tab bar */
+    #tab-communication {
+      overflow:hidden;
+      height: calc(100vh - var(--header-h, 58px) - var(--tab-bar-top, 58px) - 42px);
+    }
     /* Layout */
     #tab-communication .crm-inbox-wrap { display:flex; flex:1; min-height:0; overflow:hidden; }
     #tab-communication .crm-thread-list { width:300px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
