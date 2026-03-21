@@ -946,13 +946,15 @@
     if (!token) { window.location.href = '/portal-login'; return; }
 
     // ── Real-time socket for instant message updates ───────
+    // window._portalReloadMessages is set later (inside selectContact scope)
+    // so the socket handler calls through to it when it exists
+    window._portalReloadMessages = null;
     try {
       const _socket = io({ auth: { token } });
       _socket.on('connect', () => console.log('[portal socket] connected'));
       _socket.on('message:new', ({ senderType }) => {
-        // Staff sent us a message — reload chat
-        if (senderType === 'staff' && typeof loadAllMessages === 'function') {
-          loadAllMessages();
+        if (senderType === 'staff' && typeof window._portalReloadMessages === 'function') {
+          window._portalReloadMessages();
         }
       });
     } catch (e) {
@@ -1824,6 +1826,7 @@
     }
 
     async function loadAllMessages() {
+      window._portalReloadMessages = loadAllMessages; // expose for socket handler
       const token = localStorage.getItem('portalToken');
       if (!token) return;
       try {
