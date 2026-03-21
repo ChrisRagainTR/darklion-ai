@@ -1043,8 +1043,8 @@
             <div class="msg-meta">${esc(m.senderName||'')} · ${relTime(m.createdAt)}</div>
           </div>`;
         }).join('');
-        // Double RAF ensures scroll happens after layout is fully painted
-        requestAnimationFrame(() => requestAnimationFrame(() => { msgEl.scrollTop = msgEl.scrollHeight; }));
+        // Scroll to bottom — use timeout to ensure flex layout is fully settled
+        setTimeout(() => { msgEl.scrollTop = msgEl.scrollHeight; }, 50);
       }
     } catch(e) {
       document.getElementById('comm-detail-messages').innerHTML = '<div style="color:var(--muted);padding:1rem;">Failed to load thread.</div>';
