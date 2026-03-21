@@ -374,7 +374,11 @@
 
   function authHeaders() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }; }
   async function apiFetch(url, opts = {}) {
-    const res = await fetch(url, { ...opts, headers: { ...authHeaders(), ...(opts.headers||{}) } });
+    const isFormData = opts.body instanceof FormData;
+    const headers = isFormData
+      ? { 'Authorization': 'Bearer ' + token, ...(opts.headers||{}) }
+      : { ...authHeaders(), ...(opts.headers||{}) };
+    const res = await fetch(url, { ...opts, headers });
     if (res.status === 401) window.location.href = '/login';
     return res;
   }

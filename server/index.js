@@ -74,11 +74,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use((req, res, next) => {
-  // Skip JSON parsing for multipart/form-data (handled by multer per-route)
-  if (req.headers['content-type']?.startsWith('multipart/form-data')) return next();
-  express.json()(req, res, next);
-});
+app.use(express.json());
 app.use(express.urlencoded({ extended: false })); // needed for Pusher auth endpoint
 
 // --- Force HTTPS in production ---
