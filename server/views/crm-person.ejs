@@ -186,7 +186,7 @@
         </div>
         <div class="form-group"><label>Title</label><input type="text" class="form-control" id="pd-title" placeholder="e.g. 2024 Individual Return"></div>
       </div>
-      <div class="form-group"><label>Intro Note (shown to client)</label><textarea class="form-control" id="pd-intro" rows="3" placeholder="Please review and sign your tax return…"></textarea></div>
+      <div class="form-group"><label>Intro Note (shown to client)</label><textarea class="form-control" id="pd-intro" rows="5"></textarea></div>
       <div class="form-group"><label>Review Document (PDF for client to review)</label>
         <select class="form-control" id="pd-review-doc"><option value="">— Select document —</option></select>
       </div>
@@ -941,6 +941,10 @@
     }
     yearSel.value = String(cy - 1);
     const titleEl = document.getElementById('pd-title'); if (titleEl) titleEl.value = String(cy - 1) + ' Tax Return Delivery';
+    const introEl = document.getElementById('pd-intro');
+    if (introEl && !introEl.value) {
+      introEl.value = 'Dear Client,\n\nYour ' + String(cy - 1) + ' tax return has been prepared and is ready for your review. Please take a moment to carefully review all information for accuracy.\n\nOnce you have reviewed the return, you will have the opportunity to either approve it and provide your electronic signature, or request changes if anything needs to be corrected.\n\nIf you have any questions prior to signing, please don\'t hesitate to reach out to our office directly.\n\nThank you for trusting Sentinel Wealth & Tax with your tax preparation.';
+    }
 
     // Load personal docs for this person
     _pdAllDocs = [];
