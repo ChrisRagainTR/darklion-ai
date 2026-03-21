@@ -160,8 +160,8 @@ app.get('/invite/:token', (req, res) => res.sendFile(path.join(publicDir, 'invit
 
 // --- Staff pages (EJS templates with unified layout) ---
 // Note: auth is handled client-side (JWT in localStorage); server just serves the pages
-app.get('/dashboard', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
-app.get('/statements-calendar', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
+app.get('/dashboard', (req, res) => res.render('dashboard', { title: 'Dashboard', activeNav: '' }));
+app.get('/statements-calendar', (req, res) => res.render('statements-calendar', { title: 'Statement Calendar', activeNav: 'statements-calendar' }));
 app.get('/dashboard.html', (req, res) => res.redirect('/dashboard'));
 app.get('/theme-preview', (req, res) => res.sendFile(path.join(publicDir, 'theme-preview.html')));
 // Team page — redirect to dashboard team section for now
