@@ -202,7 +202,7 @@
     .comm-right { flex:1; display:flex; flex-direction:column; min-width:0; }
     .comm-right-header { padding:0.85rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:1rem; flex-shrink:0; background:var(--shell); }
     .comm-right-subject { font-size:1rem; font-weight:700; color:var(--text); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .comm-messages-area { flex:1; overflow-y:auto; padding:1.25rem; display:flex; flex-direction:column; gap:0.75rem; }
+    .comm-messages-area { flex:1; overflow-y:auto; min-height:0; padding:1.25rem; display:flex; flex-direction:column; gap:0.75rem; }
     .comm-bubble-wrap { display:flex; flex-direction:column; }
     .comm-bubble-wrap.staff { align-items:flex-start; }
     .comm-bubble-wrap.client { align-items:flex-end; }
@@ -212,9 +212,9 @@
     .comm-bubble.client { background:var(--gold); color:#0f1117; }
     .comm-bubble.internal { background:rgba(201,168,76,0.08); color:var(--text); border:1px dashed rgba(201,168,76,0.4); }
     .comm-bubble-meta { font-size:0.68rem; color:var(--muted); margin-top:0.15rem; }
-    .comm-msg-attachments { display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.4rem; }
-    .comm-attach-chip { display:inline-flex; align-items:center; gap:0.3rem; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); border-radius:4px; padding:0.15rem 0.5rem; font-size:0.73rem; color:inherit; text-decoration:none; cursor:pointer; }
-    .comm-attach-chip:hover { opacity:0.8; }
+    .comm-msg-attachments { display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.5rem; }
+    .comm-attach-chip { display:inline-flex; align-items:center; gap:0.35rem; background:rgba(0,0,0,0.25); border:1px solid rgba(0,0,0,0.2); border-radius:6px; padding:0.25rem 0.6rem; font-size:0.73rem; color:#fff; text-decoration:none; cursor:pointer; font-weight:500; }
+    .comm-attach-chip:hover { background:rgba(0,0,0,0.4); }
     .comm-compose-area { border-top:1px solid var(--border); padding:1rem 1.25rem; flex-shrink:0; background:var(--shell); }
     .comm-compose-toolbar { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem; flex-wrap:wrap; }
     .comm-toolbar-btn { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:0.2rem 0.5rem; font-size:0.78rem; cursor:pointer; transition:border-color 0.15s,color 0.15s; }
@@ -1027,7 +1027,8 @@
           <div class="comm-bubble-meta">${esc(m.senderName || '')} · ${relTime(m.createdAt)}</div>
         </div>`;
       }).join('');
-      msgEl.scrollTop = msgEl.scrollHeight;
+      // Scroll to bottom after paint
+      requestAnimationFrame(() => { msgEl.scrollTop = msgEl.scrollHeight; });
     } catch(e) {
       document.getElementById('comm-messages-list').innerHTML = '<div style="color:var(--muted);padding:1rem;">Failed to load thread.</div>';
     }
