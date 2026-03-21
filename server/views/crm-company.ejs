@@ -1272,7 +1272,7 @@
       const res = await apiFetch('/api/tax-deliveries/' + id + '/cancel', { method: 'POST' });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Cancelled — returned to draft');
-      const el = document.getElementById('tax-content'); delete el.dataset.loaded; loadTax();
+      loadTax(true);
     } catch(e) { toast(e.message, 'error'); }
   }
 

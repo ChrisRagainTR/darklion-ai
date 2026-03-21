@@ -971,7 +971,7 @@
       const res = await apiFetch('/api/tax-deliveries/' + id + '/send', { method: 'POST', body: '{}' });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Delivery sent to client');
-      const el = document.getElementById('tax-content'); delete el.dataset.loaded; loadTax();
+      loadTax(true);
     } catch(e) { toast(e.message, 'error'); }
   }
 
@@ -980,7 +980,7 @@
     try {
       await apiFetch('/api/tax-deliveries/' + id, { method: 'DELETE' });
       toast('Deleted');
-      const el = document.getElementById('tax-content'); delete el.dataset.loaded; loadTax();
+      loadTax(true);
     } catch(e) { toast(e.message, 'error'); }
   }
 
@@ -990,7 +990,7 @@
       const res = await apiFetch('/api/tax-deliveries/' + id + '/cancel', { method: 'POST' });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Delivery cancelled — returned to draft');
-      const el = document.getElementById('tax-content'); delete el.dataset.loaded; loadTax();
+      loadTax(true);
     } catch(e) { toast(e.message, 'error'); }
   }
 
