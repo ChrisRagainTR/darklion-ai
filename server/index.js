@@ -160,8 +160,8 @@ app.get('/invite/:token', (req, res) => res.sendFile(path.join(publicDir, 'invit
 
 // --- Staff pages (EJS templates with unified layout) ---
 // Note: auth is handled client-side (JWT in localStorage); server just serves the pages
-app.get('/dashboard', (req, res) => res.render('dashboard', { title: 'Dashboard', activeNav: '' }));
-app.get('/statements-calendar', (req, res) => res.render('statements-calendar', { title: 'Statement Calendar', activeNav: 'statements-calendar' }));
+app.get('/dashboard', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
+app.get('/statements-calendar', (req, res) => res.sendFile(path.join(publicDir, 'dashboard.html')));
 app.get('/dashboard.html', (req, res) => res.redirect('/dashboard'));
 app.get('/theme-preview', (req, res) => res.sendFile(path.join(publicDir, 'theme-preview.html')));
 // Team page — redirect to dashboard team section for now
@@ -174,12 +174,12 @@ app.get('/crm', (req, res) => {
   return res.redirect('/crm/relationships');
 });
 app.get('/crm.html', (req, res) => res.redirect('/crm/relationships'));
-app.get('/crm/relationships', (req, res) => res.render('relationships', { title: 'Relationships', activeNav: 'relationships' }));
-app.get('/crm/people', (req, res) => res.render('people', { title: 'People', activeNav: 'people' }));
-app.get('/crm/companies', (req, res) => res.render('companies', { title: 'Companies', activeNav: 'companies' }));
-app.get('/crm/person/:id', (req, res) => res.render('crm-person', { title: 'Person', activeNav: 'people' }));
-app.get('/crm/company/:id', (req, res) => res.render('crm-company', { title: 'Company', activeNav: 'companies' }));
-app.get('/crm/relationship/:id', (req, res) => res.render('crm-relationship', { title: 'Relationship', activeNav: 'relationships' }));
+app.get('/crm/relationships', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
+app.get('/crm/people', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
+app.get('/crm/companies', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
+app.get('/crm/person/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-person.html')));
+app.get('/crm/company/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-company.html')));
+app.get('/crm/relationship/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-relationship.html')));
 
 // Redirect route (previously required Basic Auth)
 app.get('/redirect', (req, res) => res.sendFile(path.join(publicDir, 'redirect.html')));
@@ -214,7 +214,7 @@ app.use('/api/documents', requireFirm, apiLimiter, documentsRouter);
 
 const messagesRouter = require('./routes/messages');
 app.use('/api/messages', requireFirm, apiLimiter, messagesRouter);
-app.get('/messages', (req, res) => res.render('messages', { title: 'Messages', activeNav: 'messages' }));
+app.get('/messages', (req, res) => res.sendFile(path.join(publicDir, 'messages.html')));
 
 const pipelinesRouter = require('./routes/pipelines');
 app.use('/api/pipelines', requireFirm, apiLimiter, pipelinesRouter);
