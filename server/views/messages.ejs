@@ -265,26 +265,45 @@ function displayStatus(s) {
   return 'Active';
 }
 
-// Load threads
-async function loadInbox() {
+let _inboxLoading = false;
+
+// Load threads — silent refresh, no flash, no spinner on poll
+async function loadInbox(showSpinner = false) {
+  if (_inboxLoading) return; // prevent concurrent fetches
+  _inboxLoading = true;
   try {
+    if (showSpinner) {
+      document.getElementById('inboxList').innerHTML = '<div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>';
+    }
     const all = activeFilter === 'resolved';
     const res = await apiFetch('/api/messages' + (all ? '?all=true' : ''));
-    allThreads = await res.json();
-    // Also load firm users for assign dropdown
-    const usersRes = await apiFetch('/firms/team').catch(() => ({ json: () => [] }));
-    try { firmUsers = await usersRes.json(); } catch(e) { firmUsers = []; }
-    renderInbox();
+    const freshThreads = await res.json();
+    // Only re-render if data changed (avoid unnecessary DOM churn)
+    const freshJson = JSON.stringify(freshThreads);
+    if (freshJson !== JSON.stringify(allThreads)) {
+      allThreads = freshThreads;
+      renderInbox();
+    }
+    // Load firm users once if empty
+    if (!firmUsers.length) {
+      const usersRes = await apiFetch('/firms/team').catch(() => ({ json: () => [] }));
+      try { firmUsers = await usersRes.json(); } catch(e) { firmUsers = []; }
+    }
   } catch(e) {
-    document.getElementById('inboxList').innerHTML = '<div style="color:var(--muted);padding:1rem;font-size:0.85rem;">Failed to load inbox.</div>';
+    if (showSpinner) {
+      document.getElementById('inboxList').innerHTML = '<div style="color:var(--muted);padding:1rem;font-size:0.85rem;">Failed to load inbox.</div>';
+    }
+  } finally {
+    _inboxLoading = false;
   }
 }
 
 function setFilter(f, el) {
   activeFilter = f;
+  allThreads = []; // force re-render on filter change
   document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  loadInbox();
+  loadInbox(true); // show spinner on intentional filter switch
 }
 
 function filterThreads() {
@@ -493,8 +512,8 @@ async function removeCompanyTag(threadId, companyId) {
 }
 
 
-// Initial load
-loadInbox();
+// Initial load — show spinner on first load only
+loadInbox(true);
 </script>
 
 <%- include('partials/shell-close') %>
