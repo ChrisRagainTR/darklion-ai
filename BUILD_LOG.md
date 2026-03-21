@@ -183,7 +183,7 @@ Relationship  →  the household/group (top-level billing unit)
 
 ---
 
-### ⏳ Phase 9 — Proposals + Engagement Letters
+### ⏊ Phase 9 — Proposals + Engagement Letters *(SKIPPED — not building)*
 **Plan:**
 - Port existing proposals app into DarkLion
 - Full flow: proposal → e-sign → auto-create client record + pipeline job
@@ -191,7 +191,7 @@ Relationship  →  the household/group (top-level billing unit)
 
 ---
 
-### ⏳ Phase 10 — Billing
+### ⏊ Phase 10 — Billing *(SKIPPED — not building)*
 **Plan:**
 - Stripe subscriptions at Relationship level
 - Monthly packages (tiered), one-time fees, payment tracking
