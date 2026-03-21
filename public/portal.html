@@ -1936,14 +1936,6 @@
     }
     window.removeChatAttachFile = removeChatAttachFile; // expose for onclick attribute
 
-    function renderChatAttachChips() {
-      const el = document.getElementById('chatAttachChips');
-      if (!el) return;
-      el.innerHTML = _chatAttachFiles.map((f, i) =>
-        `<span class="chat-attach-chip">📎 ${chatEsc(f.name)} <button onclick="removeChatAttachFile(${i})">×</button></span>`
-      ).join('');
-    }
-
     async function downloadPortalAttachment(documentId) {
       const token = localStorage.getItem('portalToken');
       try {
@@ -1954,6 +1946,15 @@
         if (data.url) window.open(data.url, '_blank');
         else alert('Download failed');
       } catch(e) { alert('Failed to download attachment'); }
+    }
+    window.downloadPortalAttachment = downloadPortalAttachment;
+
+    function renderChatAttachChips() {
+      const el = document.getElementById('chatAttachChips');
+      if (!el) return;
+      el.innerHTML = _chatAttachFiles.map((f, i) =>
+        `<span class="chat-attach-chip">📎 ${chatEsc(f.name)} <button onclick="removeChatAttachFile(${i})">×</button></span>`
+      ).join('');
     }
 
     let _renderedMsgIds = new Set();
