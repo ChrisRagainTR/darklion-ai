@@ -271,6 +271,20 @@ router.post('/:id/send', async (req, res) => {
       [id]
     );
 
+    // Mark attached docs as delivered so they appear in client portal
+    if (delivery.review_doc_id) {
+      await pool.query(
+        "UPDATE documents SET is_delivered = true, delivered_at = NOW() WHERE id = $1",
+        [delivery.review_doc_id]
+      );
+    }
+    if (delivery.signature_doc_id) {
+      await pool.query(
+        "UPDATE documents SET is_delivered = true, delivered_at = NOW() WHERE id = $1",
+        [delivery.signature_doc_id]
+      );
+    }
+
     // Fetch signers with their person info
     const { rows: signers } = await pool.query(
       `SELECT tds.person_id, p.first_name, p.last_name, p.email, p.firm_id
@@ -341,10 +355,18 @@ router.post('/:id/cancel', async (req, res) => {
     );
     if (!rows[0]) return res.status(404).json({ error: 'Delivery not found' });
     if (rows[0].status === 'complete') return res.status(400).json({ error: 'Cannot cancel a completed delivery' });
+    const { rows: cancelRows } = await pool.query(
+      'SELECT review_doc_id, signature_doc_id FROM tax_deliveries WHERE id = $1',
+      [id]
+    );
     await pool.query(
       "UPDATE tax_deliveries SET status = 'draft', updated_at = NOW() WHERE id = $1",
       [id]
     );
+    // Un-deliver the docs
+    const cancelDel = cancelRows[0];
+    if (cancelDel?.review_doc_id) await pool.query("UPDATE documents SET is_delivered = false WHERE id = $1", [cancelDel.review_doc_id]);
+    if (cancelDel?.signature_doc_id) await pool.query("UPDATE documents SET is_delivered = false WHERE id = $1", [cancelDel.signature_doc_id]);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
