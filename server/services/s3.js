@@ -90,4 +90,15 @@ async function deleteFile({ key, bucket }) {
   }
 }
 
-module.exports = { uploadFile, getSignedDownloadUrl, deleteFile, buildKey, sanitizeFilename };
+async function downloadFile({ key, bucket }) {
+  const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
+  const response = await s3.send(cmd);
+  // Convert stream to buffer
+  const chunks = [];
+  for await (const chunk of response.Body) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
+module.exports = { uploadFile, downloadFile, getSignedDownloadUrl, deleteFile, buildKey, sanitizeFilename };

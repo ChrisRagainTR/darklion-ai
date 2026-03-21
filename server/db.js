@@ -533,6 +533,12 @@ async function initDB() {
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
 
+    -- Signed PDF document link on tax delivery signers
+    DO $$ BEGIN
+      ALTER TABLE tax_delivery_signers ADD COLUMN IF NOT EXISTS signed_doc_id INTEGER REFERENCES documents(id);
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
     -- ===================== TAX RETURN DELIVERIES =====================
     CREATE TABLE IF NOT EXISTS tax_deliveries (
       id SERIAL PRIMARY KEY,

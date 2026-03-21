@@ -3,7 +3,8 @@
 const { Router } = require('express');
 const multer = require('multer');
 const { pool } = require('../db');
-const { getSignedDownloadUrl, uploadFile, buildKey, sanitizeFilename } = require('../services/s3');
+const { getSignedDownloadUrl, uploadFile, downloadFile, buildKey, sanitizeFilename } = require('../services/s3');
+const { embedSignature } = require('../services/sign-pdf');
 const { classifyMessage } = require('../services/claude');
 const { sendEmail, sendPortalNotification } = require('../services/email');
 const { advancePipelineJob } = require('./tax-delivery');
@@ -790,6 +791,60 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
        WHERE delivery_id = $4 AND person_id = $5`,
       [req.ip, signature_data, signature_type, id, personId]
     );
+
+    // Generate signed PDF for this signer
+    try {
+      const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
+      // Get delivery + person info
+      const { rows: [delivInfo] } = await pool.query(
+        `SELECT td.signature_doc_id, td.tax_year, td.firm_id, f.name AS firm_name,
+                p.first_name, p.last_name, p.email AS person_email
+         FROM tax_deliveries td
+         JOIN firms f ON f.id = td.firm_id
+         JOIN people p ON p.id = $2
+         WHERE td.id = $1`,
+        [id, personId]
+      );
+      if (delivInfo && delivInfo.signature_doc_id) {
+        const { rows: [sigDoc] } = await pool.query(
+          'SELECT s3_key, s3_bucket FROM documents WHERE id = $1', [delivInfo.signature_doc_id]
+        );
+        if (sigDoc) {
+          const originalPdf = await downloadFile({ key: sigDoc.s3_key, bucket: sigDoc.s3_bucket || bucket });
+          const signedPdf = await embedSignature(originalPdf, {
+            name: `${delivInfo.first_name} ${delivInfo.last_name}`.trim(),
+            email: delivInfo.person_email,
+            signedAt: new Date().toISOString(),
+            signedIp: req.ip,
+            signatureData: signature_data,
+            signatureType: signature_type,
+            taxYear: delivInfo.tax_year,
+            firmName: delivInfo.firm_name,
+          });
+          // Store signed PDF as new document
+          const signedKey = buildKey(delivInfo.firm_id, 'tax_signed', `signed_${Date.now()}.pdf`);
+          await uploadFile({ buffer: signedPdf, key: signedKey, mimeType: 'application/pdf', bucket });
+          const { rows: [newDoc] } = await pool.query(
+            `INSERT INTO documents (firm_id, owner_type, owner_id, doc_type, display_name, mime_type,
+               size_bytes, s3_key, s3_bucket, folder_section, folder_category, year, is_delivered, delivered_at)
+             VALUES ($1, 'person', $2, 'signed_return', $3, 'application/pdf', $4, $5, $6,
+                     'firm_uploaded', 'tax', $7, true, NOW())
+             RETURNING id`,
+            [delivInfo.firm_id, personId,
+             `${delivInfo.tax_year} Tax Return — Signed by ${delivInfo.first_name} ${delivInfo.last_name}.pdf`,
+             signedPdf.length, signedKey, bucket, delivInfo.tax_year]
+          );
+          // Link signed doc to the signer record
+          await pool.query(
+            'UPDATE tax_delivery_signers SET signed_doc_id = $1 WHERE delivery_id = $2 AND person_id = $3',
+            [newDoc.id, id, personId]
+          );
+        }
+      }
+    } catch(pdfErr) {
+      console.error('[portal] sign PDF embed error (non-fatal):', pdfErr);
+      // Non-fatal — signature is still recorded even if PDF embed fails
+    }
 
     // Check if ALL signers have now signed
     const { rows: allSigners } = await pool.query(
