@@ -765,7 +765,8 @@ router.get('/entity-jobs', async (req, res) => {
          pi.tax_year,
          COALESCE(fu.display_name, fu.name) AS assigned_name,
          (SELECT body FROM pipeline_job_updates u WHERE u.job_id = pj.id ORDER BY u.created_at DESC LIMIT 1) AS last_update,
-         (SELECT created_at FROM pipeline_job_updates u WHERE u.job_id = pj.id ORDER BY u.created_at DESC LIMIT 1) AS last_update_at
+         (SELECT created_at FROM pipeline_job_updates u WHERE u.job_id = pj.id ORDER BY u.created_at DESC LIMIT 1) AS last_update_at,
+         (SELECT COALESCE(fu2.display_name, fu2.name) FROM pipeline_job_updates u JOIN firm_users fu2 ON fu2.id = u.author_id WHERE u.job_id = pj.id ORDER BY u.created_at DESC LIMIT 1) AS last_update_author
        FROM pipeline_jobs pj
        JOIN pipeline_instances pi ON pi.id = pj.instance_id
        JOIN pipeline_templates pt ON pt.id = pi.template_id

@@ -518,7 +518,10 @@
         const statusColor = j.job_status === 'blocked' ? 'var(--red)' : j.job_status === 'waiting_client' || j.job_status === 'missing_info' ? 'var(--orange)' : 'var(--green)';
         const statusLabels = { active:'Active', waiting_client:'Waiting on Client', missing_info:'Missing Info', blocked:'Blocked', under_extension:'Under Extension', on_hold:'On Hold' };
         const statusLabel = statusLabels[j.job_status] || 'Active';
-        const lastUpdate = j.last_update ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">${esc(j.last_update.length > 80 ? j.last_update.substring(0,80)+'…' : j.last_update)}</div>` : '';
+        const updateText = j.last_update ? (j.last_update.length > 80 ? j.last_update.substring(0,80)+'…' : j.last_update) : null;
+        const updateDate = j.last_update_at ? new Date(j.last_update_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+        const updateAuthor = j.last_update_author || '';
+        const lastUpdate = updateText ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">${esc(updateText)}<span style="font-size:0.72rem;color:rgba(143,163,184,0.6);margin-left:0.4rem;">— ${esc(updateAuthor)}${updateDate ? ', '+updateDate : ''}</span></div>` : '';
         return `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
           <div style="flex:1;min-width:180px;">
             <div style="font-weight:700;font-size:0.95rem;">${esc(j.pipeline_name)}${yearBadge}</div>
