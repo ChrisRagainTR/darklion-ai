@@ -2281,12 +2281,10 @@
       qs('#team-loading').style.display = '';
       qs('#team-content').style.display = 'none';
       try {
-        const [teamRes, companiesRes] = await Promise.all([
-          apiFetch('/firms/team'),
-          apiFetch('/api/companies'),
-        ]);
+        const teamRes = await apiFetch('/firms/team');
         teamData = await teamRes.json();
-        firmCompanies = await companiesRes.json();
+        if (!Array.isArray(teamData)) teamData = [];
+        firmCompanies = Array.isArray(companies) ? companies : [];
         renderTeam();
         qs('#team-loading').style.display = 'none';
         qs('#team-content').style.display = '';
