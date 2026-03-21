@@ -173,11 +173,14 @@
 
     // ── Toast ──
     window.toast = function(msg, type) {
-      var t = document.getElementById('toast');
-      t.textContent = msg;
-      t.className = 'toast show' + (type==='error'?' error':'');
-      clearTimeout(t._timer);
-      t._timer = setTimeout(function(){ t.className='toast'; }, 3000);
+      try {
+        var t = document.getElementById('toast');
+        if (!t) return;
+        t.textContent = msg;
+        t.className = 'toast show' + (type==='error'?' error':'');
+        clearTimeout(t._timer);
+        t._timer = setTimeout(function(){ t.className='toast'; }, 3000);
+      } catch(e) { /* non-fatal */ }
     };
 
     // ── apiFetch exposed globally for page scripts ──

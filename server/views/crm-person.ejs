@@ -444,7 +444,7 @@
     const yyyy = d.getUTCFullYear();
     return `${mm}/${dd}/${yyyy}`;
   }
-  function toast(msg, type='success') { window.toast(msg, type === 'error' ? 'error' : undefined); }
+  function toast(msg, type) { if (window.toast) window.toast(msg, type === 'error' ? 'error' : undefined); }
 
   function switchTab(name, el) {
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
