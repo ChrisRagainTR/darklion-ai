@@ -1128,9 +1128,9 @@
 
   // ── TAX DELIVERIES ────────────────────────────────────────────────────────
 
-  async function loadTax() {
+  async function loadTax(force) {
     const el = document.getElementById('tax-content');
-    if (el.dataset.loaded) return;
+    if (el.dataset.loaded && !force) return;
     el.dataset.loaded = '1';
     el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>';
     try {
@@ -1253,9 +1253,7 @@
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       closeDeliveryModal();
       toast('Delivery created');
-      const el = document.getElementById('tax-content');
-      delete el.dataset.loaded;
-      loadTax();
+      loadTax(true);
     } catch(e) { document.getElementById('delivery-error').textContent = e.message; document.getElementById('delivery-error').style.display = ''; }
   }
 
