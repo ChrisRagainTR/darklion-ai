@@ -950,8 +950,11 @@
       if (typeof window._portalReloadMessages === 'function') window._portalReloadMessages();
     }
 
-    // Polling: 30s fallback (socket handles instant delivery, poll is safety net only)
-    setInterval(_reloadMessages, 30000);
+    // Polling: 30s fallback — paused while user is typing
+    let _userTyping = false;
+    document.addEventListener('focusin', (e) => { if (e.target.id === 'chatInput') _userTyping = true; });
+    document.addEventListener('focusout', (e) => { if (e.target.id === 'chatInput') _userTyping = false; });
+    setInterval(() => { if (!_userTyping) _reloadMessages(); }, 30000);
 
     // Socket: instant delivery (per socket.io v4 docs)
     const _socket = io({ auth: { token } });
