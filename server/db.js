@@ -546,6 +546,14 @@ async function initDB() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS pipeline_job_updates (
+      id SERIAL PRIMARY KEY,
+      job_id INTEGER NOT NULL REFERENCES pipeline_jobs(id) ON DELETE CASCADE,
+      author_id INTEGER REFERENCES firm_users(id),
+      body TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS tax_delivery_signers (
       id SERIAL PRIMARY KEY,
       delivery_id INTEGER NOT NULL REFERENCES tax_deliveries(id) ON DELETE CASCADE,

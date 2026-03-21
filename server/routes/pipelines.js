@@ -378,9 +378,28 @@ router.get('/instances/:id', async (req, res) => {
       [inst.id]
     );
 
-    // Resolve entity names
+    // Resolve entity names + recent updates (last 3 per job)
+    const jobIds = jobs.map(j => j.id);
+    let updatesMap = {};
+    if (jobIds.length > 0) {
+      const { rows: updates } = await pool.query(
+        `SELECT u.id, u.job_id, u.body, u.created_at,
+                COALESCE(fu.display_name, fu.name, fu.email) AS author_name
+         FROM pipeline_job_updates u
+         LEFT JOIN firm_users fu ON fu.id = u.author_id
+         WHERE u.job_id = ANY($1)
+         ORDER BY u.job_id, u.created_at DESC`,
+        [jobIds]
+      );
+      for (const u of updates) {
+        if (!updatesMap[u.job_id]) updatesMap[u.job_id] = [];
+        updatesMap[u.job_id].push(u);
+      }
+    }
+
     for (const job of jobs) {
       job.entity_name = await resolveEntityName(job);
+      job.recent_updates = (updatesMap[job.id] || []).slice(0, 3);
     }
 
     res.json({ ...inst, template: tmpl, stages, jobs });
@@ -683,6 +702,60 @@ router.get('/jobs/:jobId/history', async (req, res) => {
   } catch (e) {
     console.error('GET /jobs/:jobId/history error:', e);
     res.status(500).json({ error: 'Failed to load history' });
+  }
+});
+
+// --- GET /jobs/:jobId/updates ---
+router.get('/jobs/:jobId/updates', async (req, res) => {
+  try {
+    const job = await getJob(req.firm.id, req.params.jobId);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    const { rows } = await pool.query(
+      `SELECT u.id, u.body, u.created_at,
+              COALESCE(fu.display_name, fu.name, fu.email) AS author_name
+       FROM pipeline_job_updates u
+       LEFT JOIN firm_users fu ON fu.id = u.author_id
+       WHERE u.job_id = $1
+       ORDER BY u.created_at DESC`,
+      [job.id]
+    );
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- POST /jobs/:jobId/updates ---
+router.post('/jobs/:jobId/updates', async (req, res) => {
+  try {
+    const job = await getJob(req.firm.id, req.params.jobId);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    const { body } = req.body;
+    if (!body || !body.trim()) return res.status(400).json({ error: 'Body is required' });
+    const { rows } = await pool.query(
+      `INSERT INTO pipeline_job_updates (job_id, author_id, body)
+       VALUES ($1, $2, $3)
+       RETURNING id, body, created_at`,
+      [job.id, req.firm.userId, body.trim()]
+    );
+    res.status(201).json(rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- DELETE /jobs/:jobId/updates/:updateId ---
+router.delete('/jobs/:jobId/updates/:updateId', async (req, res) => {
+  try {
+    const job = await getJob(req.firm.id, req.params.jobId);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    await pool.query(
+      'DELETE FROM pipeline_job_updates WHERE id = $1 AND job_id = $2',
+      [req.params.updateId, job.id]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 

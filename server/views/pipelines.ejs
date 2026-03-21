@@ -412,20 +412,39 @@
 
   function renderCard(job) {
     var name = esc(job.entity_name || '#' + job.entity_id);
-    var notes = (job.notes || '').trim();
-    var notesPreview = notes.length > 80 ? notes.substring(0, 80) + '…' : notes;
+    var updates = job.recent_updates || [];
     var due = job.due_date ? formatDate(job.due_date) : '';
     var overdue = job.due_date && new Date(job.due_date) < new Date();
     var assignIni = job.assigned_name ? initials(job.assigned_name) : '';
     var statusAttr = job.job_status && job.job_status !== 'active' ? ' data-status="' + job.job_status + '"' : '';
+
+    var updatesHtml = updates.length ? updates.map(function(u) {
+      var preview = u.body.length > 70 ? u.body.substring(0, 70) + '…' : u.body;
+      var when = timeAgo(u.created_at);
+      return '<div style="font-size:0.72rem;color:var(--muted);padding:0.2rem 0;border-top:1px solid rgba(255,255,255,0.04);margin-top:0.2rem;">' +
+        '<span style="color:var(--text);">' + esc(preview) + '</span>' +
+        ' <span style="color:rgba(143,163,184,0.6);font-size:0.67rem;">' + when + '</span>' +
+      '</div>';
+    }).join('') : '';
+
     return '<div class="job-card" data-job-id="' + job.id + '" draggable="true" onclick="openPanel(' + job.id + ')"' + statusAttr + '>' +
       '<div class="job-name">' + name + '</div>' +
-      (notesPreview ? '<div style="font-size:0.75rem;color:var(--muted);margin-top:0.25rem;line-height:1.4;">' + esc(notesPreview) + '</div>' : '') +
+      updatesHtml +
       '<div class="job-meta" style="margin-top:0.35rem;">' +
         (due ? '<span class="job-due' + (overdue ? ' overdue' : '') + '">📅 ' + due + '</span>' : '') +
         (assignIni ? '<div class="job-assignee" title="' + esc(job.assigned_name) + '">' + esc(assignIni) + '</div>' : '') +
       '</div>' +
     '</div>';
+  }
+
+  function timeAgo(ts) {
+    var diff = Date.now() - new Date(ts).getTime();
+    var m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return m + 'm ago';
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + 'h ago';
+    return Math.floor(h / 24) + 'd ago';
   }
 
   // ── DRAG & DROP ───────────────────────────────────
@@ -538,12 +557,61 @@
     clearTimeout(panelSaveTimer);
   };
 
+  function renderUpdatesHtml(updates) {
+    if (!updates.length) return '<p style="color:var(--muted);font-size:0.8rem;">No updates yet.</p>';
+    return updates.map(function(u) {
+      return '<div style="padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05);">' +
+        '<div style="font-size:0.85rem;line-height:1.5;">' + esc(u.body) + '</div>' +
+        '<div style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem;">' +
+          esc(u.author_name || 'Staff') + ' · ' + timeAgo(u.created_at) +
+          ' <button onclick="deleteUpdate(' + panelJobId + ',' + u.id + ')" style="background:none;border:none;color:rgba(143,163,184,0.4);cursor:pointer;font-size:0.7rem;padding:0 0.2rem;margin-left:0.25rem;" title="Delete">✕</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  window.postUpdate = function(jobId) {
+    var input = document.getElementById('pf-update-input');
+    var body = input ? input.value.trim() : '';
+    if (!body) return;
+    api('POST', '/jobs/' + jobId + '/updates', { body: body })
+      .then(function() {
+        input.value = '';
+        return Promise.all([
+          api('GET', '/jobs/' + jobId + '/updates'),
+          loadBoard()
+        ]);
+      })
+      .then(function(results) {
+        var updates = results[0];
+        var el = document.getElementById('pf-updates-list');
+        if (el) el.innerHTML = renderUpdatesHtml(updates);
+      })
+      .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  window.deleteUpdate = function(jobId, updateId) {
+    api('DELETE', '/jobs/' + jobId + '/updates/' + updateId)
+      .then(function() { return Promise.all([api('GET', '/jobs/' + jobId + '/updates'), loadBoard()]); })
+      .then(function(results) {
+        var el = document.getElementById('pf-updates-list');
+        if (el) el.innerHTML = renderUpdatesHtml(results[0]);
+      })
+      .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
+
   function renderPanel(jobId) {
     var job = (instanceData && instanceData.jobs || []).find(function(j) { return j.id == jobId; });
     if (!job) { qs('#panel-body').innerHTML = '<p style="color:var(--red)">Job not found.</p>'; return; }
     var stages = instanceData.stages || [];
 
-    api('GET', '/jobs/' + jobId + '/history').then(function(history) {
+    Promise.all([
+      api('GET', '/jobs/' + jobId + '/history'),
+      api('GET', '/jobs/' + jobId + '/updates')
+    ]).then(function(results) {
+      var history = results[0];
+      var updates = results[1];
+      history.updates = updates;
       qs('#panel-title').textContent = job.entity_name || 'Job #' + job.id;
 
       var stageOpts = stages.map(function(s) {
@@ -583,8 +651,13 @@
         '</select></div>' +
         '<div class="panel-field"><label>Assigned To</label><select id="pf-assigned" onchange="panelSave(' + jobId + ')">' + teamOpts + '</select></div>' +
         '<div class="panel-field"><label>Due Date</label><input type="date" id="pf-due" value="' + dueVal + '" onchange="panelSave(' + jobId + ')" /></div>' +
-        '<div class="panel-field"><label>Notes</label><textarea id="pf-notes" rows="4" oninput="panelScheduleSave(' + jobId + ')">' + esc(job.notes || '') + '</textarea></div>' +
-        '<div class="section-label">Movement History</div>' +
+        '<div class="section-label">Updates</div>' +
+        '<div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">' +
+          '<input type="text" id="pf-update-input" placeholder="Add an update…" style="flex:1;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.45rem 0.65rem;border-radius:6px;font-size:0.85rem;outline:none;" onkeydown="if(event.key===\'Enter\')postUpdate(' + jobId + ')" />' +
+          '<button class="btn btn-gold btn-sm" onclick="postUpdate(' + jobId + ')">Post</button>' +
+        '</div>' +
+        '<div id="pf-updates-list">' + renderUpdatesHtml(history.updates || []) + '</div>' +
+        '<div class="section-label" style="margin-top:1.25rem;">Movement History</div>' +
         '<div>' + histHtml + '</div>' +
         '<div style="margin-top:1rem;">' +
           '<button class="btn btn-sm" style="background:transparent;border:1px solid var(--red);color:var(--red);" onclick="deleteJob(' + jobId + ')">Delete Job</button>' +
@@ -605,7 +678,7 @@
     var priority = document.getElementById('pf-priority') ? document.getElementById('pf-priority').value : null;
     var assigned = document.getElementById('pf-assigned') ? document.getElementById('pf-assigned').value : null;
     var due = document.getElementById('pf-due') ? document.getElementById('pf-due').value : null;
-    var notes = document.getElementById('pf-notes') ? document.getElementById('pf-notes').value : null;
+    var notes = null; // notes replaced by updates feed
     var status = document.getElementById('pf-status') ? document.getElementById('pf-status').value : 'active';
     api('PUT', '/jobs/' + jobId, { priority: priority, assigned_to: assigned || null, due_date: due || null, notes: notes, job_status: status })
       .then(function() { return loadBoard(); })
