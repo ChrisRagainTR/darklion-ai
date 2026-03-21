@@ -209,13 +209,28 @@ Relationship  →  the household/group (top-level billing unit)
 
 ---
 
-### ⏳ Phase 12+ — Gmail Connector
+### ⏳ Phase 12+ — Gmail Connector (Google Workspace Domain-Wide Delegation)
 **Plan:**
-- OAuth per staff Gmail account
-- System pulls emails, matches sender to known Person by email address
-- Viktor classifies email content → tags to most likely Company
-- Stored in `email_log` table
-- Staff can override Viktor's classification
+- Use Google Workspace service account with domain-wide delegation (NOT per-user OAuth)
+- One-time admin setup: Google Cloud project → Gmail API → service account JSON key → Workspace Admin domain-wide delegation with `gmail.readonly` scope
+- DarkLion service account impersonates each staff mailbox to pull emails automatically — no action required from staff
+- Match sender/recipient to known Person records by email address
+- Create message threads on matched Person records (same thread model as portal messaging)
+- Viktor monitors incoming threads, alerts if a client email to one staff member should be seen by others
+- De-duplicate: same email ID never creates two threads
+- Stored in existing `message_threads` + `messages` tables (sender_type = 'client', source = 'gmail')
+- Staff can override Viktor's company classification
+
+**Setup needed (one-time, ~20 min):**
+1. Google Cloud Console → new project "DarkLion" → enable Gmail API
+2. IAM → Service Accounts → create "darklion-gmail" → download JSON key
+3. Google Workspace Admin → Security → API Controls → Domain-wide Delegation → add service account Client ID with scope `https://www.googleapis.com/auth/gmail.readonly`
+4. Add JSON key + staff email list to Railway env vars
+
+**Why this approach:**
+- Fully automatic — staff don't need to BCC or remember anything
+- Works for entire Workspace domain in one setup
+- No per-user OAuth, no Google verification needed for internal use
 
 ---
 
