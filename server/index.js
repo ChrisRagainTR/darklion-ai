@@ -218,7 +218,7 @@ app.get('/messages', (req, res) => res.sendFile(path.join(publicDir, 'messages.h
 
 const pipelinesRouter = require('./routes/pipelines');
 app.use('/api/pipelines', requireFirm, apiLimiter, pipelinesRouter);
-app.get('/pipelines', (req, res) => res.sendFile(path.join(publicDir, 'pipelines.html')));
+app.get('/pipelines', (req, res) => res.render('pipelines', { title: 'Pipelines', activeNav: 'pipelines' }));
 
 const taxDeliveryRouter = require('./routes/tax-delivery');
 app.use('/api/tax-deliveries', requireFirm, apiLimiter, taxDeliveryRouter);
