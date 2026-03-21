@@ -312,7 +312,7 @@ router.get('/firm-team', async (req, res) => {
          WHERE mt.person_id = $2 AND m.sender_type = 'staff' AND m.is_internal = false
          GROUP BY m.sender_id
        ) msg_counts ON msg_counts.sender_id = fu.id
-       WHERE fu.firm_id = $1 AND fu.accepted_at IS NOT NULL
+       WHERE fu.firm_id = $1
        ORDER BY role_order ASC, sort_order DESC
        LIMIT 5`,
       [firmId, personId]
