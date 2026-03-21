@@ -1859,10 +1859,10 @@
         // Sort by date
         freshMessages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-        // Only re-render if data actually changed
-        const freshJson = JSON.stringify(freshMessages.map(m => m.id));
-        const currentJson = JSON.stringify(_chatAllMessages.map(m => m.id));
-        if (freshJson !== currentJson) {
+        // Only re-render if messages actually changed (compare last message id + count)
+        const freshKey = `${freshMessages.length}:${freshMessages[freshMessages.length-1]?.id}`;
+        const currentKey = `${_chatAllMessages.length}:${_chatAllMessages[_chatAllMessages.length-1]?.id}`;
+        if (freshKey !== currentKey) {
           _chatAllMessages = freshMessages;
           renderChatMessages();
         }

@@ -582,9 +582,14 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
     // Emit real-time events to staff inbox and client portal
     const io = req.app.get('io');
     if (io) {
-      io.to(`firm:${firmId}`).emit('message:new', { threadId, messageId, senderType: 'staff' });
+      const firmRoom = `firm:${firmId}`;
+      const portalRoom = `portal:${firmId}:${thread.person_id}`;
+      const firmSockets = await io.in(firmRoom).fetchSockets();
+      const portalSockets = !is_internal ? await io.in(portalRoom).fetchSockets() : [];
+      console.log(`[socket] emit message:new → ${firmRoom} (${firmSockets.length} sockets), ${portalRoom} (${portalSockets.length} sockets)`);
+      io.to(firmRoom).emit('message:new', { threadId, messageId, senderType: 'staff' });
       if (!is_internal) {
-        io.to(`portal:${firmId}:${thread.person_id}`).emit('message:new', { threadId, messageId, senderType: 'staff' });
+        io.to(portalRoom).emit('message:new', { threadId, messageId, senderType: 'staff' });
       }
     }
 
