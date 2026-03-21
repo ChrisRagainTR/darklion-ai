@@ -976,8 +976,7 @@
     const _portalJwt = JSON.parse(atob(token.split('.')[1]));
     const _pusher = new Pusher('6ee61a25e438d5bc4751', {
       cluster: 'us2',
-      authEndpoint: '/pusher/auth/portal',
-      auth: { headers: { Authorization: 'Bearer ' + token } },
+      authEndpoint: '/pusher/auth/portal?token=' + encodeURIComponent(token),
     });
     const _portalChannel = _pusher.subscribe(`private-portal-${_portalJwt.firmId}-${_portalJwt.personId}`);
     _portalChannel.bind('pusher:subscription_succeeded', () => console.log('[pusher] portal subscribed'));

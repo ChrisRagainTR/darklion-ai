@@ -208,8 +208,7 @@ const _firmId = _jwtPayload.firmId || _jwtPayload.id;
 
 const _pusher = new Pusher('6ee61a25e438d5bc4751', {
   cluster: 'us2',
-  authEndpoint: '/pusher/auth/staff',
-  auth: { headers: { Authorization: 'Bearer ' + token } },
+  authEndpoint: '/pusher/auth/staff?token=' + encodeURIComponent(token),
 });
 const _firmChannel = _pusher.subscribe(`private-firm-${_firmId}`);
 
