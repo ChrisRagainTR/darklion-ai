@@ -369,7 +369,9 @@
       <h2>New Tax Delivery</h2>
       <div id="delivery-error" style="display:none;color:var(--red);font-size:0.82rem;margin-bottom:0.75rem;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
-        <div class="form-group"><label>Tax Year *</label><input type="text" class="form-control" id="nd-year" placeholder="2024"></div>
+        <div class="form-group"><label>Tax Year *</label>
+          <select class="form-control" id="nd-year" onchange="ndFilterDocsByYear()"></select>
+        </div>
         <div class="form-group"><label>Title</label><input type="text" class="form-control" id="nd-title" placeholder="e.g. 2024 Individual Return"></div>
       </div>
       <div class="form-group"><label>Intro Note (shown to client)</label><textarea class="form-control" id="nd-intro" rows="3" placeholder="Please review and sign your tax return…"></textarea></div>
@@ -1124,20 +1126,49 @@
     }).join('');
   }
 
+    let _ndAllDocs = [];
   async function openNewDeliveryModal() {
-    const docsRes = await apiFetch('/api/documents?owner_type=company&owner_id=' + companyId);
-    const docs = await docsRes.json();
-    const pdfDocs = docs.filter(d => d.mime_type && d.mime_type.includes('pdf'));
-    const opts = '<option value="">— None —</option>' + pdfDocs.map(d => '<option value="' + d.id + '">' + esc(d.display_name || 'Untitled') + ' (' + (d.year || '') + ')</option>').join('');
-    document.getElementById('nd-review-doc').innerHTML = opts;
-    document.getElementById('nd-sig-doc').innerHTML = opts;
+    // Populate year dropdown
+    const yearSel = document.getElementById('nd-year');
+    const cy = new Date().getFullYear();
+    yearSel.innerHTML = '';
+    for (let y = cy - 1; y >= cy - 6; y--) {
+      const o = document.createElement('option');
+      o.value = String(y); o.textContent = String(y);
+      yearSel.appendChild(o);
+    }
+    yearSel.value = String(cy - 1);
+
+    // Load all company docs
+    try {
+      const docsRes = await apiFetch('/api/documents?owner_type=company&owner_id=' + companyId);
+      _ndAllDocs = await docsRes.json();
+    } catch(e) { _ndAllDocs = []; }
+    ndFilterDocsByYear();
+
     const people = (companyData && companyData.people) || [];
     document.getElementById('nd-signers-list').innerHTML = people.length
       ? people.map(p => '<label style="display:flex;align-items:center;gap:0.5rem;font-size:0.84rem;cursor:pointer;"><input type="checkbox" name="nd-signer" value="' + p.person_id + '" checked> ' + esc(p.first_name) + ' ' + esc(p.last_name) + (p.email ? ' <span style="color:var(--muted);font-size:0.75rem;">(' + esc(p.email) + ')</span>' : '') + '</label>').join('')
       : '<div style="color:var(--muted);font-size:0.82rem;">No people attached to this company.</div>';
-    document.getElementById('nd-year').value = String(new Date().getFullYear() - 1);
     document.getElementById('delivery-error').style.display = 'none';
     document.getElementById('new-delivery-modal').classList.add('open');
+  }
+
+  function ndFilterDocsByYear() {
+    const year = document.getElementById('nd-year').value;
+    const filtered = _ndAllDocs.filter(d =>
+      (d.year || '') === year &&
+      (d.folder_section === 'firm_uploaded' || !d.folder_section) &&
+      (d.folder_category === 'tax') &&
+      d.mime_type && d.mime_type.includes('pdf')
+    );
+    // Also include PDFs from firm_uploaded tax folder without year filter if none found
+    const opts = '<option value="">— None —</option>' + filtered.map(d =>
+      '<option value="' + d.id + '">' + esc(d.display_name || 'Untitled') + '</option>'
+    ).join('');
+    const fallbackMsg = filtered.length === 0 ? '<option value="" disabled>No Tax PDFs found for ' + year + '</option>' : '';
+    document.getElementById('nd-review-doc').innerHTML = filtered.length ? opts : '<option value="">— No Tax PDFs for ' + year + ' —</option>';
+    document.getElementById('nd-sig-doc').innerHTML = filtered.length ? opts : '<option value="">— No Tax PDFs for ' + year + ' —</option>';
   }
 
   function closeDeliveryModal() { document.getElementById('new-delivery-modal').classList.remove('open'); }

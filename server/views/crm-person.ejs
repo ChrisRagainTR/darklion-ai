@@ -163,7 +163,9 @@
         <select class="form-control" id="pd-company"><option value="">— Loading companies… —</option></select>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
-        <div class="form-group"><label>Tax Year *</label><input type="text" class="form-control" id="pd-year" placeholder="2024"></div>
+        <div class="form-group"><label>Tax Year *</label>
+          <select class="form-control" id="pd-year" onchange="pdFilterDocsByYear()"></select>
+        </div>
         <div class="form-group"><label>Title</label><input type="text" class="form-control" id="pd-title" placeholder="e.g. 2024 Individual Return"></div>
       </div>
       <div class="form-group"><label>Intro Note (shown to client)</label><textarea class="form-control" id="pd-intro" rows="3" placeholder="Please review and sign your tax return…"></textarea></div>
@@ -801,36 +803,61 @@
     } catch(e) { el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Failed to load.</div>'; }
   }
 
+  let _pdAllDocs = [];
   async function openPersonDeliveryModal() {
     const modal = document.getElementById('person-delivery-modal');
+    // Populate year dropdown
+    const yearSel = document.getElementById('pd-year');
+    const cy = new Date().getFullYear();
+    yearSel.innerHTML = '';
+    for (let y = cy - 1; y >= cy - 6; y--) {
+      const o = document.createElement('option');
+      o.value = String(y); o.textContent = String(y);
+      yearSel.appendChild(o);
+    }
+    yearSel.value = String(cy - 1);
+
     // Load companies this person is linked to
     const sel = document.getElementById('pd-company');
     sel.innerHTML = '<option value="">Loading…</option>';
+    _pdAllDocs = [];
     try {
       const res = await apiFetch(`/api/people/${personId}`);
       const p = await res.json();
-      const cos = p.companies || [];
+      const cos = p.company_access || p.companies || [];
       sel.innerHTML = '<option value="">— Select company —</option>' + cos.map(c => `<option value="${c.company_id}">${esc(c.company_name)}</option>`).join('');
     } catch(e) { sel.innerHTML = '<option value="">Failed to load</option>'; }
-    document.getElementById('pd-review-doc').innerHTML = '<option value="">— None —</option>';
-    document.getElementById('pd-sig-doc').innerHTML = '<option value="">— None —</option>';
-    document.getElementById('pd-year').value = String(new Date().getFullYear() - 1);
+    document.getElementById('pd-review-doc').innerHTML = '<option value="">— Select company first —</option>';
+    document.getElementById('pd-sig-doc').innerHTML = '<option value="">— Select company first —</option>';
     document.getElementById('pd-error').style.display = 'none';
     modal.classList.remove('hidden');
   }
 
-  // When company changes in modal, load its PDF docs
+  function pdFilterDocsByYear() {
+    const year = document.getElementById('pd-year').value;
+    const filtered = _pdAllDocs.filter(d =>
+      (d.year || '') === year &&
+      (d.folder_section === 'firm_uploaded' || !d.folder_section) &&
+      (d.folder_category === 'tax') &&
+      d.mime_type && d.mime_type.includes('pdf')
+    );
+    const opts = filtered.length
+      ? '<option value="">— None —</option>' + filtered.map(d => `<option value="${d.id}">${esc(d.display_name || 'Untitled')}</option>`).join('')
+      : '<option value="">— No Tax PDFs for ' + year + ' —</option>';
+    document.getElementById('pd-review-doc').innerHTML = opts;
+    document.getElementById('pd-sig-doc').innerHTML = opts;
+  }
+
+  // When company changes in modal, load its docs then filter by year
   document.addEventListener('change', async function(e) {
     if (e.target.id === 'pd-company' && e.target.value) {
       try {
         const res = await apiFetch(`/api/documents?owner_type=company&owner_id=${e.target.value}`);
-        const docs = await res.json();
-        const pdfDocs = docs.filter(d => d.mime_type && d.mime_type.includes('pdf'));
-        const opts = '<option value="">— None —</option>' + pdfDocs.map(d => `<option value="${d.id}">${esc(d.display_name || 'Untitled')} (${d.year || ''})</option>`).join('');
-        document.getElementById('pd-review-doc').innerHTML = opts;
-        document.getElementById('pd-sig-doc').innerHTML = opts;
-      } catch(e) {}
+        _pdAllDocs = await res.json();
+        pdFilterDocsByYear();
+      } catch(e) { _pdAllDocs = []; }
     }
+    if (e.target.id === 'pd-year') pdFilterDocsByYear();
   });
 
   function closePersonDeliveryModal() { document.getElementById('person-delivery-modal').classList.add('hidden'); }
