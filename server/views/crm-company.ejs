@@ -430,7 +430,6 @@
     <div id="subtab-uncategorized" class="subtab-content">
       <div style="margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
         <h2 style="font-size:1.1rem;font-weight:800;">Uncategorized Transaction Scanner</h2>
-        <button class="btn btn-gold" id="bk-btn-uncat-scan" onclick="bk_runUncategorizedScan()">Run Scan</button>
       </div>
       <div id="bk-uncat-qbo-guard"></div>
       <div id="bk-uncat-main" style="display:none;">
@@ -465,7 +464,7 @@
             <div class="var-ctrl-label">Min Amount $</div>
             <input type="number" id="bk-var-threshold-amt" class="var-amt-input" value="500" min="0">
           </div>
-          <button class="btn btn-gold" onclick="bk_runVarianceScan()">Run Analysis</button>
+          <button class="btn btn-outline btn-sm" onclick="bk_runVarianceScan()">↻ Refresh</button>
         </div>
         <div id="bk-var-stats" style="display:none;">
           <div class="stats-grid">
@@ -476,7 +475,7 @@
           <div id="bk-var-last-scan" style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;"></div>
         </div>
         <div id="bk-var-results">
-          <div style="text-align:center;padding:3rem;color:var(--muted);">Select a period and click "Run Analysis".</div>
+          <div style="text-align:center;padding:3rem;color:var(--muted);">Loading variance analysis…</div>
         </div>
       </div>
     </div>
@@ -488,7 +487,7 @@
           <h2 style="font-size:1.1rem;font-weight:800;">Liability Account Health Check</h2>
           <div style="font-size:0.82rem;color:var(--muted);">Checks for negative balances, stale payroll liabilities, unusual balances</div>
         </div>
-        <button class="btn btn-gold" onclick="bk_runLiabilityScan()">Run Check</button>
+
       </div>
       <div id="bk-liab-qbo-guard"></div>
       <div id="bk-liab-main" style="display:none;">
@@ -501,7 +500,7 @@
           <div id="bk-liab-last-scan" style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;"></div>
         </div>
         <div id="bk-liab-results">
-          <div style="text-align:center;padding:3rem;color:var(--muted);">Click "Run Check" to scan liability accounts.</div>
+          <div id="bk-liab-results-placeholder" style="text-align:center;padding:3rem;color:var(--muted);">Loading liability data…</div>
         </div>
       </div>
     </div>
@@ -1684,9 +1683,13 @@
     try {
       const scans = await (await apiFetch('/api/companies/'+bookkeepingRealm+'/scans')).json();
       const latest = Array.isArray(scans) ? scans.find(s => s.scan_type === 'uncategorized') : null;
-      if (!latest) return;
+      if (!latest) {
+        // No cached data — auto-run scan
+        bk_runUncategorizedScan();
+        return;
+      }
       const data = bk_parseScanData(latest);
-      if (!data?.summary) return;
+      if (!data?.summary) { bk_runUncategorizedScan(); return; }
       document.getElementById('bk-uncat-last-scan').textContent = 'Last scanned: ' + new Date(latest.scanned_at).toLocaleString();
       bk_renderUncatResults(data);
     } catch(e) {}
@@ -1702,7 +1705,7 @@
     if (bk_varInitialized) return;
     bk_varInitialized = true;
     bk_initVarianceMonthPicker();
-    bk_loadLatestVariance();
+    bk_loadLatestVariance();  // auto-runs scan if no cache
   }
 
   function bk_initVarianceMonthPicker() {
@@ -1777,11 +1780,12 @@
     if (!bookkeepingRealm) return;
     try {
       const resp = await apiFetch('/api/companies/'+bookkeepingRealm+'/scans?type=variance');
-      if (!resp.ok) return;
+      if (!resp.ok) { bk_runVarianceScan(); return; }
       const scan = await resp.json();
-      if (!scan?.result_data) return;
+      if (!scan?.result_data) { bk_runVarianceScan(); return; }
       const data = bk_parseScanData(scan);
       if (data) bk_renderVarianceResults(data);
+      else bk_runVarianceScan();
     } catch(e) {}
   }
 
@@ -1842,11 +1846,12 @@
     if (!bookkeepingRealm) return;
     try {
       const resp = await apiFetch('/api/companies/'+bookkeepingRealm+'/scans?type=liability');
-      if (!resp.ok) return;
+      if (!resp.ok) { bk_runLiabilityScan(); return; }
       const scan = await resp.json();
-      if (!scan?.result_data) return;
+      if (!scan?.result_data) { bk_runLiabilityScan(); return; }
       const data = bk_parseScanData(scan);
       if (data) bk_renderLiabilityResults(data);
+      else bk_runLiabilityScan();
     } catch(e) {}
   }
 
