@@ -950,8 +950,8 @@
       if (typeof window._portalReloadMessages === 'function') window._portalReloadMessages();
     }
 
-    // Polling: silent refresh every 5s (guaranteed baseline)
-    setInterval(_reloadMessages, 5000);
+    // Polling: 30s fallback (socket handles instant delivery, poll is safety net only)
+    setInterval(_reloadMessages, 30000);
 
     // Socket: instant delivery (per socket.io v4 docs)
     const _socket = io({ auth: { token } });

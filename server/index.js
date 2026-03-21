@@ -90,7 +90,7 @@ if (IS_PROD) {
 // --- Global API rate limiter ---
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100,
+  max: 300, // portal polling + normal usage needs headroom
   standardHeaders: true,
   legacyHeaders: false,
   validate: { trustProxy: false }, // suppress ERR_ERL_PERMISSIVE_TRUST_PROXY — we trust Railway's proxy

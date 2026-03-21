@@ -199,8 +199,8 @@ let firmUsers = [];
 let attachedFiles = [];
 
 // ── Real-time + polling ───────────────────────────────────────────────────────
-// Polling: silent inbox refresh every 5s (guaranteed baseline)
-setInterval(() => loadInbox(), 5000);
+// Polling: 30s fallback (socket handles instant delivery, poll is safety net only)
+setInterval(() => loadInbox(), 30000);
 
 // Socket: instant delivery on top of polling (per socket.io v4 docs)
 const _socket = io({ auth: { token } });
