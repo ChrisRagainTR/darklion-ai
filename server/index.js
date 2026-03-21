@@ -167,16 +167,11 @@ app.get('/theme-preview', (req, res) => res.sendFile(path.join(publicDir, 'theme
 // Team page — redirect to dashboard team section for now
 app.get('/team', (req, res) => res.sendFile(path.join(publicDir, 'team.html')));
 // Redirect /crm and /crm?tab=X to specific list pages
-app.get('/crm', (req, res) => {
-  const tab = req.query.tab || 'relationships';
-  if (tab === 'people') return res.redirect('/crm/people');
-  if (tab === 'companies') return res.redirect('/crm/companies');
-  return res.redirect('/crm/relationships');
-});
-app.get('/crm.html', (req, res) => res.redirect('/crm/relationships'));
-app.get('/crm/relationships', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
-app.get('/crm/people', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
-app.get('/crm/companies', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
+app.get('/crm', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
+app.get('/crm.html', (req, res) => res.redirect('/crm'));
+app.get('/crm/relationships', (req, res) => res.redirect('/crm?tab=relationships'));
+app.get('/crm/people', (req, res) => res.redirect('/crm?tab=people'));
+app.get('/crm/companies', (req, res) => res.redirect('/crm?tab=companies'));
 app.get('/crm/person/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-person.html')));
 app.get('/crm/company/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-company.html')));
 app.get('/crm/relationship/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-relationship.html')));
