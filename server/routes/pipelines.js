@@ -277,6 +277,39 @@ router.delete('/templates/:id/stages/:stageId', async (req, res) => {
 // INSTANCE ENDPOINTS
 // ─────────────────────────────────────────────
 
+// POST /templates/:templateId/ensure-instance
+// Returns an existing instance for template+year, or creates one silently.
+router.post('/templates/:templateId/ensure-instance', async (req, res) => {
+  try {
+    const tmpl = await getTemplate(req.firm.id, req.params.templateId);
+    if (!tmpl) return res.status(404).json({ error: 'Template not found' });
+
+    const { year } = req.body;
+    if (!year) return res.status(400).json({ error: 'year is required' });
+
+    // Look for an existing instance with this template + tax_year
+    const { rows: existing } = await pool.query(
+      `SELECT * FROM pipeline_instances
+       WHERE template_id = $1 AND firm_id = $2 AND tax_year = $3
+       LIMIT 1`,
+      [tmpl.id, req.firm.id, String(year)]
+    );
+    if (existing[0]) return res.json(existing[0]);
+
+    // Create a new one
+    const name = `${tmpl.name} ${year}`;
+    const { rows } = await pool.query(
+      `INSERT INTO pipeline_instances (firm_id, template_id, name, tax_year)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [req.firm.id, tmpl.id, name, String(year)]
+    );
+    res.status(201).json(rows[0]);
+  } catch (e) {
+    console.error('POST /templates/:templateId/ensure-instance error:', e);
+    res.status(500).json({ error: 'Failed to ensure instance' });
+  }
+});
+
 // GET /instances
 router.get('/instances', async (req, res) => {
   try {
