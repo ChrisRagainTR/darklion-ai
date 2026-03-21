@@ -628,7 +628,7 @@
         </div>
         <div class="detail-header" id="comm-co-detail-header"></div>
         <div class="detail-messages" id="comm-co-detail-messages"></div>
-        <div class="reply-box">
+        <div class="reply-box" id="comm-co-reply-box" style="display:none;">
           <div class="reply-box-controls">
             <label><input type="checkbox" id="comm-co-internal-toggle"> 🔒 Internal note</label>
             <div style="flex:1;"></div>
@@ -2584,6 +2584,7 @@
   function coCommShowEmpty() {
     document.getElementById('comm-co-no-thread').style.display = 'flex';
     document.getElementById('comm-co-compose-view').style.display = 'none';
+    document.getElementById('comm-co-reply-box').style.display = 'none';
     document.getElementById('comm-co-detail-header').innerHTML = '';
     document.getElementById('comm-co-detail-messages').innerHTML = '';
     document.getElementById('comm-co-reply-body').value = '';
@@ -2592,10 +2593,12 @@
   function coCommShowDetail() {
     document.getElementById('comm-co-no-thread').style.display = 'none';
     document.getElementById('comm-co-compose-view').style.display = 'none';
+    document.getElementById('comm-co-reply-box').style.display = '';
   }
   function coCommShowCompose() {
     document.getElementById('comm-co-no-thread').style.display = 'none';
     document.getElementById('comm-co-compose-view').style.display = 'flex';
+    document.getElementById('comm-co-reply-box').style.display = 'none';
   }
   function coCommOpenNew() { coCommShowCompose(); document.getElementById('comm-co-new-body').value = ''; coCommNewAttachFiles = []; renderCoNewCommAttachChips(); }
   function coCommCloseNew() { coCommShowEmpty(); }

@@ -270,7 +270,7 @@
         <div class="detail-header" id="comm-detail-header"></div>
         <div class="detail-messages" id="comm-detail-messages"></div>
         <div id="comm-typing-indicator" style="display:none;padding:0.3rem 1rem;font-size:0.78rem;color:var(--muted);font-style:italic;"></div>
-        <div class="reply-box">
+        <div class="reply-box" id="comm-reply-box" style="display:none;">
           <div class="reply-box-controls">
             <label><input type="checkbox" id="comm-internal-toggle"> 🔒 Internal note</label>
             <div style="flex:1;"></div>
@@ -966,16 +966,19 @@
   function commShowEmpty() {
     document.getElementById('comm-no-thread').style.display = 'flex';
     document.getElementById('comm-compose-view').style.display = 'none';
+    document.getElementById('comm-reply-box').style.display = 'none';
     document.getElementById('comm-detail-header').innerHTML = '';
     document.getElementById('comm-detail-messages').innerHTML = '';
   }
   function commShowDetail() {
     document.getElementById('comm-no-thread').style.display = 'none';
     document.getElementById('comm-compose-view').style.display = 'none';
+    document.getElementById('comm-reply-box').style.display = '';
   }
   function commShowCompose() {
     document.getElementById('comm-no-thread').style.display = 'none';
     document.getElementById('comm-compose-view').style.display = 'flex';
+    document.getElementById('comm-reply-box').style.display = 'none';
   }
   function commOpenNew() { commShowCompose(); document.getElementById('comm-new-body').value = ''; commNewAttachFiles = []; renderNewCommAttachChips(); }
   function commCloseNew() { commShowEmpty(); }
