@@ -1163,17 +1163,26 @@
         if (s.needs_changes_at) return '<span class="signer-chip needs-changes">↩ ' + name + '</span>';
         return '<span class="signer-chip pending">⏳ ' + name + '</span>';
       }).join('');
-      return '<div class="delivery-card">' +
-        '<div class="delivery-info">' +
-          '<div class="delivery-title">' + esc(d.title || d.tax_year + ' Tax Return') + ' ' + statusPill(d.status) + '</div>' +
-          '<div class="delivery-meta">Tax Year: ' + esc(d.tax_year) + ' · Created ' + new Date(d.created_at).toLocaleDateString() + '</div>' +
-          (signerChips ? '<div class="delivery-signers">' + signerChips + '</div>' : '') +
+      const signedDocLinks = signers.filter(s => s.signed_doc_id).map(s =>
+        '<button class="btn btn-outline btn-sm" onclick="downloadDeliveryDoc(' + s.signed_doc_id + ')" title="Signed by ' + esc(s.person_name) + '">⬇ Signed (' + esc((s.person_name||'').split(' ')[0]) + ')</button>'
+      ).join('');
+      const reviewDocLink = d.review_doc_id && d.status !== 'draft'
+        ? '<button class="btn btn-outline btn-sm" onclick="downloadDeliveryDoc(' + d.review_doc_id + ')">📄 Review Copy</button>'
+        : '';
+      return '<div class="delivery-card" style="flex-direction:column;">' +
+        '<div style="display:flex;align-items:flex-start;gap:1rem;flex-wrap:wrap;">' +
+          '<div class="delivery-info">' +
+            '<div class="delivery-title">' + esc(d.title || d.tax_year + ' Tax Return') + ' ' + statusPill(d.status) + '</div>' +
+            '<div class="delivery-meta">Tax Year: ' + esc(d.tax_year) + ' · Created ' + new Date(d.created_at).toLocaleDateString() + '</div>' +
+            (signerChips ? '<div class="delivery-signers">' + signerChips + '</div>' : '') +
+          '</div>' +
+          '<div class="delivery-actions">' +
+            (d.status === 'draft' ? '<button class="btn btn-gold btn-sm" onclick="sendDelivery(' + d.id + ')">Send →</button>' : '') +
+            (d.status === 'draft' ? '<button class="btn btn-outline btn-sm" onclick="deleteDelivery(' + d.id + ')">Delete</button>' : '') +
+            (['sent','approved','needs_changes'].includes(d.status) ? '<button class="btn btn-outline btn-sm" onclick="cancelDelivery(' + d.id + ')" style="color:var(--orange);border-color:var(--orange);">↩ Cancel & Revise</button>' : '') +
+          '</div>' +
         '</div>' +
-        '<div class="delivery-actions">' +
-          (d.status === 'draft' ? '<button class="btn btn-gold btn-sm" onclick="sendDelivery(' + d.id + ')">Send →</button>' : '') +
-          (d.status === 'draft' ? '<button class="btn btn-outline btn-sm" onclick="deleteDelivery(' + d.id + ')">Delete</button>' : '') +
-          (d.status === 'complete' ? '<button class="btn btn-outline btn-sm" onclick="downloadSigned(' + d.id + ')">⬇ Signed</button>' : '') +
-        '</div>' +
+        ((signedDocLinks || reviewDocLink) ? '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;padding-top:0.75rem;margin-top:0.75rem;border-top:1px solid var(--border);">' + reviewDocLink + signedDocLinks + '</div>' : '') +
       '</div>';
     }).join('');
   }
@@ -1248,6 +1257,25 @@
       delete el.dataset.loaded;
       loadTax();
     } catch(e) { document.getElementById('delivery-error').textContent = e.message; document.getElementById('delivery-error').style.display = ''; }
+  }
+
+  async function downloadDeliveryDoc(docId) {
+    try {
+      const res = await apiFetch(`/api/documents/${docId}/download`);
+      if (!res.ok) { toast('Failed to get download link', 'error'); return; }
+      const { url } = await res.json();
+      window.open(url, '_blank');
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function cancelDelivery(id) {
+    if (!confirm('Cancel this delivery and revert to draft?')) return;
+    try {
+      const res = await apiFetch('/api/tax-deliveries/' + id + '/cancel', { method: 'POST' });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      toast('Cancelled — returned to draft');
+      const el = document.getElementById('tax-content'); delete el.dataset.loaded; loadTax();
+    } catch(e) { toast(e.message, 'error'); }
   }
 
   async function sendDelivery(id) {

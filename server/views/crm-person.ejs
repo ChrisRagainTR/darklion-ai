@@ -857,18 +857,28 @@
         if (s.signed_at) return '<span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.72rem;background:rgba(62,207,142,0.1);color:var(--green);border:1px solid rgba(62,207,142,0.25);">✓ ' + name + '</span>';
         return '<span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.72rem;background:rgba(237,137,54,0.1);color:var(--orange);border:1px solid rgba(237,137,54,0.25);">⏳ ' + name + '</span>';
       }).join(' ');
-      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:0.75rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
-        <div>
-          <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.25rem;">${esc(d.title || d.tax_year + ' Tax Return')} ${statusPill(d.status)}</div>
-          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">Tax Year: ${esc(d.tax_year)}${d.company_name ? ' · ' + esc(d.company_name) : ''} · Created ${new Date(d.created_at).toLocaleDateString()}</div>
-          ${signerChips ? `<div style="display:flex;gap:0.35rem;flex-wrap:wrap;">${signerChips}</div>` : ''}
+      // Doc links for signed/sent deliveries
+      const signedDocs = signers.filter(s => s.signed_doc_id).map(s =>
+        `<button class="btn btn-outline btn-sm" onclick="downloadDeliveryDoc(${s.signed_doc_id})" title="Signed by ${esc(s.person_name)}">⬇ Signed (${esc((s.person_name||'').split(' ')[0])})</button>`
+      ).join('');
+      const reviewDocLink = d.review_doc_id && d.status !== 'draft'
+        ? `<button class="btn btn-outline btn-sm" onclick="downloadDeliveryDoc(${d.review_doc_id})">📄 Review Copy</button>`
+        : '';
+
+      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:0.75rem;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:${(signedDocs||reviewDocLink)?'0.75rem':'0'}">
+          <div>
+            <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.25rem;">${esc(d.title || d.tax_year + ' Tax Return')} ${statusPill(d.status)}</div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">Tax Year: ${esc(d.tax_year)}${d.company_name ? ' · ' + esc(d.company_name) : ''} · Created ${new Date(d.created_at).toLocaleDateString()}</div>
+            ${signerChips ? `<div style="display:flex;gap:0.35rem;flex-wrap:wrap;">${signerChips}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-shrink:0;flex-wrap:wrap;">
+            ${d.status === 'draft' ? `<button class="btn btn-gold btn-sm" onclick="personSendDelivery(${d.id})">Send →</button>` : ''}
+            ${d.status === 'draft' ? `<button class="btn btn-outline btn-sm" onclick="personDeleteDelivery(${d.id})">Delete</button>` : ''}
+            ${['sent','approved','needs_changes'].includes(d.status) ? `<button class="btn btn-outline btn-sm" onclick="personCancelDelivery(${d.id})" style="color:var(--orange);border-color:var(--orange);">↩ Cancel & Revise</button>` : ''}
+          </div>
         </div>
-        <div style="display:flex;gap:0.5rem;flex-shrink:0;">
-          ${d.status === 'draft' ? `<button class="btn btn-gold btn-sm" onclick="personSendDelivery(${d.id})">Send →</button>` : ''}
-          ${d.status === 'draft' ? `<button class="btn btn-outline btn-sm" onclick="personDeleteDelivery(${d.id})">Delete</button>` : ''}
-          ${['sent','approved','needs_changes'].includes(d.status) ? `<button class="btn btn-outline btn-sm" onclick="personCancelDelivery(${d.id})" style="color:var(--orange);border-color:var(--orange);">↩ Cancel & Revise</button>` : ''}
-          ${d.status === 'complete' ? `<button class="btn btn-outline btn-sm" onclick="personDownloadSigned(${d.id})">⬇ Signed</button>` : ''}
-        </div>
+        ${(signedDocs || reviewDocLink) ? `<div style="display:flex;gap:0.5rem;flex-wrap:wrap;padding-top:0.75rem;border-top:1px solid var(--border);">${reviewDocLink}${signedDocs}</div>` : ''}
       </div>`;
     }).join('');
   }
@@ -983,6 +993,15 @@
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Delivery cancelled — returned to draft');
       const el = document.getElementById('tax-content'); delete el.dataset.loaded; loadTax();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function downloadDeliveryDoc(docId) {
+    try {
+      const res = await apiFetch(`/api/documents/${docId}/download`);
+      if (!res.ok) { toast('Failed to get download link', 'error'); return; }
+      const { url } = await res.json();
+      window.open(url, '_blank');
     } catch(e) { toast(e.message, 'error'); }
   }
 
