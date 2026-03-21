@@ -855,8 +855,16 @@
       const signerChips = signers.map(s => {
         const name = esc(s.person_name || ('Person #' + s.person_id));
         if (s.signed_at) return '<span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.72rem;background:rgba(62,207,142,0.1);color:var(--green);border:1px solid rgba(62,207,142,0.25);">✓ ' + name + '</span>';
+        if (s.needs_changes_at) return '<span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.72rem;background:rgba(245,101,101,0.1);color:var(--red);border:1px solid rgba(245,101,101,0.3);">↩ ' + name + ' — Changes Requested</span>';
         return '<span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.72rem;background:rgba(237,137,54,0.1);color:var(--orange);border:1px solid rgba(237,137,54,0.25);">⏳ ' + name + '</span>';
       }).join(' ');
+      // Show change request notes if any
+      const changeNotes = signers.filter(s => s.needs_changes_at && s.needs_changes_note).map(s =>
+        '<div style="margin-top:0.5rem;padding:0.6rem 0.85rem;background:rgba(245,101,101,0.07);border:1px solid rgba(245,101,101,0.2);border-radius:6px;font-size:0.82rem;">' +
+          '<span style="font-weight:700;color:var(--red);">↩ Changes requested by ' + esc(s.person_name) + ':</span> ' +
+          '<span style="color:var(--text);">' + esc(s.needs_changes_note) + '</span>' +
+        '</div>'
+      ).join('');
       // Doc links for signed/sent deliveries
       const signedDocs = signers.filter(s => s.signed_doc_id).map(s =>
         `<button class="btn btn-outline btn-sm" onclick="downloadDeliveryDoc(${s.signed_doc_id})" title="Signed by ${esc(s.person_name)}">⬇ Signed (${esc((s.person_name||'').split(' ')[0])})</button>`
@@ -870,7 +878,8 @@
           <div>
             <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.25rem;">${esc(d.title || d.tax_year + ' Tax Return')} ${statusPill(d.status)}</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">Tax Year: ${esc(d.tax_year)}${d.company_name ? ' · ' + esc(d.company_name) : ''} · Created ${new Date(d.created_at).toLocaleDateString()}</div>
-            ${signerChips ? `<div style="display:flex;gap:0.35rem;flex-wrap:wrap;">${signerChips}</div>` : ''}
+            ${signerChips ? `<div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:${changeNotes?'0.4rem':'0'}">${signerChips}</div>` : ''}
+            ${changeNotes}
           </div>
           <div style="display:flex;gap:0.5rem;flex-shrink:0;flex-wrap:wrap;">
             ${d.status === 'draft' ? `<button class="btn btn-gold btn-sm" onclick="personSendDelivery(${d.id})">Send →</button>` : ''}
