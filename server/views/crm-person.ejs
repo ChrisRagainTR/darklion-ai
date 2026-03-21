@@ -426,7 +426,7 @@
     const mainEl = document.querySelector('.main');
     if (mainEl) mainEl.style.overflowY = (name === 'communication') ? 'hidden' : 'auto';
     if (name === 'docs') loadDocs();
-    if (name === 'tax') loadTax();
+    if (name === 'tax') loadTax(true);
     if (name === 'communication') initComm(personData?.id || personId);
     if (name === 'organizers' && personData && personData.stanford_tax_url) {
       const el = document.getElementById('org-stanford-link');

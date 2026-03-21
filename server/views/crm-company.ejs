@@ -787,7 +787,7 @@
     const stbar = document.getElementById('subtab-bar');
     if (stbar) stbar.style.display = name === 'bookkeeping' ? '' : 'none';
     if (name === 'docs') loadDocs();
-    if (name === 'tax') loadTax();
+    if (name === 'tax') loadTax(true);
     if (name === 'bookkeeping') {
       if (bookkeepingRealm) bk_initBookkeeping();
       else { /* wait for company to load, then init */ window._bkPendingInit = true; }
