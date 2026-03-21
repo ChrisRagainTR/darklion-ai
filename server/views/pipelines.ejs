@@ -1,19 +1,689 @@
 <%- include('partials/shell-top', { title: title, activeNav: activeNav }) %>
 
 <style>
-  .pipes-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 60vh;
-    color: var(--muted);
-    font-size: 1rem;
-  }
+  /* ── VIEWS ── */
+  .pipes-view { display: none; }
+  .pipes-view.active { display: block; }
+
+  /* ── LIST VIEW ── */
+  .list-wrap { padding: 1.5rem 2rem; max-width: 900px; }
+  .list-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  .list-top h1 { font-size: 1.25rem; font-weight: 800; }
+  .pipe-table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .pipe-table th { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 0.65rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+  .pipe-table td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.88rem; vertical-align: middle; }
+  .pipe-table tbody tr:last-child td { border-bottom: none; }
+  .pipe-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+  .pipe-link { color: var(--gold); font-weight: 600; cursor: pointer; background: none; border: none; padding: 0; font-family: inherit; font-size: inherit; text-align: left; }
+  .pipe-link:hover { color: var(--gold-light); text-decoration: underline; }
+  .pipe-empty { text-align: center; padding: 3rem; color: var(--muted); }
+
+  /* dot menu */
+  .dot-wrap { position: relative; }
+  .dot-btn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 1.1rem; line-height: 1; }
+  .dot-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+  .dot-drop { display: none; position: absolute; right: 0; top: calc(100% + 2px); background: var(--charcoal); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 200; min-width: 130px; overflow: hidden; }
+  .dot-drop.open { display: block; }
+  .dot-item { display: block; width: 100%; text-align: left; padding: 0.6rem 1rem; font-size: 0.85rem; color: var(--text); background: none; border: none; cursor: pointer; font-family: inherit; }
+  .dot-item:hover { background: rgba(201,168,76,0.07); }
+  .dot-item.danger { color: var(--red); }
+
+  /* ── BOARD VIEW ── */
+  #view-board { display: none; flex-direction: column; }
+  #view-board.active { display: flex; }
+  .board-bar { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--charcoal); flex-wrap: wrap; }
+  .board-bar-left { display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 0; }
+  .board-title { font-size: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .year-sel { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.85rem; cursor: pointer; }
+  .year-sel:focus { outline: none; border-color: var(--gold); }
+  .back-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; padding: 0.2rem 0.5rem; border-radius: 4px; }
+  .back-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+
+  /* ── KANBAN ── */
+  .kanban-wrap { display: flex; gap: 1rem; padding: 1.25rem 1.5rem; overflow-x: auto; align-items: flex-start; flex: 1; min-height: 0; }
+  .kanban-col { flex-shrink: 0; width: 260px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; max-height: calc(100vh - 160px); }
+  .kanban-col.drag-over { border-color: var(--gold); background: rgba(201,168,76,0.05); }
+  .col-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem 0.65rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .col-name { font-size: 0.82rem; font-weight: 700; flex: 1; }
+  .col-count { font-size: 0.72rem; color: var(--muted); background: rgba(255,255,255,0.06); border-radius: 10px; padding: 0.1rem 0.45rem; }
+  .col-cards { overflow-y: auto; flex: 1; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  .col-add { padding: 0.5rem; flex-shrink: 0; }
+  .col-add-btn { width: 100%; background: none; border: 1px dashed var(--border); color: var(--muted); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; }
+  .col-add-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* ── JOB CARDS ── */
+  .job-card { background: var(--charcoal); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.75rem; cursor: pointer; transition: border-color 0.15s; }
+  .job-card:hover { border-color: rgba(201,168,76,0.4); }
+  .job-card.dragging { opacity: 0.4; }
+  .job-card[data-status="waiting_client"] { border-left: 3px solid var(--orange); }
+  .job-card[data-status="missing_info"] { border-left: 3px solid var(--orange); }
+  .job-card[data-status="blocked"] { border-left: 3px solid var(--red); }
+  .job-card[data-status="on_hold"] { border-left: 3px solid var(--muted); }
+  .job-card[data-status="under_extension"] { border-left: 3px solid #4a9eff; }
+  .job-name { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; }
+  .job-meta { display: flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; color: var(--muted); flex-wrap: wrap; }
+  .job-due { color: var(--muted); }
+  .job-due.overdue { color: var(--red); }
+  .job-assignee { width: 20px; height: 20px; border-radius: 50%; background: rgba(201,168,76,0.2); color: var(--gold); font-size: 0.6rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-left: auto; flex-shrink: 0; }
+  .priority-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .priority-dot.high { background: var(--orange); }
+  .priority-dot.urgent { background: var(--red); }
+  .priority-dot.normal { background: transparent; }
+
+  /* ── ADD JOB INLINE ── */
+  .add-job-box { padding: 0.5rem; }
+  .add-job-input { width: 100%; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.82rem; outline: none; }
+  .add-job-input:focus { border-color: var(--gold); }
+  .add-job-results { background: var(--charcoal); border: 1px solid var(--border); border-radius: 6px; margin-top: 0.25rem; max-height: 160px; overflow-y: auto; }
+  .add-job-result { padding: 0.5rem 0.75rem; font-size: 0.82rem; cursor: pointer; }
+  .add-job-result:hover { background: rgba(201,168,76,0.08); }
+  .add-job-cancel { font-size: 0.75rem; color: var(--muted); cursor: pointer; padding: 0.2rem 0; display: block; text-align: center; margin-top: 0.25rem; }
+  .add-job-cancel:hover { color: var(--text); }
+
+  /* ── JOB PANEL ── */
+  .panel-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 400; }
+  .panel-overlay.open { display: block; }
+  .job-panel { position: fixed; top: 0; right: -480px; width: 460px; height: 100vh; background: var(--card); border-left: 1px solid var(--border); z-index: 401; transition: right 0.25s ease; display: flex; flex-direction: column; overflow: hidden; }
+  .job-panel.open { right: 0; }
+  .panel-head { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .panel-title { font-size: 1rem; font-weight: 700; flex: 1; }
+  .panel-close { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 4px; }
+  .panel-close:hover { color: var(--text); }
+  .panel-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
+  .panel-field { margin-bottom: 1rem; }
+  .panel-field label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem; }
+  .panel-field select, .panel-field input[type=date], .panel-field textarea { width: 100%; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.5rem 0.65rem; font-size: 0.85rem; font-family: inherit; outline: none; }
+  .panel-field select:focus, .panel-field input:focus, .panel-field textarea:focus { border-color: var(--gold); }
+  .panel-field textarea { resize: vertical; min-height: 80px; }
+  .panel-entity-link { color: var(--gold); text-decoration: none; font-weight: 600; }
+  .panel-entity-link:hover { text-decoration: underline; }
+  .history-item { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; }
+  .history-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; margin-top: 0.45rem; }
+  .history-text { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+  .history-text strong { color: var(--text); }
+  .section-label { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.6rem; margin-top: 1rem; }
+
+  /* ── MODALS ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 500; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 440px; }
+  .modal-box h2 { font-size: 1.05rem; font-weight: 700; margin-bottom: 1.25rem; }
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.55rem 0.75rem; border-radius: 6px; font-size: 0.88rem; font-family: inherit; outline: none; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--gold); }
+  .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+  /* board empty */
+  .board-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 50vh; color: var(--muted); gap: 0.5rem; }
+  .board-empty p { font-size: 0.9rem; }
 </style>
 
-<div class="pipes-placeholder">
-  Pipelines — coming soon
+<!-- ═══════════════ PIPELINE LIST ═══════════════ -->
+<div id="view-list" class="pipes-view active">
+  <div class="list-wrap">
+    <div class="list-top">
+      <h1>Pipelines</h1>
+      <button class="btn btn-gold btn-sm" onclick="openNewPipelineModal()">+ New Pipeline</button>
+    </div>
+    <table class="pipe-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Stages</th>
+          <th>Active Jobs</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="pipe-tbody">
+        <tr><td colspan="5"><div class="pipe-empty">Loading…</div></td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
+
+<!-- ═══════════════ BOARD VIEW ═══════════════ -->
+<div id="view-board" class="pipes-view">
+  <div class="board-bar">
+    <div class="board-bar-left">
+      <button class="back-btn" onclick="showList()">← Pipelines</button>
+      <span style="color:var(--border);">|</span>
+      <div class="board-title" id="board-title">—</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.5rem;">
+      <label style="font-size:0.8rem;color:var(--muted);">Year:</label>
+      <select class="year-sel" id="year-sel" onchange="onYearChange(this.value)"></select>
+      <button class="btn btn-outline btn-sm" onclick="openEditStagesModal()" style="font-size:0.78rem;">⚙ Edit Stages</button>
+    </div>
+  </div>
+  <div id="kanban-wrap" class="kanban-wrap">
+    <div class="board-empty"><p>Loading…</p></div>
+  </div>
+</div>
+
+<!-- ═══════════════ JOB DETAIL PANEL ═══════════════ -->
+<div class="panel-overlay" id="panel-overlay" onclick="closePanel()"></div>
+<div class="job-panel" id="job-panel">
+  <div class="panel-head">
+    <div class="panel-title" id="panel-title">Job Details</div>
+    <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body" id="panel-body"><p style="color:var(--muted)">Loading…</p></div>
+</div>
+
+<!-- ═══════════════ NEW PIPELINE MODAL ═══════════════ -->
+<div class="modal-overlay" id="new-pipeline-modal">
+  <div class="modal-box">
+    <h2>New Pipeline</h2>
+    <div class="form-group">
+      <label>Name *</label>
+      <input type="text" id="np-name" placeholder="e.g. Individual Tax Returns" />
+    </div>
+    <div class="form-group">
+      <label>Client Type</label>
+      <select id="np-type">
+        <option value="relationship">Relationship (household)</option>
+        <option value="company">Company</option>
+        <option value="person">Person</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('new-pipeline-modal')">Cancel</button>
+      <button class="btn btn-gold" onclick="submitNewPipeline()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ EDIT STAGES MODAL ═══════════════ -->
+<div class="modal-overlay" id="edit-stages-modal">
+  <div class="modal-box" style="max-width:520px;">
+    <h2>Edit Stages</h2>
+    <div id="stages-list" style="margin-bottom:1rem;"></div>
+    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+      <input type="text" id="new-stage-name" placeholder="New stage name" style="flex:1;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.45rem 0.65rem;border-radius:6px;font-size:0.85rem;outline:none;" />
+      <button class="btn btn-gold btn-sm" onclick="addStage()">Add</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('edit-stages-modal')">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var token = localStorage.getItem('dl_token');
+  if (!token) { window.location.replace('/login'); return; }
+
+  var currentTemplateId = null;
+  var currentInstanceId = null;
+  var currentYear = new Date().getFullYear();
+  var instanceData = null; // { stages, jobs, template }
+  var teamMembers = [];
+  var panelJobId = null;
+  var panelSaveTimer = null;
+
+  // ── API ──────────────────────────────────────────
+  function api(method, path, body) {
+    var opts = { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    return fetch('/api/pipelines' + path, opts).then(function(r) {
+      if (r.status === 401) { localStorage.removeItem('dl_token'); window.location.replace('/login'); throw new Error('Unauthorized'); }
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Request failed'); });
+      return r.json();
+    });
+  }
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+  function qs(sel) { return document.querySelector(sel); }
+  function formatDate(d) { if (!d) return ''; return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+  function initials(name) { if (!name) return '?'; var p = name.trim().split(/\s+/); return p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length-1][0]).toUpperCase(); }
+  function entityUrl(type, id) { return type === 'company' ? '/crm/company/'+id : type === 'person' ? '/crm/person/'+id : '/crm/relationship/'+id; }
+
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  window.closeModal = function(id) { document.getElementById(id).classList.remove('open'); };
+
+  // Close dot menus on outside click
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.dot-wrap')) {
+      document.querySelectorAll('.dot-drop.open').forEach(function(d) { d.classList.remove('open'); });
+    }
+  });
+
+  // ── VIEWS ────────────────────────────────────────
+  function showList() {
+    document.getElementById('view-list').classList.add('active');
+    document.getElementById('view-board').classList.remove('active');
+    loadList();
+  }
+
+  function showBoard() {
+    document.getElementById('view-list').classList.remove('active');
+    document.getElementById('view-board').classList.add('active');
+  }
+
+  // ── PIPELINE LIST ─────────────────────────────────
+  function loadList() {
+    api('GET', '/templates').then(function(templates) {
+      var tbody = document.getElementById('pipe-tbody');
+      if (!templates.length) {
+        tbody.innerHTML = '<tr><td colspan="5"><div class="pipe-empty">No pipelines yet. Create your first one.</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = templates.map(function(t) {
+        return '<tr>' +
+          '<td><button class="pipe-link" onclick="openPipeline(' + t.id + ')">' + esc(t.name) + '</button>' +
+          (t.description ? '<div style="font-size:0.75rem;color:var(--muted);margin-top:0.1rem;">' + esc(t.description) + '</div>' : '') + '</td>' +
+          '<td style="color:var(--muted);font-size:0.82rem;">' + esc(t.entity_type) + '</td>' +
+          '<td style="color:var(--muted);">' + (t.stage_count || 0) + '</td>' +
+          '<td>' + (t.job_count || 0) + '</td>' +
+          '<td><div class="dot-wrap">' +
+            '<button class="dot-btn" onclick="toggleDot(this)">⋯</button>' +
+            '<div class="dot-drop">' +
+              '<button class="dot-item" onclick="openPipeline(' + t.id + ');this.closest(\'.dot-drop\').classList.remove(\'open\')">📋 Open Board</button>' +
+              '<button class="dot-item" onclick="openEditStagesForTemplate(' + t.id + ');this.closest(\'.dot-drop\').classList.remove(\'open\')">⚙ Edit Stages</button>' +
+              '<button class="dot-item danger" onclick="deletePipeline(' + t.id + ',\'' + esc(t.name) + '\');this.closest(\'.dot-drop\').classList.remove(\'open\')">🗑 Delete</button>' +
+            '</div>' +
+          '</div></td>' +
+        '</tr>';
+      }).join('');
+    }).catch(function(e) {
+      document.getElementById('pipe-tbody').innerHTML = '<tr><td colspan="5" style="color:var(--red);padding:1rem;">Failed to load: ' + esc(e.message) + '</td></tr>';
+    });
+  }
+
+  window.toggleDot = function(btn) {
+    var drop = btn.nextElementSibling;
+    var wasOpen = drop.classList.contains('open');
+    document.querySelectorAll('.dot-drop.open').forEach(function(d) { d.classList.remove('open'); });
+    if (!wasOpen) drop.classList.add('open');
+  };
+
+  // ── OPEN PIPELINE / BOARD ─────────────────────────
+  window.openPipeline = function(templateId) {
+    currentTemplateId = templateId;
+    showBoard();
+    document.getElementById('kanban-wrap').innerHTML = '<div class="board-empty"><p>Loading…</p></div>';
+
+    // Build year selector
+    var sel = document.getElementById('year-sel');
+    var yr = new Date().getFullYear();
+    var opts = '';
+    for (var y = yr + 1; y >= yr - 3; y--) {
+      opts += '<option value="' + y + '"' + (y === currentYear ? ' selected' : '') + '>' + y + '</option>';
+    }
+    sel.innerHTML = opts;
+
+    // Get template name
+    api('GET', '/templates/' + templateId).then(function(tmpl) {
+      document.getElementById('board-title').textContent = tmpl.name;
+      // Ensure instance for current year
+      return api('POST', '/templates/' + templateId + '/ensure-instance', { year: currentYear });
+    }).then(function(inst) {
+      currentInstanceId = inst.id;
+      return loadBoard();
+    }).catch(function(e) {
+      document.getElementById('kanban-wrap').innerHTML = '<div class="board-empty"><p style="color:var(--red)">Error: ' + esc(e.message) + '</p></div>';
+    });
+  };
+
+  window.onYearChange = function(year) {
+    currentYear = parseInt(year);
+    document.getElementById('kanban-wrap').innerHTML = '<div class="board-empty"><p>Loading…</p></div>';
+    api('POST', '/templates/' + currentTemplateId + '/ensure-instance', { year: currentYear }).then(function(inst) {
+      currentInstanceId = inst.id;
+      return loadBoard();
+    }).catch(function(e) { window.toast('Failed to load year: ' + e.message, 'error'); });
+  };
+
+  function loadBoard() {
+    return api('GET', '/instances/' + currentInstanceId).then(function(data) {
+      instanceData = data;
+      renderKanban();
+    });
+  }
+
+  function renderKanban() {
+    var wrap = document.getElementById('kanban-wrap');
+    var stages = instanceData.stages || [];
+    var jobs = instanceData.jobs || [];
+
+    if (!stages.length) {
+      wrap.innerHTML = '<div class="board-empty"><p>No stages yet.</p><p><button class="btn btn-gold btn-sm" style="margin-top:0.5rem;" onclick="openEditStagesModal()">+ Add Stages</button></p></div>';
+      return;
+    }
+
+    // Group jobs by stage
+    var byStage = {};
+    stages.forEach(function(s) { byStage[s.id] = []; });
+    jobs.forEach(function(j) {
+      if (byStage[j.current_stage_id]) byStage[j.current_stage_id].push(j);
+      else if (stages[0]) byStage[stages[0].id].push(j); // orphaned → first stage
+    });
+
+    var html = '';
+    stages.forEach(function(stage) {
+      var stageJobs = byStage[stage.id] || [];
+      var color = stage.color || 'var(--gold)';
+      html += '<div class="kanban-col" data-stage-id="' + stage.id + '"' +
+        ' ondragover="event.preventDefault();this.classList.add(\'drag-over\')"' +
+        ' ondragleave="this.classList.remove(\'drag-over\')"' +
+        ' ondrop="handleDrop(event,' + stage.id + ')">' +
+        '<div class="col-head">' +
+          '<div class="col-name" style="color:' + color + '">' + esc(stage.name) + '</div>' +
+          '<span class="col-count">' + stageJobs.length + '</span>' +
+        '</div>' +
+        '<div class="col-cards" id="cards-' + stage.id + '">';
+
+      stageJobs.forEach(function(job) { html += renderCard(job); });
+
+      html += '</div>' +
+        '<div class="col-add">' +
+          '<div id="add-box-' + stage.id + '" style="display:none;" class="add-job-box">' +
+            '<input type="text" class="add-job-input" placeholder="Search client…" id="add-input-' + stage.id + '" autocomplete="off" oninput="searchForJob(this.value,' + stage.id + ',\'' + esc(instanceData.template ? instanceData.template.entity_type : 'relationship') + '\')" />' +
+            '<div class="add-job-results" id="add-results-' + stage.id + '" style="display:none;"></div>' +
+            '<span class="add-job-cancel" onclick="hideAddBox(' + stage.id + ')">Cancel</span>' +
+          '</div>' +
+          '<button class="col-add-btn" id="add-btn-' + stage.id + '" onclick="showAddBox(' + stage.id + ')">+ Add Job</button>' +
+        '</div>' +
+      '</div>';
+    });
+
+    wrap.innerHTML = html;
+    attachDrag();
+  }
+
+  function renderCard(job) {
+    var name = esc(job.entity_name || '#' + job.entity_id);
+    var due = job.due_date ? formatDate(job.due_date) : '';
+    var overdue = job.due_date && new Date(job.due_date) < new Date();
+    var assignIni = job.assigned_name ? initials(job.assigned_name) : '';
+    var priorityDot = job.priority && job.priority !== 'normal' ? '<div class="priority-dot ' + job.priority + '"></div>' : '';
+    var statusAttr = job.job_status && job.job_status !== 'active' ? ' data-status="' + job.job_status + '"' : '';
+    return '<div class="job-card" data-job-id="' + job.id + '" draggable="true" onclick="openPanel(' + job.id + ')"' + statusAttr + '>' +
+      '<div class="job-name">' + name + '</div>' +
+      '<div class="job-meta">' +
+        priorityDot +
+        (due ? '<span class="job-due' + (overdue ? ' overdue' : '') + '">📅 ' + due + '</span>' : '') +
+        (assignIni ? '<div class="job-assignee" title="' + esc(job.assigned_name) + '">' + esc(assignIni) + '</div>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  // ── DRAG & DROP ───────────────────────────────────
+  function attachDrag() {
+    document.querySelectorAll('.job-card[draggable]').forEach(function(card) {
+      card.addEventListener('dragstart', function(e) {
+        e.dataTransfer.setData('jobId', card.dataset.jobId);
+        setTimeout(function() { card.classList.add('dragging'); }, 0);
+      });
+      card.addEventListener('dragend', function() { card.classList.remove('dragging'); });
+    });
+  }
+
+  window.handleDrop = function(e, stageId) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    var jobId = e.dataTransfer.getData('jobId');
+    if (!jobId) return;
+    api('POST', '/jobs/' + jobId + '/move', { stage_id: stageId, note: '' })
+      .then(function() { return loadBoard(); })
+      .catch(function(err) { window.toast('Move failed: ' + err.message, 'error'); });
+  };
+
+  // ── ADD JOB ───────────────────────────────────────
+  window.showAddBox = function(stageId) {
+    document.getElementById('add-box-' + stageId).style.display = '';
+    document.getElementById('add-btn-' + stageId).style.display = 'none';
+    document.getElementById('add-input-' + stageId).focus();
+  };
+
+  window.hideAddBox = function(stageId) {
+    document.getElementById('add-box-' + stageId).style.display = 'none';
+    document.getElementById('add-btn-' + stageId).style.display = '';
+    document.getElementById('add-results-' + stageId).style.display = 'none';
+  };
+
+  var searchTimer = null;
+  window.searchForJob = function(q, stageId, entityType) {
+    clearTimeout(searchTimer);
+    var res = document.getElementById('add-results-' + stageId);
+    if (!q.trim()) { res.style.display = 'none'; return; }
+    searchTimer = setTimeout(function() {
+      fetch('/api/search?q=' + encodeURIComponent(q), { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var items = entityType === 'company' ? (data.companies || []) :
+                      entityType === 'person' ? (data.people || []) :
+                      (data.relationships || []);
+          if (!items.length) {
+            res.innerHTML = '<div class="add-job-result" style="color:var(--muted)">No results</div>';
+          } else {
+            res.innerHTML = items.map(function(item) {
+              var name = item.company_name || item.name || ((item.first_name || '') + ' ' + (item.last_name || '')).trim();
+              return '<div class="add-job-result" onclick="addJob(' + item.id + ',\'' + entityType + '\',' + stageId + ',\'' + esc(name).replace(/'/g, "\\'") + '\')">' + esc(name) + '</div>';
+            }).join('');
+          }
+          res.style.display = '';
+        }).catch(function() {});
+    }, 250);
+  };
+
+  window.addJob = function(entityId, entityType, stageId, entityName) {
+    hideAddBox(stageId);
+    api('POST', '/instances/' + currentInstanceId + '/jobs', { entity_type: entityType, entity_id: entityId, notes: '', priority: 'normal' })
+      .then(function() { return loadBoard(); })
+      .then(function() {
+        // Move to correct stage if not first
+        var stages = instanceData.stages || [];
+        if (stages.length && stages[0].id !== stageId) {
+          var newJob = (instanceData.jobs || []).find(function(j) { return j.entity_id == entityId && j.entity_type === entityType; });
+          if (newJob && newJob.current_stage_id !== stageId) {
+            return api('POST', '/jobs/' + newJob.id + '/move', { stage_id: stageId, note: 'Initial placement' }).then(function() { return loadBoard(); });
+          }
+        }
+      })
+      .catch(function(err) { window.toast('Failed to add: ' + err.message, 'error'); });
+  };
+
+  // ── JOB PANEL ─────────────────────────────────────
+  window.openPanel = function(jobId) {
+    panelJobId = jobId;
+    qs('#panel-overlay').classList.add('open');
+    qs('#job-panel').classList.add('open');
+    qs('#panel-body').innerHTML = '<p style="color:var(--muted)">Loading…</p>';
+    renderPanel(jobId);
+  };
+
+  window.closePanel = function() {
+    qs('#panel-overlay').classList.remove('open');
+    qs('#job-panel').classList.remove('open');
+    panelJobId = null;
+    clearTimeout(panelSaveTimer);
+  };
+
+  function renderPanel(jobId) {
+    var job = (instanceData && instanceData.jobs || []).find(function(j) { return j.id == jobId; });
+    if (!job) { qs('#panel-body').innerHTML = '<p style="color:var(--red)">Job not found.</p>'; return; }
+    var stages = instanceData.stages || [];
+
+    api('GET', '/jobs/' + jobId + '/history').then(function(history) {
+      qs('#panel-title').textContent = job.entity_name || 'Job #' + job.id;
+
+      var stageOpts = stages.map(function(s) {
+        return '<option value="' + s.id + '"' + (s.id == job.current_stage_id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+      }).join('');
+
+      var teamOpts = '<option value="">— Unassigned —</option>' + teamMembers.map(function(m) {
+        return '<option value="' + m.id + '"' + (m.id == job.assigned_to ? ' selected' : '') + '>' + esc(m.display_name || m.name) + '</option>';
+      }).join('');
+
+      var histHtml = history.length ? history.map(function(h) {
+        return '<div class="history-item"><div class="history-dot"></div>' +
+          '<div class="history-text"><strong>' + esc(h.from_stage_name || 'Start') + '</strong> → <strong>' + esc(h.to_stage_name || '?') + '</strong><br>' +
+          esc(h.moved_by_name || 'System') + ' · ' + new Date(h.moved_at).toLocaleString() +
+          (h.note ? '<br><em>' + esc(h.note) + '</em>' : '') + '</div></div>';
+      }).join('') : '<p style="color:var(--muted);font-size:0.8rem;">No history yet.</p>';
+
+      var dueVal = job.due_date ? job.due_date.split('T')[0] : '';
+
+      qs('#panel-body').innerHTML =
+        '<div class="panel-field"><label>Client</label>' +
+          '<a class="panel-entity-link" href="' + entityUrl(job.entity_type, job.entity_id) + '" target="_blank">' + esc(job.entity_name || '#' + job.entity_id) + '</a>' +
+        '</div>' +
+        '<div class="panel-field"><label>Stage</label><select onchange="panelMoveStage(' + jobId + ',this.value)">' + stageOpts + '</select></div>' +
+        '<div class="panel-field"><label>Status</label><select id="pf-status" onchange="panelSave(' + jobId + ')">' +
+          '<option value="active"' + ((!job.job_status || job.job_status==='active') ? ' selected' : '') + '>Active</option>' +
+          '<option value="waiting_client"' + (job.job_status==='waiting_client' ? ' selected' : '') + '>🟡 Waiting on Client</option>' +
+          '<option value="missing_info"' + (job.job_status==='missing_info' ? ' selected' : '') + '>🟠 Missing Info</option>' +
+          '<option value="blocked"' + (job.job_status==='blocked' ? ' selected' : '') + '>🔴 Blocked</option>' +
+          '<option value="under_extension"' + (job.job_status==='under_extension' ? ' selected' : '') + '>🔵 Under Extension</option>' +
+          '<option value="on_hold"' + (job.job_status==='on_hold' ? ' selected' : '') + '>⚫ On Hold</option>' +
+        '</select></div>' +
+        '<div class="panel-field"><label>Priority</label><select id="pf-priority" onchange="panelSave(' + jobId + ')">' +
+          '<option value="normal"' + (job.priority==='normal' ? ' selected' : '') + '>Normal</option>' +
+          '<option value="high"' + (job.priority==='high' ? ' selected' : '') + '>High</option>' +
+          '<option value="urgent"' + (job.priority==='urgent' ? ' selected' : '') + '>Urgent</option>' +
+        '</select></div>' +
+        '<div class="panel-field"><label>Assigned To</label><select id="pf-assigned" onchange="panelSave(' + jobId + ')">' + teamOpts + '</select></div>' +
+        '<div class="panel-field"><label>Due Date</label><input type="date" id="pf-due" value="' + dueVal + '" onchange="panelSave(' + jobId + ')" /></div>' +
+        '<div class="panel-field"><label>Notes</label><textarea id="pf-notes" rows="4" oninput="panelScheduleSave(' + jobId + ')">' + esc(job.notes || '') + '</textarea></div>' +
+        '<div class="section-label">Movement History</div>' +
+        '<div>' + histHtml + '</div>' +
+        '<div style="margin-top:1rem;">' +
+          '<button class="btn btn-sm" style="background:transparent;border:1px solid var(--red);color:var(--red);" onclick="deleteJob(' + jobId + ')">Delete Job</button>' +
+        '</div>';
+    }).catch(function(e) {
+      qs('#panel-body').innerHTML = '<p style="color:var(--red)">Error: ' + esc(e.message) + '</p>';
+    });
+  }
+
+  window.panelMoveStage = function(jobId, stageId) {
+    api('POST', '/jobs/' + jobId + '/move', { stage_id: parseInt(stageId), note: '' })
+      .then(function() { return loadBoard(); })
+      .then(function() { renderPanel(jobId); })
+      .catch(function(err) { window.toast('Move failed: ' + err.message, 'error'); });
+  };
+
+  window.panelSave = function(jobId) {
+    var priority = document.getElementById('pf-priority') ? document.getElementById('pf-priority').value : null;
+    var assigned = document.getElementById('pf-assigned') ? document.getElementById('pf-assigned').value : null;
+    var due = document.getElementById('pf-due') ? document.getElementById('pf-due').value : null;
+    var notes = document.getElementById('pf-notes') ? document.getElementById('pf-notes').value : null;
+    var status = document.getElementById('pf-status') ? document.getElementById('pf-status').value : 'active';
+    api('PUT', '/jobs/' + jobId, { priority: priority, assigned_to: assigned || null, due_date: due || null, notes: notes, job_status: status })
+      .then(function() { return loadBoard(); })
+      .catch(function(err) { console.error('Panel save error:', err); });
+  };
+
+  window.panelScheduleSave = function(jobId) {
+    clearTimeout(panelSaveTimer);
+    panelSaveTimer = setTimeout(function() { panelSave(jobId); }, 800);
+  };
+
+  window.deleteJob = function(jobId) {
+    if (!confirm('Delete this job?')) return;
+    api('DELETE', '/jobs/' + jobId)
+      .then(function() { closePanel(); return loadBoard(); })
+      .catch(function(err) { window.toast('Failed: ' + err.message, 'error'); });
+  };
+
+  // ── EDIT STAGES ───────────────────────────────────
+  window.openEditStagesModal = function() {
+    if (!currentTemplateId) return;
+    renderStagesList();
+    openModal('edit-stages-modal');
+  };
+
+  window.openEditStagesForTemplate = function(templateId) {
+    currentTemplateId = templateId;
+    renderStagesList();
+    openModal('edit-stages-modal');
+  };
+
+  function renderStagesList() {
+    api('GET', '/templates/' + currentTemplateId).then(function(tmpl) {
+      var stages = tmpl.stages || [];
+      var html = stages.length ? stages.map(function(s, i) {
+        return '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">' +
+          '<input type="text" value="' + esc(s.name) + '" style="flex:1;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.6rem;border-radius:6px;font-size:0.85rem;outline:none;" onblur="renameStage(' + s.id + ',this.value)" />' +
+          '<button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:1rem;padding:0 0.3rem;" onclick="deleteStage(' + s.id + ')" title="Delete stage">✕</button>' +
+        '</div>';
+      }).join('') : '<p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.75rem;">No stages yet.</p>';
+      document.getElementById('stages-list').innerHTML = html;
+      // If board is showing, update it after stage changes
+      if (currentInstanceId) {
+        document.getElementById('stages-list').dataset.needsReload = '1';
+      }
+    }).catch(function(e) { window.toast('Failed to load stages: ' + e.message, 'error'); });
+  }
+
+  window.renameStage = function(stageId, name) {
+    if (!name.trim()) return;
+    api('PUT', '/templates/' + currentTemplateId + '/stages/' + stageId, { name: name.trim() })
+      .then(function() { if (currentInstanceId) loadBoard(); })
+      .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  window.deleteStage = function(stageId) {
+    if (!confirm('Delete this stage? Jobs in this stage will be moved to the first stage.')) return;
+    api('DELETE', '/templates/' + currentTemplateId + '/stages/' + stageId)
+      .then(function() { renderStagesList(); if (currentInstanceId) return loadBoard(); })
+      .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  window.addStage = function() {
+    var input = document.getElementById('new-stage-name');
+    var name = input.value.trim();
+    if (!name) return;
+    api('POST', '/templates/' + currentTemplateId + '/stages', { name: name, position: 999 })
+      .then(function() { input.value = ''; renderStagesList(); if (currentInstanceId) return loadBoard(); })
+      .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  // ── NEW PIPELINE ──────────────────────────────────
+  window.openNewPipelineModal = function() {
+    document.getElementById('np-name').value = '';
+    openModal('new-pipeline-modal');
+  };
+
+  window.submitNewPipeline = function() {
+    var name = document.getElementById('np-name').value.trim();
+    var type = document.getElementById('np-type').value;
+    if (!name) { window.toast('Name is required', 'error'); return; }
+    api('POST', '/templates', { name: name, entity_type: type })
+      .then(function(tmpl) {
+        closeModal('new-pipeline-modal');
+        window.toast('Pipeline created');
+        openPipeline(tmpl.id);
+      })
+      .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  // ── DELETE PIPELINE ───────────────────────────────
+  window.deletePipeline = function(id, name) {
+    if (!confirm('Delete pipeline "' + name + '"? This cannot be undone.')) return;
+    api('DELETE', '/templates/' + id)
+      .then(function() { window.toast('Deleted'); loadList(); })
+      .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  // ── LOAD TEAM ─────────────────────────────────────
+  function loadTeam() {
+    fetch('/firms/team', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(members) { teamMembers = members; })
+      .catch(function() {});
+  }
+
+  // ── INIT ──────────────────────────────────────────
+  loadTeam();
+  loadList();
+
+})();
+</script>
 
 <%- include('partials/shell-globals') %>
 <%- include('partials/shell-close') %>
