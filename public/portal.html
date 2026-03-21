@@ -911,13 +911,20 @@
   </main>
 
   <!-- ── TAX DELIVERY FLOW OVERLAY ───────────────────────────────────────── -->
-  <div id="tax-delivery-overlay" style="display:none;position:fixed;inset:0;background:var(--bg,#0f1117);z-index:9000;overflow-y:auto;">
-    <div style="max-width:720px;margin:0 auto;padding:2rem 1rem;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
-        <div id="tdo-step-label" style="font-size:0.82rem;color:var(--muted);font-weight:600;letter-spacing:0.05em;text-transform:uppercase;"></div>
-        <button onclick="closeTaxDeliveryFlow()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.5rem;line-height:1;">×</button>
+  <div id="tax-delivery-overlay" style="display:none;position:fixed;inset:0;background:rgba(10,12,20,0.97);z-index:9000;overflow-y:auto;">
+    <div style="max-width:720px;margin:2rem auto;padding:0 1rem 3rem;">
+      <!-- Header bar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.15);border-radius:10px;margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <span style="font-size:1.1rem;">✍️</span>
+          <div id="tdo-step-label" style="font-size:0.82rem;color:var(--gold,#c9a84c);font-weight:700;letter-spacing:0.05em;text-transform:uppercase;"></div>
+        </div>
+        <button onclick="closeTaxDeliveryFlow()" style="background:none;border:none;color:var(--muted,#8fa3b8);cursor:pointer;font-size:1.4rem;line-height:1;padding:0.2rem 0.4rem;border-radius:4px;" onmouseenter="this.style.color='white'" onmouseleave="this.style.color='var(--muted,#8fa3b8)'">×</button>
       </div>
-      <div id="tdo-content"></div>
+      <!-- Content card -->
+      <div style="background:var(--card,#1a1d27);border:1px solid var(--border,#2a2d3a);border-radius:12px;padding:2rem 2rem;">
+        <div id="tdo-content"></div>
+      </div>
     </div>
   </div>
 
@@ -2301,7 +2308,7 @@
         <p style="color:var(--muted);margin-bottom:1.25rem;">From ${esc(firmName)}</p>
         ${summaryHtml}
         ${d.intro_note ? `<div style="background:var(--card,#1a1d27);border:1px solid var(--border,#2a2d3a);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:0.95rem;line-height:1.6;">${esc(d.intro_note)}</div>` : ''}
-        <button class="btn btn-gold" onclick="renderTDStep2()">Review the Return →</button>
+        <button class="btn-submit" onclick="renderTDStep2()">Review the Return →</button>
       `;
     }
     window.renderTDStep1 = renderTDStep1;
@@ -2317,13 +2324,13 @@
           <label style="display:block;font-weight:600;margin-bottom:0.5rem;">Describe the changes needed:</label>
           <textarea id="tdo-changes-note" rows="4" style="width:100%;background:var(--card,#1a1d27);border:1px solid var(--border,#2a2d3a);border-radius:8px;padding:0.75rem;color:var(--text);font-size:0.9rem;resize:vertical;" placeholder="Please explain what changes are needed..."></textarea>
           <div style="margin-top:0.75rem;">
-            <button class="btn btn-outline btn-sm" onclick="document.getElementById('tdo-changes-area').style.display='none'">Cancel</button>
-            <button class="btn btn-gold btn-sm" style="margin-left:0.5rem;" onclick="submitNeedsChanges()">Submit Changes Request</button>
+            <button class="btn-cancel" style="padding:0.4rem 0.85rem;font-size:0.82rem;" onclick="document.getElementById('tdo-changes-area').style.display='none'">Cancel</button>
+            <button class="btn-submit" style="padding:0.4rem 0.85rem;font-size:0.82rem;" style="margin-left:0.5rem;" onclick="submitNeedsChanges()">Submit Changes Request</button>
           </div>
         </div>
         <div id="tdo-approve-btns" style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-          <button class="btn btn-outline" onclick="document.getElementById('tdo-changes-area').style.display='';document.getElementById('tdo-approve-btns').style.display='none';">Request Changes</button>
-          <button class="btn btn-gold" onclick="submitApprove()">Approve Return ✓</button>
+          <button class="btn-cancel" onclick="document.getElementById('tdo-changes-area').style.display='';document.getElementById('tdo-approve-btns').style.display='none';">Request Changes</button>
+          <button class="btn-submit" onclick="submitApprove()">Approve Return ✓</button>
         </div>
       `;
       // Load signed URL for review doc
@@ -2333,7 +2340,7 @@
           const { url } = await res.json();
           document.getElementById('tdo-pdf-area').innerHTML =
             `<div style="margin-bottom:0.75rem;">
-              <a href="${url}" target="_blank" class="btn btn-outline" style="display:inline-flex;align-items:center;gap:0.5rem;">📄 Open Review Copy</a>
+              <a href="${url}" target="_blank" class="btn-cancel" style="display:inline-flex;align-items:center;gap:0.5rem;">📄 Open Review Copy</a>
             </div>
             <iframe src="${url}" style="width:100%;height:500px;border:1px solid var(--border,#2a2d3a);border-radius:8px;" title="Tax Return Review Copy"></iframe>`;
         }
@@ -2371,7 +2378,7 @@
             <div style="font-size:3rem;margin-bottom:1rem;">✅</div>
             <h2 style="font-size:1.2rem;font-weight:800;margin-bottom:0.75rem;">Changes Requested</h2>
             <p style="color:var(--muted);">Your advisor has been notified and will reach out to you with updated documents.</p>
-            <button class="btn btn-outline" style="margin-top:1.5rem;" onclick="closeTaxDeliveryFlow()">Close</button>
+            <button class="btn-cancel" style="margin-top:1.5rem;" onclick="closeTaxDeliveryFlow()">Close</button>
           </div>`;
       } catch(e) { alert('Network error. Please try again.'); }
     }
@@ -2389,20 +2396,20 @@
           By signing below, I confirm I have reviewed my tax return and authorize ${esc(firmName)} to e-file on my behalf.
         </p>
         <div style="margin-bottom:0.75rem;display:flex;gap:0.5rem;">
-          <button class="btn btn-outline btn-sm" id="tdo-sig-tab-draw" onclick="switchSigTab('draw')" style="font-weight:700;">Draw</button>
-          <button class="btn btn-outline btn-sm" id="tdo-sig-tab-type" onclick="switchSigTab('type')">Type</button>
+          <button class="btn-cancel" style="padding:0.4rem 0.85rem;font-size:0.82rem;" id="tdo-sig-tab-draw" onclick="switchSigTab('draw')" style="font-weight:700;">Draw</button>
+          <button class="btn-cancel" style="padding:0.4rem 0.85rem;font-size:0.82rem;" id="tdo-sig-tab-type" onclick="switchSigTab('type')">Type</button>
         </div>
         <div id="tdo-sig-draw-area">
           <div style="position:relative;border:2px dashed var(--border,#2a2d3a);border-radius:8px;background:var(--card,#1a1d27);margin-bottom:0.5rem;">
             <canvas id="tdo-sig-canvas" width="620" height="160" style="width:100%;height:160px;display:block;touch-action:none;cursor:crosshair;border-radius:8px;"></canvas>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="clearSigCanvas()">Clear</button>
+          <button class="btn-cancel" style="padding:0.4rem 0.85rem;font-size:0.82rem;" onclick="clearSigCanvas()">Clear</button>
         </div>
         <div id="tdo-sig-type-area" style="display:none;">
           <input id="tdo-sig-typed" type="text" placeholder="Type your full name" style="width:100%;background:var(--card,#1a1d27);border:1px solid var(--border,#2a2d3a);border-radius:8px;padding:0.75rem;color:var(--text);font-size:1.6rem;font-family:cursive;margin-bottom:0.5rem;" />
         </div>
         <div style="margin:1rem 0;font-size:0.88rem;color:var(--muted);">Date: <strong>${today}</strong></div>
-        <button class="btn btn-gold" onclick="submitSignature()">Submit Signature →</button>
+        <button class="btn-submit" onclick="submitSignature()">Submit Signature →</button>
       `;
 
       // Load signature pages PDF
@@ -2411,7 +2418,7 @@
         if (res.ok) {
           const { url } = await res.json();
           document.getElementById('tdo-sig-pdf-area').innerHTML =
-            `<a href="${url}" target="_blank" class="btn btn-outline btn-sm" style="display:inline-flex;align-items:center;gap:0.5rem;">📄 View Signature Pages</a>`;
+            `<a href="${url}" target="_blank" class="btn-cancel" style="padding:0.4rem 0.85rem;font-size:0.82rem;" style="display:inline-flex;align-items:center;gap:0.5rem;">📄 View Signature Pages</a>`;
         }
       } catch(e) {}
 
@@ -2516,7 +2523,7 @@
           <p style="color:var(--muted);font-size:0.95rem;margin-bottom:0.75rem;">Your signature has been received.</p>
           ${!allSigned ? `<p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.5rem;">Your spouse will also need to sign before we can proceed.</p>` : ''}
           ${allSigned ? `<p style="color:#4caf50;font-size:0.88rem;margin-bottom:1.5rem;font-weight:600;">All signers have completed. Your advisor will proceed with e-filing.</p>` : ''}
-          <button class="btn btn-gold" onclick="closeTaxDeliveryFlow()">Done</button>
+          <button class="btn-submit" onclick="closeTaxDeliveryFlow()">Done</button>
         </div>`;
     }
     window.renderTDStep4 = renderTDStep4;
