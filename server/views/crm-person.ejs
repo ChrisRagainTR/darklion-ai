@@ -69,11 +69,13 @@
   <a href="/crm/people" class="entity-back">← People</a>
   <div class="entity-header-content">
     <div class="entity-name" id="entity-name">Loading…</div>
-    <div class="entity-badges" id="entity-badges"></div>
     <div class="entity-meta" id="entity-meta"></div>
   </div>
-  <div class="entity-actions" id="entity-actions">
-    <button class="btn btn-outline btn-sm" onclick="openEditModal()">Edit</button>
+  <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;flex-wrap:wrap;">
+    <div class="entity-badges" id="entity-badges"></div>
+    <div class="entity-actions" id="entity-actions">
+      <button class="btn btn-outline btn-sm" onclick="openEditModal()">Edit</button>
+    </div>
   </div>
 </div>
 
@@ -520,9 +522,9 @@
     else if (p.portal_invite_token) html += ` <span class="badge badge-orange">Portal Invited</span>`;
     document.getElementById('entity-badges').innerHTML = html;
     const meta = [];
-    if (p.relationship_name) meta.push(`👥 <a href="#" style="color:var(--gold);text-decoration:none;">${esc(p.relationship_name)}</a>`);
     if (p.email) meta.push(esc(p.email));
     if (p.phone) meta.push(fmtPhone(p.phone));
+    if (p.relationship_name) meta.push(`👥 <a href="#" style="color:var(--gold);text-decoration:none;">${esc(p.relationship_name)}</a>`);
     document.getElementById('entity-meta').innerHTML = meta.join('  ·  ');
     // Track recent visit
     if (window.addRecentClient) window.addRecentClient({ _type:'person', id: p.id, _label: name, _sub: p.relationship_name || 'Person' });
