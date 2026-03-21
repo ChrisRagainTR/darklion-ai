@@ -1,47 +1,6 @@
 <%- include('partials/shell-top', { title: title, activeNav: activeNav }) %>
 
 <style>
-  /* ── Communication tab layout (TaxDome-style) ── */
-  .comm-layout { display:flex; height:calc(100vh - var(--header-h) - 58px - 42px); min-height:500px; }
-  .comm-left { width:320px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; }
-  .comm-left-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
-  .comm-left-header h3 { font-size:0.9rem; font-weight:700; color:var(--text); margin:0; }
-  .comm-thread-list-inner { flex:1; overflow-y:auto; }
-  .comm-thread-item { display:flex; align-items:flex-start; gap:0.75rem; padding:0.85rem 1rem; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; transition:background 0.12s; }
-  .comm-thread-item:hover { background:rgba(255,255,255,0.03); }
-  .comm-thread-item.active { background:rgba(201,168,76,0.07); border-left:3px solid var(--gold); padding-left:calc(1rem - 3px); }
-  .comm-avatar { width:36px; height:36px; border-radius:50%; background:rgba(201,168,76,0.15); color:var(--gold); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.8rem; flex-shrink:0; }
-  .comm-thread-info { flex:1; min-width:0; }
-  .comm-thread-subject { font-size:0.85rem; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .comm-thread-preview { font-size:0.76rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:0.15rem; }
-  .comm-thread-meta { display:flex; align-items:center; gap:0.4rem; margin-top:0.3rem; }
-  .comm-thread-date { font-size:0.7rem; color:var(--muted); margin-left:auto; flex-shrink:0; }
-  .comm-status-pill { font-size:0.65rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:3px; text-transform:uppercase; }
-  .comm-right { flex:1; display:flex; flex-direction:column; min-width:0; }
-  .comm-right-header { padding:0.85rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:1rem; flex-shrink:0; background:var(--shell); }
-  .comm-right-subject { font-size:1rem; font-weight:700; color:var(--text); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .comm-messages-area { flex:1; overflow-y:auto; padding:1.25rem; display:flex; flex-direction:column; gap:0.75rem; }
-  .comm-bubble-wrap { display:flex; flex-direction:column; }
-  .comm-bubble-wrap.staff { align-items:flex-start; }
-  .comm-bubble-wrap.client { align-items:flex-end; }
-  .comm-bubble-wrap.internal { align-items:flex-start; }
-  .comm-bubble { max-width:75%; padding:0.6rem 0.9rem; border-radius:14px; font-size:0.9rem; line-height:1.5; word-break:break-word; }
-  .comm-bubble.staff { background:var(--card); color:var(--text); border:1px solid var(--border); }
-  .comm-bubble.client { background:var(--gold); color:#0f1117; }
-  .comm-bubble.internal { background:rgba(201,168,76,0.08); color:var(--text); border:1px dashed rgba(201,168,76,0.4); }
-  .comm-bubble-meta { font-size:0.68rem; color:var(--muted); margin-top:0.15rem; }
-  .comm-msg-attachments { display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.4rem; }
-  .comm-attach-chip { display:inline-flex; align-items:center; gap:0.3rem; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); border-radius:4px; padding:0.15rem 0.5rem; font-size:0.73rem; color:inherit; text-decoration:none; cursor:pointer; }
-  .comm-attach-chip:hover { opacity:0.8; }
-  .comm-compose-area { border-top:1px solid var(--border); padding:1rem 1.25rem; flex-shrink:0; background:var(--shell); }
-  .comm-reply-input { width:100%; background:var(--card); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:0.7rem 0.9rem; font-size:0.88rem; resize:vertical; min-height:80px; outline:none; font-family:inherit; transition:border-color 0.15s; }
-  .comm-reply-input:focus { border-color:var(--gold); }
-  .comm-attach-preview { display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.4rem; }
-  .comm-compose-footer { display:flex; align-items:center; gap:0.75rem; margin-top:0.6rem; }
-  .comm-internal-label { display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:var(--muted); cursor:pointer; user-select:none; }
-  .comm-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; color:var(--muted); gap:0.5rem; }
-  .comm-empty-icon { font-size:2.5rem; }
-
   .subtab-bar { background: var(--navy); border-bottom: 1px solid var(--border); display: flex; gap: 0; padding: 0 1.5rem; overflow-x: auto; }
   .subtab-item { padding: 0.45rem 0.9rem; cursor: pointer; font-size: 0.78rem; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; }
   .subtab-item:hover { color: var(--text); }
@@ -598,62 +557,112 @@
 
   </div><!-- /tab-bookkeeping -->
 
-<div id="tab-communication" class="tab-content" style="padding:0;">
-  <div class="comm-layout">
-    <div class="comm-left">
-      <div class="comm-left-header">
+<style>
+  #tab-communication.active { display:flex !important; flex-direction:column; }
+  #tab-communication { overflow:hidden; height:calc(100vh - var(--header-h, 58px) - var(--tab-bar-top, 58px) - 42px); }
+  #tab-communication .crm-inbox-wrap { display:flex; flex:1; min-height:0; overflow:hidden; }
+  #tab-communication .crm-thread-list { width:300px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+  #tab-communication .crm-thread-list-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  #tab-communication .crm-thread-list-header h3 { font-size:0.9rem; font-weight:700; color:var(--text); margin:0; }
+  #tab-communication .crm-thread-list-inner { flex:1; overflow-y:auto; }
+  #tab-communication .thread-card { padding:0.85rem 1rem; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; transition:background 0.12s; }
+  #tab-communication .thread-card:hover { background:rgba(255,255,255,0.03); }
+  #tab-communication .thread-card.active { background:rgba(201,168,76,0.07); border-left:3px solid var(--gold); padding-left:calc(1rem - 3px); }
+  #tab-communication .thread-card-name { font-size:0.85rem; font-weight:600; color:var(--text); }
+  #tab-communication .thread-card-preview { font-size:0.76rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:0.1rem; }
+  #tab-communication .thread-card-meta { display:flex; align-items:center; gap:0.4rem; margin-top:0.3rem; font-size:0.7rem; color:var(--muted); }
+  #tab-communication .unread-dot { width:8px; height:8px; border-radius:50%; background:var(--gold); flex-shrink:0; }
+  #tab-communication .crm-detail-panel { flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; position:relative; }
+  #tab-communication .detail-header { padding:1rem 1.5rem; border-bottom:1px solid var(--border); background:var(--card); flex-shrink:0; }
+  #tab-communication .detail-header-person { font-size:1rem; font-weight:700; color:var(--text); }
+  #tab-communication .detail-header-subject { font-size:0.85rem; color:var(--muted); margin-top:0.15rem; }
+  #tab-communication .detail-messages { flex:1; overflow-y:auto; min-height:0; padding:1.25rem 1.5rem; display:flex; flex-direction:column; gap:1rem; }
+  #tab-communication .msg-bubble-wrap { display:flex; flex-direction:column; }
+  #tab-communication .msg-bubble-wrap.staff { align-items:flex-end; }
+  #tab-communication .msg-bubble-wrap.client { align-items:flex-start; }
+  #tab-communication .msg-bubble-wrap.internal { align-items:flex-start; }
+  #tab-communication .msg-bubble { max-width:75%; padding:0.6rem 0.9rem; border-radius:12px; font-size:0.875rem; line-height:1.5; word-break:break-word; }
+  #tab-communication .msg-bubble.staff { background:var(--gold); color:var(--navy); }
+  #tab-communication .msg-bubble.client { background:var(--charcoal); color:var(--text); border:1px solid var(--border); }
+  #tab-communication .msg-bubble.internal { background:rgba(255,200,0,0.1); border:1px dashed var(--gold); color:var(--text); }
+  #tab-communication .msg-meta { font-size:0.68rem; color:var(--muted); margin-top:0.15rem; }
+  #tab-communication .msg-internal-label { font-size:0.62rem; color:var(--gold); margin-bottom:0.15rem; }
+  #tab-communication .msg-attachments { display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem; }
+  #tab-communication .attachment-chip { display:inline-flex; align-items:center; gap:0.35rem; background:rgba(0,0,0,0.25); border:1px solid rgba(0,0,0,0.2); border-radius:6px; padding:0.25rem 0.6rem; font-size:0.75rem; color:#fff; text-decoration:none; font-weight:500; }
+  #tab-communication .attachment-chip:hover { background:rgba(0,0,0,0.4); }
+  #tab-communication .reply-box { padding:1rem 1.5rem; border-top:1px solid var(--border); background:var(--card); flex-shrink:0; }
+  #tab-communication .reply-box-controls { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem; }
+  #tab-communication .reply-box-controls label { font-size:0.78rem; color:var(--muted); display:flex; align-items:center; gap:0.3rem; cursor:pointer; }
+  #tab-communication .reply-box textarea { width:100%; background:var(--input-bg); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:0.6rem 0.75rem; font-size:0.88rem; font-family:inherit; resize:none; min-height:80px; margin-bottom:0.5rem; }
+  #tab-communication .reply-box textarea:focus { outline:none; border-color:var(--gold); }
+  #tab-communication .reply-box-actions { display:flex; gap:0.5rem; }
+  #tab-communication .attach-chips { display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:0.4rem; }
+  #tab-communication .attach-chip-input { display:inline-flex; align-items:center; gap:0.3rem; background:rgba(255,255,255,0.07); border:1px solid var(--border); border-radius:4px; padding:0.15rem 0.5rem; font-size:0.75rem; color:var(--text); }
+  #tab-communication .attach-chip-input button { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.8rem; padding:0; line-height:1; }
+  #tab-communication .btn-attach { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:6px; padding:0.4rem 0.7rem; font-size:0.82rem; cursor:pointer; transition:all 0.15s; }
+  #tab-communication .btn-attach:hover { color:var(--text); border-color:var(--gold); }
+  #tab-communication .no-thread-selected { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:0.75rem; color:var(--muted); }
+  #tab-communication .nts-icon { font-size:3rem; opacity:0.4; }
+  #tab-communication .spinner { display:inline-block; width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin 0.7s linear infinite; }
+  @media(max-width:700px) { #tab-communication .crm-thread-list { width:240px; } }
+</style>
+
+<div id="tab-communication" class="tab-content" style="padding:0;overflow:hidden;">
+  <div class="crm-inbox-wrap">
+    <div class="crm-thread-list">
+      <div class="crm-thread-list-header">
         <h3>Messages</h3>
-        <button class="btn btn-gold btn-sm" onclick="openCoCompose()">+ New</button>
+        <button class="btn btn-gold btn-sm" onclick="coCommOpenNew()">+ New</button>
       </div>
-      <div class="comm-thread-list-inner" id="comm-co-threads">
+      <div class="crm-thread-list-inner" id="comm-co-threads">
         <div class="loading-state"><div class="loading-spinner"></div></div>
       </div>
     </div>
-    <div class="comm-right">
-      <div id="comm-co-thread-detail" style="display:none;flex-direction:column;flex:1;min-height:0;">
-        <div class="comm-right-header">
-          <div class="comm-right-subject" id="comm-co-thread-subject">—</div>
-          <select id="comm-co-status-select" onchange="updateCoThreadStatus()" style="font-size:0.78rem;background:var(--charcoal);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:0.25rem 0.5rem;flex-shrink:0;">
-            <option value="open">Open</option>
-            <option value="waiting">Waiting</option>
-            <option value="resolved">Resolved</option>
-          </select>
+    <div class="crm-detail-panel">
+      <!-- Thread view — always in DOM -->
+      <div id="comm-co-thread-view" style="flex:1;flex-direction:column;min-height:0;overflow:hidden;display:flex;">
+        <!-- Empty state overlay -->
+        <div class="no-thread-selected" id="comm-co-no-thread" style="position:absolute;inset:0;z-index:1;background:var(--navy);">
+          <div class="nts-icon">💬</div>
+          <div>Select a thread or start a new one</div>
         </div>
-        <div class="comm-messages-area" id="comm-co-messages-list"></div>
-        <div class="comm-compose-area">
-          <textarea class="comm-reply-input" id="comm-co-reply-body" placeholder="Write a reply…"></textarea>
-          <div class="comm-compose-footer">
-            <button class="btn btn-gold btn-sm" onclick="sendCoReply()">Send Reply</button>
-            <label class="comm-internal-label" style="margin-left:auto;">
-              <input type="checkbox" id="comm-co-internal-toggle" style="cursor:pointer;">
-              <span>Internal note</span>
-            </label>
+        <div class="detail-header" id="comm-co-detail-header"></div>
+        <div class="detail-messages" id="comm-co-detail-messages"></div>
+        <div class="reply-box">
+          <div class="reply-box-controls">
+            <label><input type="checkbox" id="comm-co-internal-toggle"> 🔒 Internal note</label>
+            <div style="flex:1;"></div>
+          </div>
+          <textarea id="comm-co-reply-body" placeholder="Write a reply…" rows="3"></textarea>
+          <div class="attach-chips" id="comm-co-attach-chips"></div>
+          <input type="file" id="comm-co-attach-input" multiple style="display:none;" onchange="handleCoCommAttach(this.files)">
+          <div class="reply-box-actions">
+            <button class="btn btn-gold btn-sm" onclick="coCommSendReply()">Send Reply</button>
+            <button class="btn-attach" onclick="document.getElementById('comm-co-attach-input').click()">📎 Attach</button>
+            <button class="btn btn-outline btn-sm" onclick="coCommResolve()">✅ Resolve</button>
           </div>
         </div>
       </div>
-      <div id="comm-co-compose" style="display:none;flex-direction:column;flex:1;min-height:0;">
-        <div class="comm-right-header">
-          <div class="comm-right-subject">New Message</div>
-          <button class="btn btn-outline btn-sm" onclick="closeCoCompose()">Cancel</button>
-        </div>
-        <div style="padding:1.25rem;flex:1;overflow-y:auto;">
-          <div style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.2);border-radius:6px;padding:0.6rem 0.85rem;">
-            📢 This message will be sent to <strong id="comm-co-recipient-count">all people</strong> with portal access to this company.
+      <!-- New thread compose -->
+      <div id="comm-co-compose-view" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden;">
+        <div class="detail-header" style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <span style="font-weight:700;">New Message</span>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">📢 Sent to all portal-enabled people on this company</div>
           </div>
-          <div class="form-group">
-            <textarea id="comm-co-new-body" class="comm-reply-input" rows="10" placeholder="Write your message…" style="min-height:220px;"></textarea>
+          <button class="btn btn-outline btn-sm" onclick="coCommCloseNew()">Cancel</button>
+        </div>
+        <div style="flex:1;padding:1rem 1.5rem;display:flex;flex-direction:column;min-height:0;">
+          <textarea id="comm-co-new-body" placeholder="Write your message…" style="flex:1;resize:none;width:100%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:0.6rem 0.75rem;font-size:0.88rem;font-family:inherit;min-height:0;"></textarea>
+        </div>
+        <div class="reply-box">
+          <div class="attach-chips" id="comm-co-new-attach-chips"></div>
+          <input type="file" id="comm-co-new-attach-input" multiple style="display:none;" onchange="handleCoNewCommAttach(this.files)">
+          <div class="reply-box-actions">
+            <button class="btn btn-gold btn-sm" onclick="coCommSendNew()">Send Message</button>
+            <button class="btn-attach" onclick="document.getElementById('comm-co-new-attach-input').click()">📎 Attach</button>
           </div>
         </div>
-        <div class="comm-compose-area">
-          <div class="comm-compose-footer">
-            <button class="btn btn-gold btn-sm" onclick="sendCoNewThread()">Send Message</button>
-          </div>
-        </div>
-      </div>
-      <div id="comm-co-empty-state" class="comm-empty">
-        <div class="comm-empty-icon">💬</div>
-        <div style="font-weight:600;color:var(--text);">No message selected</div>
-        <div style="font-size:0.84rem;">Select a message or start a new one</div>
       </div>
     </div>
   </div>
@@ -772,6 +781,8 @@
       else { /* wait for company to load, then init */ window._bkPendingInit = true; }
     }
     if (name === 'communication') initCoComm();
+    const mainEl = document.querySelector('.main');
+    if (mainEl) mainEl.style.overflowY = (name === 'communication') ? 'hidden' : 'auto';
     if (name === 'organizers' && companyData && companyData.stanford_tax_url) {
       const orgEl = document.getElementById('org-stanford-link');
       if (orgEl) orgEl.innerHTML = `<a href="${esc(companyData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax →</a>`;
@@ -2560,27 +2571,41 @@
   }
 
 
-  // ── Communication JS ──
+  // ── Communication JS (matches person CRM comm tab) ──
+  let commCoActiveThreadId = null;
+  let coCommAttachFiles = [];
+  let coCommNewAttachFiles = [];
+
   function coCommShowEmpty() {
-    document.getElementById('comm-co-thread-detail').style.display = 'none';
-    document.getElementById('comm-co-compose').style.display = 'none';
-    document.getElementById('comm-co-empty-state').style.display = 'flex';
+    document.getElementById('comm-co-no-thread').style.display = 'flex';
+    document.getElementById('comm-co-compose-view').style.display = 'none';
+    document.getElementById('comm-co-detail-header').innerHTML = '';
+    document.getElementById('comm-co-detail-messages').innerHTML = '';
   }
   function coCommShowDetail() {
-    document.getElementById('comm-co-thread-detail').style.display = 'flex';
-    document.getElementById('comm-co-compose').style.display = 'none';
-    document.getElementById('comm-co-empty-state').style.display = 'none';
+    document.getElementById('comm-co-no-thread').style.display = 'none';
+    document.getElementById('comm-co-compose-view').style.display = 'none';
   }
   function coCommShowCompose() {
-    document.getElementById('comm-co-thread-detail').style.display = 'none';
-    document.getElementById('comm-co-compose').style.display = 'flex';
-    document.getElementById('comm-co-empty-state').style.display = 'none';
+    document.getElementById('comm-co-no-thread').style.display = 'none';
+    document.getElementById('comm-co-compose-view').style.display = 'flex';
   }
+  function coCommOpenNew() { coCommShowCompose(); document.getElementById('comm-co-new-body').value = ''; coCommNewAttachFiles = []; renderCoNewCommAttachChips(); }
+  function coCommCloseNew() { coCommShowEmpty(); }
 
   function initCoComm() {
     commCoId = companyId;
-    coCommShowEmpty();
     loadCoThreads();
+  }
+
+  function coRelTime(ts) {
+    if (!ts) return ''; const d=new Date(ts); const diff=Date.now()-d;
+    if (diff<60000) return 'just now'; if (diff<3600000) return Math.floor(diff/60000)+'m ago';
+    if (diff<86400000) return Math.floor(diff/3600000)+'h ago'; return d.toLocaleDateString();
+  }
+
+  function coCommFormatBytes(b) {
+    if (!b) return '0 B'; if (b<1024) return b+' B'; if (b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(1)+' MB';
   }
 
   async function loadCoThreads() {
@@ -2595,19 +2620,16 @@
         return;
       }
       el.innerHTML = threads.map(t => {
-        const initials = ((t.subject||'?').charAt(0)).toUpperCase();
-        const statusColors = { open:'#3ecf8e', waiting:'#ed8936', resolved:'#718096' };
-        const sc = statusColors[t.status] || '#718096';
-        const personName = t.person ? (t.person.firstName||'')+' '+(t.person.lastName||'') : '';
-        return `<div class="comm-thread-item" id="comm-co-item-${t.id}" onclick="loadCoThread(${t.id})">
-          <div class="comm-avatar">${initials}</div>
-          <div class="comm-thread-info">
-            <div class="comm-thread-subject">${esc(t.subject||'(no subject)')}${t.unreadCount > 0 ? ` <span style="background:var(--gold);color:var(--navy);border-radius:10px;padding:0.05rem 0.35rem;font-size:0.65rem;font-weight:700;margin-left:0.3rem;">${t.unreadCount}</span>` : ''}</div>
-            <div class="comm-thread-preview">${personName ? esc(personName) + ' — ' : ''}${esc(t.lastPreview||'')}</div>
-            <div class="comm-thread-meta">
-              <span class="comm-status-pill" style="background:${sc};color:#fff;">${t.status}</span>
-              <span class="comm-thread-date">${coRelTime(t.lastMessageAt)}</span>
-            </div>
+        const personName = t.person ? ((t.person.firstName||'')+' '+(t.person.lastName||'')).trim() : '';
+        const statusColor = t.status === 'resolved' ? '#4caf50' : '#c9a84c';
+        const statusLabel = t.status === 'resolved' ? 'Resolved' : 'Active';
+        return `<div class="thread-card" id="comm-co-item-${t.id}" onclick="loadCoThread(${t.id})">
+          <div class="thread-card-name">${esc(personName || t.subject || '(no subject)')}${t.unreadCount > 0 ? ` <span style="background:var(--gold);color:var(--navy);border-radius:10px;padding:0.05rem 0.35rem;font-size:0.65rem;font-weight:700;margin-left:0.3rem;">${t.unreadCount}</span>` : ''}</div>
+          <div class="thread-card-preview">${esc(t.lastPreview||'')}</div>
+          <div class="thread-card-meta">
+            <span style="background:${statusColor};color:#fff;font-size:0.65rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:3px;text-transform:uppercase;">${statusLabel}</span>
+            <span>${coRelTime(t.lastMessageAt)}</span>
+            ${t.unreadCount > 0 ? '<span class="unread-dot"></span>' : ''}
           </div>
         </div>`;
       }).join('');
@@ -2618,105 +2640,134 @@
 
   async function loadCoThread(threadId) {
     commCoActiveThreadId = threadId;
-    document.querySelectorAll('.comm-thread-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('#comm-co-threads .thread-card').forEach(el => el.classList.remove('active'));
     const item = document.getElementById('comm-co-item-' + threadId);
     if (item) item.classList.add('active');
+    document.getElementById('comm-co-detail-messages').innerHTML = '<div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>';
+    document.getElementById('comm-co-detail-header').innerHTML = '';
     coCommShowDetail();
-    document.getElementById('comm-co-messages-list').innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
     try {
       const res = await apiFetch(`/api/messages/${threadId}`);
       const data = await res.json();
-      document.getElementById('comm-co-thread-subject').textContent = data.subject || '(no subject)';
-      document.getElementById('comm-co-status-select').value = data.status;
-      const msgEl = document.getElementById('comm-co-messages-list');
-      if (!data.messages || !data.messages.length) {
-        msgEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem;">No messages in this thread.</div>';
-        return;
+      document.getElementById('comm-co-detail-header').innerHTML = `
+        <div class="detail-header-person">${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}</div>
+        <div class="detail-header-subject">${esc(data.subject||'(no subject)')} · <span style="color:var(--gold);font-size:0.75rem;">${data.category||''}</span></div>`;
+      const msgEl = document.getElementById('comm-co-detail-messages');
+      const msgs = data.messages || [];
+      if (!msgs.length) {
+        msgEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem;">No messages yet.</div>';
+      } else {
+        msgEl.innerHTML = msgs.map(m => {
+          const isInternal = m.isInternal;
+          const isStaff = m.senderType === 'staff';
+          const side = isInternal ? 'internal' : isStaff ? 'staff' : 'client';
+          const bubbleClass = isInternal ? 'internal' : side;
+          const attachmentsHtml = (m.attachments||[]).length > 0
+            ? `<div class="msg-attachments">${m.attachments.map(a => `<a href="#" class="attachment-chip" onclick="coCommDownloadAttachment(${a.documentId});return false;">📎 ${esc(a.displayName)}</a>`).join('')}</div>` : '';
+          return `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
+            ${isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
+            <div class="msg-bubble ${bubbleClass}">${esc(m.body||'').replace(/\n/g,'<br>')}${attachmentsHtml}</div>
+            <div class="msg-meta">${esc(m.senderName||'')} · ${coRelTime(m.createdAt)}</div>
+          </div>`;
+        }).join('');
+        msgEl.scrollTop = msgEl.scrollHeight;
       }
-      msgEl.innerHTML = data.messages.map(m => {
-        const isInternal = m.isInternal;
-        const isStaff = m.senderType === 'staff';
-        const side = isInternal ? 'internal' : isStaff ? 'staff' : 'client';
-        return `<div class="comm-bubble-wrap ${side}">
-          ${isInternal ? '<div style="font-size:0.68rem;color:var(--gold);font-weight:600;margin-bottom:0.2rem;">🔒 Internal note</div>' : ''}
-          <div class="comm-bubble ${side}">${esc(m.body||'')}</div>
-          <div class="comm-bubble-meta">${esc(m.senderName||'')} · ${coRelTime(m.createdAt)}</div>
-        </div>`;
-      }).join('');
-      msgEl.scrollTop = msgEl.scrollHeight;
     } catch(e) {
-      document.getElementById('comm-co-messages-list').innerHTML = '<div style="color:var(--muted);padding:1rem;">Failed to load.</div>';
+      document.getElementById('comm-co-detail-messages').innerHTML = '<div style="color:var(--muted);padding:1rem;">Failed to load.</div>';
     }
   }
 
-  async function sendCoReply() {
+  async function coCommSendReply() {
     const body = document.getElementById('comm-co-reply-body').value.trim();
-    if (!body || !commCoActiveThreadId) return;
+    if (!commCoActiveThreadId) { toast('No thread selected', 'error'); return; }
+    if (!body && coCommAttachFiles.length === 0) return;
     const isInternal = document.getElementById('comm-co-internal-toggle').checked;
-    await apiFetch(`/api/messages/${commCoActiveThreadId}/reply`, { method:'POST', body: JSON.stringify({ body, is_internal: isInternal }) });
-    document.getElementById('comm-co-reply-body').value = '';
-    document.getElementById('comm-co-internal-toggle').checked = false;
-    await loadCoThread(commCoActiveThreadId);
-    await loadCoThreads();
+    try {
+      const fd = new FormData();
+      fd.append('body', body);
+      fd.append('is_internal', isInternal ? 'true' : 'false');
+      coCommAttachFiles.forEach(f => fd.append('files', f));
+      const replyRes = await apiFetch(`/api/messages/${commCoActiveThreadId}/reply`, { method: 'POST', body: fd });
+      if (!replyRes.ok) { const d = await replyRes.json().catch(()=>({})); throw new Error(d.error || `Server error ${replyRes.status}`); }
+      document.getElementById('comm-co-reply-body').value = '';
+      document.getElementById('comm-co-internal-toggle').checked = false;
+      coCommAttachFiles = [];
+      renderCoCommAttachChips();
+      await loadCoThread(commCoActiveThreadId);
+      await loadCoThreads();
+    } catch(e) { toast('Failed to send reply: ' + e.message, 'error'); }
   }
 
-  async function updateCoThreadStatus() {
+  async function coCommResolve() {
     if (!commCoActiveThreadId) return;
-    const status = document.getElementById('comm-co-status-select').value;
-    await apiFetch(`/api/messages/${commCoActiveThreadId}/status`, { method:'PUT', body: JSON.stringify({ status }) });
+    await apiFetch(`/api/messages/${commCoActiveThreadId}/status`, { method:'PUT', body: JSON.stringify({ status: 'resolved' }) });
+    coCommShowEmpty();
     await loadCoThreads();
   }
 
-  let _coComposePeople = [];
-  async function openCoCompose() {
-    coCommShowCompose();
-    document.getElementById('comm-co-new-subject').value = '';
-    document.getElementById('comm-co-new-body').value = '';
-    try {
-      const res = await apiFetch(`/api/companies/${commCoId}`);
-      const co = await res.json();
-      _coComposePeople = (co.people || []).filter(p => p.portal_enabled);
-      const countEl = document.getElementById('comm-co-recipient-count');
-      if (countEl) {
-        if (_coComposePeople.length === 0) countEl.textContent = 'no one (no portal users attached)';
-        else if (_coComposePeople.length === 1) countEl.textContent = esc((_coComposePeople[0].first_name||'')+' '+(_coComposePeople[0].last_name||''));
-        else countEl.textContent = _coComposePeople.length + ' people';
-      }
-    } catch(e) { _coComposePeople = []; }
-  }
-
-  function closeCoCompose() {
-    coCommShowEmpty();
-  }
-
-  async function sendCoNewThread() {
-    const subject = document.getElementById('comm-co-new-subject').value.trim();
+  async function coCommSendNew() {
     const body = document.getElementById('comm-co-new-body').value.trim();
-    if (!body) { toast('Message body is required', 'error'); return; }
-    if (_coComposePeople.length === 0) { toast('No portal users attached to this company', 'error'); return; }
+    if (!body && coCommNewAttachFiles.length === 0) { toast('Message body is required', 'error'); return; }
     try {
-      // Broadcast: create one thread per portal-enabled person
+      // Get portal-enabled people for this company
+      const coRes = await apiFetch(`/api/companies/${commCoId}`);
+      const co = await coRes.json();
+      const people = (co.people || []).filter(p => p.portal_enabled);
+      if (!people.length) { toast('No portal users on this company', 'error'); return; }
       let lastThreadId = null;
-      for (const p of _coComposePeople) {
-        const res = await apiFetch('/api/messages', { method:'POST', body: JSON.stringify({ person_id: p.person_id, subject, body, is_internal: false }) });
+      for (const p of people) {
+        const res = await apiFetch('/api/messages', { method:'POST', body: JSON.stringify({ person_id: p.person_id || p.id, subject: '', body, is_internal: false }) });
         const data = await res.json();
         if (data.threadId) lastThreadId = data.threadId;
       }
-      closeCoCompose();
+      document.getElementById('comm-co-new-body').value = '';
+      coCommNewAttachFiles = [];
+      renderCoNewCommAttachChips();
+      coCommCloseNew();
       await loadCoThreads();
       if (lastThreadId) loadCoThread(lastThreadId);
-      toast(`Message sent to ${_coComposePeople.length} ${_coComposePeople.length===1?'person':'people'}`);
+      toast(`Message sent to ${people.length} ${people.length===1?'person':'people'}`);
     } catch(e) { toast('Failed to send: ' + e.message, 'error'); }
   }
 
-  function coStatusColor(s) {
-    if (s==='open') return '#c9a84c'; if (s==='waiting') return '#4a90d9'; if (s==='resolved') return '#4caf50'; return '#666';
+  function handleCoCommAttach(fileList) {
+    for (const f of Array.from(fileList)) { if (coCommAttachFiles.length >= 8) break; coCommAttachFiles.push(f); }
+    document.getElementById('comm-co-attach-input').value = '';
+    renderCoCommAttachChips();
   }
-  function coRelTime(ts) {
-    if (!ts) return ''; const d=new Date(ts); const diff=Date.now()-d;
-    if (diff<60000) return 'just now'; if (diff<3600000) return Math.floor(diff/60000)+'m ago';
-    if (diff<86400000) return Math.floor(diff/3600000)+'h ago'; return d.toLocaleDateString();
+  window.handleCoCommAttach = handleCoCommAttach;
+
+  function renderCoCommAttachChips() {
+    const el = document.getElementById('comm-co-attach-chips');
+    if (!el) return;
+    el.innerHTML = coCommAttachFiles.map((f,i) => `<span class="attach-chip-input">📎 ${esc(f.name)} <button onclick="removeCoCommAttach(${i})">×</button></span>`).join('');
   }
+  function removeCoCommAttach(idx) { coCommAttachFiles.splice(idx,1); renderCoCommAttachChips(); }
+  window.removeCoCommAttach = removeCoCommAttach;
+
+  function handleCoNewCommAttach(fileList) {
+    for (const f of Array.from(fileList)) { if (coCommNewAttachFiles.length >= 8) break; coCommNewAttachFiles.push(f); }
+    document.getElementById('comm-co-new-attach-input').value = '';
+    renderCoNewCommAttachChips();
+  }
+  window.handleCoNewCommAttach = handleCoNewCommAttach;
+
+  function renderCoNewCommAttachChips() {
+    const el = document.getElementById('comm-co-new-attach-chips');
+    if (!el) return;
+    el.innerHTML = coCommNewAttachFiles.map((f,i) => `<span class="attach-chip-input">📎 ${esc(f.name)} <button onclick="removeCoNewCommAttach(${i})">×</button></span>`).join('');
+  }
+  function removeCoNewCommAttach(idx) { coCommNewAttachFiles.splice(idx,1); renderCoNewCommAttachChips(); }
+  window.removeCoNewCommAttach = removeCoNewCommAttach;
+
+  async function coCommDownloadAttachment(documentId) {
+    try {
+      const res = await apiFetch(`/api/messages/attachments/${documentId}/download`);
+      const data = await res.json();
+      if (data.url) window.open(data.url, '_blank');
+    } catch(e) { toast('Download failed', 'error'); }
+  }
+  window.coCommDownloadAttachment = coCommDownloadAttachment;
 </script>
 
 <!-- ── Upload Modal ── -->
