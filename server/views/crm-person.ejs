@@ -1009,9 +1009,9 @@
     document.querySelectorAll('#comm-threads .thread-card').forEach(el => el.classList.remove('active'));
     const item = document.getElementById('comm-item-' + threadId);
     if (item) item.classList.add('active');
-    commShowDetail();
     document.getElementById('comm-detail-messages').innerHTML = '<div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>';
     document.getElementById('comm-detail-header').innerHTML = '';
+    commShowDetail(); // show AFTER setting content so scrollHeight is correct
     try {
       const res = await apiFetch(`/api/messages/${threadId}`);
       const data = await res.json();
@@ -1043,8 +1043,7 @@
             <div class="msg-meta">${esc(m.senderName||'')} · ${relTime(m.createdAt)}</div>
           </div>`;
         }).join('');
-        // Scroll to bottom — use timeout to ensure flex layout is fully settled
-        setTimeout(() => { msgEl.scrollTop = msgEl.scrollHeight; }, 50);
+        msgEl.scrollTop = msgEl.scrollHeight;
       }
     } catch(e) {
       document.getElementById('comm-detail-messages').innerHTML = '<div style="color:var(--muted);padding:1rem;">Failed to load thread.</div>';
