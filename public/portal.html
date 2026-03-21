@@ -945,29 +945,22 @@
     const token = localStorage.getItem('portalToken');
     if (!token) { window.location.href = '/portal-login'; return; }
 
-    // ── Real-time + always-on polling ─────────────────────────────────────────
-    function _reloadIfMessagesTab() {
-      if (typeof window._portalReloadMessages === 'function') {
-        window._portalReloadMessages();
-      }
+    // ── Real-time + polling ────────────────────────────────────────────────────
+    function _reloadMessages() {
+      if (typeof window._portalReloadMessages === 'function') window._portalReloadMessages();
     }
 
-    // Always-on polling every 5s — guaranteed baseline
-    setInterval(_reloadIfMessagesTab, 5000);
+    // Polling: silent refresh every 5s (guaranteed baseline)
+    setInterval(_reloadMessages, 5000);
 
-    // Socket for instant delivery on top of polling
-    try {
-      if (typeof io !== 'undefined') {
-        const _socket = io({ auth: { token } });
-        _socket.on('connect', () => console.log('[portal socket] connected'));
-        _socket.on('connect_error', (e) => console.warn('[portal socket] error:', e.message));
-        _socket.on('message:new', ({ senderType }) => {
-          if (senderType === 'staff') _reloadIfMessagesTab();
-        });
-      }
-    } catch (e) {
-      console.warn('[portal socket] init error:', e);
-    }
+    // Socket: instant delivery (per socket.io v4 docs)
+    const _socket = io({ auth: { token } });
+    _socket.on('connect', () => console.log('[portal socket] connected, id:', _socket.id));
+    _socket.on('connect_error', (err) => console.warn('[portal socket] connect_error:', err.message));
+    _socket.on('message:new', ({ senderType }) => {
+      if (senderType === 'staff') _reloadMessages();
+    });
+    // ─────────────────────────────────────────────────────────────────────────
 
     // ── State ─────────────────────────────────────────────
     let _me = null, _companies = [], _docs = [], _stanford = null;

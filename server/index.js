@@ -316,61 +316,52 @@ function startNightlyCron() {
 }
 
 // Start server after DB is ready
+// ── Socket.io setup (per docs: https://socket.io/docs/v4/) ───────────────────
+const http = require('http');
+const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
+
+const httpServer = http.createServer(app);
+
+const io = new Server(httpServer, {
+  cors: { origin: '*' }, // JWT auth in handshake, no cookies, wildcard is safe
+});
+
+// Middleware: decode JWT, attach user to socket (never reject — bad token = no rooms)
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (token) {
+    try {
+      socket.user = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (e) {
+      console.warn('[socket] bad token, connecting without rooms:', e.message);
+    }
+  }
+  next();
+});
+
+io.on('connection', (socket) => {
+  const u = socket.user;
+  if (!u) return;
+  const firmId = u.firmId || u.id;
+  if (firmId && u.personId) {
+    socket.join(`portal:${firmId}:${u.personId}`);
+    console.log(`[socket] client connected → portal:${firmId}:${u.personId}`);
+  } else if (firmId) {
+    socket.join(`firm:${firmId}`);
+    console.log(`[socket] staff connected → firm:${firmId}`);
+  }
+});
+
+// Expose io to routes
+app.set('io', io);
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function start() {
   await initDB();
   console.log('Database initialized');
 
   startNightlyCron();
-
-  const http = require('http');
-  const { Server } = require('socket.io');
-  const jwt = require('jsonwebtoken');
-
-  const httpServer = http.createServer(app);
-
-  // Socket.io CORS: using wildcard is safe here because auth is done via JWT in
-  // socket.handshake.auth (not cookies), so we don't need credentials: true.
-  const io = new Server(httpServer, {
-    cors: {
-      origin: '*',
-      methods: ['GET', 'POST'],
-    },
-    transports: ['websocket', 'polling'],
-    allowEIO3: true,
-  });
-
-  // Socket auth middleware — soft auth, never rejects (bad token = no rooms joined)
-  io.use((socket, next) => {
-    try {
-      const token = socket.handshake.auth?.token || socket.handshake.query?.token;
-      if (token) {
-        const payload = jwt.verify(token, process.env.JWT_SECRET);
-        socket.user = payload;
-      }
-    } catch (e) {
-      // Invalid token — socket still connects but won't join any rooms
-      console.warn('[socket] auth warning (socket allowed, no rooms):', e.message);
-    }
-    next(); // always allow connection
-  });
-
-  io.on('connection', (socket) => {
-    const u = socket.user;
-    if (!u) return; // no valid token — connected but no rooms
-    const firmId = u.firmId || u.id; // support both old and new JWT formats
-    if (firmId && u.personId) {
-      // Portal/client user — joins their personal room
-      socket.join(`portal:${firmId}:${u.personId}`);
-      console.log(`[socket] portal user joined portal:${firmId}:${u.personId}`);
-    } else if (firmId) {
-      // Staff user — joins firm-wide room
-      socket.join(`firm:${firmId}`);
-      console.log(`[socket] staff user joined firm:${firmId}`);
-    }
-  });
-
-  // Expose io so routes can emit events via req.app.get('io')
-  app.set('io', io);
 
   httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`DarkLion server running on port ${PORT}`);

@@ -198,34 +198,22 @@ let activeThreadId = null;
 let firmUsers = [];
 let attachedFiles = [];
 
-// ── Real-time socket + always-on polling ─────────────────────────────────────
-(function initSocket() {
-  if (!token) return;
+// ── Real-time + polling ───────────────────────────────────────────────────────
+// Polling: silent inbox refresh every 5s (guaranteed baseline)
+setInterval(() => loadInbox(), 5000);
 
-  // Always-on polling every 5s — inbox only (don't reload active thread, would clear compose)
-  setInterval(() => {
-    loadInbox();
-  }, 5000);
-
-  // Socket for instant delivery on top of polling
-  try {
-    if (typeof io !== 'undefined') {
-      const socket = io({ auth: { token } });
-      socket.on('connect', () => console.log('[socket] connected'));
-      socket.on('connect_error', (e) => console.warn('[socket] error:', e.message));
-      socket.on('message:new', ({ threadId }) => {
-        // Only reload thread if user isn't actively composing a reply
-        const replyBox = document.getElementById('replyBody');
-        const isComposing = replyBox && replyBox.value.trim().length > 0;
-        if (activeThreadId === threadId && !isComposing) loadThread(threadId, true);
-        loadInbox();
-      });
-      socket.on('thread:new', () => loadInbox());
-    }
-  } catch (e) {
-    console.warn('[socket] init error:', e);
+// Socket: instant delivery on top of polling (per socket.io v4 docs)
+const _socket = io({ auth: { token } });
+_socket.on('connect', () => console.log('[socket] connected, id:', _socket.id));
+_socket.on('connect_error', (err) => console.warn('[socket] connect_error:', err.message));
+_socket.on('message:new', ({ threadId }) => {
+  loadInbox();
+  const replyBox = document.getElementById('replyBody');
+  if (activeThreadId === threadId && !(replyBox && replyBox.value.trim())) {
+    loadThread(threadId, true);
   }
-})();
+});
+_socket.on('thread:new', () => loadInbox());
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function apiFetch(url, opts = {}) {
