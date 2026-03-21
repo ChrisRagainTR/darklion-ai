@@ -159,9 +159,7 @@
     <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
       <h2>New Tax Delivery</h2>
       <div id="pd-error" style="display:none;color:var(--red);font-size:0.82rem;margin-bottom:0.75rem;"></div>
-      <div class="form-group"><label>Company / Return Type</label>
-        <select class="form-control" id="pd-company"><option value="">— Loading companies… —</option></select>
-      </div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
         <div class="form-group"><label>Tax Year *</label>
           <select class="form-control" id="pd-year" onchange="pdFilterDocsByYear(); document.getElementById('pd-title').value = this.value + ' Tax Return Delivery';"></select>
@@ -841,20 +839,8 @@
     yearSel.value = String(cy - 1);
     const titleEl = document.getElementById('pd-title'); if (titleEl) titleEl.value = String(cy - 1) + ' Tax Return Delivery';
 
-    // Load companies this person is linked to, default to Personal
-    const sel = document.getElementById('pd-company');
-    sel.innerHTML = '<option value="">Loading…</option>';
+    // Load personal docs for this person
     _pdAllDocs = [];
-    try {
-      const res = await apiFetch(`/api/people/${personId}`);
-      const p = await res.json();
-      const cos = p.company_access || p.companies || [];
-      // Personal (1040) first, then linked businesses
-      sel.innerHTML = `<option value="__personal__">👤 Personal (1040)</option>`
-        + cos.map(c => `<option value="${c.company_id}">${esc(c.company_name)}</option>`).join('');
-      sel.value = '__personal__'; // default to personal
-    } catch(e) { sel.innerHTML = '<option value="">Failed to load</option>'; }
-    // Load personal docs immediately since we default to personal
     try {
       const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${personId}`);
       _pdAllDocs = await res.json();
@@ -880,38 +866,18 @@
     document.getElementById('pd-sig-doc').innerHTML = opts;
   }
 
-  // When company changes in modal, load its docs then filter by year
-  document.addEventListener('change', async function(e) {
-    if (e.target.id === 'pd-company') {
-      const val = e.target.value;
-      _pdAllDocs = [];
-      try {
-        if (val === '__personal__') {
-          // Load personal docs
-          const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${personId}`);
-          _pdAllDocs = await res.json();
-        } else if (val) {
-          // Load company docs
-          const res = await apiFetch(`/api/documents?owner_type=company&owner_id=${val}`);
-          _pdAllDocs = await res.json();
-        }
-        pdFilterDocsByYear();
-      } catch(e) { _pdAllDocs = []; pdFilterDocsByYear(); }
-    }
+  document.addEventListener('change', function(e) {
     if (e.target.id === 'pd-year') pdFilterDocsByYear();
   });
 
   function closePersonDeliveryModal() { document.getElementById('person-delivery-modal').classList.add('hidden'); }
 
   async function submitPersonDelivery() {
-    const coVal = document.getElementById('pd-company').value;
     const year = document.getElementById('pd-year').value.trim();
-    if (!coVal) { document.getElementById('pd-error').textContent = 'Select return type'; document.getElementById('pd-error').style.display = ''; return; }
     if (!year) { document.getElementById('pd-error').textContent = 'Tax year is required'; document.getElementById('pd-error').style.display = ''; return; }
-    const isPersonal = coVal === '__personal__';
     const body = {
-      company_id: isPersonal ? null : parseInt(coVal),
-      person_id: isPersonal ? parseInt(personId) : null,
+      company_id: null,
+      person_id: parseInt(personId),
       tax_year: year,
       title: document.getElementById('pd-title').value.trim(),
       intro_note: document.getElementById('pd-intro').value.trim(),
