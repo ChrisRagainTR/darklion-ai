@@ -2321,12 +2321,19 @@
         }
         summaryHtml += '</div>';
       }
+      const meRef2 = window._portalMe || {};
+      const returnLabel = d.company_name || (`${meRef2.firstName || ''} ${meRef2.lastName || ''}`.trim()) || 'Your';
       document.getElementById('tdo-content').innerHTML = `
-        <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:0.5rem;">${esc(d.company_name)} — ${esc(d.tax_year)} Tax Return</h2>
-        <p style="color:var(--muted);margin-bottom:1.25rem;">From ${esc(firmName)}</p>
+        <div style="margin-bottom:1.5rem;">
+          <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:0.4rem;">${esc(returnLabel)} — ${esc(d.tax_year)} Tax Return</h2>
+          <p style="color:var(--muted,#8fa3b8);font-size:0.9rem;">Prepared by ${esc(firmName)}</p>
+        </div>
         ${summaryHtml}
-        ${d.intro_note ? `<div style="background:var(--card,#1a1d27);border:1px solid var(--border,#2a2d3a);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:0.95rem;line-height:1.6;">${esc(d.intro_note)}</div>` : ''}
-        <button class="btn-submit" onclick="renderTDStep2()">Review the Return →</button>
+        ${d.intro_note ? `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.2);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:0.95rem;line-height:1.7;color:var(--text,#e8edf2);">${esc(d.intro_note)}</div>` : ''}
+        <div style="margin-top:1.5rem;">
+          <p style="font-size:0.88rem;color:var(--muted,#8fa3b8);margin-bottom:1rem;">Please review your complete tax return carefully. You'll be able to approve or request changes before signing.</p>
+          <button class="btn-submit" onclick="renderTDStep2()" style="font-size:1rem;padding:0.75rem 2rem;">Review the Return →</button>
+        </div>
       `;
     }
     window.renderTDStep1 = renderTDStep1;
