@@ -370,7 +370,7 @@
       <div id="delivery-error" style="display:none;color:var(--red);font-size:0.82rem;margin-bottom:0.75rem;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
         <div class="form-group"><label>Tax Year *</label>
-          <select class="form-control" id="nd-year" onchange="ndFilterDocsByYear()"></select>
+          <select class="form-control" id="nd-year" onchange="ndFilterDocsByYear(); document.getElementById('nd-title').value = this.value + ' Tax Return Delivery';"></select>
         </div>
         <div class="form-group"><label>Title</label><input type="text" class="form-control" id="nd-title" placeholder="e.g. 2024 Individual Return"></div>
       </div>
@@ -1138,6 +1138,7 @@
       yearSel.appendChild(o);
     }
     yearSel.value = String(cy - 1);
+    document.getElementById('nd-title').value = String(cy - 1) + ' Tax Return Delivery';
 
     // Load all company docs
     try {

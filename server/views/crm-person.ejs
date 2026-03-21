@@ -164,7 +164,7 @@
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
         <div class="form-group"><label>Tax Year *</label>
-          <select class="form-control" id="pd-year" onchange="pdFilterDocsByYear()"></select>
+          <select class="form-control" id="pd-year" onchange="pdFilterDocsByYear(); document.getElementById('pd-title').value = this.value + ' Tax Return Delivery';"></select>
         </div>
         <div class="form-group"><label>Title</label><input type="text" class="form-control" id="pd-title" placeholder="e.g. 2024 Individual Return"></div>
       </div>
@@ -816,6 +816,7 @@
       yearSel.appendChild(o);
     }
     yearSel.value = String(cy - 1);
+    const titleEl = document.getElementById('pd-title'); if (titleEl) titleEl.value = String(cy - 1) + ' Tax Return Delivery';
 
     // Load companies this person is linked to
     const sel = document.getElementById('pd-company');
