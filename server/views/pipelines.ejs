@@ -287,11 +287,11 @@
   });
 
   // ── VIEWS ────────────────────────────────────────
-  function showList() {
+  window.showList = function() {
     document.getElementById('view-list').style.display = 'block';
     document.getElementById('view-board').style.display = 'none';
     loadList();
-  }
+  };
 
   function showBoard() {
     document.getElementById('view-list').style.display = 'none';
