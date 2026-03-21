@@ -945,20 +945,53 @@
     const token = localStorage.getItem('portalToken');
     if (!token) { window.location.href = '/portal-login'; return; }
 
-    // ── Real-time socket for instant message updates ───────
-    // window._portalReloadMessages is set later (inside selectContact scope)
-    // so the socket handler calls through to it when it exists
-    window._portalReloadMessages = null;
+    // ── Real-time + polling fallback for instant message updates ──────────────
+    // Polling runs every 8 seconds as a safety net regardless of socket status
+    let _lastMsgCheck = Date.now();
+    let _msgPollInterval = null;
+
+    function _reloadIfMessagesTab() {
+      // Only reload if the messages/chat tab is visible
+      if (typeof window._portalReloadMessages === 'function') {
+        window._portalReloadMessages();
+      }
+    }
+
+    function startMsgPolling() {
+      if (_msgPollInterval) return;
+      _msgPollInterval = setInterval(() => {
+        _reloadIfMessagesTab();
+      }, 8000);
+    }
+
+    // Start polling immediately as reliable fallback
+    startMsgPolling();
+
+    // Also try socket for instant delivery
     try {
-      const _socket = io({ auth: { token } });
-      _socket.on('connect', () => console.log('[portal socket] connected'));
-      _socket.on('message:new', ({ senderType }) => {
-        if (senderType === 'staff' && typeof window._portalReloadMessages === 'function') {
-          window._portalReloadMessages();
-        }
-      });
+      if (typeof io !== 'undefined') {
+        const _socket = io({ auth: { token }, reconnectionAttempts: 5 });
+        _socket.on('connect', () => {
+          console.log('[portal socket] connected — real-time active');
+          // Stop polling when socket is live (avoid double-reload)
+          if (_msgPollInterval) { clearInterval(_msgPollInterval); _msgPollInterval = null; }
+        });
+        _socket.on('disconnect', () => {
+          console.log('[portal socket] disconnected — falling back to polling');
+          startMsgPolling();
+        });
+        _socket.on('connect_error', (e) => {
+          console.warn('[portal socket] connect error:', e.message, '— polling active');
+          startMsgPolling();
+        });
+        _socket.on('message:new', ({ senderType }) => {
+          if (senderType === 'staff') _reloadIfMessagesTab();
+        });
+      } else {
+        console.warn('[portal socket] socket.io not loaded — polling only');
+      }
     } catch (e) {
-      console.warn('[portal socket] init error:', e);
+      console.warn('[portal socket] init error:', e, '— polling active');
     }
 
     // ── State ─────────────────────────────────────────────
@@ -1734,6 +1767,8 @@
     async function initChat() {
       if (_chatLoaded) return;
       _chatLoaded = true;
+      // Register reload hook for socket/polling handler
+      window._portalReloadMessages = loadAllMessages;
       await loadContacts();
       // loadContacts → selectContact → loadAllMessages, so no need to call it again
     }
@@ -1826,7 +1861,6 @@
     }
 
     async function loadAllMessages() {
-      window._portalReloadMessages = loadAllMessages; // expose for socket handler
       const token = localStorage.getItem('portalToken');
       if (!token) return;
       try {
