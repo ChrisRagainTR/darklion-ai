@@ -198,49 +198,27 @@ let activeThreadId = null;
 let firmUsers = [];
 let attachedFiles = [];
 
-// ── Real-time socket + polling fallback ──────────────────────────────────────
+// ── Real-time socket + always-on polling ─────────────────────────────────────
 (function initSocket() {
   if (!token) return;
 
-  // Polling fallback — refreshes inbox every 5s when socket is not live
-  let _pollInterval = null;
-  function startPolling() {
-    if (_pollInterval) return;
-    _pollInterval = setInterval(() => {
-      loadInbox();
-      if (activeThreadId) loadThread(activeThreadId, true);
-    }, 5000);
-  }
-  function stopPolling() {
-    if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
-  }
+  // Always-on polling every 5s — guaranteed baseline regardless of socket status
+  setInterval(() => {
+    loadInbox();
+    if (activeThreadId) loadThread(activeThreadId, true);
+  }, 5000);
 
-  // Start polling immediately as reliable baseline
-  startPolling();
-
+  // Socket for instant delivery on top of polling
   try {
     if (typeof io !== 'undefined') {
-      const socket = io({ auth: { token }, reconnectionAttempts: 5 });
-
-      socket.on('connect', () => {
-        console.log('[socket] connected — real-time active');
-        stopPolling(); // socket is live, stop polling
-      });
-      socket.on('disconnect', () => {
-        console.log('[socket] disconnected — polling fallback active');
-        startPolling();
-      });
-      socket.on('connect_error', (e) => {
-        console.warn('[socket] connect error:', e.message, '— polling active');
-        startPolling();
-      });
+      const socket = io({ auth: { token } });
+      socket.on('connect', () => console.log('[socket] connected'));
+      socket.on('connect_error', (e) => console.warn('[socket] error:', e.message));
       socket.on('message:new', ({ threadId }) => {
         if (activeThreadId === threadId) loadThread(threadId, true);
         loadInbox();
       });
       socket.on('thread:new', () => loadInbox());
-    } else {
-      console.warn('[socket] socket.io not loaded — polling only');
     }
   } catch (e) {
     console.warn('[socket] init error:', e);

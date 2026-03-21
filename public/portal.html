@@ -945,53 +945,28 @@
     const token = localStorage.getItem('portalToken');
     if (!token) { window.location.href = '/portal-login'; return; }
 
-    // ── Real-time + polling fallback for instant message updates ──────────────
-    // Polling runs every 8 seconds as a safety net regardless of socket status
-    let _lastMsgCheck = Date.now();
-    let _msgPollInterval = null;
-
+    // ── Real-time + always-on polling ─────────────────────────────────────────
     function _reloadIfMessagesTab() {
-      // Only reload if the messages/chat tab is visible
       if (typeof window._portalReloadMessages === 'function') {
         window._portalReloadMessages();
       }
     }
 
-    function startMsgPolling() {
-      if (_msgPollInterval) return;
-      _msgPollInterval = setInterval(() => {
-        _reloadIfMessagesTab();
-      }, 5000);
-    }
+    // Always-on polling every 5s — guaranteed baseline
+    setInterval(_reloadIfMessagesTab, 5000);
 
-    // Start polling immediately as reliable fallback
-    startMsgPolling();
-
-    // Also try socket for instant delivery
+    // Socket for instant delivery on top of polling
     try {
       if (typeof io !== 'undefined') {
-        const _socket = io({ auth: { token }, reconnectionAttempts: 5 });
-        _socket.on('connect', () => {
-          console.log('[portal socket] connected — real-time active');
-          // Stop polling when socket is live (avoid double-reload)
-          if (_msgPollInterval) { clearInterval(_msgPollInterval); _msgPollInterval = null; }
-        });
-        _socket.on('disconnect', () => {
-          console.log('[portal socket] disconnected — falling back to polling');
-          startMsgPolling();
-        });
-        _socket.on('connect_error', (e) => {
-          console.warn('[portal socket] connect error:', e.message, '— polling active');
-          startMsgPolling();
-        });
+        const _socket = io({ auth: { token } });
+        _socket.on('connect', () => console.log('[portal socket] connected'));
+        _socket.on('connect_error', (e) => console.warn('[portal socket] error:', e.message));
         _socket.on('message:new', ({ senderType }) => {
           if (senderType === 'staff') _reloadIfMessagesTab();
         });
-      } else {
-        console.warn('[portal socket] socket.io not loaded — polling only');
       }
     } catch (e) {
-      console.warn('[portal socket] init error:', e, '— polling active');
+      console.warn('[portal socket] init error:', e);
     }
 
     // ── State ─────────────────────────────────────────────
