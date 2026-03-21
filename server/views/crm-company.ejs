@@ -1198,12 +1198,13 @@
   }
 
   async function autoSaveNotes(val, force) {
-    if (!companyData) return;
     try {
       await apiFetch(`/api/companies/${companyId}`, { method: 'PUT', body: JSON.stringify({ notes: val }) });
-      const ind = document.getElementById('notes-saved') || document.getElementById('notes-saved-full');
-      if (ind) { ind.textContent = 'Saved'; setTimeout(() => { ind.textContent = ''; }, 2000); }
-    } catch(e) {}
+      // Show indicator on whichever notes element is in the active tab
+      const ind = document.getElementById('notes-saved-full') || document.getElementById('notes-saved');
+      if (ind) { ind.textContent = '✓ Saved'; setTimeout(() => { ind.textContent = ''; }, 2000); }
+      if (companyData) companyData.notes = val;
+    } catch(e) { toast('Failed to save notes', 'error'); }
   }
 
   function openEditModal() {
