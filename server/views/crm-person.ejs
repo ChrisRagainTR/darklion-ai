@@ -188,8 +188,7 @@
       overflow:hidden;
       height: calc(100vh - var(--header-h, 58px) - var(--tab-bar-top, 58px) - 42px);
     }
-    /* Hide main scrollbar when comm tab is active — it manages its own scroll */
-    body:has(#tab-communication.active) .main { overflow:hidden !important; }
+
     /* Layout */
     #tab-communication .crm-inbox-wrap { display:flex; flex:1; min-height:0; overflow:hidden; }
     #tab-communication .crm-thread-list { width:300px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
@@ -417,6 +416,9 @@
     if (el) el.classList.add('active');
     const tc = document.getElementById('tab-' + name);
     if (tc) tc.classList.add('active');
+    // Hide main scrollbar on comm tab, restore on others
+    const mainEl = document.querySelector('.main');
+    if (mainEl) mainEl.style.overflowY = (name === 'communication') ? 'hidden' : 'auto';
     if (name === 'docs') loadDocs();
     if (name === 'tax') loadTax();
     if (name === 'communication') initComm(personData?.id || personId);
