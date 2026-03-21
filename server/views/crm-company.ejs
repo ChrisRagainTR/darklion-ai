@@ -675,7 +675,11 @@
 
 
 <div id="tab-workflow" class="tab-content">
-  <div class="placeholder-section"><div class="ph-icon">⚙️</div><div class="ph-title">Pipelines</div><div class="ph-desc">Pipeline jobs for this company will appear here.</div></div>
+  <div style="max-width:860px;padding:1.5rem 2rem;">
+    <div style="font-size:1.05rem;font-weight:700;margin-bottom:1.25rem;">Active Pipelines</div>
+    <div id="workflow-loading" style="color:var(--muted);padding:2rem 0;">Loading…</div>
+    <div id="workflow-list" style="display:none;"></div>
+  </div>
 </div>
 
 <div id="tab-notes" class="tab-content">
@@ -796,6 +800,35 @@
       if (orgEl) orgEl.innerHTML = `<a href="${esc(companyData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax →</a>`;
     }
     if (name === 'notes' && companyData) document.getElementById('notes-ta-full').value = companyData.notes || '';
+    if (name === 'workflow') loadWorkflow();
+  }
+
+  async function loadWorkflow() {
+    const loading = document.getElementById('workflow-loading');
+    const list = document.getElementById('workflow-list');
+    loading.style.display = ''; list.style.display = 'none';
+    try {
+      const res = await apiFetch(`/api/pipelines/entity-jobs?entity_type=company&entity_id=${companyId}`);
+      const jobs = await res.json();
+      loading.style.display = 'none'; list.style.display = '';
+      if (!jobs.length) { list.innerHTML = '<div style="color:var(--muted);">This company is not in any pipelines yet.</div>'; return; }
+      list.innerHTML = jobs.map(j => {
+        const stageColor = j.stage_color || 'var(--gold)';
+        const yearBadge = j.tax_year ? `<span style="font-size:0.72rem;background:rgba(255,255,255,0.06);border-radius:4px;padding:0.1rem 0.45rem;margin-left:0.5rem;color:var(--muted);">${j.tax_year}</span>` : '';
+        const statusColor = j.job_status === 'blocked' ? 'var(--red)' : (j.job_status === 'waiting_client' || j.job_status === 'missing_info') ? 'var(--orange)' : 'var(--green)';
+        const statusLabel = {active:'Active',waiting_client:'Waiting on Client',missing_info:'Missing Info',blocked:'Blocked',under_extension:'Under Extension',on_hold:'On Hold'}[j.job_status] || 'Active';
+        const updateText = j.last_update ? (j.last_update.length > 80 ? j.last_update.substring(0,80)+'…' : j.last_update) : null;
+        const updateDate = j.last_update_at ? new Date(j.last_update_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+        const updateAuthor = j.last_update_author || '';
+        const lastUpdate = updateText ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">${esc(updateText)}<span style="font-size:0.72rem;color:rgba(143,163,184,0.6);margin-left:0.4rem;">— ${esc(updateAuthor)}${updateDate ? ', '+updateDate : ''}</span></div>` : '';
+        return `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+          <div style="flex:1;min-width:180px;"><div style="font-weight:700;font-size:0.95rem;">${esc(j.pipeline_name)}${yearBadge}</div>${lastUpdate}</div>
+          <div style="text-align:center;min-width:140px;"><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Current Stage</div><div style="font-weight:700;color:${stageColor};font-size:0.9rem;">${esc(j.stage_name)}</div></div>
+          <div style="text-align:center;min-width:100px;"><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Status</div><div style="font-weight:600;font-size:0.82rem;color:${statusColor};">${statusLabel}</div></div>
+          ${j.assigned_name ? `<div style="text-align:center;min-width:80px;"><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Assigned</div><div style="font-size:0.82rem;">${esc(j.assigned_name)}</div></div>` : ''}
+        </div>`;
+      }).join('');
+    } catch(e) { loading.textContent = 'Failed to load pipelines: ' + e.message; }
   }
 
   function switchSubtab(name, el) {

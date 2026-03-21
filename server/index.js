@@ -172,9 +172,9 @@ app.get('/crm.html', (req, res) => res.redirect('/crm'));
 app.get('/crm/relationships', (req, res) => res.redirect('/crm?tab=relationships'));
 app.get('/crm/people', (req, res) => res.redirect('/crm?tab=people'));
 app.get('/crm/companies', (req, res) => res.redirect('/crm?tab=companies'));
-app.get('/crm/person/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-person.html')));
-app.get('/crm/company/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-company.html')));
-app.get('/crm/relationship/:id', (req, res) => res.sendFile(path.join(publicDir, 'crm-relationship.html')));
+app.get('/crm/person/:id', (req, res) => res.render('crm-person', { title: 'Person', activeNav: 'people' }));
+app.get('/crm/company/:id', (req, res) => res.render('crm-company', { title: 'Company', activeNav: 'companies' }));
+app.get('/crm/relationship/:id', (req, res) => res.render('crm-relationship', { title: 'Relationship', activeNav: 'relationships' }));
 
 // Redirect route (previously required Basic Auth)
 app.get('/redirect', (req, res) => res.sendFile(path.join(publicDir, 'redirect.html')));
@@ -209,7 +209,7 @@ app.use('/api/documents', requireFirm, apiLimiter, documentsRouter);
 
 const messagesRouter = require('./routes/messages');
 app.use('/api/messages', requireFirm, apiLimiter, messagesRouter);
-app.get('/messages', (req, res) => res.sendFile(path.join(publicDir, 'messages.html')));
+app.get('/messages', (req, res) => res.render('messages', { title: 'Messages', activeNav: 'messages' }));
 
 const pipelinesRouter = require('./routes/pipelines');
 app.use('/api/pipelines', requireFirm, apiLimiter, pipelinesRouter);
