@@ -437,9 +437,12 @@
     var updatesHtml = updates.length ? updates.map(function(u) {
       var preview = u.body.length > 70 ? u.body.substring(0, 70) + '…' : u.body;
       var when = timeAgo(u.created_at);
-      return '<div style="font-size:0.72rem;color:var(--muted);padding:0.2rem 0;border-top:1px solid rgba(255,255,255,0.04);margin-top:0.2rem;">' +
+      var author = u.author_name ? u.author_name.split(' ')[0] : 'Staff'; // first name only
+      return '<div style="font-size:0.72rem;color:var(--muted);padding:0.25rem 0;border-top:1px solid rgba(255,255,255,0.04);margin-top:0.2rem;">' +
+        '<span style="color:var(--gold);font-size:0.68rem;font-weight:600;">' + esc(author) + '</span>' +
+        ' <span style="color:var(--muted);">· </span>' +
         '<span style="color:var(--text);">' + esc(preview) + '</span>' +
-        ' <span style="color:rgba(143,163,184,0.6);font-size:0.67rem;">' + when + '</span>' +
+        ' <span style="color:rgba(143,163,184,0.5);font-size:0.66rem;">' + when + '</span>' +
       '</div>';
     }).join('') : '';
 
