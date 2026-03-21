@@ -841,7 +841,7 @@
     yearSel.value = String(cy - 1);
     const titleEl = document.getElementById('pd-title'); if (titleEl) titleEl.value = String(cy - 1) + ' Tax Return Delivery';
 
-    // Load companies this person is linked to
+    // Load companies this person is linked to, default to Personal
     const sel = document.getElementById('pd-company');
     sel.innerHTML = '<option value="">Loading…</option>';
     _pdAllDocs = [];
@@ -849,10 +849,18 @@
       const res = await apiFetch(`/api/people/${personId}`);
       const p = await res.json();
       const cos = p.company_access || p.companies || [];
-      sel.innerHTML = '<option value="">— Select company —</option>' + cos.map(c => `<option value="${c.company_id}">${esc(c.company_name)}</option>`).join('');
+      // Personal (1040) first, then linked businesses
+      sel.innerHTML = `<option value="__personal__">👤 Personal (1040)</option>`
+        + cos.map(c => `<option value="${c.company_id}">${esc(c.company_name)}</option>`).join('');
+      sel.value = '__personal__'; // default to personal
     } catch(e) { sel.innerHTML = '<option value="">Failed to load</option>'; }
-    document.getElementById('pd-review-doc').innerHTML = '<option value="">— Select company first —</option>';
-    document.getElementById('pd-sig-doc').innerHTML = '<option value="">— Select company first —</option>';
+    // Load personal docs immediately since we default to personal
+    try {
+      const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${personId}`);
+      _pdAllDocs = await res.json();
+      pdFilterDocsByYear();
+    } catch(e) { _pdAllDocs = []; }
+    document.getElementById('pd-error').style.display = 'none';
     document.getElementById('pd-error').style.display = 'none';
     modal.classList.remove('hidden');
   }
@@ -874,12 +882,21 @@
 
   // When company changes in modal, load its docs then filter by year
   document.addEventListener('change', async function(e) {
-    if (e.target.id === 'pd-company' && e.target.value) {
+    if (e.target.id === 'pd-company') {
+      const val = e.target.value;
+      _pdAllDocs = [];
       try {
-        const res = await apiFetch(`/api/documents?owner_type=company&owner_id=${e.target.value}`);
-        _pdAllDocs = await res.json();
+        if (val === '__personal__') {
+          // Load personal docs
+          const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${personId}`);
+          _pdAllDocs = await res.json();
+        } else if (val) {
+          // Load company docs
+          const res = await apiFetch(`/api/documents?owner_type=company&owner_id=${val}`);
+          _pdAllDocs = await res.json();
+        }
         pdFilterDocsByYear();
-      } catch(e) { _pdAllDocs = []; }
+      } catch(e) { _pdAllDocs = []; pdFilterDocsByYear(); }
     }
     if (e.target.id === 'pd-year') pdFilterDocsByYear();
   });
@@ -887,12 +904,14 @@
   function closePersonDeliveryModal() { document.getElementById('person-delivery-modal').classList.add('hidden'); }
 
   async function submitPersonDelivery() {
-    const coId = document.getElementById('pd-company').value;
+    const coVal = document.getElementById('pd-company').value;
     const year = document.getElementById('pd-year').value.trim();
-    if (!coId) { document.getElementById('pd-error').textContent = 'Select a company'; document.getElementById('pd-error').style.display = ''; return; }
+    if (!coVal) { document.getElementById('pd-error').textContent = 'Select return type'; document.getElementById('pd-error').style.display = ''; return; }
     if (!year) { document.getElementById('pd-error').textContent = 'Tax year is required'; document.getElementById('pd-error').style.display = ''; return; }
+    const isPersonal = coVal === '__personal__';
     const body = {
-      company_id: parseInt(coId),
+      company_id: isPersonal ? null : parseInt(coVal),
+      person_id: isPersonal ? parseInt(personId) : null,
       tax_year: year,
       title: document.getElementById('pd-title').value.trim(),
       intro_note: document.getElementById('pd-intro').value.trim(),

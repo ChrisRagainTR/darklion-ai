@@ -102,34 +102,51 @@ router.post('/', async (req, res) => {
   const firmId = req.firm.id;
   const userId = req.firm.userId;
   const {
-    company_id, tax_year, title, intro_note, tax_summary,
+    company_id, person_id, tax_year, title, intro_note, tax_summary,
     review_doc_id, signature_doc_id, signer_person_ids = [], pipeline_job_id
   } = req.body;
 
-  if (!company_id || !tax_year) {
-    return res.status(400).json({ error: 'company_id and tax_year are required' });
+  if (!tax_year) {
+    return res.status(400).json({ error: 'tax_year is required' });
+  }
+  if (!company_id && !person_id) {
+    return res.status(400).json({ error: 'company_id or person_id is required' });
   }
 
   try {
-    // Verify company belongs to firm
-    const { rows: co } = await pool.query(
-      'SELECT id FROM companies WHERE id = $1 AND firm_id = $2', [company_id, firmId]
-    );
-    if (!co[0]) return res.status(404).json({ error: 'Company not found' });
+    // Verify company belongs to firm (if company delivery)
+    if (company_id) {
+      const { rows: co } = await pool.query(
+        'SELECT id FROM companies WHERE id = $1 AND firm_id = $2', [company_id, firmId]
+      );
+      if (!co[0]) return res.status(404).json({ error: 'Company not found' });
+    }
+
+    // Verify person belongs to firm (if personal delivery)
+    if (person_id && !company_id) {
+      const { rows: pe } = await pool.query(
+        'SELECT id FROM people WHERE id = $1 AND firm_id = $2', [person_id, firmId]
+      );
+      if (!pe[0]) return res.status(404).json({ error: 'Person not found' });
+    }
 
     const { rows } = await pool.query(
       `INSERT INTO tax_deliveries
          (firm_id, company_id, tax_year, title, intro_note, tax_summary, review_doc_id, signature_doc_id, pipeline_job_id, created_by, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'draft')
        RETURNING *`,
-      [firmId, company_id, tax_year, title || '', intro_note || '',
+      [firmId, company_id || null, tax_year, title || '', intro_note || '',
        JSON.stringify(tax_summary || {}), review_doc_id || null, signature_doc_id || null,
        pipeline_job_id || null, userId || null]
     );
     const delivery = rows[0];
 
-    // Add signers
-    for (const pid of signer_person_ids) {
+    // Add signers — always include person_id for personal returns
+    const allSigners = [...new Set([
+      ...(person_id ? [parseInt(person_id)] : []),
+      ...signer_person_ids.map(p => parseInt(p)),
+    ])];
+    for (const pid of allSigners) {
       await pool.query(
         'INSERT INTO tax_delivery_signers (delivery_id, person_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
         [delivery.id, pid]
