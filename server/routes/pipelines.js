@@ -749,6 +749,39 @@ router.get('/jobs/:jobId/history', async (req, res) => {
   }
 });
 
+// --- GET /entity-jobs?entity_type=company&entity_id=123 ---
+// Returns all pipeline jobs for a given entity, grouped with pipeline/stage info
+router.get('/entity-jobs', async (req, res) => {
+  try {
+    const { entity_type, entity_id } = req.query;
+    if (!entity_type || !entity_id) return res.status(400).json({ error: 'entity_type and entity_id required' });
+
+    const { rows } = await pool.query(
+      `SELECT
+         pj.id, pj.entity_type, pj.entity_id, pj.job_status, pj.priority,
+         pj.assigned_to, pj.due_date, pj.created_at,
+         ps.name AS stage_name, ps.color AS stage_color,
+         pt.name AS pipeline_name, pt.id AS template_id,
+         pi.tax_year,
+         COALESCE(fu.display_name, fu.name) AS assigned_name,
+         (SELECT body FROM pipeline_job_updates u WHERE u.job_id = pj.id ORDER BY u.created_at DESC LIMIT 1) AS last_update,
+         (SELECT created_at FROM pipeline_job_updates u WHERE u.job_id = pj.id ORDER BY u.created_at DESC LIMIT 1) AS last_update_at
+       FROM pipeline_jobs pj
+       JOIN pipeline_instances pi ON pi.id = pj.instance_id
+       JOIN pipeline_templates pt ON pt.id = pi.template_id
+       JOIN pipeline_stages ps ON ps.id = pj.current_stage_id
+       LEFT JOIN firm_users fu ON fu.id = pj.assigned_to
+       WHERE pi.firm_id = $1 AND pj.entity_type = $2 AND pj.entity_id = $3
+       ORDER BY pt.name ASC, pi.tax_year DESC`,
+      [req.firm.id, entity_type, parseInt(entity_id)]
+    );
+    res.json(rows);
+  } catch (e) {
+    console.error('GET /entity-jobs error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // --- GET /jobs/:jobId/updates ---
 router.get('/jobs/:jobId/updates', async (req, res) => {
   try {
