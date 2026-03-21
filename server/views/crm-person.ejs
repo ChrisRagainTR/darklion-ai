@@ -972,7 +972,7 @@
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       closePersonDeliveryModal();
       toast('Delivery created');
-      loadTax(true);
+      setTimeout(function(){ window.location.href = window.location.pathname + '?tab=tax'; }, 600);
     } catch(e) { document.getElementById('pd-error').textContent = e.message; document.getElementById('pd-error').style.display = ''; }
   }
 
@@ -982,7 +982,7 @@
       const res = await apiFetch('/api/tax-deliveries/' + id + '/send', { method: 'POST', body: '{}' });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Delivery sent to client');
-      loadTax(true);
+      setTimeout(function(){ window.location.href = window.location.pathname + '?tab=tax'; }, 800);
     } catch(e) { toast(e.message, 'error'); }
   }
 
@@ -991,7 +991,7 @@
     try {
       await apiFetch('/api/tax-deliveries/' + id, { method: 'DELETE' });
       toast('Deleted');
-      loadTax(true);
+      setTimeout(function(){ window.location.href = window.location.pathname + '?tab=tax'; }, 600);
     } catch(e) { toast(e.message, 'error'); }
   }
 
@@ -1001,7 +1001,7 @@
       const res = await apiFetch('/api/tax-deliveries/' + id + '/cancel', { method: 'POST' });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Delivery cancelled — returned to draft');
-      loadTax(true);
+      setTimeout(function(){ window.location.href = window.location.pathname + '?tab=tax'; }, 600);
     } catch(e) { toast(e.message, 'error'); }
   }
 
@@ -1286,7 +1286,13 @@
   }
 
 
-  loadPerson();
+  loadPerson().then(function() {
+    var urlTab = new URLSearchParams(window.location.search).get('tab');
+    if (urlTab) {
+      var tabEl = document.querySelector('[onclick*="switchTab(\'' + urlTab + '\'"]');
+      switchTab(urlTab, tabEl);
+    }
+  });
 </script>
 
 <%- include('partials/shell-close') %>
