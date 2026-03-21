@@ -755,14 +755,37 @@ router.post('/tax-deliveries/:id/needs-changes', async (req, res) => {
     if (deliveryRows[0]) {
       const d = deliveryRows[0];
       const clientName = `${d.first_name} ${d.last_name}`.trim();
+      const entityLabel = d.company_name || clientName;
+
+      // Email firm
       try {
         await sendEmail({
           to: d.firm_email,
-          subject: `Changes Requested: ${d.tax_year} Return for ${d.company_name}`,
-          html: `<p><strong>${clientName}</strong> has requested changes to their ${d.tax_year} tax return for ${d.company_name}:</p><blockquote>${note}</blockquote><p>Log in to DarkLion to review.</p>`,
+          subject: `Changes Requested: ${d.tax_year} Return for ${entityLabel}`,
+          html: `<p><strong>${clientName}</strong> has requested changes to their ${d.tax_year} tax return for ${entityLabel}:</p><blockquote>${note}</blockquote><p>Log in to DarkLion to review.</p>`,
         });
       } catch (emailErr) {
         console.error('[portal] needs-changes email error:', emailErr);
+      }
+
+      // Create a staff message thread so it appears in team inbox
+      try {
+        const subject = `⚠️ Changes Requested: ${clientName} — ${d.tax_year} Tax Return`;
+        const body = `${clientName} has requested changes to their ${d.tax_year} tax return.\n\n"${note}"\n\nGo to the Tax tab on their record to review and resend.`;
+        const { rows: threadRows } = await pool.query(
+          `INSERT INTO message_threads (firm_id, person_id, subject, status, category, last_message_at)
+           VALUES ($1, $2, $3, 'open', 'tax', NOW()) RETURNING id`,
+          [d.firm_id, personId, subject]
+        );
+        if (threadRows[0]) {
+          await pool.query(
+            `INSERT INTO messages (thread_id, sender_type, sender_id, body, is_internal)
+             VALUES ($1, 'client', $2, $3, false)`,
+            [threadRows[0].id, personId, body]
+          );
+        }
+      } catch (msgErr) {
+        console.error('[portal] needs-changes message thread error:', msgErr);
       }
     }
 
