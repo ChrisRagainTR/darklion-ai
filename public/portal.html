@@ -1121,11 +1121,13 @@
           if (tdRes.ok) {
             const deliveries = await tdRes.json();
             window._taxDeliveriesCache = deliveries;
-            if (deliveries && deliveries.length > 0) {
+            // Only show tab if there are unsigned/pending deliveries
+            const pending = deliveries.filter(function(d) { return !d.signed_at; });
+            if (pending.length > 0) {
               const tdTab = document.getElementById('review-sign-tab');
               const tdBadge = document.getElementById('review-sign-badge');
               if (tdTab) { tdTab.style.display = ''; tdTab.style.visibility = 'visible'; }
-              if (tdBadge) { tdBadge.textContent = deliveries.length; tdBadge.style.display = ''; }
+              if (tdBadge) { tdBadge.textContent = pending.length; tdBadge.style.display = ''; }
             }
           } else {
             console.warn('[portal] tax-deliveries status:', tdRes.status);
