@@ -858,13 +858,15 @@
         if (s.needs_changes_at) return '<span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.72rem;background:rgba(245,101,101,0.1);color:var(--red);border:1px solid rgba(245,101,101,0.3);">↩ ' + name + ' — Changes Requested</span>';
         return '<span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.72rem;background:rgba(237,137,54,0.1);color:var(--orange);border:1px solid rgba(237,137,54,0.25);">⏳ ' + name + '</span>';
       }).join(' ');
-      // Show change request notes if any
-      const changeNotes = signers.filter(s => s.needs_changes_at && s.needs_changes_note).map(s =>
-        '<div style="margin-top:0.5rem;padding:0.6rem 0.85rem;background:rgba(245,101,101,0.07);border:1px solid rgba(245,101,101,0.2);border-radius:6px;font-size:0.82rem;">' +
-          '<span style="font-weight:700;color:var(--red);">↩ Changes requested by ' + esc(s.person_name) + ':</span> ' +
-          '<span style="color:var(--text);">' + esc(s.needs_changes_note) + '</span>' +
-        '</div>'
-      ).join('');
+      // Show change request notes — check signer record first, fall back to delivery-level note
+      const changeNoteText = (signers.find(s => s.needs_changes_note) || {}).needs_changes_note || d.needs_changes_note || '';
+      const changeNoteAuthor = (signers.find(s => s.needs_changes_at) || {}).person_name || 'Client';
+      const changeNotes = changeNoteText
+        ? '<div style="margin-top:0.5rem;padding:0.6rem 0.85rem;background:rgba(245,101,101,0.07);border:1px solid rgba(245,101,101,0.2);border-radius:6px;font-size:0.82rem;">' +
+            '<span style="font-weight:700;color:var(--red);">↩ ' + esc(changeNoteAuthor) + ':</span> ' +
+            '<span style="color:var(--text);">' + esc(changeNoteText) + '</span>' +
+          '</div>'
+        : '';
       // Doc links for signed/sent deliveries
       const signedDocs = signers.filter(s => s.signed_doc_id).map(s =>
         `<button class="btn btn-outline btn-sm" onclick="downloadDeliveryDoc(${s.signed_doc_id})" title="Signed by ${esc(s.person_name)}">⬇ Signed (${esc((s.person_name||'').split(' ')[0])})</button>`
