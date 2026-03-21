@@ -183,50 +183,49 @@
 
 <style>
     #tab-communication.active { display:flex !important; flex-direction:column; }
-    .comm-layout { display:flex; flex:1; overflow:hidden; min-height:0; }
-    .comm-left { width:320px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; }
-    .comm-left-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
-    .comm-left-header h3 { font-size:0.9rem; font-weight:700; color:var(--text); margin:0; }
-    .comm-thread-list-inner { flex:1; overflow-y:auto; }
-    .comm-thread-item { display:flex; align-items:flex-start; gap:0.75rem; padding:0.85rem 1rem; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; transition:background 0.12s; }
-    .comm-thread-item:hover { background:rgba(255,255,255,0.03); }
-    .comm-thread-item.active { background:rgba(201,168,76,0.07); border-left:3px solid var(--gold); padding-left:calc(1rem - 3px); }
-    .comm-avatar { width:36px; height:36px; border-radius:50%; background:rgba(201,168,76,0.15); color:var(--gold); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.8rem; flex-shrink:0; }
-    .comm-thread-info { flex:1; min-width:0; }
-    .comm-thread-subject { font-size:0.85rem; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .comm-thread-preview { font-size:0.76rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:0.15rem; }
-    .comm-thread-meta { display:flex; align-items:center; gap:0.4rem; margin-top:0.3rem; }
-    .comm-thread-date { font-size:0.7rem; color:var(--muted); margin-left:auto; flex-shrink:0; }
-    .comm-status-pill { font-size:0.65rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:3px; text-transform:uppercase; }
-    .comm-right { flex:1; display:flex; flex-direction:column; min-width:0; }
-    .comm-right-header { padding:0.85rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:1rem; flex-shrink:0; background:var(--shell); }
-    .comm-right-subject { font-size:1rem; font-weight:700; color:var(--text); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .comm-messages-area { flex:1; overflow-y:auto; min-height:0; padding:1.25rem; display:flex; flex-direction:column; gap:0.75rem; }
-    .comm-bubble-wrap { display:flex; flex-direction:column; }
-    .comm-bubble-wrap.staff { align-items:flex-start; }
-    .comm-bubble-wrap.client { align-items:flex-end; }
-    .comm-bubble-wrap.internal { align-items:flex-start; }
-    .comm-bubble { max-width:75%; padding:0.6rem 0.9rem; border-radius:14px; font-size:0.9rem; line-height:1.5; word-break:break-word; }
-    .comm-bubble.staff { background:var(--card); color:var(--text); border:1px solid var(--border); }
-    .comm-bubble.client { background:var(--gold); color:#0f1117; }
-    .comm-bubble.internal { background:rgba(201,168,76,0.08); color:var(--text); border:1px dashed rgba(201,168,76,0.4); }
-    .comm-bubble-meta { font-size:0.68rem; color:var(--muted); margin-top:0.15rem; }
-    .comm-msg-attachments { display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.5rem; }
-    .comm-attach-chip { display:inline-flex; align-items:center; gap:0.35rem; background:rgba(0,0,0,0.25); border:1px solid rgba(0,0,0,0.2); border-radius:6px; padding:0.25rem 0.6rem; font-size:0.73rem; color:#fff; text-decoration:none; cursor:pointer; font-weight:500; }
-    .comm-attach-chip:hover { background:rgba(0,0,0,0.4); }
-    .comm-compose-area { border-top:1px solid var(--border); padding:1rem 1.25rem; flex-shrink:0; background:var(--shell); }
-    .comm-compose-controls { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; }
-    .comm-compose-toolbar { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem; flex-wrap:wrap; }
-    .comm-toolbar-btn { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:0.2rem 0.5rem; font-size:0.78rem; cursor:pointer; transition:border-color 0.15s,color 0.15s; }
-    .comm-toolbar-btn:hover { border-color:var(--gold); color:var(--gold); }
-    .comm-reply-input { width:100%; background:var(--card); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:0.7rem 0.9rem; font-size:0.88rem; resize:vertical; min-height:80px; outline:none; font-family:inherit; transition:border-color 0.15s; }
-    .comm-reply-input:focus { border-color:var(--gold); }
-    .comm-attach-preview { display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.4rem; }
-    .comm-compose-footer { display:flex; align-items:center; gap:0.75rem; margin-top:0.6rem; }
-    .comm-internal-label { display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:var(--muted); cursor:pointer; user-select:none; }
-    .comm-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; color:var(--muted); gap:0.5rem; }
-    .comm-empty-icon { font-size:2.5rem; }
-    @media(max-width:700px) { .comm-left { width:240px; } }
+    #tab-communication .comm-layout { display:flex; flex:1; overflow:hidden; min-height:0; }
+    #tab-communication .comm-left { width:320px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; }
+    #tab-communication .comm-left-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    #tab-communication .comm-left-header h3 { font-size:0.9rem; font-weight:700; color:var(--text); margin:0; }
+    #tab-communication .comm-thread-list-inner { flex:1; overflow-y:auto; }
+    #tab-communication .comm-thread-item { display:flex; align-items:flex-start; gap:0.75rem; padding:0.85rem 1rem; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; transition:background 0.12s; }
+    #tab-communication .comm-thread-item:hover { background:rgba(255,255,255,0.03); }
+    #tab-communication .comm-thread-item.active { background:rgba(201,168,76,0.07); border-left:3px solid var(--gold); padding-left:calc(1rem - 3px); }
+    #tab-communication .comm-avatar { width:36px; height:36px; border-radius:50%; background:rgba(201,168,76,0.15); color:var(--gold); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.8rem; flex-shrink:0; }
+    #tab-communication .comm-thread-info { flex:1; min-width:0; }
+    #tab-communication .comm-thread-subject { font-size:0.85rem; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #tab-communication .comm-thread-preview { font-size:0.76rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:0.15rem; }
+    #tab-communication .comm-thread-meta { display:flex; align-items:center; gap:0.4rem; margin-top:0.3rem; }
+    #tab-communication .comm-thread-date { font-size:0.7rem; color:var(--muted); margin-left:auto; flex-shrink:0; }
+    #tab-communication .comm-status-pill { font-size:0.65rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:3px; text-transform:uppercase; }
+    #tab-communication .comm-right { flex:1; display:flex; flex-direction:column; min-width:0; }
+    #tab-communication .comm-right-header { padding:0.85rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:1rem; flex-shrink:0; background:var(--shell); }
+    #tab-communication .comm-right-subject { font-size:1rem; font-weight:700; color:var(--text); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #tab-communication .comm-messages-area { flex:1; overflow-y:auto; min-height:0; padding:1.25rem; display:flex; flex-direction:column; gap:0.75rem; }
+    #tab-communication .comm-bubble-wrap { display:flex; flex-direction:column; }
+    #tab-communication .comm-bubble-wrap.staff { align-items:flex-start; }
+    #tab-communication .comm-bubble-wrap.client { align-items:flex-end; }
+    #tab-communication .comm-bubble-wrap.internal { align-items:flex-start; }
+    #tab-communication .comm-bubble { max-width:75%; padding:0.6rem 0.9rem; border-radius:14px; font-size:0.9rem; line-height:1.5; word-break:break-word; }
+    #tab-communication .comm-bubble.staff { background:var(--card); color:var(--text); border:1px solid var(--border); }
+    #tab-communication .comm-bubble.client { background:var(--gold); color:#0f1117; }
+    #tab-communication .comm-bubble.internal { background:rgba(201,168,76,0.08); color:var(--text); border:1px dashed rgba(201,168,76,0.4); }
+    #tab-communication .comm-bubble-meta { font-size:0.68rem; color:var(--muted); margin-top:0.15rem; }
+    #tab-communication .comm-msg-attachments { display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.5rem; }
+    #tab-communication .comm-attach-chip { display:inline-flex; align-items:center; gap:0.35rem; background:rgba(0,0,0,0.25); border:1px solid rgba(0,0,0,0.2); border-radius:6px; padding:0.25rem 0.6rem; font-size:0.73rem; color:#fff; text-decoration:none; cursor:pointer; font-weight:500; }
+    #tab-communication .comm-attach-chip:hover { background:rgba(0,0,0,0.4); }
+    #tab-communication .comm-compose-area { border-top:1px solid var(--border); padding:1rem 1.25rem; flex-shrink:0; background:var(--shell); }
+    #tab-communication .comm-compose-controls { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; }
+    #tab-communication .comm-toolbar-btn { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:0.2rem 0.5rem; font-size:0.78rem; cursor:pointer; transition:border-color 0.15s,color 0.15s; }
+    #tab-communication .comm-toolbar-btn:hover { border-color:var(--gold); color:var(--gold); }
+    #tab-communication .comm-reply-input { width:100%; background:var(--card); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:0.7rem 0.9rem; font-size:0.88rem; resize:none; outline:none; font-family:inherit; transition:border-color 0.15s; }
+    #tab-communication .comm-reply-input:focus { border-color:var(--gold); }
+    #tab-communication .comm-attach-preview { display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.4rem; }
+    #tab-communication .comm-compose-footer { display:flex; align-items:center; gap:0.75rem; margin-top:0.6rem; }
+    #tab-communication .comm-internal-label { display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:var(--muted); cursor:pointer; user-select:none; }
+    #tab-communication .comm-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; color:var(--muted); gap:0.5rem; }
+    #tab-communication .comm-empty-icon { font-size:2.5rem; }
+    @media(max-width:700px) { #tab-communication .comm-left { width:240px; } }
   </style>
 
 <div id="tab-communication" class="tab-content" style="padding:0;display:flex;flex-direction:column;overflow:hidden;">
