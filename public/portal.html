@@ -1859,9 +1859,13 @@
         // Sort by date
         freshMessages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-        // Only update UI now that we have the full dataset
-        _chatAllMessages = freshMessages;
-        renderChatMessages();
+        // Only re-render if data actually changed
+        const freshJson = JSON.stringify(freshMessages.map(m => m.id));
+        const currentJson = JSON.stringify(_chatAllMessages.map(m => m.id));
+        if (freshJson !== currentJson) {
+          _chatAllMessages = freshMessages;
+          renderChatMessages();
+        }
 
         // Update tab unread badge
         const unread = threads.reduce((acc, t) => acc + (t.unreadCount || 0), 0);
