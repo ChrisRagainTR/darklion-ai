@@ -330,6 +330,27 @@ router.post('/:id/send', async (req, res) => {
 });
 
 // ── DELETE /tax-deliveries/:id ────────────────────────────────────────────
+// ── POST /tax-deliveries/:id/cancel ──────────────────────────────────────
+router.post('/:id/cancel', async (req, res) => {
+  const firmId = req.firm.id;
+  const id = parseInt(req.params.id);
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, status FROM tax_deliveries WHERE id = $1 AND firm_id = $2',
+      [id, firmId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Delivery not found' });
+    if (rows[0].status === 'complete') return res.status(400).json({ error: 'Cannot cancel a completed delivery' });
+    await pool.query(
+      "UPDATE tax_deliveries SET status = 'draft', updated_at = NOW() WHERE id = $1",
+      [id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.delete('/:id', async (req, res) => {
   const firmId = req.firm.id;
   const id = parseInt(req.params.id);
