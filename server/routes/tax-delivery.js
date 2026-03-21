@@ -174,22 +174,17 @@ router.get('/:id', async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT td.*, co.company_name,
-         (SELECT json_agg(
-           json_build_object(
-             'id', tds.id,
-             'person_id', tds.person_id,
-             'approved_at', tds.approved_at,
-             'approved_ip', tds.approved_ip,
-             'signed_at', tds.signed_at,
-             'signed_ip', tds.signed_ip,
-             'signature_type', tds.signature_type,
-             'needs_changes_at', tds.needs_changes_at,
-             'needs_changes_note', tds.needs_changes_note,
-             'first_name', p.first_name,
-             'last_name', p.last_name,
-             'email', p.email
-           )
-         ) FROM tax_delivery_signers tds JOIN people p ON p.id = tds.person_id WHERE tds.delivery_id = td.id) AS signers,
+         (SELECT json_agg(row_to_json(x)) FROM (
+           SELECT tds.id, tds.person_id, tds.approved_at, tds.approved_ip,
+                  tds.signed_at, tds.signed_ip, tds.signature_type,
+                  tds.needs_changes_at, tds.needs_changes_note,
+                  tds.signed_doc_id,
+                  p.first_name, p.last_name, p.email,
+                  p.first_name || ' ' || p.last_name AS person_name
+           FROM tax_delivery_signers tds
+           JOIN people p ON p.id = tds.person_id
+           WHERE tds.delivery_id = td.id
+         ) x) AS signers,
          rd.display_name AS review_doc_name,
          sd.display_name AS signature_doc_name
        FROM tax_deliveries td
