@@ -2218,10 +2218,14 @@
 
       try {
         const res = await fetch('/portal/tax-deliveries', { headers: authHeader() });
-        if (!res.ok) throw new Error('Failed');
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          loading.innerHTML = `<p style="color:var(--red,#f56565);text-align:center;">Error ${res.status}: ${errBody.error || 'Failed to load'}</p>`;
+          return;
+        }
         _taxDeliveries = await res.json();
       } catch(e) {
-        loading.innerHTML = '<p style="color:var(--muted);text-align:center;">Unable to load. Please refresh.</p>';
+        loading.innerHTML = `<p style="color:var(--red,#f56565);text-align:center;">Network error: ${e.message}</p>`;
         return;
       }
 
