@@ -1405,7 +1405,10 @@
   loadPerson().then(function() {
     var urlTab = new URLSearchParams(window.location.search).get('tab');
     if (urlTab) {
-      var tabEl = document.querySelector('[onclick*="switchTab(\'' + urlTab + '\'"]');
+      var tabEl = null;
+      document.querySelectorAll('.tab-item').forEach(function(t) {
+        if (t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'" + urlTab + "'") !== -1) tabEl = t;
+      });
       switchTab(urlTab, tabEl);
     }
   });
