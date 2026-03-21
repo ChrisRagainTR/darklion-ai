@@ -857,11 +857,19 @@
     }
   }
 
+  const ENTITY_LABELS = {
+    s_corp: 'S-Corporation', c_corp: 'C-Corporation', llc: 'LLC',
+    partnership: 'Partnership', sole_prop: 'Sole Proprietorship',
+    trust: 'Trust', nonprofit: 'Non-Profit', '1040': '1040 (Individual)',
+    other: 'Other'
+  };
+  function etLabel(t) { return ENTITY_LABELS[t] || (t ? t.replace(/_/g,' ') : ''); }
+
   function renderHeader(c) {
     document.title = `${c.company_name} — DarkLion`;
     document.getElementById('entity-name').textContent = c.company_name || 'Unnamed Company';
     let html = `<span class="badge badge-muted">Company</span>`;
-    if (c.entity_type) html += ` <span class="badge badge-muted">${esc(c.entity_type)}</span>`;
+    if (c.entity_type) html += ` <span class="badge badge-muted">${esc(etLabel(c.entity_type))}</span>`;
     if (c.status === 'active') html += ` <span class="badge badge-green">Active</span>`;
     if (c.status === 'inactive') html += ` <span class="badge badge-muted">Inactive</span>`;
     if (c.status === 'dissolved') html += ` <span class="badge badge-red">Dissolved</span>`;
@@ -880,7 +888,7 @@
     const left = document.getElementById('overview-left');
     let html = `<div class="card">
       <div class="card-title">Company Details</div>
-      <div class="info-row"><span class="info-label">Entity Type</span><span class="info-val">${esc(c.entity_type || '—')}</span></div>
+      <div class="info-row"><span class="info-label">Entity Type</span><span class="info-val">${esc(etLabel(c.entity_type) || '—')}</span></div>
       <div class="info-row"><span class="info-label">Status</span><span class="info-val">${esc(c.status || 'active')}</span></div>
       <div class="info-row"><span class="info-label">Tax Year End</span><span class="info-val">${esc(c.tax_year_end || '—')}</span></div>
       <div class="info-row"><span class="info-label">QBO</span><span class="info-val">${c.realm_id ? '<span class="badge badge-green">Connected</span>' : '<span class="badge badge-muted">Not Connected</span>'}</span></div>
