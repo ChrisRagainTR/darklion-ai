@@ -1048,8 +1048,7 @@
       const res = await apiFetch('/api/tax-deliveries', { method: 'POST', body: JSON.stringify(body) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       closePersonDeliveryModal();
-      sessionStorage.setItem('openTab','tax');
-      setTimeout(function(){ window.location.reload(); }, 100);
+      var _tabEl = null; document.querySelectorAll('.tab-item').forEach(function(t){ if(t.getAttribute('onclick')&&t.getAttribute('onclick').indexOf("'tax'")!==-1) _tabEl=t; }); switchTab('tax', _tabEl);
     } catch(e) { document.getElementById('pd-error').textContent = e.message; document.getElementById('pd-error').style.display = ''; }
   }
 
@@ -1067,7 +1066,7 @@
     if (!await window.dlConfirm('Delete this draft delivery? This cannot be undone.', {title:'Delete Draft', confirmLabel:'Delete', danger:true, icon:'🗑️'})) return;
     try {
       await apiFetch('/api/tax-deliveries/' + id, { method: 'DELETE' });
-      sessionStorage.setItem('openTab','tax'); window.location.reload();
+      var _tabEl = null; document.querySelectorAll('.tab-item').forEach(function(t){ if(t.getAttribute('onclick')&&t.getAttribute('onclick').indexOf("'tax'")!==-1) _tabEl=t; }); switchTab('tax', _tabEl);
     } catch(e) { toast(e.message, 'error'); }
   }
 
@@ -1076,7 +1075,7 @@
     try {
       const res = await apiFetch('/api/tax-deliveries/' + id + '/cancel', { method: 'POST' });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
-      sessionStorage.setItem('openTab','tax'); window.location.reload();
+      var _tabEl = null; document.querySelectorAll('.tab-item').forEach(function(t){ if(t.getAttribute('onclick')&&t.getAttribute('onclick').indexOf("'tax'")!==-1) _tabEl=t; }); switchTab('tax', _tabEl);
     } catch(e) { toast(e.message, 'error'); }
   }
 
@@ -1115,7 +1114,7 @@
       const res = await apiFetch('/api/tax-deliveries/' + id, { method: 'PUT', body: JSON.stringify(body) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       closeEditDeliveryModal();
-      sessionStorage.setItem('openTab','tax'); window.location.reload();
+      var _tabEl = null; document.querySelectorAll('.tab-item').forEach(function(t){ if(t.getAttribute('onclick')&&t.getAttribute('onclick').indexOf("'tax'")!==-1) _tabEl=t; }); switchTab('tax', _tabEl);
     } catch(e) {
       document.getElementById('ed-error').textContent = e.message;
       document.getElementById('ed-error').style.display = '';
