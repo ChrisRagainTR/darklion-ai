@@ -176,7 +176,7 @@
 
   <!-- New Delivery Modal (person) -->
   <div class="modal-overlay hidden" id="person-delivery-modal">
-    <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:680px;">
       <h2>New Tax Delivery</h2>
       <div id="pd-error" style="display:none;color:var(--red);font-size:0.82rem;margin-bottom:0.75rem;"></div>
 
@@ -186,7 +186,7 @@
         </div>
         <div class="form-group"><label>Title</label><input type="text" class="form-control" id="pd-title" placeholder="e.g. 2024 Individual Return"></div>
       </div>
-      <div class="form-group"><label>Intro Note (shown to client)</label><textarea class="form-control" id="pd-intro" rows="5"></textarea></div>
+      <div class="form-group"><label>Message to Client <span style="font-weight:400;color:var(--muted);">(shown in the portal — edit as needed)</span></label><textarea class="form-control" id="pd-intro" rows="9" style="font-size:0.88rem;line-height:1.6;"></textarea></div>
       <div class="form-group"><label>Review Document (PDF for client to review)</label>
         <select class="form-control" id="pd-review-doc"><option value="">— Select document —</option></select>
       </div>
