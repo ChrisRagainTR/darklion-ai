@@ -247,14 +247,13 @@
         <div class="comm-right-header">
           <div class="comm-right-subject" id="comm-thread-subject">—</div>
           <select id="comm-status-select" onchange="updateThreadStatus()" style="font-size:0.78rem;background:var(--charcoal);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:0.25rem 0.5rem;flex-shrink:0;">
-            <option value="open">Open</option>
-            <option value="waiting">Waiting</option>
+            <option value="open">Active</option>
             <option value="resolved">Resolved</option>
           </select>
         </div>
         <div class="comm-messages-area" id="comm-messages-list"></div>
         <div class="comm-compose-area">
-          <textarea class="comm-reply-input" id="comm-reply-body" placeholder="Write a reply…"></textarea>
+          <textarea class="comm-reply-input" id="comm-reply-body" placeholder="Write a reply…" style="min-height:70px;max-height:160px;resize:none;"></textarea>
           <div class="comm-attach-preview" id="comm-attach-chips"></div>
           <input type="file" id="comm-attach-input" multiple style="display:none;" onchange="handleCommAttach(this.files)">
           <div class="comm-compose-footer">
@@ -273,10 +272,8 @@
           <div class="comm-right-subject">New Message</div>
           <button class="btn btn-outline btn-sm" onclick="closeCompose()">Cancel</button>
         </div>
-        <div style="padding:1.25rem;flex:1;overflow-y:auto;">
-          <div class="form-group">
-            <textarea id="comm-new-body" class="comm-reply-input" rows="10" placeholder="Write your message…" style="min-height:220px;"></textarea>
-          </div>
+        <div style="padding:1.25rem;flex:1;min-height:0;display:flex;flex-direction:column;">
+          <textarea id="comm-new-body" class="comm-reply-input" placeholder="Write your message…" style="flex:1;resize:none;min-height:0;"></textarea>
         </div>
         <div class="comm-compose-area">
           <div class="comm-compose-footer">
