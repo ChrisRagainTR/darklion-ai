@@ -333,9 +333,15 @@
   <div style="max-width:700px;">
     <div class="card">
       <div class="card-title">Stanford Tax Organizer</div>
-      <div id="org-stanford-link">
-        <div style="color:var(--muted);font-size:0.86rem;">No Stanford Tax URL set. Edit the person to add one.</div>
+      <div id="org-stanford-link" style="margin-bottom:1rem;"></div>
+      <div style="display:flex;gap:0.75rem;align-items:flex-end;">
+        <div class="form-group" style="flex:1;margin:0;">
+          <label style="font-size:0.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:0.35rem;">Organizer URL</label>
+          <input type="url" id="stanford-url-input" class="form-control" placeholder="https://..." style="font-size:0.88rem;">
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="saveStanfordUrl()">Save</button>
       </div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem;">Paste the client's Stanford Tax organizer link. It will also appear in their portal.</div>
     </div>
   </div>
 </div>
@@ -448,9 +454,13 @@
     if (name === 'docs') loadDocs();
     if (name === 'tax') loadTax(true);
     if (name === 'communication') initComm(personData?.id || personId);
-    if (name === 'organizers' && personData && personData.stanford_tax_url) {
+    if (name === 'organizers') {
+      const urlInput = document.getElementById('stanford-url-input');
+      if (urlInput && personData) urlInput.value = personData.stanford_tax_url || '';
       const el = document.getElementById('org-stanford-link');
-      if (el) el.innerHTML = `<a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
+      if (el && personData && personData.stanford_tax_url) {
+        el.innerHTML = `<a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
+      }
     }
     if (name === 'notes' && personData) document.getElementById('notes-ta-full').value = personData.notes || '';
     if (name === 'workflow') loadWorkflow();
@@ -787,6 +797,18 @@
       window.openUploadModal(file);
     });
   })();
+
+  async function saveStanfordUrl() {
+    const url = document.getElementById('stanford-url-input').value.trim();
+    try {
+      await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify({ stanford_tax_url: url }) });
+      if (personData) personData.stanford_tax_url = url;
+      const el = document.getElementById('org-stanford-link');
+      if (el && url) el.innerHTML = `<a href="${esc(url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
+      else if (el) el.innerHTML = '';
+      toast('Organizer URL saved');
+    } catch(e) { toast(e.message, 'error'); }
+  }
 
   async function autoSaveNotes(val, force) {
     try {
