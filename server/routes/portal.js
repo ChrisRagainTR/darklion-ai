@@ -295,35 +295,29 @@ router.get('/firm-team', async (req, res) => {
   const personId = req.portal.personId;
   const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
   try {
+    // All active firm staff, left-joined with message counts for this client.
+    // Owner(s) first (sort_order = 1), then everyone else sorted by message count desc.
+    // Staff who've never messaged this client are still included (count = 0).
     const { rows: rawRows } = await pool.query(
-      `(SELECT fu.id, COALESCE(fu.display_name, fu.name, fu.email) AS name, fu.email, fu.avatar_url, fu.credentials, fu.role, 0 AS sort_order
-        FROM firm_users fu
-        WHERE fu.firm_id = $1 AND fu.role = 'owner' AND fu.accepted_at IS NOT NULL
-        LIMIT 1)
-       UNION ALL
-       (SELECT fu.id, COALESCE(fu.display_name, fu.name, fu.email) AS name, fu.email, fu.avatar_url, fu.credentials, fu.role,
-               COUNT(m.id) AS sort_order
-        FROM messages m
-        JOIN message_threads mt ON mt.id = m.thread_id
-        JOIN firm_users fu ON fu.id = m.sender_id
-        WHERE mt.person_id = $2 AND m.sender_type = 'staff' AND m.is_internal = false
-          AND fu.firm_id = $1 AND fu.role != 'owner'
-        GROUP BY fu.id, fu.display_name, fu.name, fu.email, fu.avatar_url, fu.credentials, fu.role
-        ORDER BY COUNT(m.id) DESC
-        LIMIT 4)`,
+      `SELECT fu.id,
+              COALESCE(fu.display_name, fu.name, fu.email) AS name,
+              fu.email, fu.avatar_url, fu.credentials, fu.role,
+              COALESCE(msg_counts.msg_count, 0) AS sort_order,
+              CASE WHEN fu.role = 'owner' THEN 0 ELSE 1 END AS role_order
+       FROM firm_users fu
+       LEFT JOIN (
+         SELECT m.sender_id, COUNT(m.id) AS msg_count
+         FROM messages m
+         JOIN message_threads mt ON mt.id = m.thread_id
+         WHERE mt.person_id = $2 AND m.sender_type = 'staff' AND m.is_internal = false
+         GROUP BY m.sender_id
+       ) msg_counts ON msg_counts.sender_id = fu.id
+       WHERE fu.firm_id = $1 AND fu.accepted_at IS NOT NULL
+       ORDER BY role_order ASC, sort_order DESC
+       LIMIT 5`,
       [firmId, personId]
     );
-
-    // Deduplicate by id (owner may also appear in messages half), cap at 5
-    const seen = new Set();
-    const merged = [];
-    for (const row of rawRows) {
-      if (!seen.has(row.id)) {
-        seen.add(row.id);
-        merged.push(row);
-        if (merged.length >= 5) break;
-      }
-    }
+    const merged = rawRows;
 
     const result = await Promise.all(merged.map(async (member) => {
       let avatar_url = null;
