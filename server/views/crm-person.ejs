@@ -154,6 +154,26 @@
   </div>
   <div id="tax-content" style="padding:1.5rem;"></div>
 
+  <!-- Edit Delivery Docs Modal -->
+  <div class="modal-overlay hidden" id="edit-delivery-modal">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">
+      <h2>Update Delivery Documents</h2>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">Select new documents to replace the existing ones, then resend.</p>
+      <input type="hidden" id="ed-id" />
+      <div class="form-group"><label>Review Document (PDF for client to review)</label>
+        <select class="form-control" id="ed-review-doc"><option value="">— No change —</option></select>
+      </div>
+      <div class="form-group"><label>Signature Document (8879 / signature pages)</label>
+        <select class="form-control" id="ed-sig-doc"><option value="">— No change —</option></select>
+      </div>
+      <div id="ed-error" style="display:none;color:var(--red);font-size:0.82rem;margin-bottom:0.5rem;"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeEditDeliveryModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="submitEditDelivery()">Save & Ready to Send</button>
+      </div>
+    </div>
+  </div>
+
   <!-- New Delivery Modal (person) -->
   <div class="modal-overlay hidden" id="person-delivery-modal">
     <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
@@ -885,6 +905,7 @@
           </div>
           <div style="display:flex;gap:0.5rem;flex-shrink:0;flex-wrap:wrap;">
             ${d.status === 'draft' ? `<button class="btn btn-gold btn-sm" onclick="personSendDelivery(${d.id})">Send →</button>` : ''}
+            ${d.status === 'draft' ? `<button class="btn btn-outline btn-sm" onclick="openEditDeliveryModal(${d.id},${d.review_doc_id||'null'},${d.sig_doc_id||d.signature_doc_id||'null'})">✏️ Edit Docs</button>` : ''}
             ${d.status === 'draft' ? `<button class="btn btn-outline btn-sm" onclick="personDeleteDelivery(${d.id})">Delete</button>` : ''}
             ${['sent','approved','needs_changes'].includes(d.status) ? `<button class="btn btn-outline btn-sm" onclick="personCancelDelivery(${d.id})" style="color:var(--orange);border-color:var(--orange);">↩ Cancel & Revise</button>` : ''}
           </div>
@@ -1003,6 +1024,49 @@
       toast('Delivery cancelled — returned to draft');
       setTimeout(function(){ window.location.href = window.location.pathname + '?tab=tax'; }, 600);
     } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function openEditDeliveryModal(deliveryId, currentReviewDocId, currentSigDocId) {
+    document.getElementById('ed-id').value = deliveryId;
+    document.getElementById('ed-error').style.display = 'none';
+    // Load all person docs for selection
+    try {
+      const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${personId}`);
+      const docs = await res.json();
+      const pdfDocs = docs.filter(d => (d.mime_type||'').includes('pdf') || (d.display_name||'').toLowerCase().endsWith('.pdf'));
+      const opts = '<option value="">— No change —</option>' + pdfDocs.map(d =>
+        `<option value="${d.id}" ${d.id == currentReviewDocId ? 'selected' : ''}>${esc(d.display_name||'Document')} (${d.year||'?'})</option>`
+      ).join('');
+      document.getElementById('ed-review-doc').innerHTML = opts;
+      const sigOpts = '<option value="">— No change —</option>' + pdfDocs.map(d =>
+        `<option value="${d.id}" ${d.id == currentSigDocId ? 'selected' : ''}>${esc(d.display_name||'Document')} (${d.year||'?'})</option>`
+      ).join('');
+      document.getElementById('ed-sig-doc').innerHTML = sigOpts;
+    } catch(e) {}
+    document.getElementById('edit-delivery-modal').classList.remove('hidden');
+  }
+
+  function closeEditDeliveryModal() {
+    document.getElementById('edit-delivery-modal').classList.add('hidden');
+  }
+
+  async function submitEditDelivery() {
+    const id = document.getElementById('ed-id').value;
+    const reviewDocId = document.getElementById('ed-review-doc').value;
+    const sigDocId = document.getElementById('ed-sig-doc').value;
+    const body = {};
+    if (reviewDocId) body.review_doc_id = parseInt(reviewDocId);
+    if (sigDocId) body.signature_doc_id = parseInt(sigDocId);
+    try {
+      const res = await apiFetch('/api/tax-deliveries/' + id, { method: 'PUT', body: JSON.stringify(body) });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      closeEditDeliveryModal();
+      toast('Documents updated — ready to send');
+      setTimeout(function(){ window.location.href = window.location.pathname + '?tab=tax'; }, 600);
+    } catch(e) {
+      document.getElementById('ed-error').textContent = e.message;
+      document.getElementById('ed-error').style.display = '';
+    }
   }
 
   async function downloadDeliveryDoc(docId) {

@@ -361,7 +361,12 @@ router.post('/:id/cancel', async (req, res) => {
       [id]
     );
     await pool.query(
-      "UPDATE tax_deliveries SET status = 'draft', updated_at = NOW() WHERE id = $1",
+      "UPDATE tax_deliveries SET status = 'draft', updated_at = NOW(), needs_changes_note = '' WHERE id = $1",
+      [id]
+    );
+    // Clear signer needs_changes so they start fresh
+    await pool.query(
+      "UPDATE tax_delivery_signers SET needs_changes_at = NULL, needs_changes_note = '', approved_at = NULL WHERE delivery_id = $1",
       [id]
     );
     // Un-deliver the docs
