@@ -328,8 +328,19 @@ async function start() {
 
   const httpServer = http.createServer(app);
 
+  // Socket.io CORS: can't use wildcard with credentials — use same allowed origins as HTTP
+  const socketCorsOrigins = IS_PROD
+    ? ['https://darklion.ai', 'https://www.darklion.ai']
+    : ['http://localhost:8080', 'http://127.0.0.1:8080'];
+
   const io = new Server(httpServer, {
-    cors: { origin: '*', credentials: true },
+    cors: {
+      origin: socketCorsOrigins,
+      credentials: true,
+    },
+    // Allow polling fallback in case WS upgrade is blocked by proxy
+    transports: ['websocket', 'polling'],
+    allowEIO3: true,
   });
 
   // Socket auth middleware — accepts both firm JWTs and portal JWTs
