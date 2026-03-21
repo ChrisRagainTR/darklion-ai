@@ -216,6 +216,7 @@
     .comm-attach-chip { display:inline-flex; align-items:center; gap:0.35rem; background:rgba(0,0,0,0.25); border:1px solid rgba(0,0,0,0.2); border-radius:6px; padding:0.25rem 0.6rem; font-size:0.73rem; color:#fff; text-decoration:none; cursor:pointer; font-weight:500; }
     .comm-attach-chip:hover { background:rgba(0,0,0,0.4); }
     .comm-compose-area { border-top:1px solid var(--border); padding:1rem 1.25rem; flex-shrink:0; background:var(--shell); }
+    .comm-compose-controls { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; }
     .comm-compose-toolbar { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem; flex-wrap:wrap; }
     .comm-toolbar-btn { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:0.2rem 0.5rem; font-size:0.78rem; cursor:pointer; transition:border-color 0.15s,color 0.15s; }
     .comm-toolbar-btn:hover { border-color:var(--gold); color:var(--gold); }
@@ -252,16 +253,16 @@
         </div>
         <div class="comm-messages-area" id="comm-messages-list"></div>
         <div class="comm-compose-area">
-          <textarea class="comm-reply-input" id="comm-reply-body" placeholder="Write a reply…" style="min-height:70px;max-height:160px;resize:none;"></textarea>
+          <div class="comm-compose-controls">
+            <label class="comm-internal-label"><input type="checkbox" id="comm-internal-toggle"> 🔒 Internal note</label>
+          </div>
+          <textarea class="comm-reply-input" id="comm-reply-body" placeholder="Write a reply…" rows="3"></textarea>
           <div class="comm-attach-preview" id="comm-attach-chips"></div>
           <input type="file" id="comm-attach-input" multiple style="display:none;" onchange="handleCommAttach(this.files)">
           <div class="comm-compose-footer">
             <button class="btn btn-gold btn-sm" onclick="sendReply()">Send Reply</button>
             <button class="comm-toolbar-btn" onclick="document.getElementById('comm-attach-input').click()">📎 Attach</button>
-            <label class="comm-internal-label" style="margin-left:auto;">
-              <input type="checkbox" id="comm-internal-toggle" style="cursor:pointer;">
-              <span>Internal note</span>
-            </label>
+            <button class="btn btn-outline btn-sm" onclick="updateThreadStatus('resolved')" style="margin-left:auto;">✅ Resolve</button>
           </div>
         </div>
       </div>
@@ -271,12 +272,15 @@
           <div class="comm-right-subject">New Message</div>
           <button class="btn btn-outline btn-sm" onclick="closeCompose()">Cancel</button>
         </div>
-        <div style="padding:1.25rem;flex:1;min-height:0;display:flex;flex-direction:column;">
-          <textarea id="comm-new-body" class="comm-reply-input" placeholder="Write your message…" style="flex:1;resize:none;min-height:0;"></textarea>
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;">
+          <textarea id="comm-new-body" class="comm-reply-input" placeholder="Write your message…" style="flex:1;resize:none;min-height:0;margin:1rem 1.25rem 0;"></textarea>
         </div>
         <div class="comm-compose-area">
+          <div class="comm-attach-preview" id="comm-new-attach-chips"></div>
+          <input type="file" id="comm-new-attach-input" multiple style="display:none;" onchange="handleNewCommAttach(this.files)">
           <div class="comm-compose-footer">
             <button class="btn btn-gold btn-sm" onclick="sendNewThread()">Send Message</button>
+            <button class="comm-toolbar-btn" onclick="document.getElementById('comm-new-attach-input').click()">📎 Attach</button>
           </div>
         </div>
       </div>
@@ -1041,6 +1045,8 @@
     return (b/1048576).toFixed(1) + ' MB';
   }
 
+  let commNewAttachFiles = [];
+
   function handleCommAttach(fileList) {
     for (const f of Array.from(fileList)) {
       if (commAttachFiles.length >= 8) { alert('Maximum 8 files per message'); break; }
@@ -1048,6 +1054,28 @@
     }
     document.getElementById('comm-attach-input').value = '';
     renderCommAttachChips();
+  }
+
+  function handleNewCommAttach(fileList) {
+    for (const f of Array.from(fileList)) {
+      if (commNewAttachFiles.length >= 8) { alert('Maximum 8 files per message'); break; }
+      commNewAttachFiles.push(f);
+    }
+    document.getElementById('comm-new-attach-input').value = '';
+    renderNewCommAttachChips();
+  }
+
+  function removeNewCommAttachFile(idx) {
+    commNewAttachFiles.splice(idx, 1);
+    renderNewCommAttachChips();
+  }
+
+  function renderNewCommAttachChips() {
+    const el = document.getElementById('comm-new-attach-chips');
+    if (!el) return;
+    el.innerHTML = commNewAttachFiles.map((f, i) =>
+      `<span style="display:inline-flex;align-items:center;gap:0.3rem;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:4px;padding:0.15rem 0.5rem;font-size:0.75rem;color:var(--text);">📎 ${esc(f.name)} <button onclick="removeNewCommAttachFile(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;padding:0;line-height:1;">×</button></span>`
+    ).join('');
   }
 
   function removeCommAttachFile(idx) {
@@ -1092,10 +1120,11 @@
     } catch(e) { console.error('[comm] sendReply error:', e); toast('Failed to send reply: ' + e.message, 'error'); }
   }
 
-  async function updateThreadStatus() {
+  async function updateThreadStatus(forceStatus) {
     if (!commActiveThreadId) return;
-    const status = document.getElementById('comm-status-select').value;
+    const status = forceStatus || document.getElementById('comm-status-select').value;
     await apiFetch(`/api/messages/${commActiveThreadId}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
+    if (forceStatus === 'resolved') commShowEmpty();
     await loadThreads();
   }
 
@@ -1110,10 +1139,22 @@
 
   async function sendNewThread() {
     const body = document.getElementById('comm-new-body').value.trim();
-    if (!body) { toast('Message body is required', 'error'); return; }
+    if (!body && commNewAttachFiles.length === 0) { toast('Message body is required', 'error'); return; }
     try {
+      // Create thread first
       const res = await apiFetch('/api/messages', { method: 'POST', body: JSON.stringify({ person_id: commPersonId, subject: '', body, is_internal: false }) });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      // Send attachments as a reply if any
+      if (commNewAttachFiles.length > 0 && data.threadId) {
+        const fd = new FormData();
+        fd.append('body', '');
+        commNewAttachFiles.forEach(f => fd.append('files', f));
+        await apiFetch(`/api/messages/${data.threadId}/reply`, { method: 'POST', body: fd });
+      }
+      document.getElementById('comm-new-body').value = '';
+      commNewAttachFiles = [];
+      renderNewCommAttachChips();
       closeCompose();
       await loadThreads();
       if (data.threadId) loadThread(data.threadId);
