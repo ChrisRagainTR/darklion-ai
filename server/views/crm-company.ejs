@@ -2576,6 +2576,7 @@
 
 
   // ── Communication JS (matches person CRM comm tab) ──
+  let commCoId = null;
   let commCoActiveThreadId = null;
   let coCommAttachFiles = [];
   let coCommNewAttachFiles = [];
@@ -2585,6 +2586,8 @@
     document.getElementById('comm-co-compose-view').style.display = 'none';
     document.getElementById('comm-co-detail-header').innerHTML = '';
     document.getElementById('comm-co-detail-messages').innerHTML = '';
+    document.getElementById('comm-co-reply-body').value = '';
+    commCoActiveThreadId = null;
   }
   function coCommShowDetail() {
     document.getElementById('comm-co-no-thread').style.display = 'none';
