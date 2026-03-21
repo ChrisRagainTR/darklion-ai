@@ -2294,10 +2294,8 @@
     function closeTaxDeliveryFlow() {
       document.getElementById('tax-delivery-overlay').style.display = 'none';
       _currentDelivery = null;
-      // Refresh the list
-      loadTaxDeliveries().catch(() => {});
-      // Update badge
-      loadTaxDeliveriesInit().catch(() => {});
+      // Reload page so tab state is fresh
+      window.location.reload();
     }
     window.closeTaxDeliveryFlow = closeTaxDeliveryFlow;
 

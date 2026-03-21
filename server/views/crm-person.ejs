@@ -1045,7 +1045,7 @@
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       closePersonDeliveryModal();
       toast('Delivery created');
-      setTimeout(function(){ window.location.href = window.location.pathname + '?tab=tax'; }, 600);
+      sessionStorage.setItem('openTab','tax'); setTimeout(function(){ window.location.reload(); }, 600);
     } catch(e) { document.getElementById('pd-error').textContent = e.message; document.getElementById('pd-error').style.display = ''; }
   }
 
@@ -1055,7 +1055,7 @@
       const res = await apiFetch('/api/tax-deliveries/' + id + '/send', { method: 'POST', body: '{}' });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Delivery sent to client');
-      setTimeout(function(){ window.location.href = window.location.pathname + '?tab=tax'; }, 800);
+      sessionStorage.setItem('openTab','tax'); setTimeout(function(){ window.location.reload(); }, 800);
     } catch(e) { toast(e.message, 'error'); }
   }
 
@@ -1064,7 +1064,7 @@
     try {
       await apiFetch('/api/tax-deliveries/' + id, { method: 'DELETE' });
       toast('Deleted');
-      setTimeout(function(){ window.location.href = window.location.pathname + '?tab=tax'; }, 600);
+      sessionStorage.setItem('openTab','tax'); setTimeout(function(){ window.location.reload(); }, 600);
     } catch(e) { toast(e.message, 'error'); }
   }
 
@@ -1074,7 +1074,7 @@
       const res = await apiFetch('/api/tax-deliveries/' + id + '/cancel', { method: 'POST' });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Delivery cancelled — returned to draft');
-      setTimeout(function(){ window.location.href = window.location.pathname + '?tab=tax'; }, 600);
+      sessionStorage.setItem('openTab','tax'); setTimeout(function(){ window.location.reload(); }, 600);
     } catch(e) { toast(e.message, 'error'); }
   }
 
@@ -1114,7 +1114,7 @@
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       closeEditDeliveryModal();
       toast('Documents updated — ready to send');
-      setTimeout(function(){ window.location.href = window.location.pathname + '?tab=tax'; }, 600);
+      sessionStorage.setItem('openTab','tax'); setTimeout(function(){ window.location.reload(); }, 600);
     } catch(e) {
       document.getElementById('ed-error').textContent = e.message;
       document.getElementById('ed-error').style.display = '';
@@ -1403,13 +1403,14 @@
 
 
   loadPerson().then(function() {
-    var urlTab = new URLSearchParams(window.location.search).get('tab');
-    if (urlTab) {
+    var openTab = sessionStorage.getItem('openTab');
+    sessionStorage.removeItem('openTab');
+    if (openTab) {
       var tabEl = null;
       document.querySelectorAll('.tab-item').forEach(function(t) {
-        if (t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'" + urlTab + "'") !== -1) tabEl = t;
+        if (t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'" + openTab + "'") !== -1) tabEl = t;
       });
-      switchTab(urlTab, tabEl);
+      switchTab(openTab, tabEl);
     }
   });
 </script>
