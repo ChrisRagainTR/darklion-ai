@@ -911,18 +911,18 @@
   </main>
 
   <!-- ── TAX DELIVERY FLOW OVERLAY ───────────────────────────────────────── -->
-  <div id="tax-delivery-overlay" style="display:none;position:fixed;inset:0;background:rgba(10,12,20,0.97);z-index:9000;overflow-y:auto;">
-    <div style="max-width:720px;margin:2rem auto;padding:0 1rem 3rem;">
-      <!-- Header bar -->
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.15);border-radius:10px;margin-bottom:1.5rem;">
-        <div style="display:flex;align-items:center;gap:0.75rem;">
-          <span style="font-size:1.1rem;">✍️</span>
-          <div id="tdo-step-label" style="font-size:0.82rem;color:var(--gold,#c9a84c);font-weight:700;letter-spacing:0.05em;text-transform:uppercase;"></div>
-        </div>
-        <button onclick="closeTaxDeliveryFlow()" style="background:none;border:none;color:var(--muted,#8fa3b8);cursor:pointer;font-size:1.4rem;line-height:1;padding:0.2rem 0.4rem;border-radius:4px;" onmouseenter="this.style.color='white'" onmouseleave="this.style.color='var(--muted,#8fa3b8)'">×</button>
+  <div id="tax-delivery-overlay" style="display:none;position:fixed;inset:0;background:rgba(10,12,20,0.98);z-index:9000;display:none;flex-direction:column;">
+    <!-- Sticky top bar -->
+    <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.5rem;background:rgba(201,168,76,0.07);border-bottom:1px solid rgba(201,168,76,0.2);">
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <span style="font-size:1.1rem;">✍️</span>
+        <div id="tdo-step-label" style="font-size:0.82rem;color:#c9a84c;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;"></div>
       </div>
-      <!-- Content card -->
-      <div style="background:var(--card,#1a1d27);border:1px solid var(--border,#2a2d3a);border-radius:12px;padding:2rem 2rem;">
+      <button onclick="closeTaxDeliveryFlow()" style="background:none;border:none;color:#8fa3b8;cursor:pointer;font-size:1.5rem;line-height:1;padding:0.2rem 0.5rem;border-radius:4px;" onmouseenter="this.style.color='white'" onmouseleave="this.style.color='#8fa3b8'">×</button>
+    </div>
+    <!-- Scrollable content -->
+    <div style="flex:1;overflow-y:auto;padding:1.5rem 2rem 3rem;">
+      <div style="max-width:1100px;margin:0 auto;">
         <div id="tdo-content"></div>
       </div>
     </div>
@@ -2266,7 +2266,7 @@
     async function openTaxDeliveryFlow(deliveryId) {
       _currentDelivery = _taxDeliveries.find(d => d.id === deliveryId);
       if (!_currentDelivery) return;
-      document.getElementById('tax-delivery-overlay').style.display = '';
+      document.getElementById('tax-delivery-overlay').style.display = 'flex';
       await renderTDStep1();
     }
     window.openTaxDeliveryFlow = openTaxDeliveryFlow;
@@ -2342,7 +2342,7 @@
             `<div style="margin-bottom:0.75rem;">
               <a href="${url}" target="_blank" class="btn-cancel" style="display:inline-flex;align-items:center;gap:0.5rem;">📄 Open Review Copy</a>
             </div>
-            <iframe src="${url}" style="width:100%;height:500px;border:1px solid var(--border,#2a2d3a);border-radius:8px;" title="Tax Return Review Copy"></iframe>`;
+            <iframe src="${url}" style="width:100%;height:calc(100vh - 280px);min-height:600px;border:1px solid var(--border,#2a2d3a);border-radius:8px;" title="Tax Return Review Copy"></iframe>`;
         }
       } catch(e) {
         document.getElementById('tdo-pdf-area').innerHTML = '<p style="color:var(--muted);font-size:0.88rem;">Unable to load PDF. You can still approve or request changes.</p>';
