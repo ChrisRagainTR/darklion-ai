@@ -47,9 +47,7 @@
   .col-name { font-size: 0.82rem; font-weight: 700; flex: 1; }
   .col-count { font-size: 0.72rem; color: var(--muted); background: rgba(255,255,255,0.06); border-radius: 10px; padding: 0.1rem 0.45rem; }
   .col-cards { overflow-y: auto; flex: 1; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
-  .col-add { padding: 0.5rem; flex-shrink: 0; }
-  .col-add-btn { width: 100%; background: none; border: 1px dashed var(--border); color: var(--muted); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; }
-  .col-add-btn:hover { border-color: var(--gold); color: var(--gold); }
+  /* col-add removed — jobs added from board header */
 
   /* ── JOB CARDS ── */
   .job-card { background: var(--charcoal); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.75rem; cursor: pointer; transition: border-color 0.15s; }
@@ -70,15 +68,11 @@
   .priority-dot.urgent { background: var(--red); }
   .priority-dot.normal { background: transparent; }
 
-  /* ── ADD JOB INLINE ── */
-  .add-job-box { padding: 0.5rem; }
-  .add-job-input { width: 100%; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.82rem; outline: none; }
-  .add-job-input:focus { border-color: var(--gold); }
-  .add-job-results { background: var(--charcoal); border: 1px solid var(--border); border-radius: 6px; margin-top: 0.25rem; max-height: 160px; overflow-y: auto; }
-  .add-job-result { padding: 0.5rem 0.75rem; font-size: 0.82rem; cursor: pointer; }
-  .add-job-result:hover { background: rgba(201,168,76,0.08); }
-  .add-job-cancel { font-size: 0.75rem; color: var(--muted); cursor: pointer; padding: 0.2rem 0; display: block; text-align: center; margin-top: 0.25rem; }
-  .add-job-cancel:hover { color: var(--text); }
+  /* ── ADD JOB SEARCH ── */
+  .search-results { background: var(--charcoal); border: 1px solid var(--border); border-radius: 6px; margin-top: 0.35rem; max-height: 220px; overflow-y: auto; }
+  .search-result-item { padding: 0.55rem 0.75rem; font-size: 0.85rem; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .search-result-item:last-child { border-bottom: none; }
+  .search-result-item:hover { background: rgba(201,168,76,0.08); }
 
   /* ── JOB PANEL ── */
   .panel-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 400; }
@@ -154,6 +148,7 @@
     <div style="display:flex;align-items:center;gap:0.5rem;">
       <label style="font-size:0.8rem;color:var(--muted);">Year:</label>
       <select class="year-sel" id="year-sel" onchange="onYearChange(this.value)"></select>
+      <button class="btn btn-gold btn-sm" onclick="openAddJobModal()" style="font-size:0.78rem;">+ Add Job</button>
       <button class="btn btn-outline btn-sm" onclick="openEditStagesModal()" style="font-size:0.78rem;">⚙ Edit Stages</button>
     </div>
   </div>
@@ -191,6 +186,27 @@
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('new-pipeline-modal')">Cancel</button>
       <button class="btn btn-gold" onclick="submitNewPipeline()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ ADD JOB MODAL ═══════════════ -->
+<div class="modal-overlay" id="add-job-modal">
+  <div class="modal-box" style="max-width:460px;">
+    <h2>Add Job</h2>
+    <div class="form-group">
+      <label>Search Client</label>
+      <input type="text" id="aj-search" placeholder="Type a name to search…" autocomplete="off" />
+      <div class="search-results" id="aj-results" style="display:none;"></div>
+    </div>
+    <div id="aj-selected" style="display:none;background:rgba(201,168,76,0.08);border:1px solid var(--gold);border-radius:6px;padding:0.6rem 0.85rem;display:none;align-items:center;gap:0.5rem;margin-top:0.5rem;">
+      <span style="flex:1;font-weight:600;font-size:0.9rem;" id="aj-selected-name"></span>
+      <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;" onclick="clearJobClient()">✕</button>
+    </div>
+    <p style="font-size:0.78rem;color:var(--muted);margin-top:0.75rem;">The job will be added to the first stage. Drag it to the correct stage after.</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('add-job-modal')">Cancel</button>
+      <button class="btn btn-gold" onclick="submitAddJob()">Add Job</button>
     </div>
   </div>
 </div>
@@ -379,16 +395,7 @@
 
       stageJobs.forEach(function(job) { html += renderCard(job); });
 
-      html += '</div>' +
-        '<div class="col-add">' +
-          '<div id="add-box-' + stage.id + '" style="display:none;" class="add-job-box">' +
-            '<input type="text" class="add-job-input" placeholder="Search client…" id="add-input-' + stage.id + '" autocomplete="off" oninput="searchForJob(this.value,' + stage.id + ',\'' + esc(instanceData.template ? instanceData.template.entity_type : 'relationship') + '\')" />' +
-            '<div class="add-job-results" id="add-results-' + stage.id + '" style="display:none;"></div>' +
-            '<span class="add-job-cancel" onclick="hideAddBox(' + stage.id + ')">Cancel</span>' +
-          '</div>' +
-          '<button class="col-add-btn" id="add-btn-' + stage.id + '" onclick="showAddBox(' + stage.id + ')">+ Add Job</button>' +
-        '</div>' +
-      '</div>';
+      html += '</div></div>';
     });
 
     wrap.innerHTML = html;
@@ -397,15 +404,16 @@
 
   function renderCard(job) {
     var name = esc(job.entity_name || '#' + job.entity_id);
+    var notes = (job.notes || '').trim();
+    var notesPreview = notes.length > 80 ? notes.substring(0, 80) + '…' : notes;
     var due = job.due_date ? formatDate(job.due_date) : '';
     var overdue = job.due_date && new Date(job.due_date) < new Date();
     var assignIni = job.assigned_name ? initials(job.assigned_name) : '';
-    var priorityDot = job.priority && job.priority !== 'normal' ? '<div class="priority-dot ' + job.priority + '"></div>' : '';
     var statusAttr = job.job_status && job.job_status !== 'active' ? ' data-status="' + job.job_status + '"' : '';
     return '<div class="job-card" data-job-id="' + job.id + '" draggable="true" onclick="openPanel(' + job.id + ')"' + statusAttr + '>' +
       '<div class="job-name">' + name + '</div>' +
-      '<div class="job-meta">' +
-        priorityDot +
+      (notesPreview ? '<div style="font-size:0.75rem;color:var(--muted);margin-top:0.25rem;line-height:1.4;">' + esc(notesPreview) + '</div>' : '') +
+      '<div class="job-meta" style="margin-top:0.35rem;">' +
         (due ? '<span class="job-due' + (overdue ? ' overdue' : '') + '">📅 ' + due + '</span>' : '') +
         (assignIni ? '<div class="job-assignee" title="' + esc(job.assigned_name) + '">' + esc(assignIni) + '</div>' : '') +
       '</div>' +
@@ -433,59 +441,77 @@
       .catch(function(err) { window.toast('Move failed: ' + err.message, 'error'); });
   };
 
-  // ── ADD JOB ───────────────────────────────────────
-  window.showAddBox = function(stageId) {
-    document.getElementById('add-box-' + stageId).style.display = '';
-    document.getElementById('add-btn-' + stageId).style.display = 'none';
-    document.getElementById('add-input-' + stageId).focus();
+  // ── ADD JOB MODAL ─────────────────────────────────
+  var addJobEntityType = 'relationship';
+  var addJobSearchTimer = null;
+  var addJobSelected = null; // { id, name }
+
+  window.openAddJobModal = function() {
+    if (!currentInstanceId || !instanceData) return;
+    addJobEntityType = (instanceData.template && instanceData.template.entity_type) || 'relationship';
+    addJobSelected = null;
+    document.getElementById('aj-search').value = '';
+    document.getElementById('aj-results').innerHTML = '';
+    document.getElementById('aj-results').style.display = 'none';
+    document.getElementById('aj-selected').style.display = 'none';
+    document.getElementById('aj-selected-name').textContent = '';
+    openModal('add-job-modal');
+    setTimeout(function() { document.getElementById('aj-search').focus(); }, 100);
   };
 
-  window.hideAddBox = function(stageId) {
-    document.getElementById('add-box-' + stageId).style.display = 'none';
-    document.getElementById('add-btn-' + stageId).style.display = '';
-    document.getElementById('add-results-' + stageId).style.display = 'none';
-  };
-
-  var searchTimer = null;
-  window.searchForJob = function(q, stageId, entityType) {
-    clearTimeout(searchTimer);
-    var res = document.getElementById('add-results-' + stageId);
-    if (!q.trim()) { res.style.display = 'none'; return; }
-    searchTimer = setTimeout(function() {
+  document.getElementById('aj-search').addEventListener('input', function() {
+    var q = this.value.trim();
+    clearTimeout(addJobSearchTimer);
+    var res = document.getElementById('aj-results');
+    if (!q) { res.style.display = 'none'; return; }
+    addJobSearchTimer = setTimeout(function() {
       fetch('/api/search?q=' + encodeURIComponent(q), { headers: { 'Authorization': 'Bearer ' + token } })
         .then(function(r) { return r.json(); })
         .then(function(data) {
-          var items = entityType === 'company' ? (data.companies || []) :
-                      entityType === 'person' ? (data.people || []) :
+          var items = addJobEntityType === 'company' ? (data.companies || []) :
+                      addJobEntityType === 'person' ? (data.people || []) :
                       (data.relationships || []);
           if (!items.length) {
-            res.innerHTML = '<div class="add-job-result" style="color:var(--muted)">No results</div>';
+            res.innerHTML = '<div class="search-result-item" style="color:var(--muted);">No results found</div>';
           } else {
             res.innerHTML = items.map(function(item) {
               var name = item.company_name || item.name || ((item.first_name || '') + ' ' + (item.last_name || '')).trim();
-              return '<div class="add-job-result" onclick="addJob(' + item.id + ',\'' + entityType + '\',' + stageId + ',\'' + esc(name).replace(/'/g, "\\'") + '\')">' + esc(name) + '</div>';
+              return '<div class="search-result-item" onclick="selectJobClient(' + item.id + ',\'' + esc(name).replace(/'/g, "\\'") + '\')">' + esc(name) + '</div>';
             }).join('');
           }
           res.style.display = '';
         }).catch(function() {});
     }, 250);
+  });
+
+  window.selectJobClient = function(id, name) {
+    addJobSelected = { id: id, name: name };
+    document.getElementById('aj-search').value = '';
+    document.getElementById('aj-results').style.display = 'none';
+    document.getElementById('aj-selected-name').textContent = name;
+    document.getElementById('aj-selected').style.display = '';
   };
 
-  window.addJob = function(entityId, entityType, stageId, entityName) {
-    hideAddBox(stageId);
-    api('POST', '/instances/' + currentInstanceId + '/jobs', { entity_type: entityType, entity_id: entityId, notes: '', priority: 'normal' })
-      .then(function() { return loadBoard(); })
-      .then(function() {
-        // Move to correct stage if not first
-        var stages = instanceData.stages || [];
-        if (stages.length && stages[0].id !== stageId) {
-          var newJob = (instanceData.jobs || []).find(function(j) { return j.entity_id == entityId && j.entity_type === entityType; });
-          if (newJob && newJob.current_stage_id !== stageId) {
-            return api('POST', '/jobs/' + newJob.id + '/move', { stage_id: stageId, note: 'Initial placement' }).then(function() { return loadBoard(); });
-          }
-        }
-      })
-      .catch(function(err) { window.toast('Failed to add: ' + err.message, 'error'); });
+  window.clearJobClient = function() {
+    addJobSelected = null;
+    document.getElementById('aj-selected').style.display = 'none';
+    document.getElementById('aj-selected-name').textContent = '';
+    document.getElementById('aj-search').focus();
+  };
+
+  window.submitAddJob = function() {
+    if (!addJobSelected) { window.toast('Select a client first', 'error'); return; }
+    var stages = instanceData.stages || [];
+    api('POST', '/instances/' + currentInstanceId + '/jobs', {
+      entity_type: addJobEntityType,
+      entity_id: addJobSelected.id,
+      notes: '',
+      priority: 'normal'
+    }).then(function() {
+      closeModal('add-job-modal');
+      window.toast(addJobSelected.name + ' added');
+      return loadBoard();
+    }).catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
   };
 
   // ── JOB PANEL ─────────────────────────────────────

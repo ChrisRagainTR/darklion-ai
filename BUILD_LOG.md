@@ -290,6 +290,19 @@ Relationship  →  the household/group (top-level billing unit)
 
 ---
 
+### ⏳ Phase 6b — Pipeline Bulk Add
+**Plan:**
+- "📥 Bulk Add" button on the board header
+- Opens a modal with a filterable, searchable checklist of all clients of the right type
+- Filter by CRM fields (tags, entity type, status, etc.) — requires CRM to have more data first
+- "Select All" + individual checkboxes
+- Choose starting stage
+- Skips clients already in the pipeline for that year
+- One API call adds all selected clients as jobs
+- **Prerequisite:** CRM needs more client attributes for meaningful filtering (Phase 6c or later)
+
+---
+
 ### ⏳ Phase 14 — Engagement Tab
 **Plan:**
 - New "Engagement" tab on the Relationship detail page (crm-relationship.html)
