@@ -66,18 +66,13 @@ router.get('/', async (req, res) => {
   try {
     let query = `
       SELECT td.*, co.company_name,
-        (SELECT json_agg(
-          json_build_object(
-            'person_id', tds.person_id,
-            'person_name', p.first_name || ' ' || p.last_name,
-            'approved_at', tds.approved_at,
-            'signed_at', tds.signed_at,
-            'needs_changes_at', tds.needs_changes_at,
-            'signed_doc_id', tds.signed_doc_id
-          )
-         FROM tax_delivery_signers tds
-         JOIN people p ON p.id = tds.person_id
-         WHERE tds.delivery_id = td.id) AS signers
+        (SELECT json_agg(row_to_json(s)) FROM (
+          SELECT tds.person_id, p.first_name || ' ' || p.last_name AS person_name,
+                 tds.approved_at, tds.signed_at, tds.needs_changes_at, tds.signed_doc_id
+          FROM tax_delivery_signers tds
+          JOIN people p ON p.id = tds.person_id
+          WHERE tds.delivery_id = td.id
+        ) s) AS signers
       FROM tax_deliveries td
       LEFT JOIN companies co ON co.id = td.company_id
       WHERE td.firm_id = $1
