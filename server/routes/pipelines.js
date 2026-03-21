@@ -61,14 +61,15 @@ async function resolveEntityName(job) {
 // GET /templates
 router.get('/templates', async (req, res) => {
   try {
+    const showArchived = req.query.archived === 'true';
     const { rows } = await pool.query(
       `SELECT pt.*, COUNT(ps.id)::int AS stage_count
        FROM pipeline_templates pt
        LEFT JOIN pipeline_stages ps ON ps.template_id = pt.id
-       WHERE pt.firm_id = $1
+       WHERE pt.firm_id = $1 AND pt.status = $2
        GROUP BY pt.id
        ORDER BY pt.created_at ASC`,
-      [req.firm.id]
+      [req.firm.id, showArchived ? 'archived' : 'active']
     );
     res.json(rows);
   } catch (e) {
@@ -308,6 +309,49 @@ router.post('/templates/:templateId/ensure-instance', async (req, res) => {
     console.error('POST /templates/:templateId/ensure-instance error:', e);
     res.status(500).json({ error: 'Failed to ensure instance' });
   }
+});
+
+// POST /templates/:id/clone
+router.post('/templates/:id/clone', async (req, res) => {
+  try {
+    const tmpl = await getTemplate(req.firm.id, req.params.id);
+    if (!tmpl) return res.status(404).json({ error: 'Template not found' });
+    const { rows: [newTmpl] } = await pool.query(
+      `INSERT INTO pipeline_templates (firm_id, name, entity_type, description)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [req.firm.id, tmpl.name + ' (Copy)', tmpl.entity_type, tmpl.description]
+    );
+    const { rows: stages } = await pool.query(
+      'SELECT * FROM pipeline_stages WHERE template_id = $1 ORDER BY position ASC', [tmpl.id]
+    );
+    for (const s of stages) {
+      await pool.query(
+        `INSERT INTO pipeline_stages (template_id, name, position, color, is_terminal) VALUES ($1,$2,$3,$4,$5)`,
+        [newTmpl.id, s.name, s.position, s.color, s.is_terminal]
+      );
+    }
+    res.status(201).json(newTmpl);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /templates/:id/archive
+router.post('/templates/:id/archive', async (req, res) => {
+  try {
+    const tmpl = await getTemplate(req.firm.id, req.params.id);
+    if (!tmpl) return res.status(404).json({ error: 'Template not found' });
+    await pool.query('UPDATE pipeline_templates SET status=$1 WHERE id=$2', ['archived', tmpl.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /templates/:id/unarchive
+router.post('/templates/:id/unarchive', async (req, res) => {
+  try {
+    const tmpl = await getTemplate(req.firm.id, req.params.id);
+    if (!tmpl) return res.status(404).json({ error: 'Template not found' });
+    await pool.query('UPDATE pipeline_templates SET status=$1 WHERE id=$2', ['active', tmpl.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // GET /instances

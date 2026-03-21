@@ -135,8 +135,11 @@
 <div id="view-list" class="pipes-view active">
   <div class="list-wrap">
     <div class="list-top">
-      <h1>Pipelines</h1>
-      <button class="btn btn-gold btn-sm" onclick="openNewPipelineModal()">+ New Pipeline</button>
+      <div style="display:flex;align-items:center;gap:1rem;">
+        <h1 id="list-title">Pipelines</h1>
+        <button class="btn btn-outline btn-sm" id="archived-toggle" onclick="toggleArchived()" style="font-size:0.78rem;">📦 View Archived</button>
+      </div>
+      <button class="btn btn-gold btn-sm" onclick="openNewPipelineModal()" id="new-pipe-btn">+ New Pipeline</button>
     </div>
     <table class="pipe-table">
       <thead>
@@ -300,27 +303,30 @@
 
   // ── PIPELINE LIST ─────────────────────────────────
   function loadList() {
-    api('GET', '/templates').then(function(templates) {
+    var path = '/templates' + (showingArchived ? '?archived=true' : '');
+    api('GET', path).then(function(templates) {
       var tbody = document.getElementById('pipe-tbody');
       if (!templates.length) {
-        tbody.innerHTML = '<tr><td colspan="5"><div class="pipe-empty">No pipelines yet. Create your first one.</div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5"><div class="pipe-empty">' + (showingArchived ? 'No archived pipelines.' : 'No pipelines yet. Create your first one.') + '</div></td></tr>';
         return;
       }
       tbody.innerHTML = templates.map(function(t) {
+        var dotMenu = showingArchived
+          ? '<button class="dot-item" onclick="unarchivePipeline(' + t.id + ',\'' + esc(t.name) + '\');this.closest(\'.dot-drop\').classList.remove(\'open\')">↩ Restore</button>' +
+            '<button class="dot-item danger" onclick="deletePipeline(' + t.id + ',\'' + esc(t.name) + '\');this.closest(\'.dot-drop\').classList.remove(\'open\')">🗑 Delete</button>'
+          : '<button class="dot-item" onclick="openPipeline(' + t.id + ');this.closest(\'.dot-drop\').classList.remove(\'open\')">📋 Open Board</button>' +
+            '<button class="dot-item" onclick="openEditStagesForTemplate(' + t.id + ');this.closest(\'.dot-drop\').classList.remove(\'open\')">⚙ Edit Stages</button>' +
+            '<button class="dot-item" onclick="clonePipeline(' + t.id + ',\'' + esc(t.name) + '\');this.closest(\'.dot-drop\').classList.remove(\'open\')">📋 Clone</button>' +
+            '<button class="dot-item" onclick="archivePipeline(' + t.id + ',\'' + esc(t.name) + '\');this.closest(\'.dot-drop\').classList.remove(\'open\')">📦 Archive</button>' +
+            '<button class="dot-item danger" onclick="deletePipeline(' + t.id + ',\'' + esc(t.name) + '\');this.closest(\'.dot-drop\').classList.remove(\'open\')">🗑 Delete</button>';
+
         return '<tr>' +
-          '<td><button class="pipe-link" onclick="openPipeline(' + t.id + ')">' + esc(t.name) + '</button>' +
+          '<td>' + (showingArchived ? '<span style="color:var(--muted);font-weight:600;">' + esc(t.name) + '</span>' : '<button class="pipe-link" onclick="openPipeline(' + t.id + ')">' + esc(t.name) + '</button>') +
           (t.description ? '<div style="font-size:0.75rem;color:var(--muted);margin-top:0.1rem;">' + esc(t.description) + '</div>' : '') + '</td>' +
           '<td style="color:var(--muted);font-size:0.82rem;">' + esc(t.entity_type) + '</td>' +
           '<td style="color:var(--muted);">' + (t.stage_count || 0) + '</td>' +
           '<td>' + (t.job_count || 0) + '</td>' +
-          '<td><div class="dot-wrap">' +
-            '<button class="dot-btn" onclick="toggleDot(this)">⋯</button>' +
-            '<div class="dot-drop">' +
-              '<button class="dot-item" onclick="openPipeline(' + t.id + ');this.closest(\'.dot-drop\').classList.remove(\'open\')">📋 Open Board</button>' +
-              '<button class="dot-item" onclick="openEditStagesForTemplate(' + t.id + ');this.closest(\'.dot-drop\').classList.remove(\'open\')">⚙ Edit Stages</button>' +
-              '<button class="dot-item danger" onclick="deletePipeline(' + t.id + ',\'' + esc(t.name) + '\');this.closest(\'.dot-drop\').classList.remove(\'open\')">🗑 Delete</button>' +
-            '</div>' +
-          '</div></td>' +
+          '<td><div class="dot-wrap"><button class="dot-btn" onclick="toggleDot(this)">⋯</button><div class="dot-drop">' + dotMenu + '</div></div></td>' +
         '</tr>';
       }).join('');
     }).catch(function(e) {
@@ -785,6 +791,42 @@
     api('DELETE', '/templates/' + id)
       .then(function() { window.toast('Deleted'); loadList(); })
       .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  // ── CLONE PIPELINE ────────────────────────────────
+  window.clonePipeline = function(id, name) {
+    api('POST', '/templates/' + id + '/clone')
+      .then(function(newTmpl) {
+        window.toast('"' + name + '" cloned');
+        loadList();
+      })
+      .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  // ── ARCHIVE / UNARCHIVE ───────────────────────────
+  var showingArchived = false;
+
+  window.archivePipeline = function(id, name) {
+    api('POST', '/templates/' + id + '/archive')
+      .then(function() { window.toast('"' + name + '" archived'); loadList(); })
+      .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  window.unarchivePipeline = function(id, name) {
+    api('POST', '/templates/' + id + '/unarchive')
+      .then(function() { window.toast('"' + name + '" restored'); loadList(); })
+      .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  window.toggleArchived = function() {
+    showingArchived = !showingArchived;
+    var btn = document.getElementById('archived-toggle');
+    var title = document.getElementById('list-title');
+    var newBtn = document.getElementById('new-pipe-btn');
+    btn.textContent = showingArchived ? '← Active Pipelines' : '📦 View Archived';
+    title.textContent = showingArchived ? 'Archived Pipelines' : 'Pipelines';
+    if (newBtn) newBtn.style.display = showingArchived ? 'none' : '';
+    loadList();
   };
 
   // ── LOAD TEAM ─────────────────────────────────────
