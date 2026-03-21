@@ -390,13 +390,7 @@ async function loadThread(threadId, silent = false) {
         <div class="detail-header-subject">${esc(data.subject || '(no subject)')} · <span style="color:var(--gold);">${data.category}</span></div>
         ${companies ? `<div class="company-tags" id="companyTags-${threadId}">${companies}</div>` : ''}
       </div>
-      <div class="detail-header-controls">
-        <select onchange="updateStatus(${threadId}, this.value)">
-          <option value="open" ${data.status!=='resolved'?'selected':''}>Active</option>
-          <option value="resolved" ${data.status==='resolved'?'selected':''}>Resolved</option>
-        </select>
-        ${firmUsers.length ? `<select onchange="assignThread(${threadId}, this.value)"><option value="">Unassigned</option>${assignOpts}</select>` : ''}
-      </div>
+
     `;
 
     // Messages
