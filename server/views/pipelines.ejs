@@ -40,9 +40,14 @@
   .back-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
 
   /* ── KANBAN ── */
+  /* Board view fills remaining viewport — horizontal scrollbar stays pinned at bottom */
+  #view-board.active { display: flex; flex-direction: column; height: calc(100vh - var(--header-h, 58px)); overflow: hidden; }
+  .board-bar { flex-shrink: 0; }
   .kanban-wrap {
-    display: flex; gap: 1rem; padding: 1.25rem 1.5rem 2rem;
-    overflow-x: auto; align-items: flex-start;
+    display: flex; gap: 1rem; padding: 1rem 1.5rem 0;
+    overflow-x: auto; overflow-y: hidden;
+    flex: 1; min-height: 0;
+    align-items: stretch;
     scrollbar-width: auto;
     scrollbar-color: var(--gold) var(--charcoal);
   }
@@ -50,12 +55,18 @@
   .kanban-wrap::-webkit-scrollbar-track { background: var(--charcoal); border-radius: 6px; }
   .kanban-wrap::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 6px; border: 2px solid var(--charcoal); }
   .kanban-wrap::-webkit-scrollbar-thumb:hover { background: var(--gold-light); }
-  .kanban-col { flex-shrink: 0; width: 260px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; }
+  .kanban-col { flex-shrink: 0; width: 260px; background: var(--card); border: 1px solid var(--border); border-radius: 10px 10px 0 0; display: flex; flex-direction: column; min-height: 0; }
   .kanban-col.drag-over { border-color: var(--gold); background: rgba(201,168,76,0.05); }
   .col-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem 0.65rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
   .col-name { font-size: 0.82rem; font-weight: 700; flex: 1; }
   .col-count { font-size: 0.72rem; color: var(--muted); background: rgba(255,255,255,0.06); border-radius: 10px; padding: 0.1rem 0.45rem; }
-  .col-cards { padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  .col-cards {
+    overflow-y: auto; flex: 1; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem;
+    scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.4) transparent;
+  }
+  .col-cards::-webkit-scrollbar { width: 4px; }
+  .col-cards::-webkit-scrollbar-track { background: transparent; }
+  .col-cards::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.35); border-radius: 4px; }
 
   /* ── JOB CARDS ── */
   .job-card { background: var(--charcoal); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.75rem; cursor: pointer; transition: border-color 0.15s; }
