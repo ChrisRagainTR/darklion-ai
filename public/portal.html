@@ -937,7 +937,7 @@
     </div>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
   <script>
   (function () {
     'use strict';
@@ -959,12 +959,13 @@
     document.addEventListener('focusout', (e) => { if (e.target.id === 'chatInput') _userTyping = false; });
     setInterval(() => { if (!_userTyping) _reloadMessages(); }, 30000);
 
-    // Socket: instant delivery (per socket.io v4 docs)
-    const _socket = io({ auth: { token } });
-    _socket.on('connect', () => console.log('[portal socket] connected, id:', _socket.id));
-    _socket.on('connect_error', (err) => console.warn('[portal socket] connect_error:', err.message));
-    _socket.on('message:new', ({ senderType }) => {
-      console.log('[portal socket] message:new received, senderType:', senderType);
+    // Pusher: instant delivery
+    const _portalJwt = JSON.parse(atob(token.split('.')[1]));
+    const _pusher = new Pusher('6ee61a25e438d5bc4751', { cluster: 'us2' });
+    const _portalChannel = _pusher.subscribe(`portal-${_portalJwt.firmId}-${_portalJwt.personId}`);
+    _portalChannel.bind('pusher:subscription_succeeded', () => console.log('[pusher] portal subscribed'));
+    _portalChannel.bind('message-new', ({ senderType }) => {
+      console.log('[pusher] message-new received, senderType:', senderType);
       _reloadMessages();
     });
     // ─────────────────────────────────────────────────────────────────────────

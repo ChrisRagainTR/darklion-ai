@@ -519,10 +519,10 @@ router.post('/messages/send', upload.array('files', 8), async (req, res) => {
     // Cancel any pending notification timer — client is actively messaging
     cancelPendingNotification(personId);
 
-    // Emit real-time event to firm staff inbox
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`firm:${firmId}`).emit('message:new', { threadId, messageId, senderType: 'client' });
+    // Pusher: notify staff inbox of client reply
+    const pusher = req.app.get('pusher');
+    if (pusher) {
+      pusher.trigger(`firm-${firmId}`, 'message-new', { threadId, senderType: 'client' });
     }
 
     // Classify asynchronously (non-blocking, non-fatal)

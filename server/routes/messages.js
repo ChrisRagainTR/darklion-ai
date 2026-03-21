@@ -479,10 +479,10 @@ router.post('/', async (req, res) => {
     // Classify asynchronously (non-blocking)
     setImmediate(() => applyClassification(threadId, firmId, person_id, body.trim()));
 
-    // Notify all staff in real-time
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`firm:${firmId}`).emit('thread:new', { threadId, personId: person_id });
+    // Pusher: notify staff of new thread
+    const pusher = req.app.get('pusher');
+    if (pusher) {
+      pusher.trigger(`firm-${firmId}`, 'thread-new', { threadId, personId: person_id });
     }
 
     res.status(201).json({ ok: true, threadId });
@@ -579,18 +579,12 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
       });
     }
 
-    // Emit real-time events to staff inbox and client portal
-    const io = req.app.get('io');
-    if (io) {
-      const firmRoom = `firm:${firmId}`;
-      const portalRoom = `portal:${firmId}:${thread.person_id}`;
-      const firmSockets = await io.in(firmRoom).fetchSockets();
-      const portalSockets = !is_internal ? await io.in(portalRoom).fetchSockets() : [];
-      console.log(`[socket] emit message:new → ${firmRoom} (${firmSockets.length} sockets), ${portalRoom} (${portalSockets.length} sockets)`);
-      io.to(firmRoom).emit('message:new', { threadId, messageId, senderType: 'staff' });
-      if (!is_internal) {
-        io.to(portalRoom).emit('message:new', { threadId, messageId, senderType: 'staff' });
-      }
+    // Pusher: notify staff inbox and client portal
+    const pusher = req.app.get('pusher');
+    if (pusher && !is_internal) {
+      pusher.trigger([`firm-${firmId}`, `portal-${firmId}-${thread.person_id}`], 'message-new', { threadId, senderType: 'staff' });
+    } else if (pusher && is_internal) {
+      pusher.trigger(`firm-${firmId}`, 'message-new', { threadId, senderType: 'staff' });
     }
 
     res.json({ ok: true, messageId });

@@ -315,46 +315,16 @@ function startNightlyCron() {
   setTimeout(runNightlyScans, ms);
 }
 
-// Start server after DB is ready
-// ── Socket.io setup (per docs: https://socket.io/docs/v4/) ───────────────────
-const http = require('http');
-const { Server } = require('socket.io');
-const jwt = require('jsonwebtoken');
-
-const httpServer = http.createServer(app);
-
-const io = new Server(httpServer, {
-  cors: { origin: '*' }, // JWT auth in handshake, no cookies, wildcard is safe
+// ── Pusher setup ─────────────────────────────────────────────────────────────
+const Pusher = require('pusher');
+const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID,
+  key: process.env.PUSHER_KEY,
+  secret: process.env.PUSHER_SECRET,
+  cluster: process.env.PUSHER_CLUSTER,
+  useTLS: true,
 });
-
-// Middleware: decode JWT, attach user to socket (never reject — bad token = no rooms)
-io.use((socket, next) => {
-  const token = socket.handshake.auth?.token;
-  if (token) {
-    try {
-      socket.user = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (e) {
-      console.warn('[socket] bad token, connecting without rooms:', e.message);
-    }
-  }
-  next();
-});
-
-io.on('connection', (socket) => {
-  const u = socket.user;
-  if (!u) return;
-  const firmId = u.firmId || u.id;
-  if (firmId && u.personId) {
-    socket.join(`portal:${firmId}:${u.personId}`);
-    console.log(`[socket] client connected → portal:${firmId}:${u.personId}`);
-  } else if (firmId) {
-    socket.join(`firm:${firmId}`);
-    console.log(`[socket] staff connected → firm:${firmId}`);
-  }
-});
-
-// Expose io to routes
-app.set('io', io);
+app.set('pusher', pusher);
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function start() {
@@ -363,7 +333,7 @@ async function start() {
 
   startNightlyCron();
 
-  httpServer.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`DarkLion server running on port ${PORT}`);
   });
 }

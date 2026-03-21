@@ -186,7 +186,7 @@
   </div>
 
 <%- include('partials/shell-globals') %>
-<script src="/socket.io/socket.io.js"></script>
+<script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
 
 <script>
 const token = localStorage.getItem('dl_token');
@@ -198,24 +198,25 @@ let activeThreadId = null;
 let firmUsers = [];
 let attachedFiles = [];
 
-// ── Real-time + polling ───────────────────────────────────────────────────────
-// Polling: 30s fallback (socket handles instant delivery, poll is safety net only)
+// ── Pusher real-time + 30s polling fallback ───────────────────────────────────
 setInterval(() => loadInbox(), 30000);
 
-// Socket: instant delivery on top of polling (per socket.io v4 docs)
-const _socket = io({ auth: { token } });
-_socket.on('connect', () => console.log('[socket] connected, id:', _socket.id));
-_socket.on('connect_error', (err) => console.warn('[socket] connect_error:', err.message));
-_socket.on('message:new', ({ threadId, senderType }) => {
+// Decode firmId from JWT (already verified server-side, just reading payload here)
+const _jwtPayload = JSON.parse(atob(token.split('.')[1]));
+const _firmId = _jwtPayload.firmId || _jwtPayload.id;
+
+const _pusher = new Pusher('6ee61a25e438d5bc4751', { cluster: 'us2' });
+const _firmChannel = _pusher.subscribe(`firm-${_firmId}`);
+
+_firmChannel.bind('pusher:subscription_succeeded', () => console.log('[pusher] subscribed'));
+_firmChannel.bind('message-new', ({ threadId, senderType }) => {
   loadInbox();
-  // Only reload thread on incoming messages (client replies), not our own sends
   const replyBox = document.getElementById('replyBody');
-  const isComposing = replyBox && replyBox.value.trim();
-  if (activeThreadId === threadId && !isComposing && !_justSent && senderType !== 'staff') {
+  if (activeThreadId === threadId && !(replyBox && replyBox.value.trim()) && !_justSent && senderType !== 'staff') {
     loadThread(threadId, true);
   }
 });
-_socket.on('thread:new', () => loadInbox());
+_firmChannel.bind('thread-new', () => loadInbox());
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function apiFetch(url, opts = {}) {
