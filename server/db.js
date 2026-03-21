@@ -527,6 +527,12 @@ async function initDB() {
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
 
+    -- Pipeline template status (active/archived)
+    DO $$ BEGIN
+      ALTER TABLE pipeline_templates ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
     -- ===================== TAX RETURN DELIVERIES =====================
     CREATE TABLE IF NOT EXISTS tax_deliveries (
       id SERIAL PRIMARY KEY,
