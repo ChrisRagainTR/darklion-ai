@@ -181,9 +181,10 @@
   </div>
 </div>
 
-<div id="tab-communication" class="tab-content" style="padding:0;">
+<div id="tab-communication" class="tab-content" style="padding:0;display:flex;flex-direction:column;overflow:hidden;">
   <style>
-    .comm-layout { display:flex; height:calc(100vh - var(--header-h) - 58px - 42px); min-height:500px; }
+    #tab-communication.active { display:flex !important; flex-direction:column; }
+    .comm-layout { display:flex; flex:1; overflow:hidden; min-height:0; }
     .comm-left { width:320px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; }
     .comm-left-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
     .comm-left-header h3 { font-size:0.9rem; font-weight:700; color:var(--text); margin:0; }
