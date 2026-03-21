@@ -259,7 +259,7 @@
 </div>
 
 <!-- Edit Modal -->
-<div class="modal-overlay" id="edit-modal">
+<div class="modal-overlay hidden" id="edit-modal">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
     <h2>Edit Person</h2>
     <div id="edit-error" style="display:none;color:var(--red);font-size:0.82rem;margin-bottom:0.75rem;"></div>
@@ -640,9 +640,9 @@
     document.getElementById('ef-phone').value = personData.phone || '';
     document.getElementById('ef-dob').value = personData.date_of_birth || '';
     document.getElementById('ef-filing').value = personData.filing_status || '';
-    document.getElementById('edit-modal').classList.add('open');
+    document.getElementById('edit-modal').classList.remove('hidden');
   }
-  function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
+  function closeModal() { document.getElementById('edit-modal').classList.add('hidden'); }
 
   async function submitEdit() {
     const body = {
