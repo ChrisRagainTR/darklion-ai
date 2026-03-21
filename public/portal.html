@@ -755,6 +755,21 @@
     .attachment-chip:hover { background: rgba(0,0,0,0.4); color: #fff; }
     .att-size { color: var(--muted); font-size: 0.7rem; }
     .unread-badge-tab { display: inline-flex; align-items: center; justify-content: center; background: #ffffff; color: #1a1a2e; border-radius: 10px; padding: 0.1rem 0.45rem; font-size: 0.68rem; font-weight: 700; margin-left: 0.4rem; }
+
+    @keyframes attention-pulse {
+      0%, 100% { background: rgba(201,168,76,0.15); color: var(--gold); box-shadow: 0 0 0 0 rgba(201,168,76,0.5); transform: scale(1); }
+      50% { background: rgba(201,168,76,0.3); color: #fff; box-shadow: 0 0 0 6px rgba(201,168,76,0); transform: scale(1.04); }
+    }
+    .review-sign-attention {
+      animation: attention-pulse 1.8s ease-in-out infinite;
+      border-radius: 8px !important;
+      font-weight: 700 !important;
+      border-bottom: 2px solid var(--gold) !important;
+    }
+    .review-sign-attention.active {
+      animation: none;
+      background: rgba(201,168,76,0.2);
+    }
   </style>
 </head>
 <body>
@@ -777,7 +792,7 @@
     <button class="tab-btn" data-tab="documents">📁 Personal Documents</button>
     <button class="tab-btn" data-tab="organizers">🔗 Organizers</button>
     <button class="tab-btn" data-tab="messages">💬 Messages</button>
-    <button class="tab-btn" data-tab="review-sign" id="review-sign-tab" style="display:none;">
+    <button class="tab-btn review-sign-attention" data-tab="review-sign" id="review-sign-tab" style="display:none;">
       ✍️ Review &amp; Sign
       <span class="unread-badge-tab" id="review-sign-badge" style="display:none;"></span>
     </button>
