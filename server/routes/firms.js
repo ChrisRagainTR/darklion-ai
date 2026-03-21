@@ -504,6 +504,22 @@ router.put('/team/:userId/credentials', requireFirm, async (req, res) => {
   }
 });
 
+// --- PUT /firms/team/:userId/display-name ---
+router.put('/team/:userId/display-name', requireFirm, async (req, res) => {
+  try {
+    const firmId = req.firm.id;
+    const userId = parseInt(req.params.userId);
+    const { display_name } = req.body;
+    await pool.query(
+      'UPDATE firm_users SET display_name = $1 WHERE id = $2 AND firm_id = $3',
+      [(display_name || '').slice(0, 120), userId, firmId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- GET /firms/team/:userId/avatar ---
 router.get('/team/:userId/avatar', requireFirm, async (req, res) => {
   try {

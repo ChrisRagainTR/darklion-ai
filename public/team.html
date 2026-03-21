@@ -352,19 +352,27 @@
 
         const initials = (u.name || u.email || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
         const avatarHtml = u.avatar_url
-          ? `<img id="avatar-img-${u.id}" data-user-id="${u.id}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;vertical-align:middle;display:none;" alt="${esc(initials)}">
-             <div id="avatar-init-${u.id}" style="width:36px;height:36px;border-radius:50%;background:rgba(201,168,76,0.15);color:var(--gold);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;flex-shrink:0;">${esc(initials)}</div>`
-          : `<div style="width:36px;height:36px;border-radius:50%;background:rgba(201,168,76,0.15);color:var(--gold);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;flex-shrink:0;">${esc(initials)}</div>`;
+          ? `<img id="avatar-img-${u.id}" data-user-id="${u.id}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;vertical-align:middle;display:none;" alt="${esc(initials)}">
+             <div id="avatar-init-${u.id}" style="width:44px;height:44px;border-radius:50%;background:rgba(201,168,76,0.15);color:var(--gold);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.88rem;flex-shrink:0;">${esc(initials)}</div>`
+          : `<div style="width:44px;height:44px;border-radius:50%;background:rgba(201,168,76,0.15);color:var(--gold);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.88rem;flex-shrink:0;">${esc(initials)}</div>`;
         const uploadBtn = `<label style="cursor:pointer;font-size:0.72rem;color:var(--gold);white-space:nowrap;"><input type="file" accept="image/*" style="display:none;" onchange="uploadAvatar(${u.id},this)"> 📷 Photo</label>`;
-        const credInput = `<input type="text" value="${esc(u.credentials||'')}" placeholder="e.g. CPA/PFS"
-          style="background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-size:0.68rem;width:80px;outline:none;margin-top:0.2rem;"
-          onblur="saveCredentials(${u.id},this.value)" onkeydown="if(event.key==='Enter')this.blur()">`;
+
+        const displayNameInput = `<input type="text" value="${esc(u.display_name||'')}" placeholder="Display name (portal)"
+          style="background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--text);font-size:0.82rem;font-weight:600;width:140px;outline:none;"
+          onblur="saveDisplayName(${u.id},this.value)" onkeydown="if(event.key==='Enter')this.blur()" title="Shown as their name on the client portal">`;
+        const credInput = `<input type="text" value="${esc(u.credentials||'')}" placeholder="Certifications (e.g. CPA/PFS)"
+          style="background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-size:0.72rem;width:140px;outline:none;margin-top:0.15rem;"
+          onblur="saveCredentials(${u.id},this.value)" onkeydown="if(event.key==='Enter')this.blur()" title="Shown under their name on the client portal">`;
 
         return `<tr id="team-row-${u.id}">
-          <td style="font-weight:600;">
-            <div style="display:flex;align-items:center;gap:0.6rem;">
-              ${avatarHtml}
-              <div><div>${esc(u.name||'—')}</div>${credInput}</div>
+          <td>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <div style="flex-shrink:0;">${avatarHtml}</div>
+              <div style="display:flex;flex-direction:column;gap:0.1rem;">
+                <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.1rem;">${esc(u.name||'—')}</div>
+                ${displayNameInput}
+                ${credInput}
+              </div>
             </div>
           </td>
           <td style="color:var(--muted);">${esc(u.email)}</td>
@@ -445,6 +453,13 @@
         if (res.ok) toast('Role updated');
         else { const d = await res.json(); toast(d.error || 'Failed', 'err'); }
       } catch(e) { toast(e.message, 'err'); }
+    }
+
+    // ===== DISPLAY NAME =====
+    async function saveDisplayName(userId, value) {
+      try {
+        await apiFetch(`/firms/team/${userId}/display-name`, { method: 'PUT', body: JSON.stringify({ display_name: value }) });
+      } catch(e) {}
     }
 
     // ===== CREDENTIALS =====
