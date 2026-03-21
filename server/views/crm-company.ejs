@@ -1017,13 +1017,6 @@
     } catch(e) { toast('Failed to get download link', 'error'); }
   }
 
-  async function loadTax() {
-    const el = document.getElementById('tax-content');
-    if (el.dataset.loaded) return;
-    el.dataset.loaded = '1';
-    el.innerHTML = '<div class="empty-state">No tax returns on file.</div>';
-  }
-
   // ── TAX DELIVERIES ────────────────────────────────────────────────────────
 
   async function loadTax() {

@@ -58,10 +58,10 @@ async function advancePipelineJob(jobId) {
   }
 }
 
-// ── GET /tax-deliveries?company_id=X ─────────────────────────────────────
+// ── GET /tax-deliveries?company_id=X or ?person_id=X ─────────────────────
 router.get('/', async (req, res) => {
   const firmId = req.firm.id;
-  const { company_id } = req.query;
+  const { company_id, person_id } = req.query;
 
   try {
     let query = `
@@ -76,6 +76,15 @@ router.get('/', async (req, res) => {
     if (company_id) {
       params.push(parseInt(company_id));
       query += ` AND td.company_id = $${params.length}`;
+    } else if (person_id) {
+      // Return deliveries for all companies this person is linked to (as signer or via company access)
+      params.push(parseInt(person_id));
+      query += ` AND (
+        td.id IN (SELECT delivery_id FROM tax_delivery_signers WHERE person_id = $${params.length})
+        OR td.company_id IN (
+          SELECT company_id FROM person_company_access WHERE person_id = $${params.length}
+        )
+      )`;
     }
 
     query += ' ORDER BY td.created_at DESC';

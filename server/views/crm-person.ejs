@@ -148,7 +148,37 @@
 </div>
 
 <div id="tab-tax" class="tab-content">
-  <div id="tax-content"><div class="empty-state">No tax returns on file.</div></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem 0;">
+    <span style="font-size:0.84rem;color:var(--muted);">Tax return deliveries &amp; e-signatures</span>
+    <button class="btn btn-gold btn-sm" onclick="openPersonDeliveryModal()">+ New Delivery</button>
+  </div>
+  <div id="tax-content" style="padding:1.5rem;"></div>
+
+  <!-- New Delivery Modal (person) -->
+  <div class="modal-overlay hidden" id="person-delivery-modal">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
+      <h2>New Tax Delivery</h2>
+      <div id="pd-error" style="display:none;color:var(--red);font-size:0.82rem;margin-bottom:0.75rem;"></div>
+      <div class="form-group"><label>Company / Return Type</label>
+        <select class="form-control" id="pd-company"><option value="">— Loading companies… —</option></select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+        <div class="form-group"><label>Tax Year *</label><input type="text" class="form-control" id="pd-year" placeholder="2024"></div>
+        <div class="form-group"><label>Title</label><input type="text" class="form-control" id="pd-title" placeholder="e.g. 2024 Individual Return"></div>
+      </div>
+      <div class="form-group"><label>Intro Note (shown to client)</label><textarea class="form-control" id="pd-intro" rows="3" placeholder="Please review and sign your tax return…"></textarea></div>
+      <div class="form-group"><label>Review Document (PDF for client to review)</label>
+        <select class="form-control" id="pd-review-doc"><option value="">— Select document —</option></select>
+      </div>
+      <div class="form-group"><label>Signature Document (PDF to sign)</label>
+        <select class="form-control" id="pd-sig-doc"><option value="">— Select document —</option></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closePersonDeliveryModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="submitPersonDelivery()">Create Draft</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="tab-communication" class="tab-content">
@@ -282,6 +312,7 @@
     const tc = document.getElementById('tab-' + name);
     if (tc) tc.classList.add('active');
     if (name === 'docs') loadDocs();
+    if (name === 'tax') loadTax();
     if (name === 'communication' && personData) initComm(personData.id || personId);
     if (name === 'organizers' && personData && personData.stanford_tax_url) {
       const el = document.getElementById('org-stanford-link');
@@ -654,6 +685,142 @@
       toast('Portal disabled');
       await loadPerson();
     } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // ── Tax delivery JS ──
+  function statusPill(status) {
+    return `<span class="status-pill status-${status}" style="display:inline-block;padding:0.15rem 0.5rem;border-radius:20px;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;background:rgba(201,168,76,0.12);color:var(--gold);">${(status||'draft').replace(/_/g,' ')}</span>`;
+  }
+
+  function renderTaxDeliveries(deliveries) {
+    const el = document.getElementById('tax-content');
+    if (!deliveries.length) {
+      el.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted);">
+        <div style="font-size:2.5rem;margin-bottom:1rem;">📄</div>
+        <div style="font-weight:700;color:var(--text);margin-bottom:0.5rem;">No tax deliveries yet</div>
+        <div style="font-size:0.84rem;margin-bottom:1.5rem;">Create a delivery to send the tax return for review and e-signature</div>
+        <button class="btn btn-gold" onclick="openPersonDeliveryModal()">+ New Delivery</button>
+      </div>`;
+      return;
+    }
+    el.innerHTML = deliveries.map(d => {
+      const signers = d.signers || [];
+      const signerChips = signers.map(s => {
+        const name = esc(s.person_name || ('Person #' + s.person_id));
+        if (s.signed_at) return '<span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.72rem;background:rgba(62,207,142,0.1);color:var(--green);border:1px solid rgba(62,207,142,0.25);">✓ ' + name + '</span>';
+        return '<span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.72rem;background:rgba(237,137,54,0.1);color:var(--orange);border:1px solid rgba(237,137,54,0.25);">⏳ ' + name + '</span>';
+      }).join(' ');
+      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:0.75rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.25rem;">${esc(d.title || d.tax_year + ' Tax Return')} ${statusPill(d.status)}</div>
+          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">Tax Year: ${esc(d.tax_year)}${d.company_name ? ' · ' + esc(d.company_name) : ''} · Created ${new Date(d.created_at).toLocaleDateString()}</div>
+          ${signerChips ? `<div style="display:flex;gap:0.35rem;flex-wrap:wrap;">${signerChips}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-shrink:0;">
+          ${d.status === 'draft' ? `<button class="btn btn-gold btn-sm" onclick="personSendDelivery(${d.id})">Send →</button>` : ''}
+          ${d.status === 'draft' ? `<button class="btn btn-outline btn-sm" onclick="personDeleteDelivery(${d.id})">Delete</button>` : ''}
+          ${d.status === 'complete' ? `<button class="btn btn-outline btn-sm" onclick="personDownloadSigned(${d.id})">⬇ Signed</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function loadTax() {
+    const el = document.getElementById('tax-content');
+    if (el.dataset.loaded) return;
+    el.dataset.loaded = '1';
+    el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>';
+    try {
+      const res = await apiFetch(`/api/tax-deliveries?person_id=${personId}`);
+      const deliveries = await res.json();
+      renderTaxDeliveries(deliveries);
+    } catch(e) { el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Failed to load.</div>'; }
+  }
+
+  async function openPersonDeliveryModal() {
+    const modal = document.getElementById('person-delivery-modal');
+    // Load companies this person is linked to
+    const sel = document.getElementById('pd-company');
+    sel.innerHTML = '<option value="">Loading…</option>';
+    try {
+      const res = await apiFetch(`/api/people/${personId}`);
+      const p = await res.json();
+      const cos = p.companies || [];
+      sel.innerHTML = '<option value="">— Select company —</option>' + cos.map(c => `<option value="${c.company_id}">${esc(c.company_name)}</option>`).join('');
+    } catch(e) { sel.innerHTML = '<option value="">Failed to load</option>'; }
+    document.getElementById('pd-review-doc').innerHTML = '<option value="">— None —</option>';
+    document.getElementById('pd-sig-doc').innerHTML = '<option value="">— None —</option>';
+    document.getElementById('pd-year').value = String(new Date().getFullYear() - 1);
+    document.getElementById('pd-error').style.display = 'none';
+    modal.classList.remove('hidden');
+  }
+
+  // When company changes in modal, load its PDF docs
+  document.addEventListener('change', async function(e) {
+    if (e.target.id === 'pd-company' && e.target.value) {
+      try {
+        const res = await apiFetch(`/api/documents?owner_type=company&owner_id=${e.target.value}`);
+        const docs = await res.json();
+        const pdfDocs = docs.filter(d => d.mime_type && d.mime_type.includes('pdf'));
+        const opts = '<option value="">— None —</option>' + pdfDocs.map(d => `<option value="${d.id}">${esc(d.display_name || 'Untitled')} (${d.year || ''})</option>`).join('');
+        document.getElementById('pd-review-doc').innerHTML = opts;
+        document.getElementById('pd-sig-doc').innerHTML = opts;
+      } catch(e) {}
+    }
+  });
+
+  function closePersonDeliveryModal() { document.getElementById('person-delivery-modal').classList.add('hidden'); }
+
+  async function submitPersonDelivery() {
+    const coId = document.getElementById('pd-company').value;
+    const year = document.getElementById('pd-year').value.trim();
+    if (!coId) { document.getElementById('pd-error').textContent = 'Select a company'; document.getElementById('pd-error').style.display = ''; return; }
+    if (!year) { document.getElementById('pd-error').textContent = 'Tax year is required'; document.getElementById('pd-error').style.display = ''; return; }
+    const body = {
+      company_id: parseInt(coId),
+      tax_year: year,
+      title: document.getElementById('pd-title').value.trim(),
+      intro_note: document.getElementById('pd-intro').value.trim(),
+      review_doc_id: document.getElementById('pd-review-doc').value ? parseInt(document.getElementById('pd-review-doc').value) : null,
+      signature_doc_id: document.getElementById('pd-sig-doc').value ? parseInt(document.getElementById('pd-sig-doc').value) : null,
+      signer_person_ids: [parseInt(personId)],
+    };
+    try {
+      const res = await apiFetch('/api/tax-deliveries', { method: 'POST', body: JSON.stringify(body) });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      closePersonDeliveryModal();
+      toast('Delivery created');
+      const el = document.getElementById('tax-content');
+      delete el.dataset.loaded;
+      loadTax();
+    } catch(e) { document.getElementById('pd-error').textContent = e.message; document.getElementById('pd-error').style.display = ''; }
+  }
+
+  async function personSendDelivery(id) {
+    if (!confirm('Send this tax return to the client for review and signature?')) return;
+    try {
+      const res = await apiFetch('/api/tax-deliveries/' + id + '/send', { method: 'POST', body: '{}' });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      toast('Delivery sent to client');
+      const el = document.getElementById('tax-content'); delete el.dataset.loaded; loadTax();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function personDeleteDelivery(id) {
+    if (!confirm('Delete this draft delivery?')) return;
+    try {
+      await apiFetch('/api/tax-deliveries/' + id, { method: 'DELETE' });
+      toast('Deleted');
+      const el = document.getElementById('tax-content'); delete el.dataset.loaded; loadTax();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function personDownloadSigned(id) {
+    try {
+      const res = await apiFetch('/api/tax-deliveries/' + id + '/download-signature');
+      const d = await res.json();
+      if (d.url) window.open(d.url, '_blank');
+    } catch(e) { toast('Failed to download', 'error'); }
   }
 
   // ── Communication JS ──
