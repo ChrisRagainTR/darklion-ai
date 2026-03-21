@@ -339,27 +339,33 @@ async function start() {
     allowEIO3: true,
   });
 
-  // Socket auth middleware — accepts both firm JWTs and portal JWTs
+  // Socket auth middleware — soft auth, never rejects (bad token = no rooms joined)
   io.use((socket, next) => {
     try {
       const token = socket.handshake.auth?.token || socket.handshake.query?.token;
-      if (!token) return next(new Error('unauthorized'));
-      const payload = jwt.verify(token, process.env.JWT_SECRET);
-      socket.user = payload;
-      next();
+      if (token) {
+        const payload = jwt.verify(token, process.env.JWT_SECRET);
+        socket.user = payload;
+      }
     } catch (e) {
-      next(new Error('unauthorized'));
+      // Invalid token — socket still connects but won't join any rooms
+      console.warn('[socket] auth warning (socket allowed, no rooms):', e.message);
     }
+    next(); // always allow connection
   });
 
   io.on('connection', (socket) => {
     const u = socket.user;
-    if (u.firmId && u.personId) {
+    if (!u) return; // no valid token — connected but no rooms
+    const firmId = u.firmId || u.id; // support both old and new JWT formats
+    if (firmId && u.personId) {
       // Portal/client user — joins their personal room
-      socket.join(`portal:${u.firmId}:${u.personId}`);
-    } else if (u.firmId) {
+      socket.join(`portal:${firmId}:${u.personId}`);
+      console.log(`[socket] portal user joined portal:${firmId}:${u.personId}`);
+    } else if (firmId) {
       // Staff user — joins firm-wide room
-      socket.join(`firm:${u.firmId}`);
+      socket.join(`firm:${firmId}`);
+      console.log(`[socket] staff user joined firm:${firmId}`);
     }
   });
 
