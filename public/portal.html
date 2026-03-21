@@ -2008,8 +2008,17 @@
       if (count > 0) {
         btn.insertAdjacentHTML('beforeend', `<span class="unread-badge-tab">${count}</span>`);
       }
-      // Silently refresh contacts to update unread counts in left panel
-      loadContacts();
+      // Update unread count in contact panel without re-rendering (avoids photo blink)
+      const contactRows = document.querySelectorAll('.chat-contact-row');
+      contactRows.forEach(row => {
+        const badge = row.querySelector('.chat-unread-badge');
+        if (count > 0) {
+          if (badge) badge.textContent = count;
+          else row.querySelector('.chat-contact-meta')?.insertAdjacentHTML('beforeend', `<div class="chat-unread-badge">${count}</div>`);
+        } else if (badge) {
+          badge.remove();
+        }
+      });
     }
 
     function chatEsc(s) {
