@@ -3,7 +3,6 @@
 <style>
   /* ── VIEWS ── */
   .pipes-view { display: none; }
-  .pipes-view.active { display: block; }
 
   /* ── LIST VIEW ── */
   .list-wrap { padding: 1.5rem 2rem; }
@@ -29,8 +28,7 @@
   .dot-item.danger { color: var(--red); }
 
   /* ── BOARD VIEW ── */
-  #view-board { display: none; flex-direction: column; }
-  #view-board.active { display: flex; }
+  /* #view-board display controlled by .pipes-view / .pipes-view.active + override below */
   .board-bar { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--charcoal); flex-wrap: wrap; }
   .board-bar-left { display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 0; }
   .board-title { font-size: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -41,6 +39,7 @@
 
   /* ── KANBAN ── */
   /* Board view fills remaining viewport — horizontal scrollbar stays pinned at bottom */
+  .pipes-view.active { display: block; }
   #view-board.active { display: flex; flex-direction: column; height: calc(100vh - var(--header-h, 58px)); overflow: hidden; }
   .board-bar { flex-shrink: 0; }
   .kanban-wrap {
