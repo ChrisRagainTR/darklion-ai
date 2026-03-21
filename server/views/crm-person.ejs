@@ -378,9 +378,10 @@
     </div>`;
 
     // Companies
-    if (p.companies && p.companies.length) {
+    const companies = p.company_access || p.companies || [];
+    if (companies.length) {
       html += `<div class="card"><div class="card-title">Companies</div>`;
-      p.companies.forEach(c => {
+      companies.forEach(c => {
         html += `<div class="person-row">
           <div class="person-info"><div class="person-name"><a href="/crm/company/${c.company_id}" style="color:var(--text);text-decoration:none;">🏢 ${esc(c.company_name)}</a></div></div>
           <button class="btn btn-ghost btn-xs" onclick="window.location.href='/crm/company/${c.company_id}'">→</button>
