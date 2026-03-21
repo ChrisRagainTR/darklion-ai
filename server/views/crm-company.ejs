@@ -1324,6 +1324,15 @@
   })();
 
   // ── Bookkeeping JS ──
+  const BK_QBO_NOT_CONNECTED_HTML = '<div style="padding:2rem;text-align:center;color:var(--muted);"><div style="font-size:2rem;margin-bottom:0.75rem;">🔌</div><div style="font-weight:600;color:var(--text);margin-bottom:0.5rem;">QuickBooks Not Connected</div><div style="font-size:0.84rem;">Connect QuickBooks Online to enable bookkeeping features.</div><a href="/connect" class="btn btn-gold" style="margin-top:1rem;display:inline-flex;">Connect QBO →</a></div>';
+  let bk_cpInitialized = false;
+  let bk_uncatLoaded = false;
+  let bk_varInitialized = false;
+  let bk_liabLoaded = false;
+  let bk_payrollInitialized = false;
+  let bk_stmtInitialized = false;
+  let bk_calInitialized = false;
+
   function bk_qboGuard(guardElId, mainElId) {
     const guardEl = document.getElementById(guardElId);
     const mainEl = document.getElementById(mainElId);
