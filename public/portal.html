@@ -1079,6 +1079,7 @@
           api('/portal/companies').catch(() => []),
           api('/portal/documents').catch(() => []),
         ]);
+        window._portalMe = _me; // expose for second script block
         // Load message contacts and firm team in parallel
         await Promise.all([
           (async () => {
@@ -2256,7 +2257,8 @@
         };
         const badge = badgeMap[myStatus] || badgeMap['needs-review'];
         const statusBadge = badgeMap[d.status] || { label: d.status, color: '#888' };
-        const entityLabel = d.company_name || (_me ? `${_me.firstName || ''} ${_me.lastName || ''}`.trim() : 'Personal') || 'Personal';
+        const meRef = window._portalMe || {};
+        const entityLabel = d.company_name || (`${meRef.firstName || ''} ${meRef.lastName || ''}`.trim()) || 'Personal';
         const actionBtn = myStatus === 'complete'
           ? `<span style="color:#4caf50;font-weight:600;font-size:0.88rem;">✓ Complete</span>`
           : `<button class="btn-submit" onclick="openTaxDeliveryFlow(${d.id})" style="padding:0.55rem 1.25rem;font-size:0.9rem;">✍️ Review &amp; Sign →</button>`;
