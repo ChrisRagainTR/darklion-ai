@@ -745,7 +745,7 @@ router.post('/tax-deliveries/:id/needs-changes', async (req, res) => {
               p.first_name, p.last_name,
               f.email AS firm_email, f.name AS firm_name
        FROM tax_deliveries td
-       JOIN companies co ON co.id = td.company_id
+       LEFT JOIN companies co ON co.id = td.company_id
        JOIN people p ON p.id = $2
        JOIN firms f ON f.id = td.firm_id
        WHERE td.id = $1`,
@@ -808,7 +808,7 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
       const { rows: deliveryRows } = await pool.query(
         `SELECT td.*, co.company_name, f.email AS firm_email, f.name AS firm_name
          FROM tax_deliveries td
-         JOIN companies co ON co.id = td.company_id
+         LEFT JOIN companies co ON co.id = td.company_id
          JOIN firms f ON f.id = td.firm_id
          WHERE td.id = $1`,
         [id]
