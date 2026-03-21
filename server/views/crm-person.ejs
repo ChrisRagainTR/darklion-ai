@@ -347,6 +347,8 @@
     if (p.email) meta.push(esc(p.email));
     if (p.phone) meta.push(esc(p.phone));
     document.getElementById('entity-meta').innerHTML = meta.join('  ·  ');
+    // Track recent visit
+    if (window.addRecentClient) window.addRecentClient({ _type:'person', id: p.id, _label: name, _sub: p.relationship_name || 'Person' });
   }
 
   function renderOverview(p) {

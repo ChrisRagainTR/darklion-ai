@@ -762,6 +762,8 @@
     if (c.relationship) meta.push(`👥 <a href="/crm/relationship/${c.relationship.id}" style="color:var(--gold);text-decoration:none;">${esc(c.relationship.name)}</a>`);
     if (c.tax_year_end) meta.push(`Tax Year End: ${esc(c.tax_year_end)}`);
     document.getElementById('entity-meta').innerHTML = meta.join('  ·  ');
+    // Track recent visit
+    if (window.addRecentClient) window.addRecentClient({ _type:'company', id: c.id, _label: c.company_name || 'Unnamed', _sub: (c.relationship && c.relationship.name) || c.entity_type || 'Company' });
   }
 
   function renderOverview(c) {

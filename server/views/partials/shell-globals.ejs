@@ -66,6 +66,18 @@
       window.location.replace('/login');
     });
 
+    // ── Recent clients (localStorage) ──
+    var RECENT_KEY = 'dl_recent_clients';
+    function getRecentClients() {
+      try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e) { return []; }
+    }
+    function addRecentClient(r) {
+      var recents = getRecentClients().filter(function(x){ return !(x._type===r._type && x.id===r.id); });
+      recents.unshift(r);
+      recents = recents.slice(0, 5);
+      try { localStorage.setItem(RECENT_KEY, JSON.stringify(recents)); } catch(e) {}
+    }
+
     // ── Unified search ──
     var searchTimer = null;
     var searchResults = [];
@@ -88,12 +100,38 @@
       searchBar.value = '';
       searchBar.placeholder = 'Search relationships, companies, people…';
     }
+    function navigateTo(r) {
+      addRecentClient(r);
+      closeSearch();
+      if (r._type==='relationship') window.location.href='/crm/relationship/'+r.id;
+      else if (r._type==='company') window.location.href='/crm/company/'+r.id;
+      else window.location.href='/crm/person/'+r.id;
+    }
     function renderSearchResults() {
       var list = document.getElementById('hcd-list');
       var footer = document.getElementById('hcd-footer');
       if (!searchResults.length) {
-        list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Type to search…</div>';
-        footer.textContent = '';
+        // Show recent clients when blank
+        var recents = getRecentClients();
+        if (recents.length) {
+          list.innerHTML = '<div style="padding:0.4rem 1rem 0.2rem;font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;">Recent</div>' +
+            recents.map(function(r,i){
+              var icon = r._type==='relationship'?'👥':r._type==='company'?'🏢':'👤';
+              return '<div class="hcd-option" data-ridx="'+i+'">' +
+                '<span style="font-size:1rem;">'+icon+'</span>' +
+                '<span class="hcd-info"><span class="hcd-name">'+esc(r._label)+'</span>' +
+                '<span class="hcd-meta" style="display:block;">'+esc(r._sub)+'</span></span></div>';
+            }).join('');
+          footer.textContent = 'Recently visited';
+          list.querySelectorAll('.hcd-option[data-ridx]').forEach(function(el){
+            el.addEventListener('click', function(){
+              navigateTo(recents[parseInt(el.dataset.ridx)]);
+            });
+          });
+        } else {
+          list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.82rem;">Type to search…</div>';
+          footer.textContent = '';
+        }
         return;
       }
       list.innerHTML = searchResults.map(function(r,i){
@@ -104,13 +142,9 @@
           '<span class="hcd-meta" style="display:block;">'+esc(r._sub)+'</span></span></div>';
       }).join('');
       footer.textContent = searchResults.length + ' result' + (searchResults.length!==1?'s':'');
-      list.querySelectorAll('.hcd-option').forEach(function(el,i){
+      list.querySelectorAll('.hcd-option[data-idx]').forEach(function(el,i){
         el.addEventListener('click', function(){
-          var r = searchResults[i];
-          closeSearch();
-          if (r._type==='relationship') window.location.href='/crm/relationship/'+r.id;
-          else if (r._type==='company') window.location.href='/crm/company/'+r.id;
-          else window.location.href='/crm/person/'+r.id;
+          navigateTo(searchResults[i]);
         });
       });
     }
@@ -149,6 +183,7 @@
     // ── apiFetch exposed globally for page scripts ──
     window.apiFetch = apiFetch;
     window.esc = esc;
+    window.addRecentClient = addRecentClient;
 
     // ── Dynamic tab-bar sticky offset (adjusts to entity-header height) ──
     function updateTabBarTop() {
