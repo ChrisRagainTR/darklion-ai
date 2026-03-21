@@ -159,7 +159,7 @@
 <div id="view-board" style="display:none;flex-direction:column;height:calc(100vh - var(--header-h, 58px));overflow:hidden;">
   <div class="board-bar">
     <div class="board-bar-left">
-      <button class="back-btn" onclick="showList()">← Pipelines</button>
+      <button class="back-btn" onclick="document.getElementById('view-list').style.display='block';document.getElementById('view-board').style.display='none';window.showList&&window.showList();">← Pipelines</button>
       <span style="color:var(--border);">|</span>
       <div class="board-title" id="board-title">—</div>
     </div>
