@@ -202,10 +202,9 @@ let attachedFiles = [];
 (function initSocket() {
   if (!token) return;
 
-  // Always-on polling every 5s — guaranteed baseline regardless of socket status
+  // Always-on polling every 5s — inbox only (don't reload active thread, would clear compose)
   setInterval(() => {
     loadInbox();
-    if (activeThreadId) loadThread(activeThreadId, true);
   }, 5000);
 
   // Socket for instant delivery on top of polling
@@ -215,7 +214,10 @@ let attachedFiles = [];
       socket.on('connect', () => console.log('[socket] connected'));
       socket.on('connect_error', (e) => console.warn('[socket] error:', e.message));
       socket.on('message:new', ({ threadId }) => {
-        if (activeThreadId === threadId) loadThread(threadId, true);
+        // Only reload thread if user isn't actively composing a reply
+        const replyBox = document.getElementById('replyBody');
+        const isComposing = replyBox && replyBox.value.trim().length > 0;
+        if (activeThreadId === threadId && !isComposing) loadThread(threadId, true);
         loadInbox();
       });
       socket.on('thread:new', () => loadInbox());
