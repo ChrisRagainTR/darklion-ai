@@ -643,8 +643,8 @@
           </div>
         </div>
       </div>
-      <!-- New thread compose -->
-      <div id="comm-co-compose-view" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden;">
+      <!-- New thread compose — absolute so it covers the thread view too -->
+      <div id="comm-co-compose-view" style="display:none;position:absolute;inset:0;z-index:2;background:var(--navy);flex-direction:column;overflow:hidden;">
         <div class="detail-header" style="display:flex;align-items:center;justify-content:space-between;">
           <div>
             <span style="font-weight:700;">New Message</span>
