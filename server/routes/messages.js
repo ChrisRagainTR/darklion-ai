@@ -479,6 +479,12 @@ router.post('/', async (req, res) => {
     // Classify asynchronously (non-blocking)
     setImmediate(() => applyClassification(threadId, firmId, person_id, body.trim()));
 
+    // Notify all staff in real-time
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`firm:${firmId}`).emit('thread:new', { threadId, personId: person_id });
+    }
+
     res.status(201).json({ ok: true, threadId });
   } catch (err) {
     console.error('[POST /messages] error:', err);
@@ -571,6 +577,15 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
         toName: `${thread.first_name} ${thread.last_name}`,
         firmName: thread.firm_name,
       });
+    }
+
+    // Emit real-time events to staff inbox and client portal
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`firm:${firmId}`).emit('message:new', { threadId, messageId, senderType: 'staff' });
+      if (!is_internal) {
+        io.to(`portal:${firmId}:${thread.person_id}`).emit('message:new', { threadId, messageId, senderType: 'staff' });
+      }
     }
 
     res.json({ ok: true, messageId });

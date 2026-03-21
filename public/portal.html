@@ -937,12 +937,27 @@
     </div>
   </div>
 
+  <script src="/socket.io/socket.io.js"></script>
   <script>
   (function () {
     'use strict';
 
     const token = localStorage.getItem('portalToken');
     if (!token) { window.location.href = '/portal-login'; return; }
+
+    // ── Real-time socket for instant message updates ───────
+    try {
+      const _socket = io({ auth: { token } });
+      _socket.on('connect', () => console.log('[portal socket] connected'));
+      _socket.on('message:new', ({ senderType }) => {
+        // Staff sent us a message — reload chat
+        if (senderType === 'staff' && typeof loadAllMessages === 'function') {
+          loadAllMessages();
+        }
+      });
+    } catch (e) {
+      console.warn('[portal socket] init error:', e);
+    }
 
     // ── State ─────────────────────────────────────────────
     let _me = null, _companies = [], _docs = [], _stanford = null;

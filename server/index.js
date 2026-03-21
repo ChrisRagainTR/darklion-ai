@@ -322,7 +322,44 @@ async function start() {
 
   startNightlyCron();
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const http = require('http');
+  const { Server } = require('socket.io');
+  const jwt = require('jsonwebtoken');
+
+  const httpServer = http.createServer(app);
+
+  const io = new Server(httpServer, {
+    cors: { origin: '*', credentials: true },
+  });
+
+  // Socket auth middleware — accepts both firm JWTs and portal JWTs
+  io.use((socket, next) => {
+    try {
+      const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+      if (!token) return next(new Error('unauthorized'));
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      socket.user = payload;
+      next();
+    } catch (e) {
+      next(new Error('unauthorized'));
+    }
+  });
+
+  io.on('connection', (socket) => {
+    const u = socket.user;
+    if (u.firmId && u.personId) {
+      // Portal/client user — joins their personal room
+      socket.join(`portal:${u.firmId}:${u.personId}`);
+    } else if (u.firmId) {
+      // Staff user — joins firm-wide room
+      socket.join(`firm:${u.firmId}`);
+    }
+  });
+
+  // Expose io so routes can emit events via req.app.get('io')
+  app.set('io', io);
+
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`DarkLion server running on port ${PORT}`);
   });
 }

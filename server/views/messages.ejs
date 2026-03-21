@@ -189,6 +189,7 @@
   </div>
 
 <%- include('partials/shell-globals') %>
+<script src="/socket.io/socket.io.js"></script>
 
 <script>
 const token = localStorage.getItem('dl_token');
@@ -199,6 +200,32 @@ let activeFilter = 'active';
 let activeThreadId = null;
 let firmUsers = [];
 let attachedFiles = [];
+
+// ── Real-time socket ──────────────────────────────────────────────────────────
+(function initSocket() {
+  if (!token) return;
+  try {
+    const socket = io({ auth: { token } });
+    socket.on('connect', () => console.log('[socket] connected'));
+    socket.on('disconnect', () => console.log('[socket] disconnected'));
+
+    socket.on('message:new', ({ threadId }) => {
+      // Reload active thread silently if we're viewing it
+      if (activeThreadId === threadId) {
+        loadThread(threadId, true /* silent */);
+      }
+      // Refresh thread list to update preview + unread badge
+      loadInbox();
+    });
+
+    socket.on('thread:new', () => {
+      loadInbox();
+    });
+  } catch (e) {
+    console.warn('[socket] init error:', e);
+  }
+})();
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function apiFetch(url, opts = {}) {
   // If body is FormData, don't set Content-Type (browser sets multipart boundary)
@@ -303,7 +330,8 @@ function renderInbox() {
 }
 
 // Load thread detail
-async function loadThread(threadId) {
+// silent=true means called from socket event — skip spinner/scroll jank if user is composing
+async function loadThread(threadId, silent = false) {
   activeThreadId = threadId;
   renderInbox(); // re-render to highlight active
 
@@ -314,8 +342,10 @@ async function loadThread(threadId) {
   tv.style.flex = '1';
   tv.style.height = '100%';
 
-  document.getElementById('detailMessages').innerHTML = '<div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>';
-  document.getElementById('detailHeader').innerHTML = '';
+  if (!silent) {
+    document.getElementById('detailMessages').innerHTML = '<div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>';
+    document.getElementById('detailHeader').innerHTML = '';
+  }
 
   try {
     const res = await apiFetch(`/api/messages/${threadId}`);
