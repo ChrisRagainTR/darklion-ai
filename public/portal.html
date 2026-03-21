@@ -2232,17 +2232,18 @@
       loading.style.display = 'none';
       list.style.display = 'block';
 
-      // Hide tab if all complete
-      const pendingCount = _taxDeliveries.filter(d => !d.signed_at).length;
+      // Only show unsigned/active deliveries — filter out already signed ones
+      const activeDeliveries = _taxDeliveries.filter(d => !d.signed_at);
       const tdTab = document.getElementById('review-sign-tab');
       const tdBadge = document.getElementById('review-sign-badge');
-      if (pendingCount === 0 && tdTab) { tdTab.style.display = 'none'; }
-      else if (tdBadge) { tdBadge.textContent = pendingCount; }
+      if (activeDeliveries.length === 0 && tdTab) { tdTab.style.display = 'none'; }
+      else if (tdBadge) { tdBadge.textContent = activeDeliveries.length; }
 
-      if (_taxDeliveries.length === 0) {
+      if (activeDeliveries.length === 0) {
         list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:2rem;">No documents require your signature at this time.</p>';
         return;
       }
+      _taxDeliveries = activeDeliveries;
 
       list.innerHTML = _taxDeliveries.map(d => {
         const myStatus = d.signed_at ? 'complete' : d.approved_at ? 'awaiting-sign' : d.needs_changes_at ? 'needs-changes' : 'needs-review';
