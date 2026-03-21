@@ -181,8 +181,7 @@
   </div>
 </div>
 
-<div id="tab-communication" class="tab-content" style="padding:0;display:flex;flex-direction:column;overflow:hidden;">
-  <style>
+<style>
     #tab-communication.active { display:flex !important; flex-direction:column; }
     .comm-layout { display:flex; flex:1; overflow:hidden; min-height:0; }
     .comm-left { width:320px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; }
@@ -229,6 +228,8 @@
     .comm-empty-icon { font-size:2.5rem; }
     @media(max-width:700px) { .comm-left { width:240px; } }
   </style>
+
+<div id="tab-communication" class="tab-content" style="padding:0;display:flex;flex-direction:column;overflow:hidden;">
   <div class="comm-layout">
     <!-- Left: thread list -->
     <div class="comm-left">
