@@ -147,15 +147,19 @@ Relationship  →  the household/group (top-level billing unit)
 
 ---
 
-### ⏳ Phase 6 — Pipelines
-**Plan:**
-- DB tables: `pipeline_templates`, `pipeline_stages`, `pipeline_instances`, `pipeline_jobs`, `pipeline_job_history`
-- Staff UI: Kanban board (templates + instances + jobs)
-- Pipeline types: fully customizable stages, entity_type locked per template (company/person/relationship)
-- Jobs manually added — no auto-population
-- Viktor can read and move jobs via API
-- Reference: existing TaxDome pipeline had 11 stages for business tax returns (see SCHEMA_PLAN.md)
-- Bookkeeping pipeline uses 12 stages (Jan–Dec months)
+### ✅ Phase 6 — Pipelines (COMPLETE — 2026-03-21)
+**What was built:**
+- TaxDome-style UX: pipeline list → click to open board (no "instances" or "boards" tabs)
+- Year selector in board header — silently creates a new instance per year on demand
+- Kanban board with drag-drop between stages, horizontal scrollbar pinned at bottom
+- Job cards tied to real CRM records (companies, people, or relationships)
+- Job activity log — updates with author name + timestamp, 3 most recent shown on card
+- Job detail panel — stage, status, priority, assignee, due date, movement history
+- Pipeline clone, archive/restore, delete from dot menu
+- Stage editor — add/rename/delete stages inline
+- `pipeline_job_updates` table for the activity log
+- `ensure-instance` endpoint — creates year instance on demand
+- All inside EJS shell (standard left nav + header)
 
 ---
 
