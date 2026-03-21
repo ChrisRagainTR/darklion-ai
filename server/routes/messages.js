@@ -146,8 +146,12 @@ router.get('/', async (req, res) => {
        FROM message_threads mt
        JOIN people p ON p.id = mt.person_id
        WHERE mt.firm_id = $1 AND mt.${statusFilter}
+         AND NOT EXISTS (
+           SELECT 1 FROM thread_dismissals td
+           WHERE td.thread_id = mt.id AND td.firm_user_id = $2
+         )
        ORDER BY mt.last_message_at DESC`,
-      [firmId]
+      [firmId, req.firm.userId || 0]
     );
 
     // Fetch company tags for each thread
@@ -713,6 +717,31 @@ router.put('/:threadId/read', async (req, res) => {
     console.error('[PUT /messages/:threadId/read] error:', err);
     res.status(500).json({ error: 'Failed to mark read' });
   }
+});
+
+// POST /:threadId/dismiss — personal dismiss (Resolve Me)
+router.post('/:threadId/dismiss', async (req, res) => {
+  try {
+    const firmUserId = req.firm.userId;
+    if (!firmUserId) return res.status(400).json({ error: 'No user ID' });
+    await pool.query(
+      `INSERT INTO thread_dismissals (thread_id, firm_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [req.params.threadId, firmUserId]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /:threadId/dismiss — undo personal dismiss
+router.delete('/:threadId/dismiss', async (req, res) => {
+  try {
+    const firmUserId = req.firm.userId;
+    await pool.query(
+      `DELETE FROM thread_dismissals WHERE thread_id = $1 AND firm_user_id = $2`,
+      [req.params.threadId, firmUserId]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 module.exports = router;

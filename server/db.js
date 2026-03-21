@@ -527,6 +527,15 @@ async function initDB() {
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
 
+    -- Per-user thread dismissals (Resolve Me)
+    CREATE TABLE IF NOT EXISTS thread_dismissals (
+      id SERIAL PRIMARY KEY,
+      thread_id INTEGER NOT NULL REFERENCES message_threads(id) ON DELETE CASCADE,
+      firm_user_id INTEGER NOT NULL REFERENCES firm_users(id) ON DELETE CASCADE,
+      dismissed_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(thread_id, firm_user_id)
+    );
+
     -- Pipeline template status (active/archived)
     DO $$ BEGIN
       ALTER TABLE pipeline_templates ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';

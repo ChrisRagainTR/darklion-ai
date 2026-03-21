@@ -38,6 +38,13 @@
     .thread-card-subject { font-size: 0.78rem; color: var(--muted); margin-top: 0.1rem; }
     .thread-card-preview { font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .thread-card-meta { display: flex; gap: 0.4rem; align-items: center; margin-top: 0.3rem; flex-wrap: wrap; }
+    .thread-card-actions { display: none; gap: 0.35rem; margin-top: 0.4rem; }
+    .thread-card:hover .thread-card-actions { display: flex; }
+    .resolve-btn { font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 4px; cursor: pointer; border: 1px solid; }
+    .resolve-me { background: transparent; border-color: var(--muted); color: var(--muted); }
+    .resolve-me:hover { border-color: var(--gold); color: var(--gold); }
+    .resolve-all { background: transparent; border-color: var(--green); color: var(--green); }
+    .resolve-all:hover { background: rgba(62,207,142,0.1); }
     .status-badge { font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; color: #fff; }
     .status-badge.active { background: #c9a84c; }
     .status-badge.open { background: #c9a84c; }
@@ -279,6 +286,32 @@ function displayStatus(s) {
 let _inboxLoading = false;
 
 // Load threads — silent refresh, no flash, no spinner on poll
+async function dismissThread(threadId) {
+  try {
+    await apiFetch(`/api/messages/${threadId}/dismiss`, { method: 'POST' });
+    allThreads = allThreads.filter(t => t.id !== threadId);
+    if (activeThreadId === threadId) {
+      activeThreadId = null;
+      document.getElementById('threadView').style.display = 'none';
+      document.getElementById('noThreadSelected').style.display = '';
+    }
+    renderInbox();
+  } catch(e) { window.toast(e.message, 'error'); }
+}
+
+async function resolveThread(threadId) {
+  try {
+    await apiFetch(`/api/messages/${threadId}/status`, { method: 'PUT', body: JSON.stringify({ status: 'resolved' }) });
+    allThreads = allThreads.filter(t => t.id !== threadId);
+    if (activeThreadId === threadId) {
+      activeThreadId = null;
+      document.getElementById('threadView').style.display = 'none';
+      document.getElementById('noThreadSelected').style.display = '';
+    }
+    renderInbox();
+  } catch(e) { window.toast(e.message, 'error'); }
+}
+
 async function loadInbox(showSpinner = false) {
   if (_inboxLoading) return; // prevent concurrent fetches
   _inboxLoading = true;
@@ -355,6 +388,10 @@ function renderInbox() {
         <span class="status-badge ${t.status === 'resolved' ? 'resolved' : 'active'}">${t.status === 'resolved' ? 'Resolved' : 'Active'}</span>
         ${companies}
         ${t.unreadCount > 0 ? `<span class="unread-dot" title="${t.unreadCount} unread"></span>` : ''}
+      </div>
+      <div class="thread-card-actions" onclick="event.stopPropagation();">
+        <button class="resolve-btn resolve-me" onclick="dismissThread(${t.id})" title="Remove from my inbox only">Resolve Me</button>
+        <button class="resolve-btn resolve-all" onclick="resolveThread(${t.id})" title="Resolve for everyone">Resolve All</button>
       </div>
     </div>`;
   }).join('');
