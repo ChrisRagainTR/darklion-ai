@@ -947,7 +947,10 @@
 
     // ── Real-time + polling ────────────────────────────────────────────────────
     function _reloadMessages() {
-      if (typeof window._portalReloadMessages === 'function') window._portalReloadMessages();
+      console.log('[portal] _reloadMessages called, _portalReloadMessages set:', typeof window._portalReloadMessages);
+      if (typeof window._portalReloadMessages === 'function') {
+        window._portalReloadMessages();
+      }
     }
 
     // Polling: 30s fallback — paused while user is typing
@@ -961,7 +964,8 @@
     _socket.on('connect', () => console.log('[portal socket] connected, id:', _socket.id));
     _socket.on('connect_error', (err) => console.warn('[portal socket] connect_error:', err.message));
     _socket.on('message:new', ({ senderType }) => {
-      if (senderType === 'staff') _reloadMessages();
+      console.log('[portal socket] message:new received, senderType:', senderType);
+      _reloadMessages();
     });
     // ─────────────────────────────────────────────────────────────────────────
 
