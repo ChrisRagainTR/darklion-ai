@@ -589,8 +589,8 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
 
     res.json({ ok: true, messageId });
   } catch (err) {
-    console.error('[POST /messages/:threadId/reply] error:', err);
-    res.status(500).json({ error: 'Failed to send reply' });
+    console.error('[POST /messages/:threadId/reply] error:', err.message, err.stack?.split('\n')[1]);
+    res.status(500).json({ error: err.message || 'Failed to send reply' });
   }
 });
 

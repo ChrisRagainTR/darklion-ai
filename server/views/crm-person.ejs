@@ -940,6 +940,7 @@
   let commPersonId = null;
   let commActiveThreadId = null;
   let commAttachFiles = [];
+  let commNewAttachFiles = [];
 
   function initComm(pid) {
     if (!pid) { console.error('[comm] initComm called with no personId'); return; }
@@ -1057,9 +1058,7 @@
     return (b/1048576).toFixed(1) + ' MB';
   }
 
-  let commNewAttachFiles = [];
-
-  function handleCommAttach(fileList) {
+    function handleCommAttach(fileList) {
     for (const f of Array.from(fileList)) {
       if (commAttachFiles.length >= 8) { alert('Maximum 8 files per message'); break; }
       commAttachFiles.push(f);
