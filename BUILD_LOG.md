@@ -163,7 +163,7 @@ Relationship  →  the household/group (top-level billing unit)
 
 ---
 
-### ⚠️ Phase 7 — Tax Return Delivery + E-Signatures (BUILT, NEEDS FIX)
+### ✅ Phase 7 — Tax Return Delivery + E-Signatures (COMPLETE — 2026-03-21)
 **Status:** Built but not working correctly. Will revisit after Phase 6 (Pipelines).
 **Plan:**
 - Deliver a document through the portal with status tracking (delivered → viewed → signed)
