@@ -2,7 +2,6 @@
 
 <style>
   /* ── VIEWS ── */
-  .pipes-view { display: none; }
 
   /* ── LIST VIEW ── */
   .list-wrap { padding: 1.5rem 2rem; }
@@ -39,8 +38,6 @@
 
   /* ── KANBAN ── */
   /* Board view fills remaining viewport — horizontal scrollbar stays pinned at bottom */
-  .pipes-view.active { display: block; }
-  #view-board.active { display: flex; flex-direction: column; height: calc(100vh - var(--header-h, 58px)); overflow: hidden; }
   .board-bar { flex-shrink: 0; }
   .kanban-wrap {
     display: flex; gap: 1rem; padding: 1rem 1.5rem 0;
@@ -132,7 +129,7 @@
 </style>
 
 <!-- ═══════════════ PIPELINE LIST ═══════════════ -->
-<div id="view-list" class="pipes-view active">
+<div id="view-list" style="display:block;">
   <div class="list-wrap">
     <div class="list-top">
       <div style="display:flex;align-items:center;gap:1rem;">
@@ -159,7 +156,7 @@
 </div>
 
 <!-- ═══════════════ BOARD VIEW ═══════════════ -->
-<div id="view-board" class="pipes-view">
+<div id="view-board" style="display:none;flex-direction:column;height:calc(100vh - var(--header-h, 58px));overflow:hidden;">
   <div class="board-bar">
     <div class="board-bar-left">
       <button class="back-btn" onclick="showList()">← Pipelines</button>
@@ -291,14 +288,18 @@
 
   // ── VIEWS ────────────────────────────────────────
   function showList() {
-    document.getElementById('view-list').classList.add('active');
-    document.getElementById('view-board').classList.remove('active');
+    document.getElementById('view-list').style.display = 'block';
+    document.getElementById('view-board').style.display = 'none';
     loadList();
   }
 
   function showBoard() {
-    document.getElementById('view-list').classList.remove('active');
-    document.getElementById('view-board').classList.add('active');
+    document.getElementById('view-list').style.display = 'none';
+    var board = document.getElementById('view-board');
+    board.style.display = 'flex';
+    board.style.flexDirection = 'column';
+    board.style.height = 'calc(100vh - var(--header-h, 58px))';
+    board.style.overflow = 'hidden';
   }
 
   // ── PIPELINE LIST ─────────────────────────────────
