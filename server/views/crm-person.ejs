@@ -1125,7 +1125,11 @@
       fd.append('body', body);
       fd.append('is_internal', isInternal ? 'true' : 'false');
       commAttachFiles.forEach(f => fd.append('files', f));
-      await apiFetch(`/api/messages/${commActiveThreadId}/reply`, { method: 'POST', body: fd });
+      const replyRes = await apiFetch(`/api/messages/${commActiveThreadId}/reply`, { method: 'POST', body: fd });
+      if (!replyRes.ok) {
+        const errData = await replyRes.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error ${replyRes.status}`);
+      }
       document.getElementById('comm-reply-body').value = '';
       document.getElementById('comm-internal-toggle').checked = false;
       commAttachFiles = [];
