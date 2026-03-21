@@ -1097,14 +1097,15 @@
           });
           if (tdRes.ok) {
             const deliveries = await tdRes.json();
+            window._taxDeliveriesCache = deliveries;
             if (deliveries && deliveries.length > 0) {
               const tdTab = document.getElementById('review-sign-tab');
               const tdBadge = document.getElementById('review-sign-badge');
-              if (tdTab) tdTab.style.display = '';
+              if (tdTab) { tdTab.style.display = ''; tdTab.style.visibility = 'visible'; }
               if (tdBadge) { tdBadge.textContent = deliveries.length; tdBadge.style.display = ''; }
-              // Store for later use
-              window._taxDeliveriesCache = deliveries;
             }
+          } else {
+            console.warn('[portal] tax-deliveries status:', tdRes.status);
           }
         } catch(e) { console.error('[portal] tax delivery init error:', e); }
 
