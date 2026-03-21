@@ -286,3 +286,43 @@ Relationship  →  the household/group (top-level billing unit)
 ---
 
 *This document should be kept up to date as each phase completes.*
+
+---
+
+### ⏳ Phase 13 — Native AI Layer (Viktor Efficiency Infrastructure)
+
+**Goal:** Make DarkLion smarter so Viktor spends time on judgment calls, not mechanical work.
+
+#### Smart Triage & Pre-processing
+- Auto-classify inbound messages/emails by type (tax question, document request, billing, urgent notice, general) — upgrade from basic Haiku classification to full context-aware routing
+- Auto-tag messages to the correct company based on content + sender history
+- Detect urgent signals: IRS notices, deadlines, "ASAP" language → escalate immediately
+- De-duplicate: detect when a client emailed twice about the same issue
+
+#### Proactive Alert Engine
+DarkLion monitors the DB and fires alerts to Viktor (or staff inbox) when:
+- Tax return unsigned after X days → prompt follow-up
+- Pipeline job stuck in same stage for 2+ weeks
+- RMD season (Jan): flag clients 73+ with no RMD pipeline job
+- IRMAA lookback: flag clients with high income 2 years prior → review for Medicare surcharge
+- Client portal document unviewed 30+ days after delivery
+- Client hasn't logged into portal in 60+ days
+- New client created but no onboarding pipeline started
+
+#### Data Enrichment for Viktor
+- **Client brief generator**: on demand or before scheduled meetings — summarizes open pipelines, recent messages, unreviewed documents, upcoming deadlines for a given client
+- **Status summary**: when Viktor asks "what's open for the Ragain Family?" → DarkLion compiles full picture across all entities
+- **Document auto-classification**: when client uploads a document, Claude infers the type (W-2, 1099, bank statement, etc.) and suggests the correct folder
+
+#### Workflow Automation (no Viktor needed)
+- Tax return fully signed by all signers → auto-advance pipeline to "Delivered" stage
+- New client (Person or Company) created → auto-generate standard onboarding pipeline from template
+- Client uploads a document → auto-classify into correct year/category folder
+- Message thread idle for 7 days with no staff reply → flag to staff inbox
+
+#### Implementation Notes
+- Alert engine runs as a cron job (2 AM UTC, same as nightly scans)
+- Alerts stored in a new `ai_alerts` table: `{ firm_id, type, entity_type, entity_id, message, severity, resolved_at }`
+- Staff dashboard shows active alerts; Viktor can resolve or act on them
+- All automation is auditable — logged in the existing audit trail
+
