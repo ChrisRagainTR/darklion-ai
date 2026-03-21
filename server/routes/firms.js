@@ -273,6 +273,24 @@ router.get('/team', requireFirm, async (req, res) => {
   }
 });
 
+// --- GET /firms/team/:userId/invite-link ---
+router.get('/team/:userId/invite-link', requireFirm, async (req, res) => {
+  try {
+    if (req.firm.role !== 'owner') return res.status(403).json({ error: 'Owners only' });
+    const { rows } = await pool.query(
+      'SELECT invite_token, invite_expires_at, accepted_at FROM firm_users WHERE id = $1 AND firm_id = $2',
+      [parseInt(req.params.userId), req.firm.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'User not found' });
+    const u = rows[0];
+    if (u.accepted_at) return res.status(400).json({ error: 'User has already accepted their invite' });
+    if (!u.invite_token) return res.status(400).json({ error: 'No pending invite for this user' });
+    res.json({ inviteUrl: `/invite/${u.invite_token}`, expires_at: u.invite_expires_at });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- PUT /firms/team/:userId (edit name/email) ---
 router.put('/team/:userId', requireFirm, async (req, res) => {
   try {
