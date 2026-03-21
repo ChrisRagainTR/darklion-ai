@@ -206,10 +206,12 @@ setInterval(() => loadInbox(), 30000);
 const _socket = io({ auth: { token } });
 _socket.on('connect', () => console.log('[socket] connected, id:', _socket.id));
 _socket.on('connect_error', (err) => console.warn('[socket] connect_error:', err.message));
-_socket.on('message:new', ({ threadId }) => {
+_socket.on('message:new', ({ threadId, senderType }) => {
   loadInbox();
+  // Only reload thread on incoming messages (client replies), not our own sends
   const replyBox = document.getElementById('replyBody');
-  if (activeThreadId === threadId && !(replyBox && replyBox.value.trim())) {
+  const isComposing = replyBox && replyBox.value.trim();
+  if (activeThreadId === threadId && !isComposing && !_justSent && senderType !== 'staff') {
     loadThread(threadId, true);
   }
 });
@@ -380,12 +382,34 @@ async function loadThread(threadId, silent = false) {
 
     `;
 
-    // Messages
+    // Messages — append-only in silent mode, full replace on initial load
     const msgs = data.messages || [];
+    const msgContainer = document.getElementById('detailMessages');
     if (!msgs.length) {
-      document.getElementById('detailMessages').innerHTML = '<div style="color:var(--muted);padding:1rem;font-size:0.85rem;">No messages yet.</div>';
+      if (!silent) msgContainer.innerHTML = '<div style="color:var(--muted);padding:1rem;font-size:0.85rem;">No messages yet.</div>';
+    } else if (silent) {
+      // Append only new messages
+      const existingIds = new Set([...msgContainer.querySelectorAll('[data-msg-id]')].map(el => parseInt(el.dataset.msgId)));
+      let appended = false;
+      for (const m of msgs) {
+        if (!existingIds.has(m.id)) {
+          const isStaff = m.senderType === 'staff';
+          const isInternal = m.isInternal;
+          const side = isStaff ? 'staff' : 'client';
+          const bubbleClass = isInternal ? 'internal' : side;
+          const attachmentsHtml = (m.attachments||[]).length > 0
+            ? `<div class="msg-attachments">${m.attachments.map(a => `<a class="attachment-chip" href="#" onclick="downloadAttachment(${a.documentId});return false;">📎 ${esc(a.displayName)}</a>`).join('')}</div>` : '';
+          msgContainer.insertAdjacentHTML('beforeend', `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
+            ${isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
+            <div class="msg-bubble ${bubbleClass}">${m.body ? esc(m.body).replace(/\n/g,'<br>') : ''}${attachmentsHtml}</div>
+            <div class="msg-meta">${esc(m.senderName||'')} · ${relTime(m.createdAt)}</div>
+          </div>`);
+          appended = true;
+        }
+      }
+      if (appended) msgContainer.scrollTop = msgContainer.scrollHeight;
     } else {
-      document.getElementById('detailMessages').innerHTML = msgs.map(m => {
+      msgContainer.innerHTML = msgs.map(m => {
         const isStaff = m.senderType === 'staff';
         const isInternal = m.isInternal;
         const side = isStaff ? 'staff' : 'client';
@@ -396,18 +420,20 @@ async function loadThread(threadId, silent = false) {
               return `<a class="attachment-chip" href="#" onclick="downloadAttachment(${a.documentId});return false;">📎 ${esc(a.displayName)}${size}</a>`;
             }).join('')}</div>`
           : '';
-        return `<div class="msg-bubble-wrap ${side}">
+        return `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
           ${isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
           <div class="msg-bubble ${bubbleClass}">${m.body ? esc(m.body).replace(/\n/g,'<br>') : ''}${attachmentsHtml}</div>
           <div class="msg-meta">${esc(m.senderName || '')} · ${relTime(m.createdAt)}</div>
         </div>`;
       }).join('');
-      document.getElementById('detailMessages').scrollTop = document.getElementById('detailMessages').scrollHeight;
+      msgContainer.scrollTop = msgContainer.scrollHeight;
     }
 
-    document.getElementById('replyBody').value = '';
-    attachedFiles = [];
-    renderAttachChips();
+    if (!silent) {
+      document.getElementById('replyBody').value = '';
+      attachedFiles = [];
+      renderAttachChips();
+    }
   } catch(e) {
     document.getElementById('detailMessages').innerHTML = '<div style="color:var(--muted);padding:1rem;">Failed to load thread.</div>';
   }
@@ -470,10 +496,13 @@ async function sendReply() {
     document.getElementById('internalToggle').checked = false;
     attachedFiles = [];
     renderAttachChips();
-    await loadThread(activeThreadId);
+    _justSent = true;
+    setTimeout(() => { _justSent = false; }, 3000);
+    await loadThread(activeThreadId, true); // silent reload — no spinner
     await loadInbox();
   } catch(e) { alert('Failed to send reply'); }
 }
+let _justSent = false;
 
 async function updateStatus(threadId, status) {
   await apiFetch(`/api/messages/${threadId}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
