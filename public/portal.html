@@ -2536,6 +2536,18 @@
           ${allSigned ? `<p style="color:#4caf50;font-size:0.88rem;margin-bottom:1.5rem;font-weight:600;">All signers have completed. Your advisor will proceed with e-filing.</p>` : ''}
           <button class="btn-submit" onclick="closeTaxDeliveryFlow()">Done</button>
         </div>`;
+
+      // Silently reload docs so they appear without refresh
+      try {
+        const token = localStorage.getItem('portalToken');
+        const docsRes = await fetch('/portal/documents', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (docsRes.ok) {
+          _docs = await docsRes.json();
+          renderDocuments();
+        }
+      } catch(e) {}
+      // Reload deliveries to update tab
+      loadTaxDeliveries().catch(() => {});
     }
     window.renderTDStep4 = renderTDStep4;
 
