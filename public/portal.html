@@ -1828,9 +1828,12 @@
       loadAllMessages();
     }
 
+    let _loadingMessages = false;
     async function loadAllMessages() {
+      if (_loadingMessages) return; // prevent concurrent calls clearing the UI
+      _loadingMessages = true;
       const token = localStorage.getItem('portalToken');
-      if (!token) return;
+      if (!token) { _loadingMessages = false; return; }
       try {
         // Load all threads
         const threadsRes = await fetch('/portal/messages', { headers: { 'Authorization': 'Bearer ' + token } });
@@ -1839,22 +1842,25 @@
         if (!Array.isArray(threads) || !threads.length) {
           const el = document.getElementById('chatEmpty');
           if (el) { el.style.display = 'block'; el.textContent = 'No messages yet. Send a message below to get started!'; }
+          _loadingMessages = false;
           return;
         }
 
-        // Load all thread messages and flatten into one conversation
-        _chatAllMessages = [];
+        // Load all thread messages into a fresh buffer — don't clear UI until ready
+        const freshMessages = [];
         for (const thread of threads) {
           const res = await fetch(`/portal/messages/${thread.id}`, { headers: { 'Authorization': 'Bearer ' + token } });
           const data = await res.json();
           if (data.messages) {
-            _chatAllMessages.push(...data.messages.map(m => ({ ...m, threadSubject: thread.subject })));
+            freshMessages.push(...data.messages.map(m => ({ ...m, threadSubject: thread.subject })));
           }
         }
 
         // Sort by date
-        _chatAllMessages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        freshMessages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
+        // Only update UI now that we have the full dataset
+        _chatAllMessages = freshMessages;
         renderChatMessages();
 
         // Update tab unread badge
@@ -1862,8 +1868,8 @@
         updateChatBadge(unread);
       } catch (e) {
         console.error('[portal messages] load error:', e);
-        const el = document.getElementById('chatEmpty');
-        if (el) el.textContent = 'Error: ' + e.message;
+      } finally {
+        _loadingMessages = false;
       }
     }
 
