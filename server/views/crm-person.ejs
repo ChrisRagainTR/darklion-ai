@@ -365,6 +365,32 @@
     return res;
   }
   function esc(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  // Format phone as 239.297.2988 and wrap in tel: link
+  function fmtPhone(raw) {
+    if (!raw) return '—';
+    const digits = raw.replace(/\D/g, '');
+    let formatted = raw; // fallback to raw if can't parse
+    if (digits.length === 10) {
+      formatted = `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6)}`;
+    } else if (digits.length === 11 && digits[0] === '1') {
+      formatted = `${digits.slice(1,4)}.${digits.slice(4,7)}.${digits.slice(7)}`;
+    }
+    return `<a href="tel:${formatted}" style="color:var(--gold);text-decoration:none;">${esc(formatted)}</a>`;
+  }
+
+  // Format date_of_birth as mm/dd/yyyy
+  function fmtDOB(raw) {
+    if (!raw) return '—';
+    // raw may be ISO date string like "1955-04-12" or "1955-04-12T00:00:00.000Z"
+    const d = new Date(raw);
+    if (isNaN(d)) return esc(raw);
+    // Use UTC parts to avoid timezone shift
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const yyyy = d.getUTCFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  }
   function toast(msg, type='success') { window.toast(msg, type === 'error' ? 'error' : undefined); }
 
   function switchTab(name, el) {
@@ -407,7 +433,7 @@
     const meta = [];
     if (p.relationship_name) meta.push(`👥 <a href="#" style="color:var(--gold);text-decoration:none;">${esc(p.relationship_name)}</a>`);
     if (p.email) meta.push(esc(p.email));
-    if (p.phone) meta.push(esc(p.phone));
+    if (p.phone) meta.push(fmtPhone(p.phone));
     document.getElementById('entity-meta').innerHTML = meta.join('  ·  ');
     // Track recent visit
     if (window.addRecentClient) window.addRecentClient({ _type:'person', id: p.id, _label: name, _sub: p.relationship_name || 'Person' });
@@ -420,8 +446,8 @@
     let html = `<div class="card">
       <div class="card-title">Contact Details</div>
       <div class="info-row"><span class="info-label">Email</span><span class="info-val">${p.email ? `<a href="mailto:${esc(p.email)}" style="color:var(--gold);">${esc(p.email)}</a>` : '—'}</span></div>
-      <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${esc(p.phone || '—')}</span></div>
-      <div class="info-row"><span class="info-label">Date of Birth</span><span class="info-val">${p.date_of_birth ? esc(p.date_of_birth) : '—'}</span></div>
+      <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${fmtPhone(p.phone)}</span></div>
+      <div class="info-row"><span class="info-label">Date of Birth</span><span class="info-val">${fmtDOB(p.date_of_birth)}</span></div>
       <div class="info-row"><span class="info-label">Filing Status</span><span class="info-val">${esc((p.filing_status||'—').replace(/_/g,' '))}</span></div>
       <div class="info-row"><span class="info-label">Relationship</span><span class="info-val">${esc(p.relationship_name || '—')}</span></div>
     </div>`;
