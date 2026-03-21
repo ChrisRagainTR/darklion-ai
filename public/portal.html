@@ -872,6 +872,7 @@
           </div>
           <div class="chat-attach-chips" id="chatAttachChips"></div>
           <input type="file" id="chatAttachInput" multiple style="display:none;" onchange="handleChatAttach(this.files)">
+          <div id="advisorTyping" style="display:none;padding:0.2rem 0.5rem;font-size:0.75rem;color:var(--muted);font-style:italic;"></div>
           <div class="chat-input-bar">
             <button class="chat-attach-btn" onclick="document.getElementById('chatAttachInput').click()" title="Attach files">📎</button>
             <textarea id="chatInput" placeholder="Write a message to your advisor…" rows="1"></textarea>
@@ -957,16 +958,40 @@
     let _userTyping = false;
     document.addEventListener('focusin', (e) => { if (e.target.id === 'chatInput') _userTyping = true; });
     document.addEventListener('focusout', (e) => { if (e.target.id === 'chatInput') _userTyping = false; });
+
+    // Emit typing indicator to staff when client types
+    let _clientTypingTimer = null;
+    document.addEventListener('input', (e) => {
+      if (e.target.id !== 'chatInput') return;
+      clearTimeout(_clientTypingTimer);
+      _clientTypingTimer = setTimeout(() => {
+        if (_portalChannel && _portalChannel.subscribed) {
+          _portalChannel.trigger('client-typing', { name: _portalJwt.name || 'Client' });
+        }
+      }, 300);
+    });
     setInterval(() => { if (!_userTyping) _reloadMessages(); }, 30000);
 
-    // Pusher: instant delivery
+    // Pusher: instant delivery via private channel
     const _portalJwt = JSON.parse(atob(token.split('.')[1]));
-    const _pusher = new Pusher('6ee61a25e438d5bc4751', { cluster: 'us2' });
-    const _portalChannel = _pusher.subscribe(`portal-${_portalJwt.firmId}-${_portalJwt.personId}`);
+    const _pusher = new Pusher('6ee61a25e438d5bc4751', {
+      cluster: 'us2',
+      authEndpoint: '/pusher/auth/portal',
+      auth: { headers: { Authorization: 'Bearer ' + token } },
+    });
+    const _portalChannel = _pusher.subscribe(`private-portal-${_portalJwt.firmId}-${_portalJwt.personId}`);
     _portalChannel.bind('pusher:subscription_succeeded', () => console.log('[pusher] portal subscribed'));
+    _portalChannel.bind('pusher:subscription_error', (e) => console.warn('[pusher] portal auth error:', e));
     _portalChannel.bind('message-new', ({ senderType }) => {
-      console.log('[pusher] message-new received, senderType:', senderType);
       _reloadMessages();
+    });
+
+    // Typing indicator from staff arrives on portal channel
+    _portalChannel.bind('client-typing', ({ name }) => {
+      const el = document.getElementById('advisorTyping');
+      if (el) { el.textContent = `${name || 'Advisor'} is typing…`; el.style.display = 'block'; }
+      clearTimeout(window._portalTypingTimer);
+      window._portalTypingTimer = setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
     });
     // ─────────────────────────────────────────────────────────────────────────
 

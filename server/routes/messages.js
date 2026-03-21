@@ -482,7 +482,7 @@ router.post('/', async (req, res) => {
     // Pusher: notify staff of new thread
     const pusher = req.app.get('pusher');
     if (pusher) {
-      pusher.trigger(`firm-${firmId}`, 'thread-new', { threadId, personId: person_id });
+      pusher.trigger(`private-firm-${firmId}`, 'thread-new', { threadId, personId: person_id });
     }
 
     res.status(201).json({ ok: true, threadId });
@@ -582,9 +582,9 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
     // Pusher: notify staff inbox and client portal
     const pusher = req.app.get('pusher');
     if (pusher && !is_internal) {
-      pusher.trigger([`firm-${firmId}`, `portal-${firmId}-${thread.person_id}`], 'message-new', { threadId, senderType: 'staff' });
+      pusher.trigger([`private-firm-${firmId}`, `private-portal-${firmId}-${thread.person_id}`], 'message-new', { threadId, senderType: 'staff' });
     } else if (pusher && is_internal) {
-      pusher.trigger(`firm-${firmId}`, 'message-new', { threadId, senderType: 'staff' });
+      pusher.trigger(`private-firm-${firmId}`, 'message-new', { threadId, senderType: 'staff' });
     }
 
     res.json({ ok: true, messageId });

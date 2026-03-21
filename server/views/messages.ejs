@@ -168,6 +168,7 @@
       <div class="detail-messages" id="detailMessages">
         <div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>
       </div>
+      <div id="typingIndicator" style="display:none;padding:0.3rem 1rem;font-size:0.78rem;color:var(--muted);font-style:italic;"></div>
       <div class="reply-box" id="replyBox">
         <div class="reply-box-controls">
           <label><input type="checkbox" id="internalToggle"> 🔒 Internal note</label>
@@ -205,10 +206,16 @@ setInterval(() => loadInbox(), 30000);
 const _jwtPayload = JSON.parse(atob(token.split('.')[1]));
 const _firmId = _jwtPayload.firmId || _jwtPayload.id;
 
-const _pusher = new Pusher('6ee61a25e438d5bc4751', { cluster: 'us2' });
-const _firmChannel = _pusher.subscribe(`firm-${_firmId}`);
+const _pusher = new Pusher('6ee61a25e438d5bc4751', {
+  cluster: 'us2',
+  authEndpoint: '/pusher/auth/staff',
+  auth: { headers: { Authorization: 'Bearer ' + token } },
+});
+const _firmChannel = _pusher.subscribe(`private-firm-${_firmId}`);
 
 _firmChannel.bind('pusher:subscription_succeeded', () => console.log('[pusher] subscribed'));
+_firmChannel.bind('pusher:subscription_error', (e) => console.warn('[pusher] auth error:', e));
+
 _firmChannel.bind('message-new', ({ threadId, senderType }) => {
   loadInbox();
   const replyBox = document.getElementById('replyBody');
@@ -217,6 +224,20 @@ _firmChannel.bind('message-new', ({ threadId, senderType }) => {
   }
 });
 _firmChannel.bind('thread-new', () => loadInbox());
+
+// When staff types, emit to the active thread's portal channel
+let _staffTypingTimer = null;
+document.addEventListener('input', (e) => {
+  if (e.target.id !== 'replyBody' || !activeThreadId) return;
+  clearTimeout(_staffTypingTimer);
+  _staffTypingTimer = setTimeout(() => {
+    // Need person_id for the portal channel — stored when thread loads
+    if (window._activePersonId) {
+      const portalCh = _pusher.channel(`private-portal-${_firmId}-${window._activePersonId}`);
+      if (portalCh) portalCh.trigger('client-typing', { threadId: activeThreadId, name: 'Advisor' });
+    }
+  }, 300);
+});
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function apiFetch(url, opts = {}) {
@@ -361,6 +382,23 @@ async function loadThread(threadId, silent = false) {
   try {
     const res = await apiFetch(`/api/messages/${threadId}`);
     const data = await res.json();
+
+    // Subscribe to this person's portal channel for typing indicators
+    if (data.person?.id && data.person.id !== window._activePersonId) {
+      window._activePersonId = data.person.id;
+      const portalChName = `private-portal-${_firmId}-${data.person.id}`;
+      if (!_pusher.channel(portalChName)) {
+        const ch = _pusher.subscribe(portalChName);
+        ch.bind('client-typing', ({ name }) => {
+          const el = document.getElementById('typingIndicator');
+          if (el) { el.textContent = `${name || 'Client'} is typing…`; el.style.display = 'block'; }
+          clearTimeout(window._typingTimer);
+          window._typingTimer = setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
+        });
+      } else {
+        window._activePersonId = data.person.id;
+      }
+    }
 
     // Header
     const companies = (data.companies || []).map(c =>

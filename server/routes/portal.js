@@ -522,7 +522,7 @@ router.post('/messages/send', upload.array('files', 8), async (req, res) => {
     // Pusher: notify staff inbox of client reply
     const pusher = req.app.get('pusher');
     if (pusher) {
-      pusher.trigger(`firm-${firmId}`, 'message-new', { threadId, senderType: 'client' });
+      pusher.trigger(`private-firm-${firmId}`, 'message-new', { threadId, senderType: 'client' });
     }
 
     // Classify asynchronously (non-blocking, non-fatal)

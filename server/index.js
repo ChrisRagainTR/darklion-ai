@@ -325,6 +325,46 @@ const pusher = new Pusher({
   useTLS: true,
 });
 app.set('pusher', pusher);
+
+// Pusher auth endpoint — required for private channels (typing indicators)
+// Staff auth: validates firm JWT, authorizes private-firm-{id} and private-portal-{firmId}-* channels
+app.post('/pusher/auth/staff', (req, res) => {
+  const jwt = require('jsonwebtoken');
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'No token' });
+  try {
+    const payload = jwt.verify(authHeader.replace('Bearer ', ''), process.env.JWT_SECRET);
+    const firmId = payload.firmId || payload.id;
+    const channelName = req.body.channel_name;
+    // Allow own firm channel + any portal channel within their firm
+    const allowed = channelName === `private-firm-${firmId}` ||
+                    channelName.startsWith(`private-portal-${firmId}-`);
+    if (!allowed) return res.status(403).json({ error: 'Forbidden' });
+    const authResponse = pusher.authorizeChannel(req.body.socket_id, channelName);
+    res.json(authResponse);
+  } catch (e) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+// Portal auth: validates portal JWT, authorizes private-portal-{firmId}-{personId} channel
+app.post('/pusher/auth/portal', (req, res) => {
+  const jwt = require('jsonwebtoken');
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'No token' });
+  try {
+    const payload = jwt.verify(authHeader.replace('Bearer ', ''), process.env.JWT_SECRET);
+    if (payload.type !== 'portal') return res.status(403).json({ error: 'Forbidden' });
+    const channelName = req.body.channel_name;
+    if (channelName !== `private-portal-${payload.firmId}-${payload.personId}`) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const authResponse = pusher.authorizeChannel(req.body.socket_id, channelName);
+    res.json(authResponse);
+  } catch (e) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function start() {
