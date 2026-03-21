@@ -31,7 +31,7 @@
     /* ===== MAIN ===== */
     .main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; padding-top: 60px; }
     .top-header { position: fixed; top: 0; left: var(--sidebar-w); right: 0; height: 60px; background: rgba(15,25,35,0.98); border-bottom: 1px solid var(--border); z-index: 99; display: flex; align-items: center; padding: 0 1.5rem; gap: 1rem; }
-    .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem; }
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem; }
     .page-header h1 { font-size: 1.4rem; font-weight: 800; }
     .subtitle { color: var(--muted); font-size: 0.85rem; margin-top: 0.2rem; }
@@ -358,10 +358,10 @@
         const uploadBtn = `<label style="cursor:pointer;font-size:0.72rem;color:var(--gold);white-space:nowrap;"><input type="file" accept="image/*" style="display:none;" onchange="uploadAvatar(${u.id},this)"> 📷 Photo</label>`;
 
         const displayNameInput = `<input type="text" value="${esc(u.display_name||'')}" placeholder="Display name (portal)"
-          style="background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--text);font-size:0.82rem;font-weight:600;width:140px;outline:none;"
+          style="background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--text);font-size:0.82rem;font-weight:600;width:180px;outline:none;"
           onblur="saveDisplayName(${u.id},this.value)" onkeydown="if(event.key==='Enter')this.blur()" title="Shown as their name on the client portal">`;
         const credInput = `<input type="text" value="${esc(u.credentials||'')}" placeholder="Certifications (e.g. CPA/PFS)"
-          style="background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-size:0.72rem;width:140px;outline:none;margin-top:0.15rem;"
+          style="background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-size:0.72rem;width:180px;outline:none;margin-top:0.15rem;"
           onblur="saveCredentials(${u.id},this.value)" onkeydown="if(event.key==='Enter')this.blur()" title="Shown under their name on the client portal">`;
 
         return `<tr id="team-row-${u.id}">
