@@ -1091,7 +1091,22 @@
         buildCompanyTabs();
 
         // Load tax deliveries (show tab if any pending)
-        loadTaxDeliveriesInit().catch(() => {});
+        try {
+          const tdRes = await fetch('/portal/tax-deliveries', {
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+          });
+          if (tdRes.ok) {
+            const deliveries = await tdRes.json();
+            if (deliveries && deliveries.length > 0) {
+              const tdTab = document.getElementById('review-sign-tab');
+              const tdBadge = document.getElementById('review-sign-badge');
+              if (tdTab) tdTab.style.display = '';
+              if (tdBadge) { tdBadge.textContent = deliveries.length; tdBadge.style.display = ''; }
+              // Store for later use
+              window._taxDeliveriesCache = deliveries;
+            }
+          }
+        } catch(e) { console.error('[portal] tax delivery init error:', e); }
 
         document.getElementById('overview-loading').style.display = 'none';
         document.getElementById('overview-content').style.display = 'block';
