@@ -1,6 +1,10 @@
 const { Router } = require('express');
 const { pool } = require('../db');
 const { encrypt, decrypt } = require('../utils/encryption');
+const crypto = require('crypto');
+const { sendPasswordReset } = require('../services/email');
+
+const APP_URL = (process.env.APP_URL || 'https://darklion.ai').replace(/\/+$/, '');
 
 const router = Router();
 
@@ -298,6 +302,80 @@ router.delete('/:id/company-access/:companyId', async (req, res) => {
   } catch (err) {
     console.error('DELETE /people/:id/company-access/:companyId error:', err);
     res.status(500).json({ error: 'Failed to revoke company access' });
+  }
+});
+
+// ── POST /:id/portal-reset — staff-initiated password reset email ─────────────
+router.post('/:id/portal-reset', async (req, res) => {
+  const firmId = req.firm.id;
+  const id = parseInt(req.params.id);
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT p.id, p.email, p.first_name, p.last_name, p.portal_enabled, f.name AS firm_name
+       FROM people p JOIN firms f ON f.id = p.firm_id
+       WHERE p.id = $1 AND p.firm_id = $2`,
+      [id, firmId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Person not found' });
+    const person = rows[0];
+
+    if (!person.portal_enabled) {
+      return res.status(400).json({ error: 'Portal is not enabled for this person' });
+    }
+    if (!person.email) {
+      return res.status(400).json({ error: 'Person has no email address' });
+    }
+
+    // Generate reset token (same mechanism as forgot-password flow)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    await pool.query(
+      `UPDATE people SET portal_invite_token = $1, portal_invite_expires_at = $2 WHERE id = $3`,
+      [resetToken, expires, id]
+    );
+
+    const resetUrl = `${APP_URL}/portal-login?reset=${resetToken}`;
+
+    try {
+      await sendPasswordReset({
+        to: person.email,
+        name: `${person.first_name} ${person.last_name}`.trim(),
+        firmName: person.firm_name,
+        resetUrl,
+      });
+    } catch (emailErr) {
+      console.error('[portal-reset] email failed (non-fatal):', emailErr.message);
+      // Still return ok — token is set, they can use the link
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('POST /people/:id/portal-reset error:', err);
+    res.status(500).json({ error: 'Failed to send reset email' });
+  }
+});
+
+// ── POST /:id/portal-disable — disable portal access ─────────────────────────
+router.post('/:id/portal-disable', async (req, res) => {
+  const firmId = req.firm.id;
+  const id = parseInt(req.params.id);
+
+  try {
+    const { rowCount } = await pool.query(
+      `UPDATE people
+       SET portal_enabled = false,
+           portal_invite_token = NULL,
+           portal_invite_expires_at = NULL
+       WHERE id = $1 AND firm_id = $2`,
+      [id, firmId]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Person not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('POST /people/:id/portal-disable error:', err);
+    res.status(500).json({ error: 'Failed to disable portal' });
   }
 });
 
