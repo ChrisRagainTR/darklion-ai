@@ -185,6 +185,37 @@
     window.esc = esc;
     window.addRecentClient = addRecentClient;
 
+    // ── Styled confirm dialog (replaces browser native confirm()) ──
+    window.dlConfirm = function(message, opts) {
+      return new Promise(function(resolve) {
+        opts = opts || {};
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        var box = document.createElement('div');
+        box.style.cssText = 'background:var(--card,#1e2f40);border:1px solid var(--border,rgba(201,168,76,0.2));border-radius:12px;padding:1.75rem 2rem;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
+        var title = opts.title ? '<div style="font-size:1rem;font-weight:700;margin-bottom:0.6rem;color:var(--text,#e8edf2);">' + esc(opts.title) + '</div>' : '';
+        var icon = opts.icon ? '<div style="font-size:2rem;margin-bottom:0.75rem;">' + opts.icon + '</div>' : '';
+        var confirmLabel = opts.confirmLabel || 'Confirm';
+        var cancelLabel = opts.cancelLabel || 'Cancel';
+        var confirmStyle = opts.danger
+          ? 'background:var(--red,#f56565);color:#fff;border:none;'
+          : 'background:var(--gold,#c9a84c);color:#0f1923;border:none;';
+        box.innerHTML = icon + title +
+          '<div style="font-size:0.92rem;color:var(--muted,#8fa3b8);line-height:1.6;margin-bottom:1.5rem;">' + message + '</div>' +
+          '<div style="display:flex;gap:0.75rem;justify-content:flex-end;">' +
+            '<button id="dl-confirm-cancel" style="background:transparent;border:1px solid var(--border,rgba(201,168,76,0.2));color:var(--text,#e8edf2);padding:0.5rem 1.1rem;border-radius:7px;cursor:pointer;font-size:0.88rem;font-weight:600;">' + cancelLabel + '</button>' +
+            '<button id="dl-confirm-ok" style="' + confirmStyle + 'padding:0.5rem 1.25rem;border-radius:7px;cursor:pointer;font-size:0.88rem;font-weight:700;">' + confirmLabel + '</button>' +
+          '</div>';
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        function close(result) { document.body.removeChild(overlay); resolve(result); }
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) close(false); });
+        box.querySelector('#dl-confirm-cancel').addEventListener('click', function() { close(false); });
+        box.querySelector('#dl-confirm-ok').addEventListener('click', function() { close(true); });
+        box.querySelector('#dl-confirm-ok').focus();
+      });
+    };
+
     // ── Dynamic tab-bar sticky offset (adjusts to entity-header height) ──
     function updateTabBarTop() {
       var eh = document.querySelector('.entity-header');

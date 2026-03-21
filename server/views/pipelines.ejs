@@ -711,7 +711,7 @@
   };
 
   window.deleteJob = function(jobId) {
-    if (!confirm('Delete this job?')) return;
+    if (!await window.dlConfirm('Delete this job? This cannot be undone.', {title:'Delete Job', confirmLabel:'Delete', danger:true, icon:'🗑️'})) return;
     api('DELETE', '/jobs/' + jobId)
       .then(function() { closePanel(); return loadBoard(); })
       .catch(function(err) { window.toast('Failed: ' + err.message, 'error'); });
@@ -755,7 +755,7 @@
   };
 
   window.deleteStage = function(stageId) {
-    if (!confirm('Delete this stage? Jobs in this stage will be moved to the first stage.')) return;
+    if (!await window.dlConfirm('Delete this stage? Jobs in this stage will be moved to the first stage.', {title:'Delete Stage', confirmLabel:'Delete', danger:true, icon:'⚠️'})) return;
     api('DELETE', '/templates/' + currentTemplateId + '/stages/' + stageId)
       .then(function() { renderStagesList(); if (currentInstanceId) return loadBoard(); })
       .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
@@ -791,7 +791,7 @@
 
   // ── DELETE PIPELINE ───────────────────────────────
   window.deletePipeline = function(id, name) {
-    if (!confirm('Delete pipeline "' + name + '"? This cannot be undone.')) return;
+    if (!await window.dlConfirm('Delete pipeline "' + name + '"? This cannot be undone.', {title:'Delete Pipeline', confirmLabel:'Delete', danger:true, icon:'🗑️'})) return;
     api('DELETE', '/templates/' + id)
       .then(function() { window.toast('Deleted'); loadList(); })
       .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });

@@ -1267,7 +1267,7 @@
   }
 
   async function cancelDelivery(id) {
-    if (!confirm('Cancel this delivery and revert to draft?')) return;
+    if (!await window.dlConfirm('Cancel this delivery and revert to draft?', {title:'Cancel Delivery', confirmLabel:'Cancel', danger:true, icon:'↩'})) return;
     try {
       const res = await apiFetch('/api/tax-deliveries/' + id + '/cancel', { method: 'POST' });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
@@ -1277,7 +1277,7 @@
   }
 
   async function sendDelivery(id) {
-    if (!confirm('Send this tax return to the client for review and signature?')) return;
+    if (!await window.dlConfirm('Send this tax return to the client for review and e-signature?', {title:'Send Tax Return', confirmLabel:'Send', icon:'📤'})) return;
     try {
       const res = await apiFetch('/api/tax-deliveries/' + id + '/send', { method: 'POST', body: '{}' });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
@@ -1289,7 +1289,7 @@
   }
 
   async function deleteDelivery(id) {
-    if (!confirm('Delete this draft delivery?')) return;
+    if (!await window.dlConfirm('Delete this draft delivery? This cannot be undone.', {title:'Delete Draft', confirmLabel:'Delete', danger:true, icon:'🗑️'})) return;
     try {
       await apiFetch('/api/tax-deliveries/' + id, { method: 'DELETE' });
       toast('Deleted');
