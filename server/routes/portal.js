@@ -613,7 +613,7 @@ router.get('/tax-deliveries', async (req, res) => {
        FROM tax_deliveries td
        LEFT JOIN companies co ON co.id = td.company_id
        LEFT JOIN tax_delivery_signers tds ON tds.delivery_id = td.id AND tds.person_id = $1
-       WHERE td.status IN ('sent','approved','needs_changes')
+       WHERE td.status IN ('sent','approved','needs_changes','signed','complete')
          AND (
            tds.person_id = $1
            OR td.company_id IN (
