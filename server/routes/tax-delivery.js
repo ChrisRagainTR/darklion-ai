@@ -256,7 +256,7 @@ router.post('/:id/send', async (req, res) => {
     const { rows: existing } = await pool.query(
       `SELECT td.*, co.company_name, f.name AS firm_name
        FROM tax_deliveries td
-       JOIN companies co ON co.id = td.company_id
+       LEFT JOIN companies co ON co.id = td.company_id
        JOIN firms f ON f.id = td.firm_id
        WHERE td.id = $1 AND td.firm_id = $2`,
       [id, firmId]
