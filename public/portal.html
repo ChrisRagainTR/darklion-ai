@@ -1928,11 +1928,13 @@
       document.getElementById('chatAttachInput').value = '';
       renderChatAttachChips();
     }
+    window.handleChatAttach = handleChatAttach; // expose for onchange attribute
 
     function removeChatAttachFile(idx) {
       _chatAttachFiles.splice(idx, 1);
       renderChatAttachChips();
     }
+    window.removeChatAttachFile = removeChatAttachFile; // expose for onclick attribute
 
     function renderChatAttachChips() {
       const el = document.getElementById('chatAttachChips');
