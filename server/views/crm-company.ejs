@@ -652,6 +652,9 @@
           </div>
           <button class="btn btn-outline btn-sm" onclick="coCommCloseNew()">Cancel</button>
         </div>
+        <div id="comm-co-no-portal-warning" style="display:none;margin:1rem 1.5rem 0;padding:0.75rem 1rem;background:rgba(237,137,54,0.1);border:1px solid rgba(237,137,54,0.3);border-radius:8px;font-size:0.82rem;color:var(--orange,#ed8936);">
+          ⚠️ No portal users on this company. Invite someone to the portal before sending a message.
+        </div>
         <div style="flex:1;padding:1rem 1.5rem;display:flex;flex-direction:column;min-height:0;">
           <textarea id="comm-co-new-body" placeholder="Write your message…" style="flex:1;resize:none;width:100%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:0.6rem 0.75rem;font-size:0.88rem;font-family:inherit;min-height:0;"></textarea>
         </div>
@@ -659,7 +662,7 @@
           <div class="attach-chips" id="comm-co-new-attach-chips"></div>
           <input type="file" id="comm-co-new-attach-input" multiple style="display:none;" onchange="handleCoNewCommAttach(this.files)">
           <div class="reply-box-actions">
-            <button class="btn btn-gold btn-sm" onclick="coCommSendNew()">Send Message</button>
+            <button class="btn btn-gold btn-sm" id="comm-co-send-btn" onclick="coCommSendNew()">Send Message</button>
             <button class="btn-attach" onclick="document.getElementById('comm-co-new-attach-input').click()">📎 Attach</button>
           </div>
         </div>
@@ -2600,7 +2603,31 @@
     document.getElementById('comm-co-compose-view').style.display = 'flex';
     document.getElementById('comm-co-reply-box').style.display = 'none';
   }
-  function coCommOpenNew() { coCommShowCompose(); document.getElementById('comm-co-new-body').value = ''; coCommNewAttachFiles = []; renderCoNewCommAttachChips(); }
+  async function coCommOpenNew() {
+    coCommShowCompose();
+    document.getElementById('comm-co-new-body').value = '';
+    coCommNewAttachFiles = [];
+    renderCoNewCommAttachChips();
+    // Check for portal users and show warning if none
+    const warningEl = document.getElementById('comm-co-no-portal-warning');
+    const sendBtn = document.getElementById('comm-co-send-btn');
+    try {
+      const res = await apiFetch(`/api/companies/${commCoId}`);
+      const co = await res.json();
+      const portalPeople = (co.people || []).filter(p => p.portal_enabled);
+      if (portalPeople.length === 0) {
+        warningEl.style.display = 'block';
+        sendBtn.disabled = true;
+        sendBtn.style.opacity = '0.4';
+        sendBtn.style.cursor = 'not-allowed';
+      } else {
+        warningEl.style.display = 'none';
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = '';
+        sendBtn.style.cursor = '';
+      }
+    } catch(e) { /* non-fatal */ }
+  }
   function coCommCloseNew() { coCommShowEmpty(); }
 
   function initCoComm() {
