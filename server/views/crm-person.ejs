@@ -190,8 +190,12 @@
       <div class="form-group"><label>Review Document (PDF for client to review)</label>
         <select class="form-control" id="pd-review-doc"><option value="">— Select document —</option></select>
       </div>
-      <div class="form-group"><label>Signature Document (PDF to sign)</label>
+      <div class="form-group"><label>Signature Document (8879 / signature pages)</label>
         <select class="form-control" id="pd-sig-doc"><option value="">— Select document —</option></select>
+      </div>
+      <div class="form-group">
+        <label>Signers <span style="font-weight:400;color:var(--muted);">(who needs to sign — e.g. both spouses)</span></label>
+        <div id="pd-signers-list" style="display:flex;flex-direction:column;gap:0.4rem;margin-top:0.25rem;"></div>
       </div>
       <div class="modal-actions">
         <button class="btn btn-outline" onclick="closePersonDeliveryModal()">Cancel</button>
@@ -968,14 +972,36 @@
       introEl.value = 'Dear Client,\n\nYour ' + String(cy - 1) + ' tax return has been prepared and is ready for your review. Please take a moment to carefully review all information for accuracy.\n\nOnce you have reviewed the return, you will have the opportunity to either approve it and provide your electronic signature, or request changes if anything needs to be corrected.\n\nIf you have any questions prior to signing, please don\'t hesitate to reach out to our office directly.\n\nThank you for trusting Sentinel Wealth & Tax with your tax preparation.';
     }
 
-    // Load personal docs for this person
+    // Load personal docs
     _pdAllDocs = [];
     try {
       const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${personId}`);
       _pdAllDocs = await res.json();
       pdFilterDocsByYear();
     } catch(e) { _pdAllDocs = []; }
-    document.getElementById('pd-error').style.display = 'none';
+
+    // Load relationship members for signer selection
+    const signersList = document.getElementById('pd-signers-list');
+    signersList.innerHTML = '';
+    try {
+      if (personData && personData.relationship_id) {
+        const relRes = await apiFetch(`/api/relationships/${personData.relationship_id}/people`);
+        const relPeople = await relRes.json();
+        relPeople.forEach(function(p) {
+          const div = document.createElement('div');
+          div.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:6px;';
+          const checked = p.id == personId; // current person always checked
+          div.innerHTML = '<input type="checkbox" class="pd-signer-cb" value="' + p.id + '"' + (checked ? ' checked' : '') + (checked ? ' disabled' : '') + ' style="cursor:pointer;width:16px;height:16px;accent-color:var(--gold);"> ' +
+            '<label style="cursor:pointer;font-size:0.88rem;">' + esc((p.first_name || '') + ' ' + (p.last_name || '')) + (p.portal_enabled ? ' <span style="font-size:0.72rem;color:var(--green);">✓ Portal</span>' : ' <span style="font-size:0.72rem;color:var(--orange);">No portal</span>') + '</label>';
+          signersList.appendChild(div);
+        });
+      } else {
+        signersList.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);">' + esc((personData && (personData.first_name + ' ' + personData.last_name)) || 'This person') + ' <span style="color:var(--green);">✓</span></div>';
+      }
+    } catch(e) {
+      signersList.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);">Could not load relationship members.</div>';
+    }
+
     document.getElementById('pd-error').style.display = 'none';
     modal.classList.remove('hidden');
   }
@@ -1012,7 +1038,7 @@
       intro_note: document.getElementById('pd-intro').value.trim(),
       review_doc_id: document.getElementById('pd-review-doc').value ? parseInt(document.getElementById('pd-review-doc').value) : null,
       signature_doc_id: document.getElementById('pd-sig-doc').value ? parseInt(document.getElementById('pd-sig-doc').value) : null,
-      signer_person_ids: [parseInt(personId)],
+      signer_person_ids: Array.from(document.querySelectorAll('.pd-signer-cb:checked')).map(function(cb){ return parseInt(cb.value); }),
     };
     try {
       const res = await apiFetch('/api/tax-deliveries', { method: 'POST', body: JSON.stringify(body) });
