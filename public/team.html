@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <title>Team — DarkLion</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f1923; --charcoal: #1c2b3a; --card: #1e2f40;
+      --gold: #c9a84c; --gold-light: #e2c068; --text: #e8edf2;
+      --muted: #8fa3b8; --border: rgba(201,168,76,0.2);
+      --green: #3ecf8e; --red: #f56565; --orange: #ed8936;
+      --sidebar-w: 220px;
+    }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--navy); color: var(--text); line-height: 1.6; display: flex; min-height: 100vh; }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar { width: var(--sidebar-w); background: rgba(15,25,35,0.98); border-right: 1px solid var(--border); position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 100; }
+    .sidebar-brand { display: flex; align-items: center; gap: 0.6rem; padding: 1.2rem 1rem; text-decoration: none; }
+    .sidebar-brand .nav-name { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .sidebar-brand .nav-name span { color: var(--gold); }
+    .sidebar-section { padding: 1rem 0 0.25rem 1rem; font-size: 0.65rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .sidebar-nav { list-style: none; padding: 0; }
+    .sidebar-nav li a { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 1rem; color: var(--muted); text-decoration: none; font-size: 0.85rem; border-left: 3px solid transparent; transition: all 0.15s; }
+    .sidebar-nav li a:hover { color: var(--text); background: rgba(201,168,76,0.05); }
+    .sidebar-nav li a.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); font-weight: 600; }
+
+    /* ===== MAIN ===== */
+    .main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; padding-top: 60px; }
+    .top-header { position: fixed; top: 0; left: var(--sidebar-w); right: 0; height: 60px; background: rgba(15,25,35,0.98); border-bottom: 1px solid var(--border); z-index: 99; display: flex; align-items: center; padding: 0 1.5rem; gap: 1rem; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem; }
+    .page-header h1 { font-size: 1.4rem; font-weight: 800; }
+    .subtitle { color: var(--muted); font-size: 0.85rem; margin-top: 0.2rem; }
+
+    /* ===== BUTTONS ===== */
+    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; }
+    .btn-gold { background: var(--gold); color: #0f1923; }
+    .btn-gold:hover { background: var(--gold-light); }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.78rem; }
+
+    /* ===== BADGES ===== */
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+    .badge-ok { background: rgba(62,207,142,0.15); color: var(--green); }
+
+    /* ===== TEAM TABLE ===== */
+    .team-table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .team-table { width: 100%; border-collapse: collapse; }
+    .team-table th { text-align: left; padding: 0.75rem 1rem; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+    .team-table td { padding: 0.75rem 1rem; font-size: 0.83rem; border-bottom: 1px solid rgba(201,168,76,0.07); }
+    .team-table tr:last-child td { border-bottom: none; }
+    .team-table tr:hover td { background: rgba(201,168,76,0.03); }
+    .team-status-active { color: var(--green); font-weight: 600; font-size: 0.75rem; }
+    .team-status-pending { color: var(--orange); font-weight: 600; font-size: 0.75rem; }
+
+    /* ===== COMPANY ACCESS ROW ===== */
+    .company-access-row { background: rgba(201,168,76,0.04); border-top: 1px solid var(--border); padding: 1rem; }
+    .company-access-row label { display: block; margin-bottom: 0.3rem; font-size: 0.82rem; cursor: pointer; }
+
+    /* ===== MODAL ===== */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; width: 100%; max-width: 440px; }
+    .modal h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.25rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.35rem; font-weight: 600; }
+    .form-group input, .form-group select { width: 100%; background: var(--charcoal); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 0.75rem; border-radius: 6px; font-size: 0.88rem; outline: none; }
+    .form-group input:focus, .form-group select:focus { border-color: var(--gold); }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+    /* ===== EDIT MODAL ===== */
+    #edit-modal .modal { max-width: 400px; }
+
+    /* ===== STATUS / LOADING ===== */
+    #status-msg { text-align: center; padding: 3rem; color: var(--muted); }
+
+    /* ===== USER MENU ===== */
+    .user-menu-wrap { margin-left: auto; position: relative; }
+    .user-menu-trigger { display: flex; align-items: center; gap: 0.5rem; background: transparent; border: none; color: var(--text); cursor: pointer; padding: 0.4rem 0.75rem; border-radius: 6px; }
+    .user-menu-trigger:hover { background: rgba(201,168,76,0.08); }
+    .user-avatar { width: 30px; height: 30px; border-radius: 50%; background: rgba(201,168,76,0.15); color: var(--gold); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; overflow: hidden; }
+    .user-menu-dropdown { display: none; position: absolute; right: 0; top: calc(100% + 4px); background: var(--card); border: 1px solid var(--border); border-radius: 8px; min-width: 180px; z-index: 200; padding: 0.4rem 0; }
+    .user-menu-dropdown.open { display: block; }
+    .umd-item { display: block; padding: 0.55rem 1rem; font-size: 0.85rem; color: var(--text); text-decoration: none; cursor: pointer; }
+    .umd-item:hover { background: rgba(201,168,76,0.07); color: var(--gold); }
+    .umd-item.danger { color: var(--red); }
+    .umd-divider { height: 1px; background: var(--border); margin: 0.3rem 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar-mount" data-active=""></aside>
+  <script src="/partials/sidebar.js?v=2"></script>
+
+  <!-- Top Header -->
+  <header class="top-header">
+    <a href="/dashboard" style="display:flex;align-items:center;gap:0.6rem;text-decoration:none;">
+      <img src="/lion-logo.png" alt="DL" width="32" height="32" style="border-radius:6px;flex-shrink:0;">
+      <span style="font-size:1rem;font-weight:700;color:var(--text);">Dark<span style="color:var(--gold);">Lion</span></span>
+    </a>
+    <div class="user-menu-wrap">
+      <button class="user-menu-trigger" id="user-menu-trigger" type="button">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div style="text-align:left;">
+          <div style="font-size:0.82rem;font-weight:600;" id="user-menu-name">User</div>
+          <div style="font-size:0.72rem;color:var(--muted);" id="user-menu-firm"></div>
+        </div>
+        <span style="font-size:0.65rem;color:var(--muted);">▼</span>
+      </button>
+      <div class="user-menu-dropdown" id="user-menu-dropdown">
+        <a class="umd-item" href="/team">👥 Team</a>
+        <div class="umd-divider"></div>
+        <a class="umd-item danger" id="logout-btn">Sign Out</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="container">
+      <div class="page-header">
+        <div>
+          <h1>Team Members</h1>
+          <div class="subtitle">Manage who has access to your firm</div>
+        </div>
+        <button class="btn btn-gold" onclick="openInviteModal()">+ Invite User</button>
+      </div>
+
+      <div id="status-msg">Loading team…</div>
+
+      <div id="team-wrap" style="display:none;">
+        <div class="team-table-wrap">
+          <table class="team-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th style="text-align:center;">Role</th>
+                <th style="text-align:center;">Companies</th>
+                <th style="text-align:center;">Status</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="team-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Invite Modal -->
+  <div class="modal-overlay" id="invite-modal">
+    <div class="modal">
+      <h2>Invite Team Member</h2>
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="invite-name" placeholder="Full name" />
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="invite-email" placeholder="email@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="invite-role">
+          <option value="admin">Admin</option>
+          <option value="owner">Owner</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeInviteModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="submitInvite()">Send Invite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="edit-modal">
+    <div class="modal">
+      <h2>Edit Team Member</h2>
+      <input type="hidden" id="edit-user-id" />
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="edit-name" />
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="edit-email" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="submitEdit()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== AUTH =====
+    const token = localStorage.getItem('dl_token');
+    if (!token) window.location.replace('/login');
+
+    let currentUserId = null, currentRole = 'admin';
+    try {
+      const p = JSON.parse(atob(token.split('.')[1]));
+      currentUserId = p.userId;
+    } catch(e) {}
+
+    // ===== HELPERS =====
+    function qs(sel) { return document.querySelector(sel); }
+    function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+    function timeAgo(ts) {
+      const diff = Date.now() - new Date(ts).getTime();
+      const m = Math.floor(diff / 60000);
+      if (m < 1) return 'just now';
+      if (m < 60) return m + 'm ago';
+      const h = Math.floor(m / 60);
+      if (h < 24) return h + 'h ago';
+      return Math.floor(h / 24) + 'd ago';
+    }
+
+    async function apiFetch(url, opts = {}) {
+      const isFormData = opts.body instanceof FormData;
+      const res = await fetch(url, {
+        ...opts,
+        headers: {
+          ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+          'Authorization': 'Bearer ' + token,
+          ...(opts.headers || {}),
+        },
+      });
+      if (res.status === 401) {
+        const data = await res.json().catch(() => ({}));
+        if (data.expired) {
+          localStorage.removeItem('dl_token');
+          localStorage.removeItem('dl_firm');
+          window.location.replace('/login?expired=1');
+        }
+        throw new Error(data.error || 'Unauthorized');
+      }
+      return res;
+    }
+
+    function toast(msg, type = 'ok') {
+      const t = document.createElement('div');
+      t.textContent = msg;
+      t.style.cssText = `position:fixed;bottom:1.5rem;right:1.5rem;background:${type==='err'?'#f56565':'#3ecf8e'};color:#0f1923;padding:0.75rem 1.25rem;border-radius:8px;font-weight:600;font-size:0.88rem;z-index:9999;`;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3500);
+    }
+
+    // ===== USER MENU =====
+    (function() {
+      try {
+        const p = JSON.parse(atob(token.split('.')[1]));
+        const name = p.displayName || p.name || p.email || '?';
+        const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        qs('#user-menu-name').textContent = name;
+        qs('#user-menu-firm').textContent = p.firmName || '';
+        qs('#user-avatar').textContent = initials;
+      } catch(e) {}
+
+      qs('#user-menu-trigger').addEventListener('click', () => {
+        qs('#user-menu-dropdown').classList.toggle('open');
+      });
+      document.addEventListener('click', e => {
+        if (!qs('#user-menu-trigger').contains(e.target)) qs('#user-menu-dropdown').classList.remove('open');
+      });
+      qs('#logout-btn').addEventListener('click', () => {
+        localStorage.removeItem('dl_token');
+        localStorage.removeItem('dl_firm');
+        window.location.replace('/login');
+      });
+    })();
+
+    // ===== TEAM DATA =====
+    let teamData = [];
+    let firmCompanies = [];
+
+    async function loadTeam() {
+      qs('#status-msg').textContent = 'Loading team…';
+      qs('#status-msg').style.display = '';
+      qs('#team-wrap').style.display = 'none';
+      try {
+        const [teamRes, companiesRes] = await Promise.all([
+          apiFetch('/firms/team'),
+          apiFetch('/api/companies'),
+        ]);
+        const rawTeam = await teamRes.json();
+        const rawCompanies = await companiesRes.json();
+
+        teamData = Array.isArray(rawTeam) ? rawTeam : [];
+        firmCompanies = Array.isArray(rawCompanies) ? rawCompanies : [];
+
+        // Get current user's real role from DB data
+        const selfEntry = teamData.find(u => u.id === currentUserId);
+        if (selfEntry) currentRole = selfEntry.role || 'admin';
+
+        renderTeam();
+        qs('#status-msg').style.display = 'none';
+        qs('#team-wrap').style.display = '';
+        loadTeamAvatars();
+      } catch(e) {
+        qs('#status-msg').textContent = 'Error loading team: ' + e.message;
+      }
+    }
+
+    function renderTeam() {
+      const tbody = qs('#team-tbody');
+      if (!teamData.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--muted);">No team members yet.</td></tr>';
+        return;
+      }
+
+      const isOwner = currentRole === 'owner';
+
+      tbody.innerHTML = teamData.map(u => {
+        const statusHtml = u.pending
+          ? '<span class="team-status-pending">Pending</span>'
+          : (u.accepted_at ? '<span class="team-status-active">Active</span>' : '<span class="team-status-pending">Inactive</span>');
+
+        const lastLogin = u.last_login_at ? timeAgo(u.last_login_at) : 'Never';
+
+        const companiesDisplay = u.allowed_realm_ids && u.allowed_realm_ids.length === 0
+          ? '<span style="color:var(--muted);font-size:0.75rem;">All</span>'
+          : (u.allowed_realm_ids ? u.allowed_realm_ids.length + ' assigned' : 'All');
+
+        const isSelf = u.id === currentUserId;
+
+        const roleCell = isOwner && !isSelf
+          ? `<select style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.2rem 0.4rem;border-radius:4px;font-size:0.78rem;cursor:pointer;"
+               onchange="changeUserRole(${u.id}, this.value)">
+               <option value="admin"${u.role==='admin'?' selected':''}>Admin</option>
+               <option value="owner"${u.role==='owner'?' selected':''}>Owner</option>
+             </select>`
+          : `<span class="badge badge-ok" style="font-size:0.72rem;">${esc(u.role)}</span>`;
+
+        const actions = !isSelf
+          ? `<div style="display:flex;gap:0.35rem;align-items:center;flex-wrap:wrap;">
+               ${isOwner ? `<button class="btn btn-outline btn-sm" onclick="openEditModal(${u.id},'${esc(u.name||'')}','${esc(u.email)}')">Edit</button>` : ''}
+               <button class="btn btn-outline btn-sm" onclick="toggleCompanyAccess(${u.id})">Companies</button>
+               ${isOwner ? `<button style="background:transparent;border:1px solid var(--red);color:var(--red);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.68rem;cursor:pointer;font-weight:600;" onclick="removeTeamMember(${u.id},'${esc(u.email)}')">Remove</button>` : ''}
+             </div>`
+          : '<span style="color:var(--muted);font-size:0.72rem;">You</span>';
+
+        const initials = (u.name || u.email || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        const avatarHtml = u.avatar_url
+          ? `<img id="avatar-img-${u.id}" data-user-id="${u.id}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;vertical-align:middle;display:none;" alt="${esc(initials)}">
+             <div id="avatar-init-${u.id}" style="width:36px;height:36px;border-radius:50%;background:rgba(201,168,76,0.15);color:var(--gold);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;flex-shrink:0;">${esc(initials)}</div>`
+          : `<div style="width:36px;height:36px;border-radius:50%;background:rgba(201,168,76,0.15);color:var(--gold);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;flex-shrink:0;">${esc(initials)}</div>`;
+        const uploadBtn = `<label style="cursor:pointer;font-size:0.72rem;color:var(--gold);white-space:nowrap;"><input type="file" accept="image/*" style="display:none;" onchange="uploadAvatar(${u.id},this)"> 📷 Photo</label>`;
+        const credInput = `<input type="text" value="${esc(u.credentials||'')}" placeholder="e.g. CPA/PFS"
+          style="background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-size:0.68rem;width:80px;outline:none;margin-top:0.2rem;"
+          onblur="saveCredentials(${u.id},this.value)" onkeydown="if(event.key==='Enter')this.blur()">`;
+
+        return `<tr id="team-row-${u.id}">
+          <td style="font-weight:600;">
+            <div style="display:flex;align-items:center;gap:0.6rem;">
+              ${avatarHtml}
+              <div><div>${esc(u.name||'—')}</div>${credInput}</div>
+            </div>
+          </td>
+          <td style="color:var(--muted);">${esc(u.email)}</td>
+          <td style="text-align:center;">${roleCell}</td>
+          <td style="text-align:center;">${companiesDisplay}</td>
+          <td style="text-align:center;">${statusHtml}</td>
+          <td style="color:var(--muted);font-size:0.78rem;">${lastLogin}</td>
+          <td><div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">${actions}${uploadBtn}</div></td>
+        </tr>
+        <tr id="team-access-${u.id}" style="display:none;">
+          <td colspan="7">${renderCompanyAccessRow(u)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderCompanyAccessRow(u) {
+      const allChecked = !u.allowed_realm_ids || u.allowed_realm_ids.length === 0;
+      let html = '<div class="company-access-row">';
+      html += `<strong style="font-size:0.78rem;display:block;margin-bottom:0.5rem;">Company Access for ${esc(u.name || u.email)}</strong>`;
+      html += `<label><input type="checkbox" id="acc-all-${u.id}" ${allChecked ? 'checked' : ''} onchange="toggleAllCompanies(${u.id},this.checked)"> All companies (unrestricted)</label>`;
+      html += `<div style="margin-top:0.5rem;padding-left:1.5rem;${allChecked ? 'display:none;' : ''}" id="acc-list-${u.id}">`;
+      for (const c of firmCompanies) {
+        const isAllowed = u.allowed_realm_ids && u.allowed_realm_ids.includes(c.realm_id);
+        html += `<label><input type="checkbox" class="acc-realm-${u.id}" value="${esc(c.realm_id)}" ${isAllowed ? 'checked' : ''}> ${esc(c.company_name || c.realm_id)}</label>`;
+      }
+      html += '</div>';
+      html += `<button class="btn btn-gold btn-sm" style="margin-top:0.75rem;" onclick="saveCompanyAccess(${u.id})">Save Access</button>`;
+      html += '</div>';
+      return html;
+    }
+
+    async function loadTeamAvatars() {
+      const withAvatars = teamData.filter(u => u.avatar_url);
+      await Promise.all(withAvatars.map(async u => {
+        try {
+          const res = await apiFetch(`/firms/team/${u.id}/avatar`);
+          if (!res.ok) return;
+          const { url } = await res.json();
+          if (!url) return;
+          const img = document.getElementById(`avatar-img-${u.id}`);
+          const init = document.getElementById(`avatar-init-${u.id}`);
+          if (img) { img.src = url; img.style.display = ''; img.onload = () => { if (init) init.style.display = 'none'; }; }
+        } catch(e) {}
+      }));
+    }
+
+    // ===== COMPANY ACCESS TOGGLE =====
+    function toggleCompanyAccess(userId) {
+      const row = document.getElementById(`team-access-${userId}`);
+      if (row) row.style.display = row.style.display === 'none' ? '' : 'none';
+    }
+
+    function toggleAllCompanies(userId, checked) {
+      const list = document.getElementById(`acc-list-${userId}`);
+      if (list) list.style.display = checked ? 'none' : '';
+    }
+
+    async function saveCompanyAccess(userId) {
+      const allCheckbox = document.getElementById(`acc-all-${userId}`);
+      let realmIds = [];
+      if (!allCheckbox.checked) {
+        realmIds = [...document.querySelectorAll(`.acc-realm-${userId}:checked`)].map(cb => cb.value);
+      }
+      try {
+        const res = await apiFetch(`/firms/team/${userId}/companies`, {
+          method: 'PUT',
+          body: JSON.stringify({ realm_ids: realmIds }),
+        });
+        if (res.ok) { toast('Access saved'); await loadTeam(); }
+        else { const d = await res.json(); toast(d.error || 'Save failed', 'err'); }
+      } catch(e) { toast(e.message, 'err'); }
+    }
+
+    // ===== ROLE CHANGE =====
+    async function changeUserRole(userId, role) {
+      try {
+        const res = await apiFetch(`/firms/team/${userId}/role`, { method: 'PUT', body: JSON.stringify({ role }) });
+        if (res.ok) toast('Role updated');
+        else { const d = await res.json(); toast(d.error || 'Failed', 'err'); }
+      } catch(e) { toast(e.message, 'err'); }
+    }
+
+    // ===== CREDENTIALS =====
+    async function saveCredentials(userId, value) {
+      try {
+        await apiFetch(`/firms/team/${userId}/credentials`, { method: 'PUT', body: JSON.stringify({ credentials: value }) });
+      } catch(e) {}
+    }
+
+    // ===== REMOVE =====
+    async function removeTeamMember(userId, email) {
+      if (!confirm(`Remove ${email} from your team?`)) return;
+      try {
+        const res = await apiFetch(`/firms/team/${userId}`, { method: 'DELETE' });
+        if (res.ok) { toast('Removed'); await loadTeam(); }
+        else { const d = await res.json(); toast(d.error || 'Failed', 'err'); }
+      } catch(e) { toast(e.message, 'err'); }
+    }
+
+    // ===== AVATAR UPLOAD =====
+    async function uploadAvatar(userId, input) {
+      const file = input.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('avatar', file);
+      try {
+        const res = await apiFetch(`/firms/team/${userId}/avatar`, { method: 'POST', body: formData });
+        if (res.ok) { toast('Photo updated'); await loadTeam(); }
+        else { const d = await res.json(); toast(d.error || 'Upload failed', 'err'); }
+      } catch(e) { toast(e.message, 'err'); }
+    }
+
+    // ===== INVITE MODAL =====
+    function openInviteModal() { qs('#invite-modal').classList.add('open'); }
+    function closeInviteModal() { qs('#invite-modal').classList.remove('open'); qs('#invite-name').value=''; qs('#invite-email').value=''; }
+
+    async function submitInvite() {
+      const name = qs('#invite-name').value.trim();
+      const email = qs('#invite-email').value.trim();
+      const role = qs('#invite-role').value;
+      if (!email) return toast('Email is required', 'err');
+      try {
+        const res = await apiFetch('/firms/invite', { method: 'POST', body: JSON.stringify({ name, email, role }) });
+        const d = await res.json();
+        if (res.ok) {
+          const link = window.location.origin + d.inviteUrl;
+          closeInviteModal();
+          toast('Invite sent!');
+          prompt('Copy invite link:', link);
+          await loadTeam();
+        } else {
+          toast(d.error || 'Invite failed', 'err');
+        }
+      } catch(e) { toast(e.message, 'err'); }
+    }
+
+    // ===== EDIT MODAL =====
+    function openEditModal(userId, name, email) {
+      qs('#edit-user-id').value = userId;
+      qs('#edit-name').value = name;
+      qs('#edit-email').value = email;
+      qs('#edit-modal').classList.add('open');
+    }
+    function closeEditModal() { qs('#edit-modal').classList.remove('open'); }
+
+    async function submitEdit() {
+      const userId = qs('#edit-user-id').value;
+      const name = qs('#edit-name').value.trim();
+      const email = qs('#edit-email').value.trim();
+      if (!email) return toast('Email is required', 'err');
+      try {
+        const res = await apiFetch(`/firms/team/${userId}`, { method: 'PUT', body: JSON.stringify({ name, email }) });
+        const d = await res.json();
+        if (res.ok) { closeEditModal(); toast('Updated'); await loadTeam(); }
+        else toast(d.error || 'Failed', 'err');
+      } catch(e) { toast(e.message, 'err'); }
+    }
+
+    // ===== INIT =====
+    loadTeam();
+  </script>
+</body>
+</html>

@@ -165,7 +165,7 @@ app.get('/statements-calendar', (req, res) => res.render('statements-calendar', 
 app.get('/dashboard.html', (req, res) => res.redirect('/dashboard'));
 app.get('/theme-preview', (req, res) => res.sendFile(path.join(publicDir, 'theme-preview.html')));
 // Team page — redirect to dashboard team section for now
-app.get('/team', (req, res) => res.redirect('/dashboard?section=team'));
+app.get('/team', (req, res) => res.sendFile(path.join(publicDir, 'team.html')));
 // Redirect /crm and /crm?tab=X to specific list pages
 app.get('/crm', (req, res) => {
   const tab = req.query.tab || 'relationships';
