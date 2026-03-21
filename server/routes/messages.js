@@ -601,14 +601,16 @@ router.put('/:threadId/status', async (req, res) => {
   const threadId = parseInt(req.params.threadId);
   const { status } = req.body;
 
-  if (!['open', 'waiting', 'resolved'].includes(status)) {
+  // Accept 'active' as alias for 'open' (UI simplified to Active/Resolved only)
+  const normalizedStatus = status === 'active' ? 'open' : status;
+  if (!['open', 'waiting', 'resolved'].includes(normalizedStatus)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
 
   try {
     const { rowCount } = await pool.query(
       'UPDATE message_threads SET status = $1 WHERE id = $2 AND firm_id = $3',
-      [status, threadId, firmId]
+      [normalizedStatus, threadId, firmId]
     );
     if (!rowCount) return res.status(404).json({ error: 'Thread not found' });
     res.json({ ok: true });

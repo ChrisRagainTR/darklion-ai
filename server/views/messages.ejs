@@ -39,8 +39,9 @@
     .thread-card-preview { font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .thread-card-meta { display: flex; gap: 0.4rem; align-items: center; margin-top: 0.3rem; flex-wrap: wrap; }
     .status-badge { font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; color: #fff; }
+    .status-badge.active { background: #c9a84c; }
     .status-badge.open { background: #c9a84c; }
-    .status-badge.waiting { background: #4a90d9; }
+    .status-badge.waiting { background: #c9a84c; }
     .status-badge.resolved { background: #4caf50; }
     .co-tag { font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; background: rgba(255,255,255,0.08); color: var(--muted); }
     .unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); margin-left: auto; flex-shrink: 0; }
@@ -145,10 +146,7 @@
       <input type="text" class="inbox-search" id="searchBox" placeholder="Search by name…" oninput="filterThreads()">
       <div class="filter-tabs">
         <button class="filter-tab active" data-filter="active" onclick="setFilter('active', this)">Active</button>
-        <button class="filter-tab" data-filter="open" onclick="setFilter('open', this)">Open</button>
-        <button class="filter-tab" data-filter="waiting" onclick="setFilter('waiting', this)">Waiting</button>
         <button class="filter-tab" data-filter="resolved" onclick="setFilter('resolved', this)">Resolved</button>
-        <button class="filter-tab" data-filter="all" onclick="setFilter('all', this)">All</button>
       </div>
     </div>
     <div class="inbox-list" id="inboxList">
@@ -255,16 +253,19 @@ function relTime(ts) {
 }
 
 function statusColor(s) {
-  if (s === 'open') return '#c9a84c';
-  if (s === 'waiting') return '#4a90d9';
   if (s === 'resolved') return '#4caf50';
-  return '#666';
+  return '#c9a84c'; // active (open/waiting both show as active)
+}
+
+function displayStatus(s) {
+  if (s === 'resolved') return 'Resolved';
+  return 'Active';
 }
 
 // Load threads
 async function loadInbox() {
   try {
-    const all = activeFilter === 'all' || activeFilter === 'resolved';
+    const all = activeFilter === 'resolved';
     const res = await apiFetch('/api/messages' + (all ? '?all=true' : ''));
     allThreads = await res.json();
     // Also load firm users for assign dropdown
@@ -291,12 +292,9 @@ function renderInbox() {
   const q = (document.getElementById('searchBox').value || '').toLowerCase();
   let threads = allThreads;
 
-  // Apply filter
-  if (activeFilter === 'open') threads = threads.filter(t => t.status === 'open');
-  else if (activeFilter === 'waiting') threads = threads.filter(t => t.status === 'waiting');
-  else if (activeFilter === 'resolved') threads = threads.filter(t => t.status === 'resolved');
-  else if (activeFilter === 'active') threads = threads.filter(t => t.status !== 'resolved');
-  // 'all' = no filter
+  // Apply filter — active = open or waiting, resolved = resolved
+  if (activeFilter === 'resolved') threads = threads.filter(t => t.status === 'resolved');
+  else threads = threads.filter(t => t.status !== 'resolved'); // active (default)
 
   // Search
   if (q) threads = threads.filter(t => {
@@ -321,7 +319,7 @@ function renderInbox() {
       <div class="thread-card-subject">${esc(t.subject || '(no subject)')}</div>
       <div class="thread-card-preview">${esc(t.lastPreview || '')}</div>
       <div class="thread-card-meta">
-        <span class="status-badge ${t.status}">${t.status}</span>
+        <span class="status-badge ${t.status === 'resolved' ? 'resolved' : 'active'}">${t.status === 'resolved' ? 'Resolved' : 'Active'}</span>
         ${companies}
         ${t.unreadCount > 0 ? `<span class="unread-dot" title="${t.unreadCount} unread"></span>` : ''}
       </div>
@@ -364,7 +362,7 @@ async function loadThread(threadId, silent = false) {
       <div class="detail-header-left">
         <div class="detail-header-person">
           <a href="/crm/person/${data.person?.id}">${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}</a>
-          <span class="status-badge ${data.status}" style="margin-left:0.5rem;">${data.status}</span>
+          <span class="status-badge ${data.status === 'resolved' ? 'resolved' : 'active'}" style="margin-left:0.5rem;">${data.status === 'resolved' ? 'Resolved' : 'Active'}</span>
         </div>
         <div class="detail-header-subject">${esc(data.subject || '(no subject)')} · <span style="color:var(--gold);">${data.category}</span></div>
         <div class="company-tags" id="companyTags-${threadId}">
@@ -378,8 +376,7 @@ async function loadThread(threadId, silent = false) {
       </div>
       <div class="detail-header-controls">
         <select onchange="updateStatus(${threadId}, this.value)">
-          <option value="open" ${data.status==='open'?'selected':''}>Open</option>
-          <option value="waiting" ${data.status==='waiting'?'selected':''}>Waiting</option>
+          <option value="open" ${data.status!=='resolved'?'selected':''}>Active</option>
           <option value="resolved" ${data.status==='resolved'?'selected':''}>Resolved</option>
         </select>
         ${firmUsers.length ? `<select onchange="assignThread(${threadId}, this.value)"><option value="">Unassigned</option>${assignOpts}</select>` : ''}
