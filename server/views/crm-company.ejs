@@ -635,9 +635,8 @@
           <button class="btn btn-outline btn-sm" onclick="closeCoCompose()">Cancel</button>
         </div>
         <div style="padding:1.25rem;flex:1;overflow-y:auto;">
-          <div class="form-group" style="margin-bottom:0.85rem;">
-            <label style="font-size:0.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:0.3rem;">Person</label>
-            <select id="comm-co-person-select" class="form-control"><option value="">Loading…</option></select>
+          <div style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.2);border-radius:6px;padding:0.6rem 0.85rem;">
+            📢 This message will be sent to <strong id="comm-co-recipient-count">all people</strong> with portal access to this company.
           </div>
           <div class="form-group" style="margin-bottom:0.85rem;">
             <label style="font-size:0.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:0.3rem;">Subject</label>
@@ -2640,18 +2639,22 @@
     await loadCoThreads();
   }
 
+  let _coComposePeople = [];
   async function openCoCompose() {
     coCommShowCompose();
-    const select = document.getElementById('comm-co-person-select');
-    select.innerHTML = '<option value="">Loading…</option>';
+    document.getElementById('comm-co-new-subject').value = '';
+    document.getElementById('comm-co-new-body').value = '';
     try {
       const res = await apiFetch(`/api/companies/${commCoId}`);
       const co = await res.json();
-      const people = co.people || [];
-      select.innerHTML = '<option value="">Select person…</option>' + people.map(p => `<option value="${p.person_id}">${esc((p.first_name||'')+' '+(p.last_name||''))}</option>`).join('');
-    } catch(e) {
-      select.innerHTML = '<option value="">Failed to load people</option>';
-    }
+      _coComposePeople = (co.people || []).filter(p => p.portal_enabled);
+      const countEl = document.getElementById('comm-co-recipient-count');
+      if (countEl) {
+        if (_coComposePeople.length === 0) countEl.textContent = 'no one (no portal users attached)';
+        else if (_coComposePeople.length === 1) countEl.textContent = esc((_coComposePeople[0].first_name||'')+' '+(_coComposePeople[0].last_name||''));
+        else countEl.textContent = _coComposePeople.length + ' people';
+      }
+    } catch(e) { _coComposePeople = []; }
   }
 
   function closeCoCompose() {
@@ -2659,16 +2662,23 @@
   }
 
   async function sendCoNewThread() {
-    const personId = document.getElementById('comm-co-person-select').value;
     const subject = document.getElementById('comm-co-new-subject').value.trim();
     const body = document.getElementById('comm-co-new-body').value.trim();
-    if (!personId) { alert('Please select a person'); return; }
-    if (!body) { alert('Message body is required'); return; }
-    const res = await apiFetch('/api/messages', { method:'POST', body: JSON.stringify({ person_id: parseInt(personId), subject, body, is_internal: false }) });
-    const data = await res.json();
-    closeCoCompose();
-    await loadCoThreads();
-    if (data.threadId) loadCoThread(data.threadId);
+    if (!body) { toast('Message body is required', 'error'); return; }
+    if (_coComposePeople.length === 0) { toast('No portal users attached to this company', 'error'); return; }
+    try {
+      // Broadcast: create one thread per portal-enabled person
+      let lastThreadId = null;
+      for (const p of _coComposePeople) {
+        const res = await apiFetch('/api/messages', { method:'POST', body: JSON.stringify({ person_id: p.person_id, subject, body, is_internal: false }) });
+        const data = await res.json();
+        if (data.threadId) lastThreadId = data.threadId;
+      }
+      closeCoCompose();
+      await loadCoThreads();
+      if (lastThreadId) loadCoThread(lastThreadId);
+      toast(`Message sent to ${_coComposePeople.length} ${_coComposePeople.length===1?'person':'people'}`);
+    } catch(e) { toast('Failed to send: ' + e.message, 'error'); }
   }
 
   function coStatusColor(s) {
