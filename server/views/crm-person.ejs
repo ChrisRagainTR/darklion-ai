@@ -1016,15 +1016,17 @@
     }
   }
 
-  async function loadThread(threadId) {
+  async function loadThread(threadId, silent = false) {
     commActiveThreadId = threadId;
     // Mark active
     document.querySelectorAll('#comm-threads .thread-card').forEach(el => el.classList.remove('active'));
     const item = document.getElementById('comm-item-' + threadId);
     if (item) item.classList.add('active');
-    document.getElementById('comm-detail-messages').innerHTML = '<div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>';
-    document.getElementById('comm-detail-header').innerHTML = '';
-    commShowDetail(); // show AFTER setting content so scrollHeight is correct
+    if (!silent) {
+      document.getElementById('comm-detail-messages').innerHTML = '<div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>';
+      document.getElementById('comm-detail-header').innerHTML = '';
+    }
+    commShowDetail();
     try {
       const res = await apiFetch(`/api/messages/${threadId}`);
       const data = await res.json();
@@ -1037,25 +1039,36 @@
       // Messages — same render as team inbox
       const msgEl = document.getElementById('comm-detail-messages');
       const msgs = data.messages || [];
+
+      function buildCommBubble(m) {
+        const isInternal = m.isInternal;
+        const isStaff = m.senderType === 'staff';
+        const side = isInternal ? 'internal' : isStaff ? 'staff' : 'client';
+        const bubbleClass = isInternal ? 'internal' : side;
+        const attachmentsHtml = (m.attachments||[]).length > 0
+          ? `<div class="msg-attachments">${m.attachments.map(a => {
+              const size = a.sizeBytes ? ` <span style="font-size:0.7rem;opacity:0.7;">(${commFormatBytes(a.sizeBytes)})</span>` : '';
+              return `<a href="#" class="attachment-chip" onclick="commDownloadAttachment(${a.documentId});return false;">📎 ${esc(a.displayName)}${size}</a>`;
+            }).join('')}</div>` : '';
+        return `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
+          ${isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
+          <div class="msg-bubble ${bubbleClass}">${esc(m.body||'').replace(/\n/g,'<br>')}${attachmentsHtml}</div>
+          <div class="msg-meta">${esc(m.senderName||'')} · ${relTime(m.createdAt)}</div>
+        </div>`;
+      }
+
       if (!msgs.length) {
-        msgEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem;">No messages yet.</div>';
+        if (!silent) msgEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem;">No messages yet.</div>';
+      } else if (silent) {
+        // Append-only — only add new messages
+        const existingIds = new Set([...msgEl.querySelectorAll('[data-msg-id]')].map(el => parseInt(el.dataset.msgId)));
+        let appended = false;
+        for (const m of msgs) {
+          if (!existingIds.has(m.id)) { msgEl.insertAdjacentHTML('beforeend', buildCommBubble(m)); appended = true; }
+        }
+        if (appended) msgEl.scrollTop = msgEl.scrollHeight;
       } else {
-        msgEl.innerHTML = msgs.map(m => {
-          const isInternal = m.isInternal;
-          const isStaff = m.senderType === 'staff';
-          const side = isInternal ? 'internal' : isStaff ? 'staff' : 'client';
-          const bubbleClass = isInternal ? 'internal' : side;
-          const attachmentsHtml = (m.attachments||[]).length > 0
-            ? `<div class="msg-attachments">${m.attachments.map(a => {
-                const size = a.sizeBytes ? ' <span style="font-size:0.7rem;opacity:0.7;">(${commFormatBytes(a.sizeBytes)})</span>' : '';
-                return `<a href="#" class="attachment-chip" onclick="commDownloadAttachment(${a.documentId});return false;">📎 ${esc(a.displayName)}${size}</a>`;
-              }).join('')}</div>` : '';
-          return `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
-            ${isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
-            <div class="msg-bubble ${bubbleClass}">${esc(m.body||'').replace(/\n/g,'<br>')}${attachmentsHtml}</div>
-            <div class="msg-meta">${esc(m.senderName||'')} · ${relTime(m.createdAt)}</div>
-          </div>`;
-        }).join('');
+        msgEl.innerHTML = msgs.map(buildCommBubble).join('');
         msgEl.scrollTop = msgEl.scrollHeight;
       }
     } catch(e) {
@@ -1142,7 +1155,7 @@
       document.getElementById('comm-internal-toggle').checked = false;
       commAttachFiles = [];
       renderCommAttachChips();
-      await loadThread(commActiveThreadId);
+      await loadThread(commActiveThreadId, true); // silent — no spinner, append-only
       await loadThreads();
     } catch(e) { console.error('[comm] sendReply error:', e); toast('Failed to send reply: ' + e.message, 'error'); }
   }

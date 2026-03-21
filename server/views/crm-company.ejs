@@ -2638,42 +2638,51 @@
     }
   }
 
-  async function loadCoThread(threadId) {
+  async function loadCoThread(threadId, silent = false) {
     commCoActiveThreadId = threadId;
     document.querySelectorAll('#comm-co-threads .thread-card').forEach(el => el.classList.remove('active'));
     const item = document.getElementById('comm-co-item-' + threadId);
     if (item) item.classList.add('active');
-    document.getElementById('comm-co-detail-messages').innerHTML = '<div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>';
-    document.getElementById('comm-co-detail-header').innerHTML = '';
+    if (!silent) {
+      document.getElementById('comm-co-detail-messages').innerHTML = '<div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>';
+      document.getElementById('comm-co-detail-header').innerHTML = '';
+    }
     coCommShowDetail();
     try {
       const res = await apiFetch(`/api/messages/${threadId}`);
       const data = await res.json();
-      document.getElementById('comm-co-detail-header').innerHTML = `
-        <div class="detail-header-person">${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}</div>
-        <div class="detail-header-subject">${esc(data.subject||'(no subject)')} · <span style="color:var(--gold);font-size:0.75rem;">${data.category||''}</span></div>`;
+      if (!silent) {
+        document.getElementById('comm-co-detail-header').innerHTML = `
+          <div class="detail-header-person">${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}</div>
+          <div class="detail-header-subject">${esc(data.subject||'(no subject)')} · <span style="color:var(--gold);font-size:0.75rem;">${data.category||''}</span></div>`;
+      }
       const msgEl = document.getElementById('comm-co-detail-messages');
       const msgs = data.messages || [];
+      function buildCoBubble(m) {
+        const isInternal = m.isInternal, isStaff = m.senderType === 'staff';
+        const side = isInternal ? 'internal' : isStaff ? 'staff' : 'client';
+        const bubbleClass = isInternal ? 'internal' : side;
+        const attachHtml = (m.attachments||[]).length > 0
+          ? `<div class="msg-attachments">${m.attachments.map(a => `<a href="#" class="attachment-chip" onclick="coCommDownloadAttachment(${a.documentId});return false;">📎 ${esc(a.displayName)}</a>`).join('')}</div>` : '';
+        return `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
+          ${isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
+          <div class="msg-bubble ${bubbleClass}">${esc(m.body||'').replace(/\n/g,'<br>')}${attachHtml}</div>
+          <div class="msg-meta">${esc(m.senderName||'')} · ${coRelTime(m.createdAt)}</div>
+        </div>`;
+      }
       if (!msgs.length) {
-        msgEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem;">No messages yet.</div>';
+        if (!silent) msgEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem;">No messages yet.</div>';
+      } else if (silent) {
+        const existingIds = new Set([...msgEl.querySelectorAll('[data-msg-id]')].map(el => parseInt(el.dataset.msgId)));
+        let appended = false;
+        for (const m of msgs) { if (!existingIds.has(m.id)) { msgEl.insertAdjacentHTML('beforeend', buildCoBubble(m)); appended = true; } }
+        if (appended) msgEl.scrollTop = msgEl.scrollHeight;
       } else {
-        msgEl.innerHTML = msgs.map(m => {
-          const isInternal = m.isInternal;
-          const isStaff = m.senderType === 'staff';
-          const side = isInternal ? 'internal' : isStaff ? 'staff' : 'client';
-          const bubbleClass = isInternal ? 'internal' : side;
-          const attachmentsHtml = (m.attachments||[]).length > 0
-            ? `<div class="msg-attachments">${m.attachments.map(a => `<a href="#" class="attachment-chip" onclick="coCommDownloadAttachment(${a.documentId});return false;">📎 ${esc(a.displayName)}</a>`).join('')}</div>` : '';
-          return `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
-            ${isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
-            <div class="msg-bubble ${bubbleClass}">${esc(m.body||'').replace(/\n/g,'<br>')}${attachmentsHtml}</div>
-            <div class="msg-meta">${esc(m.senderName||'')} · ${coRelTime(m.createdAt)}</div>
-          </div>`;
-        }).join('');
+        msgEl.innerHTML = msgs.map(buildCoBubble).join('');
         msgEl.scrollTop = msgEl.scrollHeight;
       }
     } catch(e) {
-      document.getElementById('comm-co-detail-messages').innerHTML = '<div style="color:var(--muted);padding:1rem;">Failed to load.</div>';
+      if (!silent) document.getElementById('comm-co-detail-messages').innerHTML = '<div style="color:var(--muted);padding:1rem;">Failed to load.</div>';
     }
   }
 
@@ -2693,7 +2702,7 @@
       document.getElementById('comm-co-internal-toggle').checked = false;
       coCommAttachFiles = [];
       renderCoCommAttachChips();
-      await loadCoThread(commCoActiveThreadId);
+      await loadCoThread(commCoActiveThreadId, true); // silent — no spinner
       await loadCoThreads();
     } catch(e) { toast('Failed to send reply: ' + e.message, 'error'); }
   }
