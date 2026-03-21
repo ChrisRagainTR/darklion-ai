@@ -599,16 +599,27 @@ async function getSignerForDelivery(deliveryId, personId) {
 router.get('/tax-deliveries', async (req, res) => {
   const personId = req.portal.personId;
   try {
+    // Show deliveries where:
+    // 1. This person is a named signer, OR
+    // 2. This person has portal access to the company the delivery belongs to
+    // In both cases, show their own signer row if it exists (for approve/sign actions),
+    // otherwise show null signer fields (view-only for company-access members)
     const { rows } = await pool.query(
-      `SELECT td.id, td.title, td.tax_year, td.status, td.intro_note, td.tax_summary,
+      `SELECT DISTINCT ON (td.id)
+              td.id, td.title, td.tax_year, td.status, td.intro_note, td.tax_summary,
               co.company_name,
               tds.approved_at, tds.signed_at, tds.needs_changes_at, tds.needs_changes_note
        FROM tax_deliveries td
-       JOIN tax_delivery_signers tds ON tds.delivery_id = td.id
        JOIN companies co ON co.id = td.company_id
-       WHERE tds.person_id = $1
-         AND td.status IN ('sent','approved','needs_changes')
-       ORDER BY td.created_at DESC`,
+       LEFT JOIN tax_delivery_signers tds ON tds.delivery_id = td.id AND tds.person_id = $1
+       WHERE td.status IN ('sent','approved','needs_changes')
+         AND (
+           tds.person_id = $1
+           OR td.company_id IN (
+             SELECT company_id FROM person_company_access WHERE person_id = $1
+           )
+         )
+       ORDER BY td.id, td.created_at DESC`,
       [personId]
     );
     res.json(rows);
