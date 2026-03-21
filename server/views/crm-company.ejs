@@ -771,7 +771,10 @@
     if (stbar) stbar.style.display = name === 'bookkeeping' ? '' : 'none';
     if (name === 'docs') loadDocs();
     if (name === 'tax') loadTax();
-    if (name === 'bookkeeping') bk_initBookkeeping();
+    if (name === 'bookkeeping') {
+      if (bookkeepingRealm) bk_initBookkeeping();
+      else { /* wait for company to load, then init */ window._bkPendingInit = true; }
+    }
     if (name === 'communication') initCoComm();
     if (name === 'organizers' && companyData && companyData.stanford_tax_url) {
       const orgEl = document.getElementById('org-stanford-link');
@@ -797,6 +800,8 @@
       bookkeepingRealm = companyData.realm_id || null;
       renderHeader(companyData);
       renderOverview(companyData);
+      // If bookkeeping tab was clicked before company loaded, init now
+      if (window._bkPendingInit) { window._bkPendingInit = false; bk_initBookkeeping(); }
     } catch(e) {
       document.getElementById('entity-name').textContent = 'Error loading';
     }
