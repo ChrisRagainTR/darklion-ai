@@ -2228,6 +2228,13 @@
       loading.style.display = 'none';
       list.style.display = '';
 
+      // Hide tab if all complete
+      const pendingCount = _taxDeliveries.filter(d => !d.signed_at).length;
+      const tdTab = document.getElementById('review-sign-tab');
+      const tdBadge = document.getElementById('review-sign-badge');
+      if (pendingCount === 0 && tdTab) { tdTab.style.display = 'none'; }
+      else if (tdBadge) { tdBadge.textContent = pendingCount; }
+
       if (_taxDeliveries.length === 0) {
         list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:2rem;">No documents require your signature at this time.</p>';
         return;
@@ -2244,15 +2251,19 @@
         };
         const badge = badgeMap[myStatus] || badgeMap['needs-review'];
         const statusBadge = badgeMap[d.status] || { label: d.status, color: '#888' };
+        const entityLabel = d.company_name || (_me ? `${_me.firstName || ''} ${_me.lastName || ''}`.trim() : 'Personal') || 'Personal';
+        const actionBtn = myStatus === 'complete'
+          ? `<span style="color:#4caf50;font-weight:600;font-size:0.88rem;">✓ Complete</span>`
+          : `<button class="btn-submit" onclick="openTaxDeliveryFlow(${d.id})" style="padding:0.55rem 1.25rem;font-size:0.9rem;">✍️ Review &amp; Sign →</button>`;
         return `
           <div class="card" style="margin-bottom:1rem;padding:1.25rem 1.5rem;">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
               <div>
-                <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">${esc(d.company_name)} — ${esc(d.tax_year)}</div>
+                <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">${esc(entityLabel)} — ${esc(d.tax_year)} Tax Return</div>
                 <div style="color:var(--muted);font-size:0.88rem;margin-bottom:0.5rem;">${esc(d.title || '')}</div>
                 <span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:0.78rem;font-weight:700;background:${badge.color}22;color:${badge.color};">${badge.label}</span>
               </div>
-              <button class="btn-submit" onclick="openTaxDeliveryFlow(${d.id})" style="padding:0.55rem 1.25rem;font-size:0.9rem;">✍️ Review &amp; Sign →</button>
+              ${actionBtn}
             </div>
           </div>`;
       }).join('');
