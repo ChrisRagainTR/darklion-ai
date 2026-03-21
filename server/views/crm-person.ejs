@@ -260,7 +260,7 @@
         <div>Select a thread or start a new one</div>
       </div>
       <!-- Thread view — hidden until selected -->
-      <div id="comm-thread-view" style="display:none;flex:1;flex-direction:column;height:100%;">
+      <div id="comm-thread-view" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden;">
         <div class="detail-header" id="comm-detail-header"></div>
         <div class="detail-messages" id="comm-detail-messages"></div>
         <div id="comm-typing-indicator" style="display:none;padding:0.3rem 1rem;font-size:0.78rem;color:var(--muted);font-style:italic;"></div>
@@ -280,7 +280,7 @@
         </div>
       </div>
       <!-- New thread compose -->
-      <div id="comm-compose-view" style="display:none;flex:1;flex-direction:column;height:100%;">
+      <div id="comm-compose-view" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden;">
         <div class="detail-header" style="display:flex;align-items:center;justify-content:space-between;">
           <span style="font-weight:700;">New Message</span>
           <button class="btn btn-outline btn-sm" onclick="commCloseNew()">Cancel</button>
