@@ -610,6 +610,87 @@ async function initDB() {
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    -- ===================== PROPOSALS =====================
+    CREATE TABLE IF NOT EXISTS proposals (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER REFERENCES firms(id) ON DELETE CASCADE,
+      relationship_id INTEGER REFERENCES relationships(id) ON DELETE SET NULL,
+      title TEXT NOT NULL DEFAULT 'Service Engagement Proposal',
+      client_name TEXT NOT NULL DEFAULT '',
+      client_email TEXT NOT NULL DEFAULT '',
+      client_phone TEXT DEFAULT '',
+      client_address TEXT DEFAULT '',
+      client_city_state_zip TEXT DEFAULT '',
+      engagement_type TEXT DEFAULT 'tax' CHECK(engagement_type IN ('tax','wealth')),
+      tiers JSONB NOT NULL DEFAULT '[]',
+      add_ons JSONB DEFAULT '[]',
+      backwork JSONB DEFAULT '[]',
+      aum_fee_percent NUMERIC(5,2) DEFAULT 0.69,
+      require_dual_signature BOOLEAN DEFAULT false,
+      notes TEXT DEFAULT '',
+      status TEXT DEFAULT 'draft' CHECK(status IN ('draft','sent','viewed','accepted','signed')),
+      public_token TEXT UNIQUE,
+      expires_at TIMESTAMPTZ,
+      created_by INTEGER REFERENCES firm_users(id),
+      viewed_at TIMESTAMPTZ,
+      accepted_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS proposal_acceptances (
+      id SERIAL PRIMARY KEY,
+      proposal_id INTEGER NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+      company_name TEXT DEFAULT '',
+      contact_name TEXT DEFAULT '',
+      contact_email TEXT DEFAULT '',
+      contact_phone TEXT DEFAULT '',
+      address_line1 TEXT DEFAULT '',
+      address_line2 TEXT DEFAULT '',
+      entity_type TEXT DEFAULT '',
+      owners TEXT DEFAULT '',
+      additional_notes TEXT DEFAULT '',
+      selected_tier_index INTEGER,
+      selected_tier_indices JSONB DEFAULT '[]',
+      selected_tier_names JSONB DEFAULT '[]',
+      accepted_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS proposal_engagements (
+      id SERIAL PRIMARY KEY,
+      proposal_id INTEGER NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+      firm_id INTEGER REFERENCES firms(id),
+      engagement_type TEXT DEFAULT 'tax',
+      status TEXT DEFAULT 'pending_signature' CHECK(status IN ('pending_signature','signed')),
+      signature_data TEXT DEFAULT '',
+      signed_by_name TEXT DEFAULT '',
+      signed_at TIMESTAMPTZ,
+      signer_ip TEXT DEFAULT '',
+      signature2_data TEXT DEFAULT '',
+      signed2_by_name TEXT DEFAULT '',
+      signed2_at TIMESTAMPTZ,
+      signer2_ip TEXT DEFAULT '',
+      client_name TEXT DEFAULT '',
+      contact_name TEXT DEFAULT '',
+      company_name TEXT DEFAULT '',
+      contact_email TEXT DEFAULT '',
+      address_line1 TEXT DEFAULT '',
+      address_line2 TEXT DEFAULT '',
+      entity_type TEXT DEFAULT '',
+      owners TEXT DEFAULT '',
+      monthly_price NUMERIC(10,2) DEFAULT 0,
+      selected_tier_index INTEGER,
+      selected_tier_indices JSONB DEFAULT '[]',
+      tiers JSONB DEFAULT '[]',
+      add_ons JSONB DEFAULT '[]',
+      backwork JSONB DEFAULT '[]',
+      aum_fee_percent NUMERIC(5,2) DEFAULT 0.69,
+      require_dual_signature BOOLEAN DEFAULT false,
+      saved_to_crm BOOLEAN DEFAULT false,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
 }
 

@@ -411,18 +411,76 @@
 
     <!-- ==================== OVERVIEW ==================== -->
     <div class="section-page active" id="sec-overview">
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:3rem 2rem;">
-        <div style="font-size:3rem;margin-bottom:1.5rem;">👁️</div>
-        <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:0.75rem;">Welcome to DarkLion</h1>
-        <p style="color:var(--muted);max-width:480px;line-height:1.7;margin-bottom:2rem;">
-          Your firm dashboard is being built. Search for a client above, or navigate using the left menu to get started.
-        </p>
-        <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;">
-          <a href="/crm/relationships" class="btn btn-gold">👥 Go to CRM</a>
-          <a href="#" onclick="showSection('statements-calendar',null);return false;" class="btn btn-outline">📅 Statement Calendar</a>
+
+      <!-- Hero / Welcome -->
+      <div style="display:flex;flex-direction:column;align-items:center;padding:2.5rem 2rem 1.5rem;text-align:center;border-bottom:1px solid var(--border);">
+        <img src="/lion-logo.png" alt="DarkLion" style="width:96px;height:96px;object-fit:contain;margin-bottom:1.25rem;filter:drop-shadow(0 4px 18px rgba(201,168,76,0.25));">
+        <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:0.4rem;">Welcome to DarkLion</h1>
+        <p style="color:var(--muted);font-size:0.88rem;" id="dash-greeting">Good to have you back.</p>
+      </div>
+
+      <!-- Stat cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.85rem;padding:1.5rem 1.5rem 0;">
+        <div class="dash-stat-card" onclick="window.location='/crm/relationships'">
+          <div class="dash-stat-icon">👥</div>
+          <div class="dash-stat-val" id="ds-relationships">—</div>
+          <div class="dash-stat-label">Relationships</div>
+        </div>
+        <div class="dash-stat-card" onclick="window.location='/crm/people'">
+          <div class="dash-stat-icon">👤</div>
+          <div class="dash-stat-val" id="ds-people">—</div>
+          <div class="dash-stat-label">People</div>
+        </div>
+        <div class="dash-stat-card" onclick="window.location='/crm/companies'">
+          <div class="dash-stat-icon">🏢</div>
+          <div class="dash-stat-val" id="ds-companies">—</div>
+          <div class="dash-stat-label">Companies</div>
+        </div>
+        <div class="dash-stat-card" onclick="window.location='/messages'">
+          <div class="dash-stat-icon">💬</div>
+          <div class="dash-stat-val" id="ds-messages">—</div>
+          <div class="dash-stat-label">Open Messages</div>
+        </div>
+        <div class="dash-stat-card" onclick="window.location='/pipelines'">
+          <div class="dash-stat-icon">📋</div>
+          <div class="dash-stat-val" id="ds-pipelines">—</div>
+          <div class="dash-stat-label">Active Pipeline Jobs</div>
+        </div>
+        <div class="dash-stat-card" onclick="window.location='/proposals'">
+          <div class="dash-stat-icon">📄</div>
+          <div class="dash-stat-val" id="ds-proposals">—</div>
+          <div class="dash-stat-label">Open Proposals</div>
         </div>
       </div>
+
+      <!-- Quick links row -->
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;padding:1.25rem 1.5rem;border-top:1px solid var(--border);margin-top:1.5rem;">
+        <a href="/crm/relationships" class="btn btn-gold btn-sm">👥 Relationships</a>
+        <a href="/pipelines" class="btn btn-outline btn-sm">📋 Pipelines</a>
+        <a href="/messages" class="btn btn-outline btn-sm">💬 Team Inbox</a>
+        <a href="/proposals" class="btn btn-outline btn-sm">📄 Proposals</a>
+        <a href="/templates" class="btn btn-outline btn-sm">📝 Templates</a>
+      </div>
+
     </div>
+
+    <style>
+      .dash-stat-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1.1rem 1.25rem;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+      .dash-stat-card:hover { border-color: rgba(201,168,76,0.5); background: rgba(201,168,76,0.04); }
+      .dash-stat-icon { font-size: 1.25rem; }
+      .dash-stat-val { font-size: 1.6rem; font-weight: 800; color: var(--gold); line-height: 1; }
+      .dash-stat-label { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    </style>
 
   </div><!-- /dashboard -->
 
@@ -468,7 +526,54 @@
     function selectClientFromHeader(realmId) { selectCompany(realmId); }
 
     // ===== INIT =====
+    async function loadFirmStats() {
+      // Greeting
+      const hour = new Date().getHours();
+      const greeting = hour < 12 ? 'Good morning.' : hour < 17 ? 'Good afternoon.' : 'Good evening.';
+      const greetEl = document.getElementById('dash-greeting');
+      if (greetEl) greetEl.textContent = greeting;
+
+      // Load stats in parallel (non-blocking — each sets its own element)
+      const setStat = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+      try {
+        const [relRes, peopleRes, companiesRes] = await Promise.all([
+          apiFetch('/api/relationships'),
+          apiFetch('/api/people'),
+          apiFetch('/api/companies'),
+        ]);
+        const rels = await relRes.json();
+        const people = await peopleRes.json();
+        const cos = await companiesRes.json();
+        setStat('ds-relationships', Array.isArray(rels) ? rels.length : (rels.total || '—'));
+        setStat('ds-people', Array.isArray(people) ? people.length : (people.total || '—'));
+        setStat('ds-companies', Array.isArray(cos) ? cos.length : (cos.total || '—'));
+      } catch(e) {}
+
+      try {
+        const msgRes = await apiFetch('/api/messages');
+        const msgs = await msgRes.json();
+        const open = Array.isArray(msgs) ? msgs.filter(t => t.status === 'open' || t.status === 'pending').length : '—';
+        setStat('ds-messages', open);
+      } catch(e) {}
+
+      try {
+        const pipRes = await apiFetch('/api/pipelines/entity-jobs?entity_type=company&entity_id=0&all=1');
+        // Fallback — just show '—' if endpoint doesn't support this query
+        setStat('ds-pipelines', '—');
+      } catch(e) { setStat('ds-pipelines', '—'); }
+
+      try {
+        const propRes = await apiFetch('/api/proposals');
+        const props = await propRes.json();
+        const open = Array.isArray(props) ? props.filter(p => p.status === 'sent' || p.status === 'viewed').length : '—';
+        setStat('ds-proposals', open);
+      } catch(e) { setStat('ds-proposals', '—'); }
+    }
+
     async function init() {
+      loadFirmStats(); // non-blocking — runs in background
+
       try {
         const res = await apiFetch('/api/companies');
         companies = await res.json();
