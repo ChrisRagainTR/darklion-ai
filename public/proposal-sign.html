@@ -428,8 +428,8 @@ function loeCoverHeader(eng) {
 
   return `<div class="loe-cover-header-block" style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid #462161;">
     <div style="flex:1;min-width:0;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#374151;margin-bottom:10px;">${today}</div>
-      <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-decoration:underline;color:#462161;margin-bottom:10px;">PRIVATE &amp; CONFIDENTIAL</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:0;color:#374151;margin-bottom:10px;">${today}</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:0;text-decoration:underline;color:#462161;margin-bottom:10px;">PRIVATE &amp; CONFIDENTIAL</div>
       ${clientName ? `<div style="font-size:15px;font-weight:700;color:#1a1a2e;margin-bottom:4px;">${escHtml(clientName)}</div>` : ''}
       <div style="font-size:13px;color:#374151;line-height:1.5;">
         ${owners ? `<div>${escHtml(owners)}</div>` : ''}
