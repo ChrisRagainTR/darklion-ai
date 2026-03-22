@@ -263,7 +263,7 @@ router.get('/:token/pdf', async (req, res) => {
       'SELECT * FROM proposal_engagements WHERE proposal_id = $1 ORDER BY created_at DESC LIMIT 1',
       [prop[0].id]
     );
-    if (!engRows.length) return res.status(404).json({ error: 'No engagement found' });
+    if (!engRows.length) return res.status(400).json({ error: 'Proposal must be accepted before generating a PDF' });
 
     const { generatePDF } = require('../services/pdf');
 

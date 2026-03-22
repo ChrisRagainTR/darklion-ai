@@ -145,6 +145,7 @@ function render(p) {
         </div>
         <div class="detail-actions">
           ${p.status !== 'signed' ? `<a href="/proposals/${p.id}/edit" class="btn btn-outline btn-sm">Edit</a>` : `<span title="Signed proposals cannot be edited — create a new proposal instead" style="font-size:0.78rem;color:var(--muted);font-style:italic;">🔒 Signed — cannot edit</span>`}
+          ${p.public_token ? `<button class="btn btn-outline btn-sm" onclick="previewLOE()" title="Preview the engagement letter as PDF">👁 Preview PDF</button>` : ''}
           ${p.status === 'signed' && p.public_token ? `<button class="btn btn-gold btn-sm" onclick="downloadSignedLOE()">⬇ Download Signed LOE</button>` : ''}
           <button class="btn btn-danger btn-sm" onclick="deleteProposal()">Delete</button>
           ${canSaveCRM ? `<button class="btn btn-gold btn-sm" onclick="saveToCRM()">💾 Save to CRM</button>` : ''}
@@ -284,8 +285,13 @@ function copyLink(url) {
 
 function downloadSignedLOE() {
   if (!_proposalToken) { showToast('No token available', true); return; }
-  // Hit the server-side PDF endpoint — no print dialog, real PDF
   window.location.href = '/api/proposals/public/' + _proposalToken + '/pdf';
+}
+
+function previewLOE() {
+  if (!_proposalToken) { showToast('No token available', true); return; }
+  // Open the sign page in preview mode — shows LOE without requiring auth
+  window.open('/p/' + _proposalToken + '/sign?pdf=1', '_blank');
 }
 
 load();
