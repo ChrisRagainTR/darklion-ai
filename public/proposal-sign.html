@@ -418,6 +418,32 @@ async function resetAndGoBack() {
 // LOE GENERATION
 // ============================================================
 
+function loeCoverHeader(eng) {
+  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const clientName = eng.company_name || eng.client_name || '';
+  const owners = eng.owners || '';
+  const email = eng.contact_email || '';
+  const addr1 = eng.address_line1 || '';
+  const addr2 = eng.address_line2 || '';
+
+  return `<div class="loe-cover-header-block" style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid #462161;">
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#374151;margin-bottom:10px;">${today}</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-decoration:underline;color:#462161;margin-bottom:10px;">PRIVATE &amp; CONFIDENTIAL</div>
+      ${clientName ? `<div style="font-size:15px;font-weight:700;color:#1a1a2e;margin-bottom:4px;">${escHtml(clientName)}</div>` : ''}
+      <div style="font-size:13px;color:#374151;line-height:1.5;">
+        ${owners ? `<div>${escHtml(owners)}</div>` : ''}
+        ${email ? `<div>${escHtml(email)}</div>` : ''}
+        ${addr1 ? `<div>${escHtml(addr1)}</div>` : ''}
+        ${addr2 ? `<div>${escHtml(addr2)}</div>` : ''}
+      </div>
+    </div>
+    <div style="flex-shrink:0;margin-left:2rem;text-align:right;">
+      <img src="/sentinel-logo.png" alt="Sentinel Wealth &amp; Tax" style="height:56px;width:auto;object-fit:contain;" onerror="this.parentElement.innerHTML='<div style=&quot;font-size:11px;font-weight:800;color:#462161;text-align:right;&quot;>Sentinel<br>Wealth &amp; Tax</div>'">
+    </div>
+  </div>`;
+}
+
 function formatOrdinalDate(d) {
   const day = d.getDate();
   const suffix = [11,12,13].includes(day) ? 'th' :
@@ -525,15 +551,7 @@ function generateTaxLOE(eng) {
   return `
     <!-- COVER PAGE -->
     <div class="loe-section">
-      <p class="loe-tax-confidential"><u>PRIVATE &amp; CONFIDENTIAL</u></p>
-
-      <div class="loe-client-info">
-        <p class="loe-client-name"><strong>${escHtml(eng.company_name || eng.client_name || '')}</strong></p>
-        ${eng.owners ? `<p>${escHtml(eng.owners)}</p>` : ''}
-        ${eng.contact_email ? `<p>${escHtml(eng.contact_email)}</p>` : ''}
-        ${eng.address_line1 ? `<p>${escHtml(eng.address_line1)}</p>` : ''}
-        ${eng.address_line2 ? `<p>${escHtml(eng.address_line2)}</p>` : ''}
-      </div>
+      ${loeCoverHeader(eng)}
 
       <p>This Letter is to confirm our understanding of the terms and objectives of our engagement and the nature and
       limitations of the services we will provide. Sentinel Tax will provide you with the services stated below in accordance
@@ -1191,15 +1209,7 @@ function generateWealthLOE(eng) {
   return `
     <!-- COVER PAGE -->
     <div class="loe-section">
-      <p class="loe-confidential"><u>PRIVATE &amp; CONFIDENTIAL</u></p>
-
-      <div class="loe-client-info">
-        <p class="loe-client-name"><strong>${escHtml(eng.company_name || eng.client_name || '')}</strong></p>
-        ${eng.owners ? `<p>${escHtml(eng.owners)}</p>` : ''}
-        ${eng.contact_email ? `<p>${escHtml(eng.contact_email)}</p>` : ''}
-        ${eng.address_line1 ? `<p>${escHtml(eng.address_line1)}</p>` : ''}
-        ${eng.address_line2 ? `<p>${escHtml(eng.address_line2)}</p>` : ''}
-      </div>
+      ${loeCoverHeader(eng)}
 
       <p>This Client Services Agreement (the &ldquo;Agreement&rdquo;) confirms our understanding of the terms and objectives of our
       engagement and the nature and limitations of the services ${ADVISOR_ENTITY} (the &ldquo;Advisor&rdquo;)
@@ -1720,10 +1730,8 @@ function generateLOEForPrint(eng) {
   .print-sig-name { font-size: 10pt; font-weight: 700; margin-bottom: 2pt; }
   .print-sig-meta { font-size: 8.5pt; color: #6b7280; line-height: 1.4; }
 
-  /* Hide the LOE body's own PRIVATE & CONFIDENTIAL + client block since print-header renders them */
-  .loe-body .loe-confidential,
-  .loe-body .loe-tax-confidential,
-  .loe-body .loe-client-info { display: none; }
+  /* In print, hide the inline cover header block (print-header renders it instead) */
+  .loe-body .loe-cover-header-block { display: none; }
 
   @media print {
     body { margin: 0; }
