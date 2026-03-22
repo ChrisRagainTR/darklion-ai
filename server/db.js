@@ -599,6 +599,17 @@ async function initDB() {
       needs_changes_note TEXT DEFAULT '',
       UNIQUE(delivery_id, person_id)
     );
+
+    -- ===================== MESSAGE TEMPLATES =====================
+    CREATE TABLE IF NOT EXISTS message_templates (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER REFERENCES firms(id) ON DELETE CASCADE,
+      name TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL DEFAULT '',
+      created_by INTEGER REFERENCES firm_users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
 }
 

@@ -685,7 +685,10 @@
             <span style="font-weight:700;">New Message</span>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">📢 Sent to all portal-enabled people on this company</div>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="coCommCloseNew()">Cancel</button>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <button class="btn btn-outline btn-sm" onclick="coCommOpenTemplatePicker()" title="Load a pre-written template">📋 Load Template</button>
+            <button class="btn btn-outline btn-sm" onclick="coCommCloseNew()">Cancel</button>
+          </div>
         </div>
         <div id="comm-co-no-portal-warning" style="display:none;margin:1rem 1.5rem 0;padding:0.75rem 1rem;background:rgba(237,137,54,0.1);border:1px solid rgba(237,137,54,0.3);border-radius:8px;font-size:0.82rem;color:var(--orange,#ed8936);">
           ⚠️ No portal users on this company. Invite someone to the portal before sending a message.
@@ -700,6 +703,20 @@
             <button class="btn btn-gold btn-sm" id="comm-co-send-btn" onclick="coCommSendNew()">Send Message</button>
             <button class="btn-attach" onclick="document.getElementById('comm-co-new-attach-input').click()">📎 Attach</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Template picker modal (company) -->
+      <div id="comm-co-tmpl-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;align-items:center;justify-content:center;">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;width:90%;max-width:520px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
+          <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-weight:700;">Load Template</div>
+            <button onclick="coCommCloseTemplatePicker()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;line-height:1;">✕</button>
+          </div>
+          <div style="padding:0.75rem 1rem;border-bottom:1px solid var(--border);">
+            <input type="text" id="comm-co-tmpl-search" class="form-control" placeholder="Search templates…" oninput="coCommFilterTemplates(this.value)" style="font-size:0.88rem;">
+          </div>
+          <div id="comm-co-tmpl-list" style="overflow-y:auto;flex:1;padding:0.5rem 0;"></div>
         </div>
       </div>
     </div>
@@ -2903,6 +2920,51 @@
     } catch(e) { /* non-fatal */ }
   }
   function coCommCloseNew() { coCommShowEmpty(); }
+
+  // ── Template picker (company) ──
+  let _coCommTemplates = null;
+  async function coCommOpenTemplatePicker() {
+    const overlay = document.getElementById('comm-co-tmpl-overlay');
+    overlay.style.display = 'flex';
+    document.getElementById('comm-co-tmpl-search').value = '';
+    document.getElementById('comm-co-tmpl-list').innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);">Loading…</div>';
+    if (!_coCommTemplates) {
+      try {
+        const res = await apiFetch('/api/templates');
+        _coCommTemplates = await res.json();
+      } catch(e) { _coCommTemplates = []; }
+    }
+    coCommRenderTemplates(_coCommTemplates);
+  }
+  function coCommCloseTemplatePicker() {
+    document.getElementById('comm-co-tmpl-overlay').style.display = 'none';
+  }
+  function coCommFilterTemplates(q) {
+    if (!_coCommTemplates) return;
+    const filtered = q ? _coCommTemplates.filter(t => t.name.toLowerCase().includes(q.toLowerCase()) || t.body.toLowerCase().includes(q.toLowerCase())) : _coCommTemplates;
+    coCommRenderTemplates(filtered);
+  }
+  function coCommRenderTemplates(list) {
+    const el = document.getElementById('comm-co-tmpl-list');
+    if (!list.length) {
+      el.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--muted);font-style:italic;">No templates found</div>';
+      return;
+    }
+    el.innerHTML = list.map(t => `
+      <div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;"
+        onmouseover="this.style.background='rgba(201,168,76,0.07)'" onmouseout="this.style.background=''"
+        onclick="coCommLoadTemplate(${t.id})">
+        <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.25rem;">${esc(t.name)}</div>
+        <div style="font-size:0.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(t.body.slice(0,100))}${t.body.length>100?'…':''}</div>
+      </div>`).join('');
+  }
+  function coCommLoadTemplate(id) {
+    const t = _coCommTemplates && _coCommTemplates.find(x => x.id === id);
+    if (!t) return;
+    document.getElementById('comm-co-new-body').value = t.body;
+    coCommCloseTemplatePicker();
+    document.getElementById('comm-co-new-body').focus();
+  }
 
   function initCoComm() {
     commCoId = companyId;

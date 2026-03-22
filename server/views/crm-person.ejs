@@ -344,7 +344,10 @@
       <div id="comm-compose-view" style="display:none;position:absolute;inset:0;z-index:2;background:var(--navy);flex-direction:column;overflow:hidden;">
         <div class="detail-header" style="display:flex;align-items:center;justify-content:space-between;">
           <span style="font-weight:700;">New Message</span>
-          <button class="btn btn-outline btn-sm" onclick="commCloseNew()">Cancel</button>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <button class="btn btn-outline btn-sm" onclick="commOpenTemplatePicker()" title="Load a pre-written template">📋 Load Template</button>
+            <button class="btn btn-outline btn-sm" onclick="commCloseNew()">Cancel</button>
+          </div>
         </div>
         <div style="flex:1;padding:1rem 1.5rem;display:flex;flex-direction:column;min-height:0;">
           <textarea id="comm-new-body" placeholder="Write your message…" style="flex:1;resize:none;width:100%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:0.6rem 0.75rem;font-size:0.88rem;font-family:inherit;min-height:0;"></textarea>
@@ -356,6 +359,20 @@
             <button class="btn btn-gold btn-sm" onclick="commSendNew()">Send Message</button>
             <button class="btn-attach" onclick="document.getElementById('comm-new-attach-input').click()">📎 Attach</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Template picker modal (person) -->
+      <div id="comm-tmpl-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;align-items:center;justify-content:center;">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;width:90%;max-width:520px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
+          <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-weight:700;">Load Template</div>
+            <button onclick="commCloseTemplatePicker()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;line-height:1;">✕</button>
+          </div>
+          <div style="padding:0.75rem 1rem;border-bottom:1px solid var(--border);">
+            <input type="text" id="comm-tmpl-search" class="form-control" placeholder="Search templates…" oninput="commFilterTemplates(this.value)" style="font-size:0.88rem;">
+          </div>
+          <div id="comm-tmpl-list" style="overflow-y:auto;flex:1;padding:0.5rem 0;"></div>
         </div>
       </div>
     </div>
@@ -1387,6 +1404,51 @@
   }
   function commOpenNew() { commShowCompose(); document.getElementById('comm-new-body').value = ''; commNewAttachFiles = []; renderNewCommAttachChips(); }
   function commCloseNew() { commShowEmpty(); }
+
+  // ── Template picker ──
+  let _commTemplates = null;
+  async function commOpenTemplatePicker() {
+    const overlay = document.getElementById('comm-tmpl-overlay');
+    overlay.style.display = 'flex';
+    document.getElementById('comm-tmpl-search').value = '';
+    document.getElementById('comm-tmpl-list').innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);">Loading…</div>';
+    if (!_commTemplates) {
+      try {
+        const res = await apiFetch('/api/templates');
+        _commTemplates = await res.json();
+      } catch(e) { _commTemplates = []; }
+    }
+    commRenderTemplates(_commTemplates);
+  }
+  function commCloseTemplatePicker() {
+    document.getElementById('comm-tmpl-overlay').style.display = 'none';
+  }
+  function commFilterTemplates(q) {
+    if (!_commTemplates) return;
+    const filtered = q ? _commTemplates.filter(t => t.name.toLowerCase().includes(q.toLowerCase()) || t.body.toLowerCase().includes(q.toLowerCase())) : _commTemplates;
+    commRenderTemplates(filtered);
+  }
+  function commRenderTemplates(list) {
+    const el = document.getElementById('comm-tmpl-list');
+    if (!list.length) {
+      el.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--muted);font-style:italic;">No templates found</div>';
+      return;
+    }
+    el.innerHTML = list.map(t => `
+      <div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;"
+        onmouseover="this.style.background='rgba(201,168,76,0.07)'" onmouseout="this.style.background=''"
+        onclick="commLoadTemplate(${t.id})">
+        <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.25rem;">${esc(t.name)}</div>
+        <div style="font-size:0.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(t.body.slice(0,100))}${t.body.length>100?'…':''}</div>
+      </div>`).join('');
+  }
+  function commLoadTemplate(id) {
+    const t = _commTemplates && _commTemplates.find(x => x.id === id);
+    if (!t) return;
+    document.getElementById('comm-new-body').value = t.body;
+    commCloseTemplatePicker();
+    document.getElementById('comm-new-body').focus();
+  }
 
   function commInitials(name) {
     return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) || '?';
