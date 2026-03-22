@@ -92,11 +92,13 @@
     .loe-monthly-table th:last-child { text-align: right; }
     .loe-services-table td, .loe-monthly-table td { padding: 7px 12px; border-bottom: 1px solid #e5e2eb; vertical-align: top; text-align: left; }
     .loe-svc-name { font-weight: 500; text-align: left; }
-    .loe-svc-price { text-align: right; font-weight: 600; color: #1a1a2e; white-space: nowrap; vertical-align: top; }
+    .loe-svc-price { text-align: right !important; font-weight: 600; color: #1a1a2e; white-space: nowrap; vertical-align: top; }
     .loe-svc-status { text-align: right; }
     .loe-status-included { color: #059669; font-weight: 600; font-size: 12px; }
     .loe-total-row td { font-weight: 700; color: #462161; border-top: 2px solid #462161; padding: 8px 12px; }
-    .loe-total-row td:last-child { text-align: right; }
+    .loe-total-row td:last-child { text-align: right !important; }
+    .loe-monthly-table th:last-child, .loe-svc-price-hdr { text-align: right !important; }
+    .loe-backwork-table td:last-child { text-align: right !important; }
     .loe-election-box { background: #f4f1f9; border: 2px solid #462161; border-radius: 8px; padding: 16px; margin: 20px 0; }
     .loe-election-summary { width: 100%; font-size: 14px; }
     .loe-election-summary td { padding: 4px 0; }
@@ -250,12 +252,14 @@ function renderPdfOnlyMode() {
   const pdfStyle = document.createElement('style');
   pdfStyle.textContent = `
     * { font-family: Arial, Helvetica, sans-serif !important; }
-    .loe-content, .loe-content * { background: #fff !important; color: #1a1a2e; }
+    .loe-content, .loe-content * { background: #fff !important; }
     .loe-total-row td, .loe-bw-total-row td { background: #fff !important; }
     .loe-election-box { background: #fff !important; border: 1pt solid #462161; }
     .loe-monthly-table tbody tr:nth-child(even), .loe-services-table tbody tr:nth-child(even) { background: #fff !important; }
     .loe-cover-header-block { border-bottom-color: #462161; }
     table th { background: #462161 !important; color: #fff !important; }
+    .loe-svc-price, .loe-total-row td:last-child, .loe-bw-total-row td:last-child,
+    .loe-monthly-table th:last-child, .loe-svc-price-hdr, .loe-backwork-table td:last-child { text-align: right !important; }
   `;
   document.head.appendChild(pdfStyle);
 
