@@ -1074,11 +1074,11 @@
         <div style="margin-bottom:0.75rem;">
           <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">Accounts</div>
           <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.84rem;margin-bottom:0.35rem;cursor:pointer;">
-            <input type="checkbox" id="ba-sentinel-tax" ${accounts.includes('sentinel_tax') ? 'checked' : ''}>
+            <input type="checkbox" id="ba-sentinel-tax" ${accounts.includes('sentinel_tax') ? 'checked' : ''} onchange="saveBillingConfig()">
             Sentinel Tax
           </label>
           <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.84rem;cursor:pointer;">
-            <input type="checkbox" id="ba-sentinel-pcs" ${accounts.includes('sentinel_pcs') ? 'checked' : ''}>
+            <input type="checkbox" id="ba-sentinel-pcs" ${accounts.includes('sentinel_pcs') ? 'checked' : ''} onchange="saveBillingConfig()">
             Sentinel Private Client Services
           </label>
         </div>
@@ -1097,10 +1097,7 @@
             <button class="btn btn-outline btn-sm" onclick="addBillingEmail()">Add</button>
           </div>
         </div>
-        <div style="display:flex;gap:0.5rem;align-items:center;">
-          <button class="btn btn-gold btn-sm" id="billing-save-btn" onclick="saveBillingConfig()">Save</button>
-          <button class="btn btn-outline btn-sm" onclick="loadBillingSummary(document.getElementById('billing-content'))" title="Refresh Stripe data">↻ Refresh</button>
-        </div>
+
       </div>
       <div id="billing-summary" style="flex:1;min-width:300px;">`;
 
@@ -1129,17 +1126,15 @@
     if (billingConfig.billing_emails.includes(val)) { toast('Already added', 'error'); return; }
     billingConfig.billing_emails.push(val);
     inp.value = '';
-    renderBillingConfig(document.getElementById('billing-content'));
+    saveBillingConfig();
   }
 
   function removeBillingEmail(idx) {
     billingConfig.billing_emails.splice(idx, 1);
-    renderBillingConfig(document.getElementById('billing-content'));
+    saveBillingConfig();
   }
 
   async function saveBillingConfig() {
-    const btn = document.getElementById('billing-save-btn');
-    btn.disabled = true; btn.textContent = 'Saving…';
     const accounts = [];
     if (document.getElementById('ba-sentinel-tax')?.checked) accounts.push('sentinel_tax');
     if (document.getElementById('ba-sentinel-pcs')?.checked) accounts.push('sentinel_pcs');
@@ -1151,9 +1146,12 @@
       });
       if (!res.ok) throw new Error((await res.json()).error);
       billingConfig = await res.json();
-      btn.textContent = '✓ Saved';
-      setTimeout(() => renderBilling(), 400);
-    } catch(e) { toast(e.message, 'error'); btn.disabled = false; btn.textContent = 'Save & Refresh'; }
+      // Re-render config panel and fetch Stripe data if configured
+      renderBillingConfig(document.getElementById('billing-content'));
+      if (billingConfig.billing_accounts.length && billingConfig.billing_emails.length) {
+        loadBillingSummary(document.getElementById('billing-content'));
+      }
+    } catch(e) { toast(e.message, 'error'); }
   }
 
   async function loadBillingSummary(el) {
