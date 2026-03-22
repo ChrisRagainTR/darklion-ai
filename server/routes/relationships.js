@@ -200,6 +200,78 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// GET /:id/team — get assigned team members
+router.get('/:id/team', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+  try {
+    // Auto-create table if not exists (idempotent)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS relationship_team (
+        relationship_id INTEGER NOT NULL,
+        firm_user_id INTEGER NOT NULL,
+        added_at TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (relationship_id, firm_user_id)
+      )
+    `);
+
+    const { rows: rel } = await pool.query('SELECT id FROM relationships WHERE id = $1 AND firm_id = $2', [id, firmId]);
+    if (!rel.length) return res.status(404).json({ error: 'Not found' });
+
+    const { rows } = await pool.query(`
+      SELECT fu.id, COALESCE(fu.display_name, fu.name) AS name, fu.email, fu.role, fu.avatar_url
+      FROM relationship_team rt
+      JOIN firm_users fu ON fu.id = rt.firm_user_id
+      WHERE rt.relationship_id = $1
+      ORDER BY rt.added_at ASC
+    `, [id]);
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /relationships/:id/team error:', err);
+    res.status(500).json({ error: 'Failed to fetch team' });
+  }
+});
+
+// POST /:id/team — add a team member
+router.post('/:id/team', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+  const { firm_user_id } = req.body;
+  if (!firm_user_id) return res.status(400).json({ error: 'firm_user_id required' });
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS relationship_team (
+      relationship_id INTEGER NOT NULL, firm_user_id INTEGER NOT NULL, added_at TIMESTAMPTZ DEFAULT NOW(),
+      PRIMARY KEY (relationship_id, firm_user_id)
+    )`);
+    const { rows: rel } = await pool.query('SELECT id FROM relationships WHERE id = $1 AND firm_id = $2', [id, firmId]);
+    if (!rel.length) return res.status(404).json({ error: 'Not found' });
+    // Verify the user belongs to this firm
+    const { rows: user } = await pool.query('SELECT id FROM firm_users WHERE id = $1 AND firm_id = $2', [firm_user_id, firmId]);
+    if (!user.length) return res.status(403).json({ error: 'User not in this firm' });
+
+    await pool.query(`INSERT INTO relationship_team (relationship_id, firm_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [id, firm_user_id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('POST /relationships/:id/team error:', err);
+    res.status(500).json({ error: 'Failed to add team member' });
+  }
+});
+
+// DELETE /:id/team/:userId — remove a team member
+router.delete('/:id/team/:userId', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id, userId } = req.params;
+  try {
+    const { rows: rel } = await pool.query('SELECT id FROM relationships WHERE id = $1 AND firm_id = $2', [id, firmId]);
+    if (!rel.length) return res.status(404).json({ error: 'Not found' });
+    await pool.query('DELETE FROM relationship_team WHERE relationship_id = $1 AND firm_user_id = $2', [id, userId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('DELETE /relationships/:id/team error:', err);
+    res.status(500).json({ error: 'Failed to remove team member' });
+  }
+});
+
 // GET /:id/snapshot — tax deliveries, last 5 threads, activity feed
 router.get('/:id/snapshot', async (req, res) => {
   const firmId = req.firm.id;

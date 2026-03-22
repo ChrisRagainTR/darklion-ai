@@ -135,9 +135,12 @@
   .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.15rem; }
 
   /* ── Overview dashboard grid ── */
-  .ov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; padding: 1rem 1.5rem; }
+  .ov-outer { display: grid; grid-template-columns: 1fr 260px; gap: 0.85rem; padding: 1rem 1.5rem; align-items: start; }
+  .ov-main { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
   .ov-full { grid-column: 1 / -1; }
-  @media (max-width: 768px) { .ov-grid { grid-template-columns: 1fr; } .ov-full { grid-column: 1; } }
+  .ov-sidebar { display: flex; flex-direction: column; gap: 0.85rem; }
+  @media (max-width: 960px) { .ov-outer { grid-template-columns: 1fr; } .ov-sidebar { display: grid; grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .ov-main { grid-template-columns: 1fr; } .ov-sidebar { grid-template-columns: 1fr; } }
   .ov-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; overflow: hidden; }
   .ov-panel-title { font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between; }
 
@@ -155,6 +158,21 @@
   .act-body { flex: 1; min-width: 0; }
   .act-title { font-size: 0.8rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .act-meta { font-size: 0.7rem; color: var(--muted); }
+
+  /* ── Team member chips ── */
+  .team-member { display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .team-member:last-child { border-bottom: none; }
+  .team-avatar { width: 26px; height: 26px; border-radius: 50%; background: rgba(201,168,76,0.15); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: var(--gold); flex-shrink: 0; overflow: hidden; }
+  .team-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .team-name { flex: 1; font-size: 0.8rem; font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .team-role { font-size: 0.68rem; color: var(--muted); }
+  .team-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; padding: 0.1rem 0.3rem; border-radius: 3px; flex-shrink: 0; }
+  .team-remove:hover { color: #f56565; }
+  .team-add-row { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+  .team-add-select { flex: 1; min-width: 0; padding: 0.3rem 0.5rem; background: var(--navy); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.78rem; outline: none; }
+  .team-add-select:focus { border-color: var(--gold); }
+  .team-add-btn { background: var(--gold); color: var(--navy); border: none; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+  .team-add-btn:hover { background: var(--gold-light); }
 
   /* ── Thread strip ── */
   .thread-strip { display: flex; gap: 0.6rem; overflow-x: auto; padding-bottom: 0.25rem; }
@@ -399,114 +417,96 @@
     const people = r.people || [];
     const companies = r.companies || [];
     const entityTypeLabels = { llc:'LLC', s_corp:'S-Corp', c_corp:'C-Corp', partnership:'Partnership', sole_prop:'Sole Prop', trust:'Trust', nonprofit:'Non-Profit', other:'Other' };
-    let html = '';
+    const taxStatusColors = { draft:'#8fa3b8', sent:'#63b3ed', approved:'#3ecf8e', signed:'#3ecf8e', changes_requested:'#ed8936', cancelled:'#f56565' };
+    const taxStatusLabels = { draft:'Draft', sent:'Sent', approved:'Approved', signed:'Signed', changes_requested:'Changes Req.', cancelled:'Cancelled' };
+    const tierLabels = { standard:'Standard', legacy_blueprint:'Legacy Blueprint', tax_only:'Tax Only', full_service:'Full Service' };
 
-    // ── ROW 1: People | Companies ──────────────────────────────────
+    // ── MAIN panels ───────────────────────────────────────────────
+    let main = '';
+
     // People panel
-    html += `<div class="ov-panel">
-      <div class="ov-panel-title">
-        <span>👤 People (${people.length})</span>
-        <a href="/crm/people?add=1" class="btn btn-ghost btn-xs">+ Add</a>
-      </div>`;
+    main += `<div class="ov-panel">
+      <div class="ov-panel-title"><span>👤 People (${people.length})</span><a href="/crm/people?add=1" class="btn btn-ghost btn-xs">+ Add</a></div>`;
     if (!people.length) {
-      html += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
+      main += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
     } else {
-      html += `<div class="entity-grid">`;
+      main += `<div class="entity-grid">`;
       people.forEach(p => {
         const initials = ((p.first_name||'').charAt(0) + (p.last_name||'').charAt(0)).toUpperCase() || '?';
         const portalBadge = p.portal_enabled ? `<span class="badge badge-green" style="font-size:0.62rem;">Portal</span>` : '';
         const filingBadge = p.filing_status ? `<span class="badge badge-muted" style="font-size:0.62rem;">${filingLabel(p.filing_status)}</span>` : '';
         const meta = [p.email, p.phone].filter(Boolean).join(' · ');
-        html += `<div class="entity-mini-card">
-          <div class="entity-mini-top">
-            <div class="entity-mini-avatar">${initials}</div>
-            <div class="entity-mini-name"><a href="/crm/person/${p.id}">${esc(p.first_name||'')} ${esc(p.last_name||'')}</a></div>
-          </div>
+        main += `<div class="entity-mini-card">
+          <div class="entity-mini-top"><div class="entity-mini-avatar">${initials}</div>
+          <div class="entity-mini-name"><a href="/crm/person/${p.id}">${esc(p.first_name||'')} ${esc(p.last_name||'')}</a></div></div>
           ${meta ? `<div class="entity-mini-meta">${esc(meta)}</div>` : ''}
-          <div class="entity-mini-footer">
-            <div class="entity-mini-badges">${filingBadge}${portalBadge}</div>
-            <a href="/crm/person/${p.id}" class="btn btn-ghost btn-xs" style="padding:0.15rem 0.45rem;">→</a>
-          </div>
+          <div class="entity-mini-footer"><div class="entity-mini-badges">${filingBadge}${portalBadge}</div>
+          <a href="/crm/person/${p.id}" class="btn btn-ghost btn-xs" style="padding:0.15rem 0.45rem;">→</a></div>
         </div>`;
       });
-      html += `</div>`;
+      main += `</div>`;
     }
-    html += `</div>`;
+    main += `</div>`;
 
     // Companies panel
-    html += `<div class="ov-panel">
-      <div class="ov-panel-title">
-        <span>🏢 Companies (${companies.length})</span>
-        <a href="/crm/companies?add=1" class="btn btn-ghost btn-xs">+ Add</a>
-      </div>`;
+    main += `<div class="ov-panel">
+      <div class="ov-panel-title"><span>🏢 Companies (${companies.length})</span><a href="/crm/companies?add=1" class="btn btn-ghost btn-xs">+ Add</a></div>`;
     if (!companies.length) {
-      html += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
+      main += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
     } else {
-      html += `<div class="entity-grid">`;
+      main += `<div class="entity-grid">`;
       companies.forEach(co => {
         const name = co.company_name || co.name || 'Unknown';
         const initial = name.charAt(0).toUpperCase();
         const entityBadge = co.entity_type ? `<span class="badge badge-blue" style="font-size:0.62rem;">${entityTypeLabels[co.entity_type]||esc(co.entity_type)}</span>` : '';
         const qboBadge = co.realm_id ? `<span class="badge badge-green" style="font-size:0.62rem;">QBO</span>` : '';
-        html += `<div class="entity-mini-card">
-          <div class="entity-mini-top">
-            <div class="entity-mini-avatar square">${initial}</div>
-            <div class="entity-mini-name"><a href="/crm/company/${co.id}">${esc(name)}</a></div>
-          </div>
+        main += `<div class="entity-mini-card">
+          <div class="entity-mini-top"><div class="entity-mini-avatar square">${initial}</div>
+          <div class="entity-mini-name"><a href="/crm/company/${co.id}">${esc(name)}</a></div></div>
           ${co.entity_type ? `<div class="entity-mini-meta">${entityTypeLabels[co.entity_type]||esc(co.entity_type)}</div>` : ''}
-          <div class="entity-mini-footer">
-            <div class="entity-mini-badges">${entityBadge}${qboBadge}</div>
-            <a href="/crm/company/${co.id}" class="btn btn-ghost btn-xs" style="padding:0.15rem 0.45rem;">→</a>
-          </div>
+          <div class="entity-mini-footer"><div class="entity-mini-badges">${entityBadge}${qboBadge}</div>
+          <a href="/crm/company/${co.id}" class="btn btn-ghost btn-xs" style="padding:0.15rem 0.45rem;">→</a></div>
         </div>`;
       });
-      html += `</div>`;
+      main += `</div>`;
     }
-    html += `</div>`;
-
-    // ── ROW 2: Tax Status | Recent Activity ───────────────────────
-    const taxStatusColors = {
-      draft: '#8fa3b8', sent: '#63b3ed', approved: '#3ecf8e',
-      signed: '#3ecf8e', changes_requested: '#ed8936', cancelled: '#f56565'
-    };
-    const taxStatusLabels = {
-      draft: 'Draft', sent: 'Sent', approved: 'Approved',
-      signed: 'Signed', changes_requested: 'Changes Req.', cancelled: 'Cancelled'
-    };
+    main += `</div>`;
 
     // Tax Status panel
-    html += `<div class="ov-panel">
+    main += `<div class="ov-panel">
       <div class="ov-panel-title"><span>📊 Tax Status</span></div>`;
     if (!snap) {
-      html += `<div style="color:var(--muted);font-size:0.78rem;padding:0.5rem 0;">Loading…</div>`;
+      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
     } else if (!snap.tax_deliveries || !snap.tax_deliveries.length) {
-      html += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No tax deliveries yet.</div>`;
+      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No tax deliveries yet.</div>`;
     } else {
       snap.tax_deliveries.forEach(td => {
         const dotColor = taxStatusColors[td.status] || '#8fa3b8';
         const label = taxStatusLabels[td.status] || td.status;
         const name = td.company_name || (td.signers && td.signers[0] ? td.signers[0].person_name : 'Personal');
-        html += `<div class="tax-row">
+        main += `<div class="tax-row">
           <span class="tax-year-pill">${td.tax_year || '—'}</span>
-          <span class="tax-title" title="${esc(td.title||'')}"><a href="/crm" style="color:var(--text);text-decoration:none;">${esc(td.title || name)}</a></span>
+          <span class="tax-title" title="${esc(td.title||'')}">` +
+          (td.company_id ? `<a href="/crm/company/${td.company_id}" style="color:var(--text);text-decoration:none;">${esc(td.title||name)}</a>` : esc(td.title||name)) +
+          `</span>
           <div class="tax-status-dot" style="background:${dotColor};" title="${label}"></div>
           <span style="font-size:0.7rem;color:${dotColor};font-weight:600;min-width:60px;text-align:right;">${label}</span>
         </div>`;
       });
     }
-    html += `</div>`;
+    main += `</div>`;
 
     // Recent Activity panel
-    html += `<div class="ov-panel">
+    main += `<div class="ov-panel">
       <div class="ov-panel-title"><span>🕐 Recent Activity</span></div>`;
     if (!snap) {
-      html += `<div style="color:var(--muted);font-size:0.78rem;padding:0.5rem 0;">Loading…</div>`;
+      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
     } else if (!snap.activity || !snap.activity.length) {
-      html += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No activity yet.</div>`;
+      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No activity yet.</div>`;
     } else {
       snap.activity.forEach(a => {
         const when = a.event_at ? timeAgo(a.event_at) : '';
-        html += `<div class="act-row">
+        main += `<div class="act-row">
           <span class="act-icon">${a.icon}</span>
           <div class="act-body">
             <div class="act-title" title="${esc(a.title)}">${esc(a.title)}</div>
@@ -515,23 +515,23 @@
         </div>`;
       });
     }
-    html += `</div>`;
+    main += `</div>`;
 
-    // ── ROW 3: Recent Threads (full width) ─────────────────────────
-    html += `<div class="ov-panel ov-full">
+    // Threads (full width in main)
+    main += `<div class="ov-panel ov-full">
       <div class="ov-panel-title"><span>💬 Recent Messages</span><a href="/messages" class="btn btn-ghost btn-xs">View all →</a></div>`;
     if (!snap) {
-      html += `<div style="color:var(--muted);font-size:0.78rem;padding:0.5rem 0;">Loading…</div>`;
+      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
     } else if (!snap.threads || !snap.threads.length) {
-      html += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No message threads yet.</div>`;
+      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No message threads yet.</div>`;
     } else {
-      html += `<div class="thread-strip">`;
+      main += `<div class="thread-strip">`;
       snap.threads.forEach(t => {
         const unread = t.unread_count > 0;
         const lastBody = (t.last_body || '').replace(/<[^>]*>/g,'').slice(0, 80);
         const when = t.last_message_at ? timeAgo(t.last_message_at) : '';
         const fromClient = t.last_sender_type === 'client';
-        html += `<a href="/messages?thread=${t.id}" class="thread-card${unread ? ' has-unread' : ''}">
+        main += `<a href="/messages?thread=${t.id}" class="thread-card${unread ? ' has-unread' : ''}">
           <div class="thread-person">${esc(t.person_name || 'Unknown')}</div>
           <div class="thread-subject">${esc(t.subject || '(no subject)')}</div>
           <div class="thread-preview">${fromClient ? '← ' : ''}${esc(lastBody) || '<em style="opacity:.5">No messages</em>'}</div>
@@ -541,14 +541,42 @@
           </div>
         </a>`;
       });
-      html += `</div>`;
+      main += `</div>`;
     }
-    html += `</div>`;
+    main += `</div>`;
 
-    document.getElementById('overview-dashboard').innerHTML = html;
+    // ── SIDEBAR ───────────────────────────────────────────────────
+    let sidebar = '';
+
+    // Team panel
+    sidebar += `<div class="ov-panel" id="team-panel">
+      <div class="ov-panel-title"><span>👥 Account Team</span></div>
+      <div id="team-members-list"><div style="color:var(--muted);font-size:0.78rem;">Loading…</div></div>
+      <div class="team-add-row" id="team-add-row" style="display:none;">
+        <select class="team-add-select" id="team-add-select"><option value="">Add member…</option></select>
+        <button class="team-add-btn" onclick="addTeamMember()">Add</button>
+      </div>
+    </div>`;
+
+    // Details panel
+    sidebar += `<div class="ov-panel">
+      <div class="ov-panel-title">Details <button class="btn btn-ghost btn-xs" onclick="openEditModal()">Edit</button></div>
+      <div class="info-row"><span class="info-label">Tier</span><span class="info-val">${r.service_tier ? tierBadge(r.service_tier) : '<span style="color:var(--muted);">—</span>'}</span></div>
+      <div class="info-row"><span class="info-label">Billing</span><span class="info-val">${r.billing_status ? billingBadge(r.billing_status) : '<span style="color:var(--muted);">—</span>'}</span></div>
+      <div class="info-row"><span class="info-label">Since</span><span class="info-val">${fmtDate(r.created_at)}</span></div>
+    </div>`;
+
+    document.getElementById('overview-dashboard').innerHTML = `
+      <div class="ov-outer">
+        <div class="ov-main">${main}</div>
+        <div class="ov-sidebar">${sidebar}</div>
+      </div>`;
+
+    // Load team after render
+    loadTeamPanel();
   }
 
-  function timeAgo(dateStr) {
+    function timeAgo(dateStr) {
     const d = new Date(dateStr);
     const diff = Math.floor((Date.now() - d) / 1000);
     if (diff < 60) return 'just now';
@@ -556,6 +584,91 @@
     if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
     if (diff < 604800) return Math.floor(diff/86400) + 'd ago';
     return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  }
+
+  // ── Team panel ────────────────────────────────────────────────────
+  let _allStaff = [];
+  let _assignedTeam = [];
+
+  async function loadTeamPanel() {
+    try {
+      // Fetch all staff + assigned team in parallel
+      const [staffRes, teamRes] = await Promise.all([
+        fetch('/firms/team', { headers: { 'Authorization': 'Bearer ' + token } }),
+        apiFetch(`/api/relationships/${relId}/team`),
+      ]);
+      _allStaff = staffRes.ok ? await staffRes.json() : [];
+      _assignedTeam = teamRes.ok ? await teamRes.json() : [];
+      renderTeamPanel();
+    } catch(e) {
+      const el = document.getElementById('team-members-list');
+      if (el) el.innerHTML = '<div style="color:var(--muted);font-size:0.78rem;">Failed to load team.</div>';
+    }
+  }
+
+  function renderTeamPanel() {
+    const listEl = document.getElementById('team-members-list');
+    const addRow = document.getElementById('team-add-row');
+    const addSelect = document.getElementById('team-add-select');
+    if (!listEl) return;
+
+    const assignedIds = new Set(_assignedTeam.map(m => m.id));
+
+    // Render assigned members
+    if (!_assignedTeam.length) {
+      listEl.innerHTML = `<div style="color:var(--muted);font-size:0.78rem;margin-bottom:0.3rem;">No team assigned.</div>`;
+    } else {
+      listEl.innerHTML = _assignedTeam.map(m => {
+        const initials = m.name ? m.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
+        const avatarHtml = m.avatar_url
+          ? `<img src="${m.avatar_url}" alt="${esc(m.name)}">`
+          : initials;
+        const roleLabel = m.role === 'owner' ? 'Owner' : m.role === 'admin' ? 'Admin' : 'Staff';
+        return `<div class="team-member" id="tm-${m.id}">
+          <div class="team-avatar">${avatarHtml}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="team-name">${esc(m.name||m.email)}</div>
+            <div class="team-role">${roleLabel}</div>
+          </div>
+          <button class="team-remove" onclick="removeTeamMember(${m.id})" title="Remove">✕</button>
+        </div>`;
+      }).join('');
+    }
+
+    // Populate add-select with unassigned staff
+    if (addSelect) {
+      const unassigned = _allStaff.filter(s => !s.pending && !assignedIds.has(s.id));
+      addSelect.innerHTML = `<option value="">Add member…</option>` +
+        unassigned.map(s => `<option value="${s.id}">${esc(s.display_name||s.name||s.email)}</option>`).join('');
+      if (addRow) addRow.style.display = unassigned.length ? 'flex' : 'none';
+    }
+  }
+
+  async function addTeamMember() {
+    const sel = document.getElementById('team-add-select');
+    const userId = sel ? parseInt(sel.value) : 0;
+    if (!userId) return;
+    try {
+      const res = await apiFetch(`/api/relationships/${relId}/team`, {
+        method: 'POST',
+        body: JSON.stringify({ firm_user_id: userId }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      await loadTeamPanel();
+    } catch(e) {
+      toast('Failed to add: ' + e.message, 'error');
+    }
+  }
+
+  async function removeTeamMember(userId) {
+    try {
+      const res = await apiFetch(`/api/relationships/${relId}/team/${userId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed');
+      _assignedTeam = _assignedTeam.filter(m => m.id !== userId);
+      renderTeamPanel();
+    } catch(e) {
+      toast('Failed to remove', 'error');
+    }
   }
 
   // ── Engagement tab ────────────────────────────────────────────────

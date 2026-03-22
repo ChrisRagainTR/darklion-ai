@@ -303,7 +303,7 @@
   }
 
   // ── PIPELINE LIST ─────────────────────────────────
-  function loadList() {
+  window.loadList = function loadList() {
     var path = '/templates' + (showingArchived ? '?archived=true' : '');
     api('GET', path).then(function(templates) {
       var tbody = document.getElementById('pipe-tbody');
@@ -331,7 +331,7 @@
         '</tr>';
       }).join('');
     }).catch(function(e) {
-      document.getElementById('pipe-tbody').innerHTML = '<tr><td colspan="5" style="color:var(--red);padding:1rem;">Failed to load: ' + esc(e.message) + '</td></tr>';
+      document.getElementById('pipe-tbody').innerHTML = '<tr><td colspan="5" style="color:var(--red);padding:1rem;">⚠️ Failed to load pipelines: ' + esc(e.message) + ' — <a href="javascript:loadList()" style="color:var(--gold);">Retry</a></td></tr>';
     });
   }
 
