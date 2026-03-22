@@ -1,4 +1,5 @@
 <%- include('partials/shell-top', { title: title, activeNav: activeNav }) %>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <style>
     .overview-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; cursor: pointer; transition: all 0.15s; }
@@ -411,76 +412,213 @@
 
     <!-- ==================== OVERVIEW ==================== -->
     <div class="section-page active" id="sec-overview">
-
-      <!-- Hero / Welcome -->
-      <div style="display:flex;flex-direction:column;align-items:center;padding:2.5rem 2rem 1.5rem;text-align:center;border-bottom:1px solid var(--border);">
-        <img src="/lion-logo.png" alt="DarkLion" style="width:96px;height:96px;object-fit:contain;margin-bottom:1.25rem;filter:drop-shadow(0 4px 18px rgba(201,168,76,0.25));">
-        <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:0.4rem;">Welcome to DarkLion</h1>
-        <p style="color:var(--muted);font-size:0.88rem;" id="dash-greeting">Good to have you back.</p>
-      </div>
-
-      <!-- Stat cards -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.85rem;padding:1.5rem 1.5rem 0;">
-        <div class="dash-stat-card" onclick="window.location='/crm/relationships'">
-          <div class="dash-stat-icon">👥</div>
-          <div class="dash-stat-val" id="ds-relationships">—</div>
-          <div class="dash-stat-label">Relationships</div>
-        </div>
-        <div class="dash-stat-card" onclick="window.location='/crm/people'">
-          <div class="dash-stat-icon">👤</div>
-          <div class="dash-stat-val" id="ds-people">—</div>
-          <div class="dash-stat-label">People</div>
-        </div>
-        <div class="dash-stat-card" onclick="window.location='/crm/companies'">
-          <div class="dash-stat-icon">🏢</div>
-          <div class="dash-stat-val" id="ds-companies">—</div>
-          <div class="dash-stat-label">Companies</div>
-        </div>
-        <div class="dash-stat-card" onclick="window.location='/messages'">
-          <div class="dash-stat-icon">💬</div>
-          <div class="dash-stat-val" id="ds-messages">—</div>
-          <div class="dash-stat-label">Open Messages</div>
-        </div>
-        <div class="dash-stat-card" onclick="window.location='/pipelines'">
-          <div class="dash-stat-icon">📋</div>
-          <div class="dash-stat-val" id="ds-pipelines">—</div>
-          <div class="dash-stat-label">Active Pipeline Jobs</div>
-        </div>
-        <div class="dash-stat-card" onclick="window.location='/proposals'">
-          <div class="dash-stat-icon">📄</div>
-          <div class="dash-stat-val" id="ds-proposals">—</div>
-          <div class="dash-stat-label">Open Proposals</div>
-        </div>
-      </div>
-
-      <!-- Quick links row -->
-      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;padding:1.25rem 1.5rem;border-top:1px solid var(--border);margin-top:1.5rem;">
-        <a href="/crm/relationships" class="btn btn-gold btn-sm">👥 Relationships</a>
-        <a href="/pipelines" class="btn btn-outline btn-sm">📋 Pipelines</a>
-        <a href="/messages" class="btn btn-outline btn-sm">💬 Team Inbox</a>
-        <a href="/proposals" class="btn btn-outline btn-sm">📄 Proposals</a>
-        <a href="/templates" class="btn btn-outline btn-sm">📝 Templates</a>
-      </div>
-
-    </div>
-
     <style>
-      .dash-stat-card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 1.1rem 1.25rem;
-        cursor: pointer;
-        transition: border-color 0.15s, background 0.15s;
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
+      /* ── Dashboard overview ─────────────────────────── */
+      .dash-overview-wrap {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 0;
+        height: calc(100vh - var(--header-h) - 58px);
+        overflow: hidden;
       }
+      @media (max-width: 960px) {
+        .dash-overview-wrap { grid-template-columns: 1fr; height: auto; overflow: visible; }
+        .dash-right-col { border-left: none !important; border-top: 1px solid var(--border); max-height: 500px; }
+      }
+
+      /* Left column */
+      .dash-left-col { overflow-y: auto; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+
+      /* Stat bar */
+      .dash-stat-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.65rem; }
+      .dash-stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
       .dash-stat-card:hover { border-color: rgba(201,168,76,0.5); background: rgba(201,168,76,0.04); }
-      .dash-stat-icon { font-size: 1.25rem; }
-      .dash-stat-val { font-size: 1.6rem; font-weight: 800; color: var(--gold); line-height: 1; }
-      .dash-stat-label { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+      .dash-stat-val { font-size: 1.55rem; font-weight: 800; color: var(--gold); line-height: 1; margin-bottom: 0.2rem; }
+      .dash-stat-label { font-size: 0.68rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+
+      /* Intel cards */
+      .dash-intel-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+      .dash-intel-header { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); }
+      .dash-intel-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+      .dash-intel-badge { font-size: 0.68rem; font-weight: 800; background: rgba(201,168,76,0.15); color: var(--gold); border-radius: 10px; padding: 0.1rem 0.5rem; }
+      .dash-intel-badge.red { background: rgba(245,101,101,0.12); color: var(--red); }
+      .dash-intel-badge.green { background: rgba(62,207,142,0.12); color: var(--green); }
+      .dash-intel-row { display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: background 0.1s; font-size: 0.83rem; }
+      .dash-intel-row:last-child { border-bottom: none; }
+      .dash-intel-row:hover { background: rgba(201,168,76,0.04); }
+      .dash-intel-name { font-weight: 600; color: var(--text); }
+      .dash-intel-sub { font-size: 0.73rem; color: var(--muted); margin-top: 0.1rem; }
+      .dash-intel-tag { font-size: 0.68rem; font-weight: 700; border-radius: 6px; padding: 0.15rem 0.45rem; white-space: nowrap; flex-shrink: 0; }
+      .dash-intel-empty { padding: 1rem; text-align: center; color: var(--muted); font-size: 0.82rem; font-style: italic; }
+
+      /* Charts */
+      .dash-chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; }
+      .dash-chart-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.85rem; }
+
+      /* Right col — AI chat placeholder */
+      .dash-right-col {
+        border-left: 1px solid var(--border);
+        display: flex; flex-direction: column;
+        overflow: hidden;
+      }
+      .dash-ai-header {
+        padding: 1rem 1.25rem 0.85rem;
+        border-bottom: 1px solid var(--border);
+        display: flex; align-items: center; gap: 0.65rem;
+      }
+      .dash-ai-avatar {
+        width: 36px; height: 36px; border-radius: 50%;
+        background: linear-gradient(135deg, rgba(201,168,76,0.25), rgba(201,168,76,0.1));
+        border: 1px solid rgba(201,168,76,0.4);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+      }
+      .dash-ai-messages { flex: 1; overflow-y: auto; padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.85rem; }
+      .dash-ai-bubble { max-width: 90%; border-radius: 12px; padding: 0.65rem 0.9rem; font-size: 0.84rem; line-height: 1.55; }
+      .dash-ai-bubble.agent { background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.2); color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; }
+      .dash-ai-bubble.user { background: var(--charcoal); border: 1px solid var(--border); color: var(--text); align-self: flex-end; border-bottom-right-radius: 4px; }
+      .dash-ai-input-row { padding: 0.85rem 1.25rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; align-items: flex-end; }
+      .dash-ai-input { flex: 1; background: var(--input-bg, rgba(255,255,255,0.04)); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.75rem; color: var(--text); font-size: 0.85rem; font-family: inherit; resize: none; min-height: 38px; max-height: 100px; }
+      .dash-ai-input::placeholder { color: var(--muted); }
+      .dash-ai-input:focus { outline: none; border-color: rgba(201,168,76,0.5); }
+      .dash-ai-send { background: var(--gold); color: var(--navy); border: none; border-radius: 8px; width: 36px; height: 36px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.5; }
+      .dash-ai-soon { font-size: 0.68rem; font-weight: 700; background: rgba(201,168,76,0.12); color: var(--gold); border-radius: 8px; padding: 0.15rem 0.5rem; letter-spacing: 0.05em; }
     </style>
+
+    <div class="dash-overview-wrap">
+
+      <!-- ══ LEFT: Intelligence ══ -->
+      <div class="dash-left-col">
+
+        <!-- Greeting + lion -->
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <img src="/lion-logo.png" alt="DarkLion" style="width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 2px 10px rgba(201,168,76,0.3));">
+          <div>
+            <div style="font-size:1.15rem;font-weight:800;" id="dash-greeting">Good morning.</div>
+            <div style="font-size:0.82rem;color:var(--muted);" id="dash-date"></div>
+          </div>
+        </div>
+
+        <!-- Stat bar -->
+        <div class="dash-stat-bar">
+          <div class="dash-stat-card" onclick="window.location='/crm/relationships'">
+            <div class="dash-stat-val" id="ds-relationships">—</div>
+            <div class="dash-stat-label">Relationships</div>
+          </div>
+          <div class="dash-stat-card" onclick="window.location='/crm/companies'">
+            <div class="dash-stat-val" id="ds-companies">—</div>
+            <div class="dash-stat-label">Companies</div>
+          </div>
+          <div class="dash-stat-card" onclick="window.location='/messages'">
+            <div class="dash-stat-val" id="ds-open-msgs">—</div>
+            <div class="dash-stat-label">Open Messages</div>
+          </div>
+          <div class="dash-stat-card">
+            <div class="dash-stat-val" id="ds-mrr">—</div>
+            <div class="dash-stat-label">Monthly Revenue</div>
+          </div>
+          <div class="dash-stat-card" onclick="window.location='/proposals'">
+            <div class="dash-stat-val" id="ds-proposals">—</div>
+            <div class="dash-stat-label">Open Proposals</div>
+          </div>
+        </div>
+
+        <!-- Charts row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div class="dash-chart-card">
+            <div class="dash-chart-title">Proposals — Last 6 Months</div>
+            <canvas id="chart-proposals" height="130"></canvas>
+          </div>
+          <div class="dash-chart-card">
+            <div class="dash-chart-title">Client Mix</div>
+            <canvas id="chart-clients" height="130"></canvas>
+          </div>
+        </div>
+
+        <!-- Intel cards: 2 col grid -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+
+          <!-- Unsigned tax returns -->
+          <div class="dash-intel-card">
+            <div class="dash-intel-header">
+              <span class="dash-intel-title">📄 Unsigned Returns</span>
+              <span class="dash-intel-badge red" id="badge-unsigned">0</span>
+            </div>
+            <div id="list-unsigned"><div class="dash-intel-empty">Loading…</div></div>
+          </div>
+
+          <!-- Stalled messages -->
+          <div class="dash-intel-card">
+            <div class="dash-intel-header">
+              <span class="dash-intel-title">💬 No Reply 48h+</span>
+              <span class="dash-intel-badge red" id="badge-stalled">0</span>
+            </div>
+            <div id="list-stalled"><div class="dash-intel-empty">Loading…</div></div>
+          </div>
+
+          <!-- Open proposals -->
+          <div class="dash-intel-card">
+            <div class="dash-intel-header">
+              <span class="dash-intel-title">📋 Unsigned Proposals</span>
+              <span class="dash-intel-badge" id="badge-proposals">0</span>
+            </div>
+            <div id="list-proposals"><div class="dash-intel-empty">Loading…</div></div>
+          </div>
+
+          <!-- Birthdays this month -->
+          <div class="dash-intel-card">
+            <div class="dash-intel-header">
+              <span class="dash-intel-title">🎂 Birthdays This Month</span>
+              <span class="dash-intel-badge green" id="badge-birthdays">0</span>
+            </div>
+            <div id="list-birthdays"><div class="dash-intel-empty">Loading…</div></div>
+          </div>
+
+          <!-- Portal inactive -->
+          <div class="dash-intel-card">
+            <div class="dash-intel-header">
+              <span class="dash-intel-title">🔒 Portal Inactive 60+ Days</span>
+              <span class="dash-intel-badge" id="badge-portal">0</span>
+            </div>
+            <div id="list-portal"><div class="dash-intel-empty">Loading…</div></div>
+          </div>
+
+          <!-- No pipeline -->
+          <div class="dash-intel-card">
+            <div class="dash-intel-header">
+              <span class="dash-intel-title">🆕 New — No Pipeline</span>
+              <span class="dash-intel-badge" id="badge-nopipeline">0</span>
+            </div>
+            <div id="list-nopipeline"><div class="dash-intel-empty">Loading…</div></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ══ RIGHT: AI assistant (coming soon) ══ -->
+      <div class="dash-right-col">
+        <div class="dash-ai-header">
+          <div class="dash-ai-avatar">
+            <img src="/lion-logo.png" style="width:22px;height:22px;object-fit:contain;opacity:0.85;">
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:0.88rem;">DarkLion AI</div>
+            <div style="font-size:0.72rem;color:var(--muted);">Firm intelligence assistant</div>
+          </div>
+          <span class="dash-ai-soon">Coming Soon</span>
+        </div>
+
+        <div class="dash-ai-messages" id="dash-ai-messages">
+          <!-- Greeting message populated by JS -->
+        </div>
+
+        <div class="dash-ai-input-row">
+          <textarea class="dash-ai-input" id="dash-ai-input" placeholder="Ask about your firm… (coming soon)" rows="1" disabled></textarea>
+          <button class="dash-ai-send" disabled title="Coming soon">↑</button>
+        </div>
+      </div>
+
+    </div><!-- /dash-overview-wrap -->
 
   </div><!-- /dashboard -->
 
@@ -526,53 +664,202 @@
     function selectClientFromHeader(realmId) { selectCompany(realmId); }
 
     // ===== INIT =====
-    async function loadFirmStats() {
-      // Greeting
+    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    async function loadDashboardIntel() {
+      // Greeting + date
       const hour = new Date().getHours();
       const greeting = hour < 12 ? 'Good morning.' : hour < 17 ? 'Good afternoon.' : 'Good evening.';
       const greetEl = document.getElementById('dash-greeting');
+      const dateEl = document.getElementById('dash-date');
       if (greetEl) greetEl.textContent = greeting;
+      if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
 
-      // Load stats in parallel (non-blocking — each sets its own element)
+      // AI placeholder message
+      const aiMsg = document.getElementById('dash-ai-messages');
+      if (aiMsg) {
+        aiMsg.innerHTML = `
+          <div class="dash-ai-bubble agent">
+            ${greeting} I'm your DarkLion AI assistant. I have full visibility into your firm — clients, messages, pipelines, engagements, and more.
+          </div>
+          <div class="dash-ai-bubble agent">
+            The intelligence panel on the left shows what needs your attention today. Once AI is enabled, you'll be able to ask me things like <em>"Who should I call first?"</em> or <em>"Draft a follow-up for unsigned returns."</em>
+          </div>
+          <div class="dash-ai-bubble agent" style="color:var(--muted);font-style:italic;font-size:0.78rem;">
+            💡 AI mode coming soon — your firm data is already being tracked.
+          </div>`;
+      }
+
       const setStat = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+      const setBadge = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
       try {
-        const [relRes, peopleRes, companiesRes] = await Promise.all([
-          apiFetch('/api/relationships'),
-          apiFetch('/api/people'),
-          apiFetch('/api/companies'),
-        ]);
-        const rels = await relRes.json();
-        const people = await peopleRes.json();
-        const cos = await companiesRes.json();
-        setStat('ds-relationships', Array.isArray(rels) ? rels.length : (rels.total || '—'));
-        setStat('ds-people', Array.isArray(people) ? people.length : (people.total || '—'));
-        setStat('ds-companies', Array.isArray(cos) ? cos.length : (cos.total || '—'));
-      } catch(e) {}
+        const res = await apiFetch('/api/dashboard/intel');
+        if (!res.ok) throw new Error('failed');
+        const d = await res.json();
 
-      try {
-        const msgRes = await apiFetch('/api/messages');
-        const msgs = await msgRes.json();
-        const open = Array.isArray(msgs) ? msgs.filter(t => t.status === 'open' || t.status === 'pending').length : '—';
-        setStat('ds-messages', open);
-      } catch(e) {}
+        // Stats
+        setStat('ds-relationships', d.counts?.relationships ?? '—');
+        setStat('ds-companies', d.counts?.companies ?? '—');
+        setStat('ds-open-msgs', d.counts?.open_messages ?? '—');
+        setStat('ds-mrr', d.mrr > 0 ? '$' + Math.round(d.mrr).toLocaleString() : '—');
+        setStat('ds-proposals', d.open_proposals?.length ?? '—');
 
-      try {
-        const pipRes = await apiFetch('/api/pipelines/entity-jobs?entity_type=company&entity_id=0&all=1');
-        // Fallback — just show '—' if endpoint doesn't support this query
-        setStat('ds-pipelines', '—');
-      } catch(e) { setStat('ds-pipelines', '—'); }
+        // Charts (Chart.js from CDN)
+        renderProposalChart(d.proposal_chart || []);
+        renderClientMixChart(d.counts || {});
 
-      try {
-        const propRes = await apiFetch('/api/proposals');
-        const props = await propRes.json();
-        const open = Array.isArray(props) ? props.filter(p => p.status === 'sent' || p.status === 'viewed').length : '—';
-        setStat('ds-proposals', open);
-      } catch(e) { setStat('ds-proposals', '—'); }
+        // Intel cards
+        renderUnsigned(d.unsigned_returns || []);
+        renderStalled(d.stalled_messages || []);
+        renderProposals(d.open_proposals || []);
+        renderBirthdays(d.birthdays || []);
+        renderPortalInactive(d.portal_inactive || []);
+        renderNoPipeline(d.no_pipeline || []);
+
+      } catch(e) {
+        console.error('Dashboard intel error:', e);
+      }
+    }
+
+    function renderUnsigned(items) {
+      setBadge('badge-unsigned', items.length);
+      const el = document.getElementById('list-unsigned');
+      if (!items.length) { el.innerHTML = '<div class="dash-intel-empty">✅ All returns signed</div>'; return; }
+      el.innerHTML = items.slice(0,5).map(r => {
+        const name = r.company_name || ((r.first_name||'') + ' ' + (r.last_name||'')).trim() || 'Unknown';
+        const url = r.company_id ? `/crm/company/${r.company_id}` : `/crm/person/${r.person_id}`;
+        return `<div class="dash-intel-row" onclick="window.location='${url}'">
+          <div><div class="dash-intel-name">${esc(name)}</div><div class="dash-intel-sub">${esc(r.tax_year||'')} · ${r.days_waiting}d waiting</div></div>
+          <span class="dash-intel-tag" style="background:rgba(245,101,101,0.12);color:var(--red);">Unsigned</span>
+        </div>`;
+      }).join('');
+    }
+
+    function renderStalled(items) {
+      setBadge('badge-stalled', items.length);
+      const el = document.getElementById('list-stalled');
+      if (!items.length) { el.innerHTML = '<div class="dash-intel-empty">✅ No stalled threads</div>'; return; }
+      el.innerHTML = items.slice(0,5).map(t => {
+        const name = ((t.first_name||'') + ' ' + (t.last_name||'')).trim() || 'Unknown';
+        return `<div class="dash-intel-row" onclick="window.location='/messages'">
+          <div><div class="dash-intel-name">${esc(name)}</div><div class="dash-intel-sub">${esc(t.subject||'(no subject)')} · ${t.days_since}d</div></div>
+          <span class="dash-intel-tag" style="background:rgba(237,137,54,0.12);color:#ed8936;">${t.unread_count > 0 ? t.unread_count + ' unread' : 'No reply'}</span>
+        </div>`;
+      }).join('');
+    }
+
+    function renderProposals(items) {
+      setBadge('badge-proposals', items.length);
+      const el = document.getElementById('list-proposals');
+      if (!items.length) { el.innerHTML = '<div class="dash-intel-empty">No open proposals</div>'; return; }
+      el.innerHTML = items.slice(0,5).map(p => {
+        const statusColor = p.status === 'viewed' ? 'rgba(74,144,217,0.12);color:#4a90d9' : 'rgba(201,168,76,0.12);color:var(--gold)';
+        return `<div class="dash-intel-row" onclick="window.location='/proposals'">
+          <div><div class="dash-intel-name">${esc(p.client_name)}</div><div class="dash-intel-sub">${p.days_old}d old · ${p.engagement_type === 'wealth' ? 'Wealth' : 'Tax'}</div></div>
+          <span class="dash-intel-tag" style="background:${statusColor};">${p.status === 'viewed' ? 'Viewed' : 'Sent'}</span>
+        </div>`;
+      }).join('');
+    }
+
+    function renderBirthdays(items) {
+      setBadge('badge-birthdays', items.length);
+      const el = document.getElementById('list-birthdays');
+      if (!items.length) { el.innerHTML = '<div class="dash-intel-empty">No birthdays this month</div>'; return; }
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const mon = months[new Date().getMonth()];
+      el.innerHTML = items.slice(0,5).map(b => {
+        const isToday = b.is_today;
+        return `<div class="dash-intel-row" onclick="window.location='/crm/person/${b.id}'">
+          <div><div class="dash-intel-name">${esc(b.first_name)} ${esc(b.last_name)}</div><div class="dash-intel-sub">${esc(b.relationship_name||'')} · ${mon} ${b.birthday_day}</div></div>
+          <span class="dash-intel-tag" style="background:${isToday?'rgba(62,207,142,0.15);color:var(--green)':'rgba(201,168,76,0.12);color:var(--gold)'};">${isToday ? '🎂 Today!' : mon + ' ' + b.birthday_day}</span>
+        </div>`;
+      }).join('');
+    }
+
+    function renderPortalInactive(items) {
+      setBadge('badge-portal', items.length);
+      const el = document.getElementById('list-portal');
+      if (!items.length) { el.innerHTML = '<div class="dash-intel-empty">✅ All portals active</div>'; return; }
+      el.innerHTML = items.slice(0,5).map(p => {
+        const name = ((p.first_name||'') + ' ' + (p.last_name||'')).trim();
+        const label = p.days_since_login ? p.days_since_login + 'd ago' : 'Never logged in';
+        return `<div class="dash-intel-row" onclick="window.location='/crm/person/${p.id}'">
+          <div><div class="dash-intel-name">${esc(name)}</div><div class="dash-intel-sub">${esc(p.relationship_name||'')}</div></div>
+          <span class="dash-intel-tag" style="background:rgba(143,163,184,0.1);color:var(--muted);">${label}</span>
+        </div>`;
+      }).join('');
+    }
+
+    function renderNoPipeline(items) {
+      setBadge('badge-nopipeline', items.length);
+      const el = document.getElementById('list-nopipeline');
+      if (!items.length) { el.innerHTML = '<div class="dash-intel-empty">✅ All new clients in pipeline</div>'; return; }
+      el.innerHTML = items.slice(0,5).map(r => {
+        return `<div class="dash-intel-row" onclick="window.location='/crm/relationship/${r.id}'">
+          <div><div class="dash-intel-name">${esc(r.name)}</div><div class="dash-intel-sub">Added ${r.days_old}d ago · no pipeline</div></div>
+          <a href="/pipelines" onclick="event.stopPropagation()" class="dash-intel-tag" style="background:rgba(201,168,76,0.12);color:var(--gold);text-decoration:none;">+ Add</a>
+        </div>`;
+      }).join('');
+    }
+
+    function setBadge(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+    function renderProposalChart(data) {
+      const ctx = document.getElementById('chart-proposals');
+      if (!ctx || !window.Chart) return;
+      const labels = data.map(d => d.month);
+      const sent = data.map(d => parseInt(d.sent||0));
+      const accepted = data.map(d => parseInt(d.accepted||0));
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels.length ? labels : ['No data'],
+          datasets: [
+            { label: 'Sent', data: sent, backgroundColor: 'rgba(74,144,217,0.35)', borderColor: '#4a90d9', borderWidth: 1, borderRadius: 4 },
+            { label: 'Accepted', data: accepted, backgroundColor: 'rgba(62,207,142,0.35)', borderColor: '#3ecf8e', borderWidth: 1, borderRadius: 4 },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#8fa3b8', font: { size: 10 }, boxWidth: 10 } } },
+          scales: {
+            x: { ticks: { color: '#8fa3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            y: { ticks: { color: '#8fa3b8', font: { size: 10 }, stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    function renderClientMixChart(counts) {
+      const ctx = document.getElementById('chart-clients');
+      if (!ctx || !window.Chart) return;
+      const rels = parseInt(counts.relationships||0);
+      const people = parseInt(counts.people||0);
+      const cos = parseInt(counts.companies||0);
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Relationships', 'People', 'Companies'],
+          datasets: [{
+            data: [rels, people, cos],
+            backgroundColor: ['rgba(201,168,76,0.7)', 'rgba(74,144,217,0.7)', 'rgba(62,207,142,0.7)'],
+            borderColor: ['#c9a84c', '#4a90d9', '#3ecf8e'],
+            borderWidth: 1,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#8fa3b8', font: { size: 10 }, boxWidth: 10, padding: 8 } }
+          },
+          cutout: '65%',
+        }
+      });
     }
 
     async function init() {
-      loadFirmStats(); // non-blocking — runs in background
+      loadDashboardIntel(); // non-blocking — runs in background
 
       try {
         const res = await apiFetch('/api/companies');

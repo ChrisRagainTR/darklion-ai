@@ -213,6 +213,9 @@ app.get('/messages', (req, res) => res.render('messages', { title: 'Messages', a
 
 const templatesRouter = require('./routes/templates');
 app.use('/api/templates', requireFirm, apiLimiter, templatesRouter);
+
+const dashboardRouter = require('./routes/dashboard');
+app.use('/api/dashboard', requireFirm, apiLimiter, dashboardRouter);
 app.get('/templates', (req, res) => res.render('templates', { title: 'Message Templates', activeNav: 'templates' }));
 
 const pipelinesRouter = require('./routes/pipelines');
