@@ -284,9 +284,12 @@ Relationship  →  the household/group (top-level billing unit)
 ---
 
 ## Current Status
-- Phases 1 & 2 deployed and live at darklion.ai
-- Phase 3 building now
-- No downtime caused by any phase — all migrations are additive
+All core phases complete and deployed. Remaining:
+- Phase 11 — Viktor Full Integration
+- Phase 12 — Gmail Connector
+- Phase 13 — Native AI Layer
+- Phase 14 — Engagement Tab
+- Phase 6b — Pipeline Bulk Add (needs more CRM data first)
 
 ---
 
