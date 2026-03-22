@@ -24,7 +24,7 @@ const SAFE_COLUMNS = `
 // Query: owner_type (required), owner_id (required), year?, doc_type?, is_delivered?
 router.get('/', async (req, res) => {
   const firmId = req.firm.id;
-  const { owner_type, owner_id, year, doc_type, is_delivered } = req.query;
+  const { owner_type, owner_id, year, doc_type, is_delivered, folder_category, folder_section } = req.query;
 
   if (!owner_type || !owner_id) {
     return res.status(400).json({ error: 'owner_type and owner_id are required' });
@@ -35,6 +35,8 @@ router.get('/', async (req, res) => {
 
   if (year) { params.push(year); where += ` AND year = $${params.length}`; }
   if (doc_type) { params.push(doc_type); where += ` AND doc_type = $${params.length}`; }
+  if (folder_category) { params.push(folder_category); where += ` AND folder_category = $${params.length}`; }
+  if (folder_section) { params.push(folder_section); where += ` AND folder_section = $${params.length}`; }
   if (is_delivered !== undefined) {
     params.push(is_delivered === 'true' || is_delivered === '1');
     where += ` AND is_delivered = $${params.length}`;

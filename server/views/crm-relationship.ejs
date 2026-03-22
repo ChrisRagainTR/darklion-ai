@@ -1,97 +1,277 @@
 <%- include('partials/shell-top', { title: title, activeNav: activeNav }) %>
 
 <style>
-    .tab-bar { background: rgba(15,25,35,0.6); border-bottom: 1px solid var(--border); display: flex; gap: 0; padding: 0 1.5rem; }
-    .tab-item { padding: 0.7rem 1.1rem; cursor: pointer; font-size: 0.86rem; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: all 0.15s; }
-    .tab-item:hover { color: var(--text); }
-    .tab-item.active { color: var(--gold); border-bottom-color: var(--gold); font-weight: 600; }
+  /* ── Layout ── */
+  .detail-grid { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; padding: 1.5rem; }
+  @media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
 
-    .tab-content { display: none; padding: 1.5rem; flex: 1; }
-    .tab-content.active { display: block; }
+  /* ── Tab bar ── */
+  .tab-bar { background: rgba(15,25,35,0.6); border-bottom: 1px solid var(--border); display: flex; gap: 0; padding: 0 1.5rem; overflow-x: auto; }
+  .tab-item { padding: 0.7rem 1.1rem; cursor: pointer; font-size: 0.86rem; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: all 0.15s; }
+  .tab-item:hover { color: var(--text); }
+  .tab-item.active { color: var(--gold); border-bottom-color: var(--gold); font-weight: 600; }
+  .tab-content { display: none; padding: 1.5rem; flex: 1; }
+  .tab-content.active { display: block; }
 
-    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.95rem; border-radius: 6px; font-size: 0.84rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; }
-    .btn-gold { background: var(--gold); color: var(--navy); }
-    .btn-gold:hover { background: var(--gold-light); }
-    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
-    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
-    .btn-ghost { background: transparent; color: var(--muted); padding: 0.3rem 0.6rem; font-size: 0.8rem; }
-    .btn-ghost:hover { color: var(--text); }
-    .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
-    .btn-xs { padding: 0.2rem 0.5rem; font-size: 0.72rem; }
+  /* ── Entity header ── */
+  .entity-header { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); background: rgba(15,25,35,0.4); flex-wrap: wrap; }
+  .entity-back { font-size: 0.82rem; color: var(--muted); text-decoration: none; white-space: nowrap; }
+  .entity-back:hover { color: var(--gold); }
+  .entity-header-content { flex: 1; min-width: 0; }
+  .entity-name { font-size: 1.5rem; font-weight: 800; color: var(--text); line-height: 1.2; }
+  .entity-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.3rem; }
+  .entity-actions { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; }
 
-    .badge { display: inline-block; padding: 0.18rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-    .badge-gold { background: rgba(201,168,76,0.15); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
-    .badge-green { background: rgba(62,207,142,0.12); color: var(--green); border: 1px solid rgba(62,207,142,0.25); }
-    .badge-red { background: rgba(245,101,101,0.12); color: var(--red); border: 1px solid rgba(245,101,101,0.25); }
-    .badge-orange { background: rgba(237,137,54,0.12); color: var(--orange); border: 1px solid rgba(237,137,54,0.25); }
-    .badge-muted { background: rgba(143,163,184,0.12); color: var(--muted); border: 1px solid rgba(143,163,184,0.2); }
-    .badge-blue { background: rgba(66,153,225,0.12); color: #63b3ed; border: 1px solid rgba(66,153,225,0.25); }
+  /* ── Badges ── */
+  .badge { display: inline-block; padding: 0.18rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .badge-gold { background: rgba(201,168,76,0.15); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
+  .badge-green { background: rgba(62,207,142,0.12); color: #3ecf8e; border: 1px solid rgba(62,207,142,0.25); }
+  .badge-red { background: rgba(245,101,101,0.12); color: #f56565; border: 1px solid rgba(245,101,101,0.25); }
+  .badge-orange { background: rgba(237,137,54,0.12); color: #ed8936; border: 1px solid rgba(237,137,54,0.25); }
+  .badge-muted { background: rgba(143,163,184,0.12); color: var(--muted); border: 1px solid rgba(143,163,184,0.2); }
+  .badge-blue { background: rgba(66,153,225,0.12); color: #63b3ed; border: 1px solid rgba(66,153,225,0.25); }
 
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; }
-    .card-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; }
-    .info-row { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.4rem; }
-    .info-label { font-size: 0.76rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; min-width: 100px; flex-shrink: 0; }
-    .info-val { font-size: 0.88rem; color: var(--text); word-break: break-word; }
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.95rem; border-radius: 6px; font-size: 0.84rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; }
+  .btn-gold { background: var(--gold); color: var(--navy); }
+  .btn-gold:hover { background: var(--gold-light); }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+  .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-ghost { background: transparent; color: var(--muted); padding: 0.3rem 0.6rem; font-size: 0.8rem; }
+  .btn-ghost:hover { color: var(--text); }
+  .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+  .btn-xs { padding: 0.2rem 0.5rem; font-size: 0.72rem; }
 
-    /* Entity row — used for both people and companies */
-    .entity-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-    .entity-row:last-child { border-bottom: none; }
-    .entity-avatar { width: 34px; height: 34px; border-radius: 50%; background: rgba(201,168,76,0.15); display: flex; align-items: center; justify-content: center; font-size: 0.82rem; font-weight: 700; color: var(--gold); flex-shrink: 0; }
-    .entity-row-info { flex: 1; min-width: 0; }
-    .entity-row-name { font-size: 0.88rem; font-weight: 600; }
-    .entity-row-name a { color: var(--text); text-decoration: none; }
-    .entity-row-name a:hover { color: var(--gold); }
-    .entity-row-meta { font-size: 0.74rem; color: var(--muted); }
+  /* ── Cards ── */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; }
+  .card-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; }
 
-    .form-group { margin-bottom: 1rem; }
-    .form-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.05em; }
-    .form-control { width: 100%; padding: 0.5rem 0.75rem; background: var(--navy); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.88rem; outline: none; transition: border-color 0.15s; }
-    .form-control:focus { border-color: var(--gold); }
-    textarea.form-control { resize: vertical; min-height: 120px; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-    select.form-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238fa3b8'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2rem; }
+  /* ── Info rows ── */
+  .info-row { display: flex; align-items: baseline; gap: 0.5rem; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { font-size: 0.76rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; min-width: 110px; flex-shrink: 0; }
+  .info-val { font-size: 0.88rem; color: var(--text); word-break: break-word; }
 
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 400; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.18s; }
-    .modal-overlay.open { opacity: 1; pointer-events: all; }
-    .modal { background: var(--charcoal); border: 1px solid var(--border); border-radius: 12px; width: 520px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column; transform: translateY(20px); transition: transform 0.18s; }
-    .modal-overlay.open .modal { transform: translateY(0); }
-    .modal-header { padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .modal-title { font-size: 1rem; font-weight: 700; }
-    .modal-close { background: none; border: none; color: var(--muted); font-size: 1.3rem; cursor: pointer; }
-    .modal-body { padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1; }
-    .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.5rem; }
+  /* ── Entity rows (people/companies) ── */
+  .entity-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .entity-row:last-child { border-bottom: none; }
+  .entity-avatar { width: 34px; height: 34px; border-radius: 50%; background: rgba(201,168,76,0.15); display: flex; align-items: center; justify-content: center; font-size: 0.82rem; font-weight: 700; color: var(--gold); flex-shrink: 0; }
+  .entity-row-info { flex: 1; min-width: 0; }
+  .entity-row-name { font-size: 0.88rem; font-weight: 600; }
+  .entity-row-name a { color: var(--text); text-decoration: none; }
+  .entity-row-name a:hover { color: var(--gold); }
+  .entity-row-meta { font-size: 0.74rem; color: var(--muted); }
+  .entity-row-badges { display: flex; gap: 0.3rem; flex-wrap: wrap; }
 
-    .loading-state { padding: 3rem; text-align: center; color: var(--muted); }
-    .loading-spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid rgba(201,168,76,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 0.5rem; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .error-msg { background: rgba(245,101,101,0.1); border: 1px solid rgba(245,101,101,0.25); border-radius: 6px; padding: 0.7rem 1rem; color: var(--red); font-size: 0.84rem; margin-bottom: 1rem; }
+  /* ── Forms ── */
+  .form-group { margin-bottom: 1rem; }
+  .form-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .form-control { width: 100%; padding: 0.5rem 0.75rem; background: var(--navy); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.88rem; outline: none; transition: border-color 0.15s; }
+  .form-control:focus { border-color: var(--gold); }
+  textarea.form-control { resize: vertical; min-height: 180px; }
+  select.form-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238fa3b8'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2rem; }
 
-    .save-indicator { font-size: 0.78rem; color: var(--green); margin-top: 0.35rem; min-height: 1.1em; }
+  /* ── Modals ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+  .modal-overlay.hidden { display: none; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem; width: 100%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+  .modal h2 { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 1.25rem; }
+  .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
+  .btn-cancel { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.88rem; border-radius: 7px; padding: 0.55rem 1rem; cursor: pointer; }
+  .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+  .btn-submit { background: var(--gold); color: #0f1117; font-weight: 700; font-size: 0.88rem; border: none; border-radius: 7px; padding: 0.55rem 1.25rem; cursor: pointer; transition: background 0.2s; }
+  .btn-submit:hover { background: var(--gold-light); }
+  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+  .form-err { font-size: 0.82rem; color: #f56565; margin-bottom: 0.75rem; }
 
-    .placeholder-section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 3rem; text-align: center; color: var(--muted); }
-    .ph-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
-    .ph-title { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; opacity: 0.75; }
-    .ph-desc { font-size: 0.84rem; }
+  /* ── File upload drop ── */
+  .file-drop { border: 2px dashed var(--border); border-radius: 9px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; color: var(--muted); font-size: 0.88rem; position: relative; }
+  .file-drop:hover, .file-drop.drag-over { border-color: var(--gold); background: rgba(201,168,76,0.04); }
+  .file-drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .selected-file { margin-top: 0.5rem; font-size: 0.8rem; color: var(--gold); }
 
-    .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999; display: flex; flex-direction: column; gap: 0.5rem; }
-    .toast { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.84rem; color: var(--text); box-shadow: 0 4px 16px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 0.5rem; animation: slideIn 0.2s; min-width: 240px; max-width: 360px; }
-    .toast.success { border-color: rgba(62,207,142,0.4); }
-    .toast.error { border-color: rgba(245,101,101,0.4); }
-    @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  /* ── Document rows ── */
+  .doc-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .doc-row:last-child { border-bottom: none; }
+  .doc-row:hover { background: rgba(255,255,255,0.02); border-radius: 6px; }
+  .doc-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .doc-info { flex: 1; min-width: 0; }
+  .doc-name { font-size: 0.88rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc-meta { font-size: 0.74rem; color: var(--muted); margin-top: 0.15rem; }
+  .btn-dl { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; border-radius: 6px; padding: 0.3rem 0.65rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; flex-shrink: 0; white-space: nowrap; }
+  .btn-dl:hover { border-color: var(--gold); color: var(--gold); }
 
-    @media (max-width: 768px) {
-      .sidebar { width: 56px; }
-      .sidebar .sidebar-section, .sidebar-nav li a span, .sidebar-brand .nav-name { display: none; }
-      .sidebar-nav li a { justify-content: center; padding: 0.75rem; }
-      .main { margin-left: 56px; }
-      .header-logo .hl-name { display: none; }
-      .header-search-wrap { max-width: 100%; }
-      .form-row { grid-template-columns: 1fr; }
-    }
-    .sidebar-nav li a.nav-coming-soon { opacity: 0.4; cursor: default; pointer-events: none; }
+  /* ── Placeholders ── */
+  .placeholder-section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 2.5rem; text-align: center; color: var(--muted); margin-bottom: 1rem; }
+  .ph-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
+  .ph-title { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; opacity: 0.75; }
+  .ph-desc { font-size: 0.84rem; }
+
+  /* ── Loading ── */
+  .loading-state { padding: 3rem; text-align: center; color: var(--muted); }
+  .loading-spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid rgba(201,168,76,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 0.5rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Stats ── */
+  .stat-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
+  .stat-box { flex: 1; background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.15); border-radius: 8px; padding: 0.9rem 1rem; text-align: center; }
+  .stat-num { font-size: 1.6rem; font-weight: 800; color: var(--gold); }
+  .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.15rem; }
+
+  /* ── Save indicator ── */
+  .save-indicator { font-size: 0.78rem; color: #3ecf8e; margin-top: 0.35rem; min-height: 1.1em; }
+
+  /* ── Workflow ── */
+  .workflow-entity-group { margin-bottom: 1.5rem; }
+  .workflow-entity-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0; border-bottom: 1px solid var(--border); margin-bottom: 0.5rem; }
+  .workflow-job-row { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1.1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+
+  @media (max-width: 768px) {
+    .form-row { grid-template-columns: 1fr; }
+    .stat-row { flex-direction: column; }
+  }
 </style>
 
-<main class="main">
+<!-- Entity Header -->
+<div class="entity-header">
+  <a href="/crm/relationships" class="entity-back">← Relationships</a>
+  <div class="entity-header-content">
+    <div class="entity-name" id="entity-name">Loading…</div>
+    <div class="entity-badges" id="entity-badges"></div>
+  </div>
+  <div class="entity-actions">
+    <button class="btn btn-outline btn-sm" onclick="openEditModal()">✏️ Edit</button>
+  </div>
+</div>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <div class="tab-item active" onclick="switchTab('overview', this)">Overview</div>
+  <div class="tab-item" onclick="switchTab('engagement', this)">Engagement</div>
+  <div class="tab-item" onclick="switchTab('workflow', this)">Workflow</div>
+  <div class="tab-item" onclick="switchTab('notes', this)">Notes</div>
+  <div class="tab-item" onclick="switchTab('billing', this)">Billing</div>
+</div>
+
+<!-- Tab: Overview -->
+<div id="tab-overview" class="tab-content active">
+  <div class="detail-grid">
+    <!-- Left column -->
+    <div id="overview-left">
+      <div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>
+    </div>
+    <!-- Right column -->
+    <div id="overview-right">
+      <div class="card" id="details-card">
+        <div class="card-title">Relationship Details <button class="btn btn-ghost btn-xs" onclick="openEditModal()">Edit</button></div>
+        <div id="details-card-body"><div style="color:var(--muted);font-size:0.84rem;">Loading…</div></div>
+      </div>
+      <div class="card" id="stats-card">
+        <div class="card-title">Quick Stats</div>
+        <div id="stats-card-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Engagement -->
+<div id="tab-engagement" class="tab-content">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+    <div>
+      <div style="font-size:1rem;font-weight:700;margin-bottom:0.2rem;">Engagement Letters</div>
+      <div style="font-size:0.82rem;color:var(--muted);">Signed engagement letters for this relationship</div>
+    </div>
+    <button class="btn btn-gold btn-sm" onclick="openEngagementUpload()">↑ Upload Letter</button>
+  </div>
+  <div id="engagement-list"><div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div></div>
+  <div class="placeholder-section" style="margin-top:1rem;">
+    <div class="ph-icon">🤖</div>
+    <div class="ph-title">AI Extraction Coming Soon</div>
+    <div class="ph-desc">AI extraction of engagement details coming in Phase 14b</div>
+  </div>
+</div>
+
+<!-- Tab: Workflow -->
+<div id="tab-workflow" class="tab-content">
+  <div id="workflow-content">
+    <div class="loading-state"><div class="loading-spinner"></div><div>Loading pipelines…</div></div>
+  </div>
+</div>
+
+<!-- Tab: Notes -->
+<div id="tab-notes" class="tab-content">
+  <div class="card" style="max-width:800px;">
+    <div class="card-title">Internal Notes</div>
+    <textarea class="form-control" id="notes-ta" rows="12" placeholder="Internal staff notes…" onblur="autoSaveNotes(this.value)"></textarea>
+    <div style="display:flex;align-items:center;gap:1rem;margin-top:0.75rem;">
+      <button class="btn btn-gold btn-sm" onclick="autoSaveNotes(document.getElementById('notes-ta').value, true)">Save Notes</button>
+      <div class="save-indicator" id="notes-saved"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Billing -->
+<div id="tab-billing" class="tab-content">
+  <div id="billing-content">
+    <div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay hidden" id="edit-modal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2>Edit Relationship</h2>
+    <div class="form-err" id="edit-error" style="display:none;"></div>
+    <div class="form-group">
+      <label class="form-label">Name *</label>
+      <input type="text" class="form-control" id="ef-name" placeholder="e.g. The Smith Family">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Service Tier</label>
+      <select class="form-control" id="ef-tier">
+        <option value="">— None —</option>
+        <option value="standard">Standard</option>
+        <option value="legacy_blueprint">Legacy Blueprint</option>
+        <option value="tax_only">Tax Only</option>
+        <option value="full_service">Full Service</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Billing Status</label>
+      <select class="form-control" id="ef-billing">
+        <option value="active">Active</option>
+        <option value="past_due">Past Due</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="ef-submit" onclick="submitEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Engagement Upload Modal -->
+<div class="modal-overlay hidden" id="engagement-upload-modal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2>Upload Engagement Letter</h2>
+    <div class="form-group">
+      <label class="form-label">File (PDF)</label>
+      <div class="file-drop" id="eng-file-drop">
+        <input type="file" id="eng-file-input" accept=".pdf,application/pdf">
+        <span>Click to select or drag a PDF here</span>
+        <div class="selected-file" id="eng-selected-name"></div>
+      </div>
+    </div>
+    <div class="form-err" id="eng-error" style="display:none;"></div>
+    <div id="eng-msg" style="font-size:0.8rem;color:#3ecf8e;margin-top:0.35rem;display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEngagementModal()">Cancel</button>
+      <button class="btn-submit" id="eng-submit" disabled onclick="submitEngagementUpload()">Upload</button>
+    </div>
+  </div>
+</div>
 
 <%- include('partials/shell-globals') %>
 
@@ -102,57 +282,40 @@
 
   let relData = null;
 
-  function authHeaders() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }; }
-  async function apiFetch(url, opts = {}) {
-    const isFormData = opts.body instanceof FormData;
-    const headers = isFormData
-      ? { 'Authorization': 'Bearer ' + token, ...(opts.headers||{}) }
-      : { ...authHeaders(), ...(opts.headers||{}) };
-    const res = await fetch(url, { ...opts, headers });
-    if (res.status === 401) window.location.href = '/login';
-    return res;
-  }
-  function esc(s) {
-    if (s == null) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-  function toast(msg, type='success') {
-    const c = document.getElementById('toast-container');
-    const t = document.createElement('div');
-    t.className = 'toast ' + type;
-    t.textContent = (type==='success'?'✓ ':'✕ ') + msg;
-    c.appendChild(t);
-    setTimeout(() => t.remove(), 3500);
-  }
-
-
+  // ── Helpers ──────────────────────────────────────────────────────
   function tierBadge(tier) {
     const labels = { standard:'Standard', legacy_blueprint:'Legacy Blueprint', tax_only:'Tax Only', full_service:'Full Service' };
     const cls = { standard:'badge-muted', legacy_blueprint:'badge-gold', tax_only:'badge-blue', full_service:'badge-green' };
-    if (!tier) return '<span class="badge badge-muted">—</span>';
+    if (!tier) return '';
     return `<span class="badge ${cls[tier]||'badge-muted'}">${labels[tier]||esc(tier)}</span>`;
   }
   function billingBadge(status) {
-    const cls = { active:'badge-green', past_due:'badge-orange', cancelled:'badge-red' };
-    const lbl = { active:'Active', past_due:'Past Due', cancelled:'Cancelled' };
-    if (!status) return '—';
+    const cls = { active:'badge-green', past_due:'badge-orange', cancelled:'badge-red', inactive:'badge-muted' };
+    const lbl = { active:'Active', past_due:'Past Due', cancelled:'Cancelled', inactive:'Inactive' };
+    if (!status) return '';
     return `<span class="badge ${cls[status]||'badge-muted'}">${lbl[status]||esc(status)}</span>`;
   }
   function filingLabel(s) {
-    return { single:'Single', mfj:'MFJ', mfs:'MFS', hoh:'HOH', qw:'QW' }[s] || s || '';
+    return { single:'Single', mfj:'MFJ', mfs:'MFS', hoh:'HOH', qw:'QW', married_joint:'MFJ', married_separate:'MFS', head_household:'HOH', widow:'QW' }[s] || (s||'');
+  }
+  function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  // ── Tab switching ─────────────────────────────────────────────────
   function switchTab(name, el) {
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     if (el) el.classList.add('active');
     document.getElementById('tab-' + name).classList.add('active');
-    if (name === 'notes' && relData) {
-      document.getElementById('notes-ta').value = relData.notes || '';
-    }
+    if (name === 'notes' && relData) document.getElementById('notes-ta').value = relData.notes || '';
+    if (name === 'engagement') loadEngagement();
+    if (name === 'workflow') loadWorkflow();
     if (name === 'billing') renderBilling();
   }
 
+  // ── Load relationship ─────────────────────────────────────────────
   async function loadRelationship() {
     try {
       const res = await apiFetch(`/api/relationships/${relId}`);
@@ -161,12 +324,14 @@
       renderHeader(relData);
       renderOverview(relData);
     } catch(e) {
-      document.getElementById('entity-name').textContent = 'Error loading relationship';
+      document.getElementById('entity-name').textContent = 'Error loading';
+      console.error(e);
     }
   }
 
+  // ── Header ────────────────────────────────────────────────────────
   function renderHeader(r) {
-    document.title = `${r.name} — DarkLion CRM`;
+    document.title = `${r.name || 'Relationship'} — DarkLion CRM`;
     document.getElementById('entity-name').textContent = r.name || 'Unnamed Relationship';
     let html = `<span class="badge badge-muted">Relationship</span>`;
     if (r.service_tier) html += ` ${tierBadge(r.service_tier)}`;
@@ -174,126 +339,360 @@
     document.getElementById('entity-badges').innerHTML = html;
   }
 
+  // ── Overview ──────────────────────────────────────────────────────
   function renderOverview(r) {
     const people = r.people || [];
     const companies = r.companies || [];
-    const c = document.getElementById('overview-content');
 
-    let html = `<div style="max-width:900px;">`;
+    // ── Left column ──
+    let html = '';
 
-    // ── People ──
+    // People card
     html += `<div class="card">
       <div class="card-title">
-        <span>👤 People <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${people.length})</span></span>
-        <a href="/crm?tab=people&add=1&rel=${relId}" class="btn btn-ghost btn-xs">+ Add Person</a>
+        <span>👤 People <span style="font-weight:400;color:var(--muted);font-size:0.72rem;">(${people.length})</span></span>
+        <a href="/crm/people?add=1" class="btn btn-ghost btn-xs">+ Add Person</a>
       </div>`;
     if (!people.length) {
       html += `<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No people in this relationship.</div>`;
     } else {
       people.forEach(p => {
-        const initials = ((p.first_name||'').charAt(0)+(p.last_name||'').charAt(0)).toUpperCase()||'?';
-        const portal = p.portal_enabled
-          ? '<span class="badge badge-green" style="font-size:0.65rem;">Portal</span>'
+        const initials = ((p.first_name||'').charAt(0) + (p.last_name||'').charAt(0)).toUpperCase() || '?';
+        const portalBadge = p.portal_enabled
+          ? `<span class="badge badge-green" style="font-size:0.65rem;">Portal</span>`
           : '';
-        const filing = p.filing_status ? `<span class="badge badge-muted" style="font-size:0.65rem;">${filingLabel(p.filing_status)}</span>` : '';
+        const filingBadge = p.filing_status
+          ? `<span class="badge badge-muted" style="font-size:0.65rem;">${filingLabel(p.filing_status)}</span>`
+          : '';
         html += `<div class="entity-row">
           <div class="entity-avatar">${initials}</div>
           <div class="entity-row-info">
-            <div class="entity-row-name"><a href="/crm/person/${p.id}">${esc(p.first_name)} ${esc(p.last_name)}</a></div>
+            <div class="entity-row-name"><a href="/crm/person/${p.id}">${esc(p.first_name||'')} ${esc(p.last_name||'')}</a></div>
             <div class="entity-row-meta">${p.email ? esc(p.email) : ''}${p.phone ? (p.email ? ' · ' : '') + esc(p.phone) : ''}</div>
           </div>
-          ${filing}${portal}
+          <div class="entity-row-badges">${filingBadge}${portalBadge}</div>
           <a href="/crm/person/${p.id}" class="btn btn-ghost btn-xs">View →</a>
         </div>`;
       });
     }
     html += `</div>`;
 
-    // ── Companies ──
+    // Companies card
     html += `<div class="card">
       <div class="card-title">
-        <span>🏢 Companies <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${companies.length})</span></span>
-        <a href="/crm?tab=companies&add=1&rel=${relId}" class="btn btn-ghost btn-xs">+ Add Company</a>
+        <span>🏢 Companies <span style="font-weight:400;color:var(--muted);font-size:0.72rem;">(${companies.length})</span></span>
+        <a href="/crm/companies?add=1" class="btn btn-ghost btn-xs">+ Add Company</a>
       </div>`;
     if (!companies.length) {
       html += `<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No companies in this relationship.</div>`;
     } else {
+      const entityTypeLabels = { llc:'LLC', s_corp:'S-Corp', c_corp:'C-Corp', partnership:'Partnership', sole_prop:'Sole Prop', trust:'Trust', nonprofit:'Non-Profit', other:'Other' };
       companies.forEach(co => {
-        const entityTypeLabels = { llc:'LLC', s_corp:'S-Corp', c_corp:'C-Corp', partnership:'Partnership', sole_prop:'Sole Prop', trust:'Trust', nonprofit:'Non-Profit', other:'Other' };
-        const entityBadge = co.entity_type ? `<span class="badge badge-blue" style="font-size:0.65rem;">${entityTypeLabels[co.entity_type]||esc(co.entity_type)}</span>` : '';
-        const qboBadge = co.realm_id ? '<span class="badge badge-green" style="font-size:0.65rem;">QBO</span>' : '';
-        const name = (co.company_name || co.name || 'Unknown').charAt(0).toUpperCase();
+        const name = co.company_name || co.name || 'Unknown';
+        const initial = name.charAt(0).toUpperCase();
+        const entityBadge = co.entity_type
+          ? `<span class="badge badge-blue" style="font-size:0.65rem;">${entityTypeLabels[co.entity_type]||esc(co.entity_type)}</span>`
+          : '';
+        const qboBadge = co.realm_id
+          ? `<span class="badge badge-green" style="font-size:0.65rem;">QBO</span>`
+          : '';
         html += `<div class="entity-row">
-          <div class="entity-avatar" style="border-radius:6px;">${name}</div>
+          <div class="entity-avatar" style="border-radius:6px;">${initial}</div>
           <div class="entity-row-info">
-            <div class="entity-row-name"><a href="/crm/company/${co.id}">${esc(co.company_name||co.name||'Unknown')}</a></div>
-            <div class="entity-row-meta">${co.entity_type ? entityTypeLabels[co.entity_type]||co.entity_type : ''}</div>
+            <div class="entity-row-name"><a href="/crm/company/${co.id}">${esc(name)}</a></div>
+            <div class="entity-row-meta">${co.entity_type ? (entityTypeLabels[co.entity_type]||co.entity_type) : ''}</div>
           </div>
-          ${entityBadge}${qboBadge}
+          <div class="entity-row-badges">${entityBadge}${qboBadge}</div>
           <a href="/crm/company/${co.id}" class="btn btn-ghost btn-xs">View →</a>
         </div>`;
       });
     }
     html += `</div>`;
 
-    html += `</div>`;
-    c.innerHTML = html;
+    // Tax Status placeholder
+    html += `<div class="placeholder-section">
+      <div class="ph-icon">📊</div>
+      <div class="ph-title">Tax Status</div>
+      <div class="ph-desc">Tax status summary coming soon</div>
+    </div>`;
+
+    // Recent Activity placeholder
+    html += `<div class="placeholder-section">
+      <div class="ph-icon">🕐</div>
+      <div class="ph-title">Recent Activity</div>
+      <div class="ph-desc">Recent activity coming soon</div>
+    </div>`;
+
+    document.getElementById('overview-left').innerHTML = html;
+
+    // ── Right column: details card ──
+    const tierLabels = { standard:'Standard', legacy_blueprint:'Legacy Blueprint', tax_only:'Tax Only', full_service:'Full Service' };
+    const detailsHtml = `
+      <div class="info-row"><span class="info-label">Service Tier</span><span class="info-val">${r.service_tier ? tierBadge(r.service_tier) : '<span style="color:var(--muted);">—</span>'}</span></div>
+      <div class="info-row"><span class="info-label">Billing</span><span class="info-val">${r.billing_status ? billingBadge(r.billing_status) : '<span style="color:var(--muted);">—</span>'}</span></div>
+      <div class="info-row"><span class="info-label">Created</span><span class="info-val">${fmtDate(r.created_at)}</span></div>
+    `;
+    document.getElementById('details-card-body').innerHTML = detailsHtml;
+
+    // ── Right column: stats ──
+    document.getElementById('stats-card-body').innerHTML = `
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-num">${people.length}</div><div class="stat-label">People</div></div>
+        <div class="stat-box"><div class="stat-num">${companies.length}</div><div class="stat-label">Companies</div></div>
+      </div>
+    `;
   }
 
+  // ── Engagement tab ────────────────────────────────────────────────
+  let engDocs = [];
+  async function loadEngagement() {
+    const el = document.getElementById('engagement-list');
+    if (el.dataset.loaded) return;
+    el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>';
+    try {
+      const res = await apiFetch(`/api/documents?owner_type=relationship&owner_id=${relId}&folder_category=engagement`);
+      engDocs = await res.json();
+      renderEngagement();
+      el.dataset.loaded = '1';
+    } catch(e) {
+      el.innerHTML = '<div style="color:var(--muted);padding:1rem;">Failed to load engagement letters.</div>';
+    }
+  }
+
+  function renderEngagement() {
+    const el = document.getElementById('engagement-list');
+    if (!engDocs.length) {
+      el.innerHTML = `<div class="placeholder-section">
+        <div class="ph-icon">📄</div>
+        <div class="ph-title">No Engagement Letters</div>
+        <div class="ph-desc">Upload a signed engagement letter to get started.</div>
+      </div>`;
+      return;
+    }
+    const rows = engDocs.map(doc => {
+      const uploadDate = fmtDate(doc.created_at);
+      const uploadedBy = doc.uploaded_by_type === 'staff' ? 'Staff' : 'Client';
+      return `<div class="doc-row">
+        <span class="doc-icon">📄</span>
+        <div class="doc-info">
+          <div class="doc-name">${esc(doc.display_name || 'Engagement Letter')}</div>
+          <div class="doc-meta">Uploaded ${uploadDate} · ${uploadedBy}</div>
+        </div>
+        <button class="btn-dl" onclick="downloadEngDoc(${doc.id}, this)">⬇ Download</button>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div class="card" style="padding:0.5rem 1rem;">${rows}</div>`;
+  }
+
+  async function downloadEngDoc(id, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try {
+      const res = await apiFetch(`/api/documents/${id}/url`);
+      const data = await res.json();
+      if (data.url) window.open(data.url, '_blank');
+    } catch(e) { toast('Failed to get download link', 'error'); }
+    if (btn) { btn.disabled = false; btn.textContent = '⬇ Download'; }
+  }
+
+  // ── Engagement upload modal ───────────────────────────────────────
+  let _engFile = null;
+  function openEngagementUpload() {
+    _engFile = null;
+    document.getElementById('eng-selected-name').textContent = '';
+    document.getElementById('eng-submit').disabled = true;
+    document.getElementById('eng-error').style.display = 'none';
+    document.getElementById('eng-msg').style.display = 'none';
+    document.getElementById('engagement-upload-modal').classList.remove('hidden');
+  }
+  function closeEngagementModal() {
+    document.getElementById('engagement-upload-modal').classList.add('hidden');
+  }
+
+  (function() {
+    const fileDrop = document.getElementById('eng-file-drop');
+    const fileInput = document.getElementById('eng-file-input');
+    const submitBtn = document.getElementById('eng-submit');
+
+    function setEngFile(f) {
+      _engFile = f;
+      document.getElementById('eng-selected-name').textContent = f.name;
+      submitBtn.disabled = false;
+    }
+
+    fileDrop.addEventListener('click', () => fileInput.click());
+    fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('drag-over'); });
+    fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('drag-over'));
+    fileDrop.addEventListener('drop', e => {
+      e.preventDefault(); fileDrop.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) setEngFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) setEngFile(fileInput.files[0]); });
+
+    document.getElementById('engagement-upload-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('engagement-upload-modal')) closeEngagementModal();
+    });
+  })();
+
+  async function submitEngagementUpload() {
+    if (!_engFile) return;
+    const submitBtn = document.getElementById('eng-submit');
+    const errEl = document.getElementById('eng-error');
+    const msgEl = document.getElementById('eng-msg');
+    submitBtn.disabled = true; submitBtn.textContent = 'Uploading…';
+    errEl.style.display = 'none'; msgEl.style.display = 'none';
+    try {
+      const fd = new FormData();
+      fd.append('file', _engFile);
+      fd.append('owner_type', 'relationship');
+      fd.append('owner_id', relId);
+      fd.append('folder_section', 'firm_uploaded');
+      fd.append('folder_category', 'engagement');
+      fd.append('doc_type', 'engagement');
+      const res = await fetch('/api/documents/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      msgEl.textContent = 'Uploaded successfully!'; msgEl.style.display = '';
+      // Reload engagement list
+      const listEl = document.getElementById('engagement-list');
+      delete listEl.dataset.loaded;
+      engDocs = [];
+      await loadEngagement();
+      setTimeout(() => { closeEngagementModal(); toast('Engagement letter uploaded'); }, 800);
+    } catch(e) {
+      errEl.textContent = e.message; errEl.style.display = '';
+      submitBtn.disabled = false; submitBtn.textContent = 'Upload';
+    }
+  }
+
+  // ── Workflow tab ──────────────────────────────────────────────────
+  async function loadWorkflow() {
+    const el = document.getElementById('workflow-content');
+    if (el.dataset.loaded) return;
+    el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading pipelines…</div></div>';
+
+    if (!relData) { el.innerHTML = '<div style="color:var(--muted);padding:1rem;">Relationship not loaded.</div>'; return; }
+
+    const people = relData.people || [];
+    const companies = relData.companies || [];
+
+    try {
+      // Fetch jobs for all entities in parallel
+      const allFetches = [
+        ...people.map(p => apiFetch(`/api/pipelines/entity-jobs?entity_type=person&entity_id=${p.id}`)
+          .then(r => r.json())
+          .then(jobs => ({ entityName: `${p.first_name||''} ${p.last_name||''}`.trim() || 'Person', entityType: 'person', jobs }))
+          .catch(() => null)),
+        ...companies.map(c => apiFetch(`/api/pipelines/entity-jobs?entity_type=company&entity_id=${c.id}`)
+          .then(r => r.json())
+          .then(jobs => ({ entityName: c.company_name || c.name || 'Company', entityType: 'company', jobs }))
+          .catch(() => null)),
+      ];
+
+      const results = (await Promise.all(allFetches)).filter(Boolean);
+      const withJobs = results.filter(r => r.jobs && r.jobs.length > 0);
+
+      if (!withJobs.length) {
+        el.innerHTML = `<div class="placeholder-section">
+          <div class="ph-icon">📋</div>
+          <div class="ph-title">No Active Pipelines</div>
+          <div class="ph-desc">None of the people or companies in this relationship have active pipeline jobs.</div>
+        </div>`;
+        el.dataset.loaded = '1';
+        return;
+      }
+
+      let html = '';
+      withJobs.forEach(({ entityName, entityType, jobs }) => {
+        html += `<div class="workflow-entity-group">
+          <div class="workflow-entity-label">${entityType === 'person' ? '👤' : '🏢'} ${esc(entityName)}</div>`;
+        jobs.forEach(j => {
+          const stageColor = j.stage_color || 'var(--gold)';
+          const yearBadge = j.tax_year ? `<span style="font-size:0.72rem;background:rgba(255,255,255,0.06);border-radius:4px;padding:0.1rem 0.45rem;margin-left:0.4rem;color:var(--muted);">${j.tax_year}</span>` : '';
+          const statusColor = j.job_status === 'blocked' ? '#f56565' : (['waiting_client','missing_info'].includes(j.job_status)) ? '#ed8936' : '#3ecf8e';
+          const statusLabel = { active:'Active', waiting_client:'Waiting on Client', missing_info:'Missing Info', blocked:'Blocked', under_extension:'Under Extension', on_hold:'On Hold' }[j.job_status] || 'Active';
+          html += `<div class="workflow-job-row">
+            <div style="flex:1;min-width:160px;">
+              <div style="font-weight:700;font-size:0.9rem;">${esc(j.pipeline_name)}${yearBadge}</div>
+            </div>
+            <div style="min-width:130px;text-align:center;">
+              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.15rem;">Stage</div>
+              <div style="font-weight:700;color:${stageColor};font-size:0.85rem;">${esc(j.stage_name)}</div>
+            </div>
+            <div style="min-width:110px;text-align:center;">
+              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.15rem;">Status</div>
+              <div style="font-weight:600;font-size:0.82rem;color:${statusColor};">${statusLabel}</div>
+            </div>
+            ${j.assigned_name ? `<div style="min-width:80px;text-align:center;"><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.15rem;">Assigned</div><div style="font-size:0.82rem;">${esc(j.assigned_name)}</div></div>` : ''}
+          </div>`;
+        });
+        html += `</div>`;
+      });
+
+      el.innerHTML = html;
+      el.dataset.loaded = '1';
+    } catch(e) {
+      el.innerHTML = `<div style="color:var(--muted);padding:1rem;">Failed to load workflow data: ${esc(e.message)}</div>`;
+    }
+  }
+
+  // ── Notes ─────────────────────────────────────────────────────────
+  async function autoSaveNotes(val, force) {
+    try {
+      await apiFetch(`/api/relationships/${relId}`, { method: 'PUT', body: JSON.stringify({ notes: val }) });
+      if (relData) relData.notes = val;
+      const ind = document.getElementById('notes-saved');
+      if (ind) { ind.textContent = '✓ Saved'; setTimeout(() => { ind.textContent = ''; }, 2000); }
+      if (force) toast('Notes saved');
+    } catch(e) { toast('Failed to save notes', 'error'); }
+  }
+
+  // ── Billing tab ───────────────────────────────────────────────────
   function renderBilling() {
     if (!relData) return;
     const r = relData;
-    const c = document.getElementById('billing-content');
+    const el = document.getElementById('billing-content');
     const tierLabels = { standard:'Standard', legacy_blueprint:'Legacy Blueprint', tax_only:'Tax Only', full_service:'Full Service' };
-    const tierCls = { standard:'badge-muted', legacy_blueprint:'badge-gold', tax_only:'badge-blue', full_service:'badge-green' };
-    const billCls = { active:'badge-green', past_due:'badge-orange', cancelled:'badge-red' };
-    const billLbl = { active:'Active', past_due:'Past Due', cancelled:'Cancelled' };
-
     let html = `<div style="max-width:600px;">
       <div class="card">
-        <div class="card-title" style="display:block;">Service &amp; Billing</div>
-        <div class="info-row"><span class="info-label">Service Tier</span><span class="info-val"><span class="badge ${tierCls[r.service_tier]||'badge-muted'}">${tierLabels[r.service_tier]||r.service_tier||'—'}</span></span></div>
-        <div class="info-row"><span class="info-label">Billing</span><span class="info-val"><span class="badge ${billCls[r.billing_status]||'badge-muted'}">${billLbl[r.billing_status]||r.billing_status||'—'}</span></span></div>
-        ${r.stripe_customer_id ? `<div class="info-row"><span class="info-label">Stripe Customer</span><span class="info-val" style="font-family:monospace;font-size:0.8rem;">${esc(r.stripe_customer_id)}</span></div>` : ''}
-        ${r.stripe_subscription_id ? `<div class="info-row"><span class="info-label">Stripe Sub</span><span class="info-val" style="font-family:monospace;font-size:0.8rem;">${esc(r.stripe_subscription_id)}</span></div>` : ''}
+        <div class="card-title">Service &amp; Billing</div>
+        <div class="info-row"><span class="info-label">Service Tier</span><span class="info-val">${r.service_tier ? tierBadge(r.service_tier) : '<span style="color:var(--muted);">—</span>'}</span></div>
+        <div class="info-row"><span class="info-label">Billing</span><span class="info-val">${r.billing_status ? billingBadge(r.billing_status) : '<span style="color:var(--muted);">—</span>'}</span></div>
+        ${r.stripe_customer_id ? `<div class="info-row"><span class="info-label">Stripe Customer</span><span class="info-val" style="font-family:monospace;font-size:0.82rem;">${esc(r.stripe_customer_id)}</span></div>` : ''}
+        ${r.stripe_subscription_id ? `<div class="info-row"><span class="info-label">Stripe Sub</span><span class="info-val" style="font-family:monospace;font-size:0.82rem;">${esc(r.stripe_subscription_id)}</span></div>` : ''}
         <div style="margin-top:1rem;">
           <button class="btn btn-outline btn-sm" onclick="openEditModal()">✏️ Edit Billing Info</button>
         </div>
       </div>
       <div class="placeholder-section">
         <div class="ph-icon">💳</div>
-        <div class="ph-title">Stripe Integration</div>
-        <div class="ph-desc">Automated billing, invoice generation, and payment tracking coming soon.</div>
+        <div class="ph-title">Stripe Integration Coming Soon</div>
+        <div class="ph-desc">Automated billing, invoice generation, and payment tracking will appear here.</div>
       </div>
     </div>`;
-    c.innerHTML = html;
+    el.innerHTML = html;
   }
 
-  // ── Notes ──
-  async function autoSaveNotes(val, force=false) {
-    try {
-      await apiFetch(`/api/relationships/${relId}`, { method: 'PUT', body: JSON.stringify({ notes: val }) });
-      if (relData) relData.notes = val;
-      const s = document.getElementById('notes-saved');
-      if (s) { s.textContent = '✓ Saved'; setTimeout(() => s.textContent='', 2000); }
-      if (force) toast('Notes saved');
-    } catch(e) { toast('Failed to save notes', 'error'); }
-  }
-
-  // ── Edit Modal ──
+  // ── Edit Modal ────────────────────────────────────────────────────
   function openEditModal() {
     if (!relData) return;
     document.getElementById('ef-name').value = relData.name || '';
     document.getElementById('ef-tier').value = relData.service_tier || '';
     document.getElementById('ef-billing').value = relData.billing_status || 'active';
     document.getElementById('edit-error').style.display = 'none';
-    document.getElementById('edit-modal').classList.add('open');
+    document.getElementById('edit-modal').classList.remove('hidden');
   }
-  function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
+  function closeModal() { document.getElementById('edit-modal').classList.add('hidden'); }
+  document.getElementById('edit-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('edit-modal')) closeModal();
+  });
 
   async function submitEdit() {
     const name = document.getElementById('ef-name').value.trim();
-    if (!name) { const e=document.getElementById('edit-error'); e.textContent='Name is required.'; e.style.display=''; return; }
+    if (!name) {
+      const errEl = document.getElementById('edit-error');
+      errEl.textContent = 'Name is required.'; errEl.style.display = '';
+      return;
+    }
     const body = {
       name,
       service_tier: document.getElementById('ef-tier').value || null,
@@ -303,21 +702,25 @@
     btn.disabled = true;
     try {
       const res = await apiFetch(`/api/relationships/${relId}`, { method: 'PUT', body: JSON.stringify(body) });
-      if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Failed'); }
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       const updated = await res.json();
       relData = { ...relData, ...updated };
       closeModal();
       toast('Relationship updated');
       renderHeader(relData);
+      // Refresh details card
+      renderOverview(relData);
       // Re-render billing if active
       if (document.getElementById('tab-billing').classList.contains('active')) renderBilling();
-    } catch(e) { const err=document.getElementById('edit-error'); err.textContent=e.message; err.style.display=''; }
+    } catch(e) {
+      const errEl = document.getElementById('edit-error');
+      errEl.textContent = e.message; errEl.style.display = '';
+    }
     btn.disabled = false;
   }
 
+  // ── Boot ──────────────────────────────────────────────────────────
   loadRelationship();
-
-
 </script>
 
 <%- include('partials/shell-close') %>
