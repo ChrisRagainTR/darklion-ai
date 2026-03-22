@@ -15,7 +15,7 @@
 </div>
 
 <!-- New / Edit Modal -->
-<div class="modal-overlay hidden" id="tmpl-modal">
+<div class="modal-overlay" id="tmpl-modal">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:600px;width:95%;">
     <h2 id="tmpl-modal-title">New Template</h2>
     <div id="tmpl-error" style="display:none;color:var(--red);font-size:0.82rem;margin-bottom:0.75rem;"></div>
@@ -84,7 +84,7 @@
     document.getElementById('tmpl-error').style.display = 'none';
     document.getElementById('tmpl-submit').disabled = false;
     document.getElementById('tmpl-submit').textContent = 'Save Template';
-    document.getElementById('tmpl-modal').classList.remove('hidden');
+    document.getElementById('tmpl-modal').classList.add('open');
     setTimeout(() => document.getElementById('tmpl-name').focus(), 50);
   }
 
@@ -98,12 +98,12 @@
     document.getElementById('tmpl-error').style.display = 'none';
     document.getElementById('tmpl-submit').disabled = false;
     document.getElementById('tmpl-submit').textContent = 'Save Changes';
-    document.getElementById('tmpl-modal').classList.remove('hidden');
+    document.getElementById('tmpl-modal').classList.add('open');
     setTimeout(() => document.getElementById('tmpl-name').focus(), 50);
   }
 
   function closeModal() {
-    document.getElementById('tmpl-modal').classList.add('hidden');
+    document.getElementById('tmpl-modal').classList.remove('open');
   }
 
   async function submitTemplate() {
