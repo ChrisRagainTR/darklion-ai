@@ -428,16 +428,16 @@
   }
 
   var ENTITY_PILLS = {
-    's_corp':      { label: 'S-Corp',       color: '#3182ce' },
-    'c_corp':      { label: 'C-Corp',       color: '#553c9a' },
-    'llc':         { label: 'LLC',          color: '#2c7a7b' },
-    'partnership': { label: 'Partnership',  color: '#b7791f' },
-    'sole_prop':   { label: 'Sole Prop',    color: '#c05621' },
-    'trust':       { label: 'Trust',        color: '#6b46c1' },
-    'nonprofit':   { label: 'Non-Profit',   color: '#276749' },
-    'other':       { label: 'Other',        color: '#4a5568' },
-    'individual':  { label: 'Individual',   color: '#2b6cb0' },
-    'relationship':{ label: 'Relationship', color: '#744210' },
+    's_corp':      { label: 'S-Corp',       color: '#0077b6' },  // ocean blue
+    'c_corp':      { label: 'C-Corp',       color: '#7b2d8b' },  // deep purple
+    'llc':         { label: 'LLC',          color: '#0f9d58' },  // google green
+    'partnership': { label: 'Partnership',  color: '#e67e22' },  // warm orange
+    'sole_prop':   { label: 'Sole Prop',    color: '#c0392b' },  // crimson
+    'trust':       { label: 'Trust',        color: '#8e44ad' },  // violet — distinct from c_corp
+    'nonprofit':   { label: 'Non-Profit',   color: '#16a085' },  // teal
+    'other':       { label: 'Other',        color: '#7f8c8d' },  // slate
+    'individual':  { label: 'Individual',   color: '#d4a017' },  // gold
+    'relationship':{ label: 'Relationship', color: '#e91e8c' },  // hot pink
   };
 
   function renderCard(job) {
@@ -451,7 +451,7 @@
     var pill = '';
     if (job.crm_entity_type) {
       var p = ENTITY_PILLS[job.crm_entity_type];
-      if (p) pill = '<span style="float:right;margin-left:0.4rem;margin-top:0.1rem;padding:0.1rem 0.45rem;border-radius:20px;font-size:0.62rem;font-weight:700;color:#fff;background:' + p.color + ';letter-spacing:0.03em;white-space:nowrap;">' + p.label + '</span>';
+      if (p) pill = '<span style="float:right;margin-left:0.4rem;margin-top:0.05rem;padding:0.15rem 0.55rem;border-radius:999px;font-size:0.61rem;font-weight:700;color:#fff;background:' + p.color + ';letter-spacing:0.04em;white-space:nowrap;line-height:1.4;">' + p.label + '</span>';
     }
 
     var updatesHtml = updates.length ? updates.map(function(u) {
