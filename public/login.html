@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DarkLion">
+  <link rel="apple-touch-icon" href="/lion-logo.png">
   <title>Sign In — DarkLion</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -476,9 +481,10 @@
   </div>
 
   <script>
-    // If already logged in, go to dashboard
+    // If already logged in, go to messages (PWA start) or dashboard
+    const _isPwa = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
     const token = localStorage.getItem('dl_token');
-    if (token) window.location.replace('/dashboard');
+    if (token) window.location.replace(_isPwa ? '/messages' : '/dashboard');
 
     // Restore remembered email
     const remembered = localStorage.getItem('dl_remember_email');
@@ -565,7 +571,7 @@
           localStorage.removeItem('dl_remember_email');
         }
 
-        window.location.replace('/dashboard');
+        window.location.replace(_isPwa ? '/messages' : '/dashboard');
       } catch (err) {
         showError('Network error. Please check your connection and try again.');
       } finally {
