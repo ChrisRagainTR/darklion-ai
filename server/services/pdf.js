@@ -2,12 +2,13 @@
 
 /**
  * Generate a PDF by navigating to a URL with Puppeteer.
- * Uses full puppeteer package (includes bundled Chromium).
+ * Uses system Chromium on Railway (via PUPPETEER_EXECUTABLE_PATH env var),
+ * falls back to Puppeteer's bundled Chromium locally.
  */
 async function generatePDF(htmlContent, pageUrl) {
   const puppeteer = require('puppeteer');
 
-  const browser = await puppeteer.launch({
+  const launchOptions = {
     headless: 'new',
     args: [
       '--no-sandbox',
@@ -17,16 +18,22 @@ async function generatePDF(htmlContent, pageUrl) {
       '--no-first-run',
       '--no-zygote',
       '--single-process',
+      '--disable-extensions',
     ],
-  });
+  };
+
+  // Use system Chromium if specified (Railway Docker build)
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
+  const browser = await puppeteer.launch(launchOptions);
 
   const page = await browser.newPage();
   try {
     if (pageUrl) {
       await page.goto(pageUrl, { waitUntil: 'networkidle0', timeout: 30000 });
-      // Wait for LOE content to render
       await page.waitForSelector('#loe-document', { timeout: 15000 }).catch(() => {});
-      // Extra wait for fonts and images
       await new Promise(r => setTimeout(r, 2000));
     } else if (htmlContent) {
       await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
