@@ -63,6 +63,21 @@
   .entity-row-meta { font-size: 0.74rem; color: var(--muted); }
   .entity-row-badges { display: flex; gap: 0.3rem; flex-wrap: wrap; }
 
+  /* ── Entity mini cards (2-per-row grid) ── */
+  .entity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+  @media (max-width: 600px) { .entity-grid { grid-template-columns: 1fr; } }
+  .entity-mini-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 0.85rem; display: flex; flex-direction: column; gap: 0.35rem; transition: border-color 0.15s; }
+  .entity-mini-card:hover { border-color: rgba(201,168,76,0.35); }
+  .entity-mini-top { display: flex; align-items: center; gap: 0.55rem; }
+  .entity-mini-avatar { width: 28px; height: 28px; border-radius: 50%; background: rgba(201,168,76,0.15); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: var(--gold); flex-shrink: 0; }
+  .entity-mini-avatar.square { border-radius: 5px; }
+  .entity-mini-name { font-size: 0.83rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .entity-mini-name a { color: var(--text); text-decoration: none; }
+  .entity-mini-name a:hover { color: var(--gold); }
+  .entity-mini-meta { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .entity-mini-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 0.1rem; }
+  .entity-mini-badges { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+
   /* ── Forms ── */
   .form-group { margin-bottom: 1rem; }
   .form-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -356,24 +371,29 @@
     if (!people.length) {
       html += `<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No people in this relationship.</div>`;
     } else {
+      html += `<div class="entity-grid">`;
       people.forEach(p => {
         const initials = ((p.first_name||'').charAt(0) + (p.last_name||'').charAt(0)).toUpperCase() || '?';
         const portalBadge = p.portal_enabled
-          ? `<span class="badge badge-green" style="font-size:0.65rem;">Portal</span>`
+          ? `<span class="badge badge-green" style="font-size:0.62rem;">Portal</span>`
           : '';
         const filingBadge = p.filing_status
-          ? `<span class="badge badge-muted" style="font-size:0.65rem;">${filingLabel(p.filing_status)}</span>`
+          ? `<span class="badge badge-muted" style="font-size:0.62rem;">${filingLabel(p.filing_status)}</span>`
           : '';
-        html += `<div class="entity-row">
-          <div class="entity-avatar">${initials}</div>
-          <div class="entity-row-info">
-            <div class="entity-row-name"><a href="/crm/person/${p.id}">${esc(p.first_name||'')} ${esc(p.last_name||'')}</a></div>
-            <div class="entity-row-meta">${p.email ? esc(p.email) : ''}${p.phone ? (p.email ? ' · ' : '') + esc(p.phone) : ''}</div>
+        const meta = [p.email, p.phone].filter(Boolean).join(' · ');
+        html += `<div class="entity-mini-card">
+          <div class="entity-mini-top">
+            <div class="entity-mini-avatar">${initials}</div>
+            <div class="entity-mini-name"><a href="/crm/person/${p.id}">${esc(p.first_name||'')} ${esc(p.last_name||'')}</a></div>
           </div>
-          <div class="entity-row-badges">${filingBadge}${portalBadge}</div>
-          <a href="/crm/person/${p.id}" class="btn btn-ghost btn-xs">View →</a>
+          ${meta ? `<div class="entity-mini-meta">${esc(meta)}</div>` : ''}
+          <div class="entity-mini-footer">
+            <div class="entity-mini-badges">${filingBadge}${portalBadge}</div>
+            <a href="/crm/person/${p.id}" class="btn btn-ghost btn-xs" style="padding:0.15rem 0.45rem;">→</a>
+          </div>
         </div>`;
       });
+      html += `</div>`;
     }
     html += `</div>`;
 
@@ -387,25 +407,29 @@
       html += `<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No companies in this relationship.</div>`;
     } else {
       const entityTypeLabels = { llc:'LLC', s_corp:'S-Corp', c_corp:'C-Corp', partnership:'Partnership', sole_prop:'Sole Prop', trust:'Trust', nonprofit:'Non-Profit', other:'Other' };
+      html += `<div class="entity-grid">`;
       companies.forEach(co => {
         const name = co.company_name || co.name || 'Unknown';
         const initial = name.charAt(0).toUpperCase();
         const entityBadge = co.entity_type
-          ? `<span class="badge badge-blue" style="font-size:0.65rem;">${entityTypeLabels[co.entity_type]||esc(co.entity_type)}</span>`
+          ? `<span class="badge badge-blue" style="font-size:0.62rem;">${entityTypeLabels[co.entity_type]||esc(co.entity_type)}</span>`
           : '';
         const qboBadge = co.realm_id
-          ? `<span class="badge badge-green" style="font-size:0.65rem;">QBO</span>`
+          ? `<span class="badge badge-green" style="font-size:0.62rem;">QBO</span>`
           : '';
-        html += `<div class="entity-row">
-          <div class="entity-avatar" style="border-radius:6px;">${initial}</div>
-          <div class="entity-row-info">
-            <div class="entity-row-name"><a href="/crm/company/${co.id}">${esc(name)}</a></div>
-            <div class="entity-row-meta">${co.entity_type ? (entityTypeLabels[co.entity_type]||co.entity_type) : ''}</div>
+        html += `<div class="entity-mini-card">
+          <div class="entity-mini-top">
+            <div class="entity-mini-avatar square">${initial}</div>
+            <div class="entity-mini-name"><a href="/crm/company/${co.id}">${esc(name)}</a></div>
           </div>
-          <div class="entity-row-badges">${entityBadge}${qboBadge}</div>
-          <a href="/crm/company/${co.id}" class="btn btn-ghost btn-xs">View →</a>
+          ${co.entity_type ? `<div class="entity-mini-meta">${entityTypeLabels[co.entity_type]||esc(co.entity_type)}</div>` : ''}
+          <div class="entity-mini-footer">
+            <div class="entity-mini-badges">${entityBadge}${qboBadge}</div>
+            <a href="/crm/company/${co.id}" class="btn btn-ghost btn-xs" style="padding:0.15rem 0.45rem;">→</a>
+          </div>
         </div>`;
       });
+      html += `</div>`;
     }
     html += `</div>`;
 
