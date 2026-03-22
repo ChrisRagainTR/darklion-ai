@@ -224,8 +224,17 @@ function showSuccess() {
 }
 
 function downloadDoc() {
-  // Server-side PDF: no print dialog, no browser headers, pixel-perfect
-  window.location.href = API_BASE + '/pdf';
+  // Show feedback — Puppeteer takes 15-20s
+  const btn = document.querySelector('[onclick="downloadDoc()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating PDF…'; }
+  const a = document.createElement('a');
+  a.href = API_BASE + '/pdf';
+  a.download = 'Engagement-Letter.pdf';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = '⬇ Download / Print Copy'; } }, 25000);
 }
 
 function renderPdfOnlyMode() {

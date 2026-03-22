@@ -285,7 +285,22 @@ function copyLink(url) {
 
 function downloadSignedLOE() {
   if (!_proposalToken) { showToast('No token available', true); return; }
-  window.location.href = '/api/proposals/public/' + _proposalToken + '/pdf';
+  const btn = document.querySelector('[onclick="downloadSignedLOE()"]');
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating PDF…'; }
+  showToast('Generating PDF — this takes about 15 seconds…');
+  // Use a hidden link so the page doesn't navigate away
+  const a = document.createElement('a');
+  a.href = '/api/proposals/public/' + _proposalToken + '/pdf';
+  a.download = 'Engagement-Letter.pdf';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // Re-enable button after delay
+  setTimeout(() => {
+    if (btn) { btn.disabled = false; btn.textContent = origText; }
+  }, 20000);
 }
 
 function previewLOE() {
