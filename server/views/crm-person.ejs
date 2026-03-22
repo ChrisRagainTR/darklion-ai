@@ -90,13 +90,40 @@
 </div>
 
 <div id="tab-overview" class="tab-content active">
-  <div class="detail-grid">
-    <div id="overview-left"><div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div></div>
-    <div id="overview-right">
-      <div class="card">
-        <div class="card-title">Internal Notes</div>
-        <textarea class="form-control" id="notes-ta" rows="6" placeholder="Internal staff notes…" onblur="autoSaveNotes(this.value)"></textarea>
-        <div class="save-indicator" id="notes-saved"></div>
+  <div style="padding:0.85rem;display:flex;flex-direction:column;gap:0.85rem;">
+    <!-- 3-COL LAYOUT -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 320px;gap:0.85rem;align-items:start;">
+      <!-- LEFT col -->
+      <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">
+        <div id="overview-contact-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+        <div id="overview-portal-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+      </div>
+      <!-- CENTER col -->
+      <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">
+        <div id="overview-spouse-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+        <div id="overview-tax-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+      </div>
+      <!-- RIGHT col -->
+      <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">
+        <div id="overview-companies-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Internal Notes</div>
+          <textarea class="form-control" id="notes-ta" rows="5" placeholder="Internal staff notes…" style="width:100%;box-sizing:border-box;" onblur="autoSaveNotes(this.value)"></textarea>
+          <div class="save-indicator" id="notes-saved"></div>
+        </div>
+        <div id="overview-messages-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
       </div>
     </div>
   </div>
@@ -517,7 +544,15 @@
     document.title = `${name} — DarkLion`;
     document.getElementById('entity-name').textContent = name;
     let html = `<span class="badge badge-muted">Person</span>`;
-    if (p.filing_status) html += ` <span class="badge badge-muted">${esc(p.filing_status.replace(/_/g,' '))}</span>`;
+    if (p.filing_status) {
+      const fsColors = { MFJ:'rgba(74,144,217,0.18)', Single:'rgba(143,163,184,0.2)', HOH:'rgba(237,137,54,0.18)', MFS:'rgba(138,99,241,0.18)' };
+      const fsTextColors = { MFJ:'#4a90d9', Single:'#8fa3b8', HOH:'#ed8936', MFS:'#a78bfa' };
+      const fsKey = p.filing_status.toUpperCase() === 'MFJ' ? 'MFJ' : p.filing_status === 'single' ? 'Single' : p.filing_status === 'hoh' ? 'HOH' : p.filing_status === 'mfs' ? 'MFS' : null;
+      const fsLabel = { mfj:'MFJ', single:'Single', hoh:'HOH', mfs:'MFS' }[p.filing_status] || p.filing_status.replace(/_/g,' ');
+      const bg = fsColors[fsKey] || 'rgba(143,163,184,0.2)';
+      const tc = fsTextColors[fsKey] || '#8fa3b8';
+      html += ` <span class="badge" style="background:${bg};color:${tc};">${esc(fsLabel)}</span>`;
+    }
     if (p.portal_enabled) html += ` <span class="badge badge-green">Portal Active</span>`;
     else if (p.portal_invite_token) html += ` <span class="badge badge-orange">Portal Invited</span>`;
     document.getElementById('entity-badges').innerHTML = html;
@@ -532,20 +567,32 @@
 
   function renderOverview(p) {
     document.getElementById('notes-ta').value = p.notes || '';
-    const left = document.getElementById('overview-left');
 
-    let html = `<div class="card">
-      <div class="card-title">Contact Details</div>
+    // ── LEFT COL: Contact Details ──
+    const contactEl = document.getElementById('overview-contact-panel');
+    const initials = ((p.first_name||'').charAt(0)+(p.last_name||'').charAt(0)).toUpperCase() || '?';
+    const fsLabel = { mfj:'MFJ', single:'Single', hoh:'Head of Household', mfs:'MFS' }[p.filing_status] || (p.filing_status||'').replace(/_/g,' ');
+    const fsColors = { MFJ:'rgba(74,144,217,0.15)', Single:'rgba(143,163,184,0.15)', HOH:'rgba(237,137,54,0.15)', MFS:'rgba(138,99,241,0.15)' };
+    const fsTextColors = { MFJ:'#4a90d9', Single:'#8fa3b8', HOH:'#ed8936', MFS:'#a78bfa' };
+    const fsKey = p.filing_status === 'mfj' ? 'MFJ' : p.filing_status === 'single' ? 'Single' : p.filing_status === 'hoh' ? 'HOH' : p.filing_status === 'mfs' ? 'MFS' : null;
+    const fsBg = fsColors[fsKey] || 'rgba(143,163,184,0.15)';
+    const fsTc = fsTextColors[fsKey] || '#8fa3b8';
+    contactEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Contact Details</div>
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.85rem;">
+        <div style="width:48px;height:48px;border-radius:50%;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
+        <div>
+          <div style="font-weight:700;font-size:0.95rem;">${esc((p.first_name||'')+' '+(p.last_name||'')).trim() || 'Unnamed'}</div>
+          ${p.filing_status ? `<span style="background:${fsBg};color:${fsTc};border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">${esc(fsLabel)}</span>` : ''}
+        </div>
+      </div>
       <div class="info-row"><span class="info-label">Email</span><span class="info-val">${p.email ? `<a href="mailto:${esc(p.email)}" style="color:var(--gold);">${esc(p.email)}</a>` : '—'}</span></div>
       <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${fmtPhone(p.phone)}</span></div>
       <div class="info-row"><span class="info-label">Date of Birth</span><span class="info-val">${fmtDOB(p.date_of_birth)}</span></div>
-      <div class="info-row"><span class="info-label">Filing Status</span><span class="info-val">${esc((p.filing_status||'—').replace(/_/g,' '))}</span></div>
-      <div class="info-row"><span class="info-label">Relationship</span><span class="info-val">${esc(p.relationship_name || '—')}</span></div>
-    </div>`;
+      ${p.relationship_name ? `<div class="info-row"><span class="info-label">Relationship</span><span class="info-val"><a href="#" style="color:var(--gold);">${esc(p.relationship_name)}</a></span></div>` : ''}`;
 
-    // Portal management
-    html += `<div class="card">
-      <div class="card-title">Client Portal</div>
+    // ── LEFT COL: Client Portal ──
+    const portalEl = document.getElementById('overview-portal-panel');
+    portalEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Client Portal</div>
       <div style="font-size:0.84rem;color:var(--muted);margin-bottom:0.75rem;">
         ${p.portal_enabled ? '✅ Portal active' : p.portal_invite_token ? '📧 Invite sent' : '⭕ Not set up'}
       </div>
@@ -553,23 +600,106 @@
         ${!p.portal_enabled ? `<button class="btn btn-gold btn-sm" onclick="sendPortalInvite()">Send Invite</button>` : ''}
         ${p.portal_enabled ? `<button class="btn btn-outline btn-sm" onclick="resetPortalPassword()">Reset Password</button>` : ''}
         ${p.portal_enabled ? `<button class="btn btn-outline btn-sm" onclick="disablePortal()">Disable Portal</button>` : ''}
-      </div>
-    </div>`;
+      </div>`;
 
-    // Companies
-    const companies = p.company_access || p.companies || [];
-    if (companies.length) {
-      html += `<div class="card"><div class="card-title">Companies</div>`;
-      companies.forEach(c => {
-        html += `<div class="person-row">
-          <div class="person-info"><div class="person-name"><a href="/crm/company/${c.company_id}" style="color:var(--text);text-decoration:none;">🏢 ${esc(c.company_name)}</a></div></div>
-          <button class="btn btn-ghost btn-xs" onclick="window.location.href='/crm/company/${c.company_id}'">→</button>
+    // ── CENTER COL: Spouse ──
+    const spouseEl = document.getElementById('overview-spouse-panel');
+    if (p.spouse) {
+      const sp = p.spouse;
+      const spInitials = ((sp.first_name||'').charAt(0)+(sp.last_name||'').charAt(0)).toUpperCase() || '?';
+      spouseEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Spouse</div>
+        <div style="background:var(--charcoal);border:1px solid var(--border);border-radius:8px;padding:0.75rem;display:flex;align-items:flex-start;gap:0.65rem;">
+          <div style="width:38px;height:38px;border-radius:50%;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:0.95rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${spInitials}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.2rem;"><a href="/crm/person/${sp.id||sp.person_id}" style="color:var(--text);text-decoration:none;">${esc((sp.first_name||'')+' '+(sp.last_name||'')).trim()}</a></div>
+            ${sp.email ? `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.15rem;">${esc(sp.email)}</div>` : ''}
+            ${sp.phone ? `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.15rem;">${fmtPhone(sp.phone)}</div>` : ''}
+            ${sp.portal_enabled ? `<span style="font-size:0.7rem;background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.1rem 0.35rem;font-weight:600;">Portal Active</span>` : ''}
+          </div>
         </div>`;
-      });
-      html += `</div>`;
+    } else {
+      spouseEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Spouse</div>
+        <div style="color:var(--muted);font-size:0.84rem;font-style:italic;">No spouse linked — set via Edit</div>`;
     }
 
-    left.innerHTML = html;
+    // ── CENTER COL: Tax Deliveries ──
+    const taxEl = document.getElementById('overview-tax-panel');
+    taxEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;">
+      <span>Tax Deliveries</span>
+      <a href="#" onclick="switchTab('tax',document.querySelector('.tab-item:nth-child(3)'));return false;" style="font-size:0.72rem;color:var(--gold);">View all →</a>
+    </div><div id="ov-tax-inner" style="color:var(--muted);font-size:0.82rem;">Loading…</div>`;
+
+    // Use cached personData deliveries or fetch
+    const renderPersonTaxSnippet = (deliveries) => {
+      const el = document.getElementById('ov-tax-inner');
+      if (!el) return;
+      if (!deliveries || !deliveries.length) { el.innerHTML=`<div style="font-style:italic;">No tax deliveries yet.</div>`; return; }
+      const STATUS_DOT = { draft:'#8fa3b8', sent:'#4a90d9', signed:'#3ecf8e', complete:'#3ecf8e', needs_changes:'#ed8936', approved:'#c9a84c' };
+      const STATUS_LABEL = { draft:'Draft', sent:'Sent', signed:'Signed', complete:'Complete', needs_changes:'Needs Changes', approved:'Approved' };
+      el.innerHTML = deliveries.slice(0,3).map(d => {
+        const dot = STATUS_DOT[d.status] || '#8fa3b8';
+        const label = STATUS_LABEL[d.status] || d.status || '';
+        return `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span style="background:rgba(201,168,76,0.12);color:var(--gold);border-radius:4px;padding:0.1rem 0.4rem;font-size:0.72rem;font-weight:700;flex-shrink:0;">${esc(String(d.tax_year||''))}</span>
+          <span style="flex:1;min-width:0;font-size:0.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(d.title||'Return')}</span>
+          <span style="display:flex;align-items:center;gap:0.3rem;font-size:0.75rem;flex-shrink:0;"><span style="width:7px;height:7px;border-radius:50%;background:${dot};display:inline-block;flex-shrink:0;"></span>${esc(label)}</span>
+        </div>`;
+      }).join('');
+    };
+    if (p.tax_deliveries && p.tax_deliveries.length) {
+      renderPersonTaxSnippet(p.tax_deliveries);
+    } else {
+      apiFetch(`/api/tax-deliveries?person_id=${personId}`).then(r=>r.json()).then(renderPersonTaxSnippet).catch(()=>{
+        const el=document.getElementById('ov-tax-inner'); if(el) el.innerHTML='<span>—</span>';
+      });
+    }
+
+    // ── RIGHT COL: Companies ──
+    const companiesEl = document.getElementById('overview-companies-panel');
+    const companies = p.company_access || p.companies || [];
+    let compHtml = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Companies</div>`;
+    if (!companies.length) {
+      compHtml += `<div style="color:var(--muted);font-size:0.84rem;font-style:italic;">No companies linked.</div>`;
+    } else {
+      compHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">`;
+      companies.forEach(c => {
+        const cInitial = (c.company_name||'?').charAt(0).toUpperCase();
+        compHtml += `<div style="background:var(--charcoal);border:1px solid var(--border);border-radius:8px;padding:0.55rem 0.65rem;display:flex;align-items:flex-start;gap:0.45rem;cursor:pointer;" onclick="window.location.href='/crm/company/${c.company_id}'">
+          <div style="width:28px;height:28px;border-radius:5px;background:rgba(74,144,217,0.15);color:#4a90d9;font-weight:700;font-size:0.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🏢</div>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:0.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.company_name||'Company')}</div>
+            ${c.access_level ? `<div style="font-size:0.68rem;color:var(--muted);">${esc(c.access_level)}</div>` : ''}
+          </div>
+        </div>`;
+      });
+      compHtml += `</div>`;
+    }
+    companiesEl.innerHTML = compHtml;
+
+    // ── RIGHT COL: Recent Messages ──
+    const msgsEl = document.getElementById('overview-messages-panel');
+    msgsEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;">
+      <span>Recent Messages</span>
+      <a href="#" onclick="switchTab('communication',document.querySelector('.tab-item:nth-child(4)'));return false;" style="font-size:0.72rem;color:var(--gold);">View all →</a>
+    </div><div id="ov-person-msgs-inner" style="color:var(--muted);font-size:0.82rem;">Loading…</div>`;
+    apiFetch(`/api/messages?person_id=${personId}`).then(r=>r.json()).then(threads=>{
+      const el = document.getElementById('ov-person-msgs-inner');
+      if (!el) return;
+      const arr = Array.isArray(threads) ? threads : (threads.threads || threads.data || []);
+      if (!arr.length) { el.innerHTML=`<div style="font-style:italic;">No messages yet.</div>`; return; }
+      function relTime(ts) { if(!ts) return ''; const d=new Date(ts); const diff=Date.now()-d; if(diff<60000) return 'just now'; if(diff<3600000) return Math.floor(diff/60000)+'m ago'; if(diff<86400000) return Math.floor(diff/3600000)+'h ago'; return d.toLocaleDateString(); }
+      el.innerHTML = arr.slice(0,3).map(t => {
+        const subject = t.subject || '(no subject)';
+        const preview = t.lastPreview || t.preview || '';
+        return `<div style="padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;" onclick="switchTab('communication',document.querySelector('.tab-item:nth-child(4)'));setTimeout(()=>loadThread(${t.id}),200);">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
+            <span style="font-size:0.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(subject)}</span>
+            <span style="font-size:0.72rem;color:var(--muted);flex-shrink:0;">${relTime(t.lastMessageAt||t.created_at)}</span>
+          </div>
+          <div style="font-size:0.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(preview)}</div>
+        </div>`;
+      }).join('');
+    }).catch(()=>{ const el=document.getElementById('ov-person-msgs-inner'); if(el) el.innerHTML='<span>—</span>'; });
   }
 
   // ── Docs: helpers ──

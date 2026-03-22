@@ -256,13 +256,45 @@
 </div>
 
 <div id="tab-overview" class="tab-content active">
-  <div class="detail-grid">
-    <div id="overview-left"><div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div></div>
-    <div id="overview-right">
-      <div class="card">
-        <div class="card-title">Internal Notes</div>
-        <textarea class="form-control" id="notes-ta" rows="6" placeholder="Internal staff notes…" onblur="autoSaveNotes(this.value)"></textarea>
-        <div class="save-indicator" id="notes-saved"></div>
+  <div style="padding:0.85rem;display:flex;flex-direction:column;gap:0.85rem;">
+    <!-- TOP ROW: 2 columns -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;align-items:start;">
+      <!-- Company Details -->
+      <div id="overview-details-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+        <div class="loading-state"><div class="loading-spinner"></div></div>
+      </div>
+      <!-- People -->
+      <div id="overview-people-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+        <div class="loading-state"><div class="loading-spinner"></div></div>
+      </div>
+    </div>
+    <!-- 3-COL BOTTOM -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 320px;gap:0.85rem;align-items:start;">
+      <!-- LEFT col -->
+      <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">
+        <div id="overview-tax-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+        <div id="overview-messages-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+      </div>
+      <!-- CENTER col -->
+      <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">
+        <div id="overview-bookkeeping-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+      </div>
+      <!-- RIGHT col -->
+      <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Internal Notes</div>
+          <textarea class="form-control" id="notes-ta" rows="6" placeholder="Internal staff notes…" style="width:100%;box-sizing:border-box;" onblur="autoSaveNotes(this.value)"></textarea>
+          <div class="save-indicator" id="notes-saved"></div>
+        </div>
+        <div id="overview-quicklinks-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
       </div>
     </div>
   </div>
@@ -749,6 +781,18 @@
     <div class="form-group"><label>Status</label>
       <select class="form-control" id="ef-status"><option value="active">Active</option><option value="inactive">Inactive</option><option value="dissolved">Dissolved</option></select>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+      <div class="form-group"><label>Bookkeeper</label>
+        <select class="form-control" id="ef-bookkeeper"><option value="">— None —</option></select>
+      </div>
+      <div class="form-group"><label>Bookkeeping Service</label>
+        <select class="form-control" id="ef-bookkeeping-service">
+          <option value="none">None</option>
+          <option value="bank_feed">Bank Feed</option>
+          <option value="accrual">Accrual</option>
+        </select>
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
       <button class="btn btn-gold" id="ef-submit" onclick="submitEdit()">Save Changes</button>
@@ -875,6 +919,10 @@
     if (c.status === 'inactive') html += ` <span class="badge badge-muted">Inactive</span>`;
     if (c.status === 'dissolved') html += ` <span class="badge badge-red">Dissolved</span>`;
     if (c.realm_id) html += ` <span class="badge badge-green">QBO Connected</span>`;
+    if (c.bookkeeping_service && c.bookkeeping_service !== 'none') {
+      const bkLabel = { bank_feed: 'Bank Feed', accrual: 'Accrual' }[c.bookkeeping_service] || c.bookkeeping_service;
+      html += ` <span class="badge" style="background:rgba(74,144,217,0.15);color:#4a90d9;border:1px solid rgba(74,144,217,0.3);">📒 ${esc(bkLabel)}</span>`;
+    }
     document.getElementById('entity-badges').innerHTML = html;
     const meta = [];
     if (c.relationship) meta.push(`👥 <a href="/crm/relationship/${c.relationship.id}" style="color:var(--gold);text-decoration:none;">${esc(c.relationship.name)}</a>`);
@@ -886,47 +934,156 @@
 
   function renderOverview(c) {
     document.getElementById('notes-ta').value = c.notes || '';
-    const left = document.getElementById('overview-left');
-    let html = `<div class="card">
-      <div class="card-title">Company Details</div>
-      <div class="info-row"><span class="info-label">Entity Type</span><span class="info-val">${esc(etLabel(c.entity_type) || '—')}</span></div>
-      <div class="info-row"><span class="info-label">Status</span><span class="info-val">${esc(c.status || 'active')}</span></div>
-      <div class="info-row"><span class="info-label">Tax Year End</span><span class="info-val">${esc(c.tax_year_end || '—')}</span></div>
-      <div class="info-row"><span class="info-label">QBO</span><span class="info-val">${c.realm_id ? '<span class="badge badge-green">Connected</span>' : '<span class="badge badge-muted">Not Connected</span>'}</span></div>
-      ${c.last_sync_at ? `<div class="info-row"><span class="info-label">Last Sync</span><span class="info-val" style="color:var(--muted);font-size:0.82rem;">${new Date(c.last_sync_at).toLocaleDateString()}</span></div>` : ''}
-    </div>`;
 
+    // ── TOP LEFT: Company Details panel ──
+    const detailsEl = document.getElementById('overview-details-panel');
+    let detailsHtml = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Company Details</div>`;
+    detailsHtml += `<div class="info-row"><span class="info-label">Entity Type</span><span class="info-val">${esc(etLabel(c.entity_type) || '—')}</span></div>`;
+    detailsHtml += `<div class="info-row"><span class="info-label">Status</span><span class="info-val">${esc(c.status || 'active')}</span></div>`;
+    detailsHtml += `<div class="info-row"><span class="info-label">Tax Year End</span><span class="info-val">${esc(c.tax_year_end || '—')}</span></div>`;
     if (c.stanford_tax_url) {
-      html += `<div class="card" style="display:flex;align-items:center;gap:1rem;">
-        <div style="flex:1;min-width:0;"><div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Stanford Tax</div><div style="font-size:0.82rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(c.stanford_tax_url)}</div></div>
-        <a href="${esc(c.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">Open →</a>
-      </div>`;
+      detailsHtml += `<div class="info-row"><span class="info-label">Stanford Tax</span><span class="info-val"><a href="${esc(c.stanford_tax_url)}" target="_blank" rel="noopener" style="color:var(--gold);">Open →</a></span></div>`;
     }
+    detailsEl.innerHTML = detailsHtml;
 
+    // ── TOP RIGHT: People panel ──
+    const peopleEl = document.getElementById('overview-people-panel');
     const people = c.people || [];
-    html += `<div class="card">
-      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
-        <span>People</span>
-        <button class="btn btn-gold btn-sm" onclick="openAttachPersonModal()">+ Attach</button>
-      </div>`;
+    let peopleHtml = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;">
+      <span>People</span>
+      <button class="btn btn-gold btn-sm" onclick="openAttachPersonModal()" style="font-size:0.72rem;padding:0.25rem 0.65rem;">+ Attach</button>
+    </div>`;
     if (!people.length) {
-      html += `<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No people attached.</div>`;
+      peopleHtml += `<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No people attached.</div>`;
     } else {
+      peopleHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">`;
       people.forEach(p => {
         const initials = ((p.first_name||'').charAt(0)+(p.last_name||'').charAt(0)).toUpperCase() || '?';
-        html += `<div class="person-row">
-          <div class="person-avatar">${initials}</div>
-          <div class="person-info">
-            <div class="person-name"><a href="/crm/person/${p.person_id}" style="color:var(--text);text-decoration:none;">${esc(p.first_name)} ${esc(p.last_name)}</a></div>
-            <div class="person-meta">${p.email ? esc(p.email) : ''}</div>
+        const accessLabel = { full:'Full', view:'View', sign:'Sign' }[p.access_level] || (p.access_level || '');
+        peopleHtml += `<div style="background:var(--charcoal);border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.75rem;display:flex;align-items:flex-start;gap:0.55rem;position:relative;">
+          <div style="width:32px;height:32px;border-radius:5px;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:0.88rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
+          <div style="min-width:0;flex:1;">
+            <div style="font-weight:600;font-size:0.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><a href="/crm/person/${p.person_id}" style="color:var(--text);text-decoration:none;">${esc(p.first_name)} ${esc(p.last_name)}</a></div>
+            ${p.email ? `<div style="font-size:0.73rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.email)}</div>` : ''}
+            ${accessLabel ? `<div style="font-size:0.68rem;margin-top:0.2rem;"><span style="background:rgba(201,168,76,0.12);color:var(--gold);border-radius:4px;padding:0.1rem 0.35rem;font-weight:600;">${esc(accessLabel)}</span></div>` : ''}
           </div>
-          <button class="btn btn-ghost btn-xs" onclick="window.location.href='/crm/person/${p.person_id}'">→</button>
-          <button class="btn btn-danger btn-xs" onclick="detachPerson(${p.person_id})">✕</button>
+          <button onclick="detachPerson(${p.person_id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.75rem;padding:0;line-height:1;flex-shrink:0;" title="Remove">✕</button>
         </div>`;
       });
+      peopleHtml += `</div>`;
     }
-    html += `</div>`;
-    left.innerHTML = html;
+    peopleEl.innerHTML = peopleHtml;
+
+    // ── LEFT COL: Tax Status panel ──
+    const taxEl = document.getElementById('overview-tax-panel');
+    taxEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;">
+      <span>Tax Status</span>
+      <a href="#" onclick="switchTab('tax',document.querySelector('[onclick*=\\'tax\\']'));return false;" style="font-size:0.72rem;color:var(--gold);">View all →</a>
+    </div><div id="ov-tax-inner" style="color:var(--muted);font-size:0.82rem;">Loading…</div>`;
+    apiFetch(`/api/tax-deliveries?company_id=${companyId}`).then(r=>r.json()).then(deliveries=>{
+      const el = document.getElementById('ov-tax-inner');
+      if (!el) return;
+      if (!deliveries.length) { el.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;font-style:italic;">No tax deliveries yet.</div>`; return; }
+      const last3 = deliveries.slice(0,3);
+      const STATUS_DOT = { draft:'#8fa3b8', sent:'#4a90d9', signed:'#3ecf8e', complete:'#3ecf8e', needs_changes:'#ed8936', approved:'#c9a84c' };
+      const STATUS_LABEL = { draft:'Draft', sent:'Sent', signed:'Signed', complete:'Complete', needs_changes:'Needs Changes', approved:'Approved' };
+      el.innerHTML = last3.map(d => {
+        const dot = STATUS_DOT[d.status] || '#8fa3b8';
+        const label = STATUS_LABEL[d.status] || d.status || '';
+        return `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span style="background:rgba(201,168,76,0.12);color:var(--gold);border-radius:4px;padding:0.1rem 0.4rem;font-size:0.72rem;font-weight:700;flex-shrink:0;">${esc(String(d.tax_year||''))}</span>
+          <span style="flex:1;min-width:0;font-size:0.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(d.title||'Return')}</span>
+          <span style="display:flex;align-items:center;gap:0.3rem;font-size:0.75rem;flex-shrink:0;"><span style="width:7px;height:7px;border-radius:50%;background:${dot};display:inline-block;flex-shrink:0;"></span>${esc(label)}</span>
+        </div>`;
+      }).join('');
+    }).catch(()=>{ const el=document.getElementById('ov-tax-inner'); if(el) el.innerHTML='<span style="color:var(--muted);">—</span>'; });
+
+    // ── LEFT COL: Recent Messages panel ──
+    const msgsEl = document.getElementById('overview-messages-panel');
+    msgsEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;">
+      <span>Recent Messages</span>
+      <a href="#" onclick="switchTab('communication',document.querySelector('[onclick*=\\'communication\\']'));return false;" style="font-size:0.72rem;color:var(--gold);">View all →</a>
+    </div><div id="ov-msgs-inner" style="color:var(--muted);font-size:0.82rem;">Loading…</div>`;
+    apiFetch(`/api/messages/company/${companyId}`).then(r=>r.json()).then(threads=>{
+      const el = document.getElementById('ov-msgs-inner');
+      if (!el) return;
+      if (!threads.length) { el.innerHTML=`<div style="color:var(--muted);font-size:0.82rem;font-style:italic;">No messages yet.</div>`; return; }
+      const last3 = threads.slice(0,3);
+      function relTime(ts) { if(!ts) return ''; const d=new Date(ts); const diff=Date.now()-d; if(diff<60000) return 'just now'; if(diff<3600000) return Math.floor(diff/60000)+'m ago'; if(diff<86400000) return Math.floor(diff/3600000)+'h ago'; return d.toLocaleDateString(); }
+      el.innerHTML = last3.map(t => {
+        const personName = t.person ? ((t.person.firstName||'')+' '+(t.person.lastName||'')).trim() : '';
+        return `<div style="padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;" onclick="switchTab('communication',document.querySelector('[onclick*=\\'communication\\']'));setTimeout(()=>loadCoThread(${t.id}),200);">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
+            <span style="font-size:0.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(personName || t.subject || '(no subject)')}</span>
+            <span style="font-size:0.72rem;color:var(--muted);flex-shrink:0;">${relTime(t.lastMessageAt)}</span>
+          </div>
+          <div style="font-size:0.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(t.lastPreview||t.subject||'')}</div>
+        </div>`;
+      }).join('');
+    }).catch(()=>{ const el=document.getElementById('ov-msgs-inner'); if(el) el.innerHTML='<span style="color:var(--muted);">—</span>'; });
+
+    // ── CENTER COL: Bookkeeping panel ──
+    const bkEl = document.getElementById('overview-bookkeeping-panel');
+    bkEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Bookkeeping</div>
+      <div class="form-group" style="margin-bottom:0.75rem;">
+        <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:0.3rem;">Bookkeeper</label>
+        <select class="form-control" id="ov-bk-bookkeeper" style="width:100%;"><option value="">— None assigned —</option></select>
+      </div>
+      <div class="form-group" style="margin-bottom:0.75rem;">
+        <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:0.3rem;">Bookkeeping Service</label>
+        <select class="form-control" id="ov-bk-service" style="width:100%;">
+          <option value="none">None</option>
+          <option value="bank_feed">Bank Feed</option>
+          <option value="accrual">Accrual</option>
+        </select>
+      </div>
+      <button class="btn btn-gold btn-sm" onclick="saveBookkeepingSettings()" style="margin-bottom:0.75rem;">Save</button>
+      <div id="ov-bk-save-msg" style="font-size:0.75rem;color:var(--green);height:1rem;margin-bottom:0.5rem;"></div>
+      <div style="border-top:1px solid var(--border);padding-top:0.65rem;margin-top:0.25rem;">
+        <div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:0.4rem;">QuickBooks Online</div>
+        ${c.realm_id
+          ? `<div style="display:flex;align-items:center;gap:0.5rem;"><span class="badge badge-green">Connected</span>${c.last_sync_at ? `<span style="font-size:0.75rem;color:var(--muted);">Last sync: ${new Date(c.last_sync_at).toLocaleDateString()}</span>` : ''}</div>`
+          : `<span style="font-size:0.82rem;color:var(--muted);">Not connected</span>`
+        }
+      </div>`;
+    // Populate bookkeeper select
+    apiFetch('/firms/team').then(r=>r.json()).then(team=>{
+      const sel = document.getElementById('ov-bk-bookkeeper');
+      if (!sel) return;
+      (Array.isArray(team) ? team : (team.members||[])).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id || m.user_id || '';
+        opt.textContent = (m.name || m.display_name || (m.first_name+' '+m.last_name) || m.email || 'Team member');
+        if (c.bookkeeper_id && String(opt.value) === String(c.bookkeeper_id)) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }).catch(()=>{});
+    // Set service
+    const svcSel = document.getElementById('ov-bk-service');
+    if (svcSel && c.bookkeeping_service) svcSel.value = c.bookkeeping_service;
+
+    // ── RIGHT COL: Quick Links panel ──
+    const qlEl = document.getElementById('overview-quicklinks-panel');
+    let qlHtml = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Quick Links</div>`;
+    const links = [];
+    if (c.stanford_tax_url) links.push(`<a href="${esc(c.stanford_tax_url)}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.5rem;color:var(--gold);font-size:0.84rem;padding:0.3rem 0;text-decoration:none;">🎓 Stanford Tax Organizer</a>`);
+    if (c.realm_id) links.push(`<a href="https://qbo.intuit.com" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.5rem;color:var(--gold);font-size:0.84rem;padding:0.3rem 0;text-decoration:none;">💼 QuickBooks Online</a>`);
+    if (!links.length) qlHtml += `<div style="color:var(--muted);font-size:0.82rem;font-style:italic;">No quick links configured.</div>`;
+    else qlHtml += links.join('');
+    qlEl.innerHTML = qlHtml;
+  }
+
+  async function saveBookkeepingSettings() {
+    const bookkeeper_id = document.getElementById('ov-bk-bookkeeper')?.value || null;
+    const bookkeeping_service = document.getElementById('ov-bk-service')?.value || 'none';
+    const msgEl = document.getElementById('ov-bk-save-msg');
+    try {
+      const res = await apiFetch(`/api/companies/${companyId}`, { method: 'PUT', body: JSON.stringify({ bookkeeper_id: bookkeeper_id || null, bookkeeping_service }) });
+      if (!res.ok) throw new Error('Failed');
+      if (msgEl) { msgEl.textContent = '✓ Saved'; setTimeout(()=>{ msgEl.textContent=''; }, 2000); }
+      if (companyData) { companyData.bookkeeper_id = bookkeeper_id; companyData.bookkeeping_service = bookkeeping_service; }
+      renderHeader(companyData);
+    } catch(e) { if (msgEl) { msgEl.style.color='var(--red)'; msgEl.textContent='Failed to save'; setTimeout(()=>{ msgEl.textContent=''; msgEl.style.color='var(--green)'; }, 2000); } }
   }
 
   function docTypeBadge(mimeType, displayName) {
@@ -1350,13 +1507,27 @@
     } catch(e) { toast('Failed to save notes', 'error'); }
   }
 
-  function openEditModal() {
+  async function openEditModal() {
     if (!companyData) return;
     document.getElementById('ef-name').value = companyData.company_name || '';
     document.getElementById('ef-entity-type').value = companyData.entity_type || '';
     document.getElementById('ef-tax-year-end').value = companyData.tax_year_end || '';
     document.getElementById('ef-stanford').value = companyData.stanford_tax_url || '';
     document.getElementById('ef-status').value = companyData.status || 'active';
+    document.getElementById('ef-bookkeeping-service').value = companyData.bookkeeping_service || 'none';
+    // Populate bookkeeper select
+    const bkSel = document.getElementById('ef-bookkeeper');
+    bkSel.innerHTML = '<option value="">— None —</option>';
+    try {
+      const r = await apiFetch('/firms/team'); const team = await r.json();
+      (Array.isArray(team) ? team : (team.members||[])).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id || m.user_id || '';
+        opt.textContent = (m.name || m.display_name || ((m.first_name||'') + ' ' + (m.last_name||'')).trim() || m.email || 'Team member');
+        if (companyData.bookkeeper_id && String(opt.value) === String(companyData.bookkeeper_id)) opt.selected = true;
+        bkSel.appendChild(opt);
+      });
+    } catch(e) {}
     document.getElementById('edit-modal').classList.add('open');
   }
   function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
@@ -1372,6 +1543,8 @@
       tax_year_end: document.getElementById('ef-tax-year-end').value.trim(),
       stanford_tax_url: document.getElementById('ef-stanford').value.trim(),
       status: document.getElementById('ef-status').value,
+      bookkeeper_id: document.getElementById('ef-bookkeeper').value || null,
+      bookkeeping_service: document.getElementById('ef-bookkeeping-service').value || 'none',
     };
     try {
       const res = await apiFetch(`/api/companies/${companyId}`, { method: 'PUT', body: JSON.stringify(body) });
