@@ -424,7 +424,7 @@
     }
     // MRR from engagement
     if (activeLetter && activeLetter.extracted_data && activeLetter.extracted_data.total_monthly) {
-      html += `<span class="badge" style="background:rgba(201,168,76,0.18);color:var(--gold);border:1px solid rgba(201,168,76,0.35);">$${Number(activeLetter.extracted_data.total_monthly).toFixed(0)}/mo</span> `;
+      html += `<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.35);">$${Number(activeLetter.extracted_data.total_monthly).toFixed(0)}/mo</span> `;
     }
     if (r.billing_status) {
       const bc = {active:'rgba(62,207,142,0.15)',past_due:'rgba(237,137,54,0.15)',cancelled:'rgba(245,101,101,0.15)',inactive:'rgba(143,163,184,0.12)'};
