@@ -144,39 +144,36 @@
 
     /* ── MOBILE (iPhone) ── */
     @media (max-width: 600px) {
-      /* Full-width layout — no sidebar visible */
       .main {
         left: 0 !important;
-        flex-direction: column !important;
-        height: calc(100dvh - var(--header-h)) !important;
+        flex-direction: row !important;
+        overflow: hidden !important;
       }
 
-      /* Inbox fills screen by default */
+      /* Inbox panel — full width, hides when thread open */
       .inbox-panel {
-        width: 100% !important;
-        height: 100% !important;
+        width: 100vw !important;
+        flex-shrink: 0 !important;
         border-right: none !important;
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        z-index: 10;
-        background: var(--navy);
-        transition: transform 0.25s ease;
+        transition: margin-left 0.25s ease;
       }
       .inbox-panel.slide-away {
-        transform: translateX(-100%);
+        margin-left: -100vw;
       }
 
-      /* Thread detail slides in from right */
+      /* Detail panel — full width, always in flow */
       .detail-panel {
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        z-index: 20;
-        background: var(--navy);
-        transform: translateX(100%);
-        transition: transform 0.25s ease;
+        width: 100vw !important;
+        flex-shrink: 0 !important;
+        overflow: hidden;
+        display: flex !important;
+        flex-direction: column !important;
       }
-      .detail-panel.slide-in {
-        transform: translateX(0);
+
+      /* Detail messages — must scroll on iOS */
+      .detail-messages {
+        -webkit-overflow-scrolling: touch;
+        overflow-y: auto !important;
       }
 
       /* Back button */
@@ -190,22 +187,25 @@
         font-size: 0.9rem;
         font-weight: 600;
         cursor: pointer;
-        padding: 0.5rem 0;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border);
+        width: 100%;
+        text-align: left;
+        -webkit-tap-highlight-color: transparent;
       }
 
-      /* Inbox header tweaks */
-      .inbox-header { padding: 1rem; }
-      .inbox-header h2 { font-size: 1.1rem; }
-
-      /* Slightly larger touch targets */
+      /* Touch targets */
       .thread-card { padding: 1rem; }
-      .reply-box textarea { min-height: 60px; font-size: 1rem; }
       .reply-box { padding: 0.75rem 1rem; }
+      .reply-box textarea { min-height: 60px; font-size: 1rem; }
       .detail-messages { padding: 1rem; }
-      .detail-header { padding: 0.75rem 1rem; }
+      .detail-header { padding: 0.75rem 1rem; flex-wrap: wrap; }
 
-      /* Always show resolve actions on mobile (no hover) */
+      /* Always show resolve buttons on mobile */
       .thread-card-actions { display: flex !important; }
+
+      /* Buttons need tap-friendly sizing */
+      .btn { padding: 0.55rem 1rem; }
     }
 </style>
 
@@ -228,7 +228,7 @@
 
   <!-- Thread detail -->
   <div class="detail-panel" id="detailPanel">
-    <button class="mobile-back-btn" id="mobileBackBtn" style="display:none;padding:0.75rem 1rem;border-bottom:1px solid var(--border);width:100%;text-align:left;" onclick="closeMobileThread()">← Back to Messages</button>
+    <button class="mobile-back-btn" id="mobileBackBtn" style="display:none;" onclick="closeMobileThread()">← Back to Messages</button>
     <div class="no-thread-selected" id="noThreadSelected">
       <div class="nts-icon">💬</div>
       <div>Select a thread to read messages</div>
@@ -677,13 +677,14 @@ const _isMobile = () => window.innerWidth <= 600;
 function openMobileThread() {
   if (!_isMobile()) return;
   document.getElementById('inboxPanel').classList.add('slide-away');
-  document.getElementById('detailPanel').classList.add('slide-in');
   document.getElementById('mobileBackBtn').style.display = 'flex';
 }
 
 function closeMobileThread() {
   document.getElementById('inboxPanel').classList.remove('slide-away');
-  document.getElementById('detailPanel').classList.remove('slide-in');
+  document.getElementById('mobileBackBtn').style.display = 'none';
+  activeThreadId = null;
+  renderInbox();
 }
 
 // Patch loadThread to trigger mobile slide
