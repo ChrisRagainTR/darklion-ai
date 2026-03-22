@@ -403,12 +403,20 @@ router.get('/:id/snapshot', async (req, res) => {
 
       // ── Active engagement letters ───────────────────────────────
       pool.query(`
+        CREATE TABLE IF NOT EXISTS engagement_letters (
+          id SERIAL PRIMARY KEY, firm_id INTEGER NOT NULL, relationship_id INTEGER NOT NULL,
+          display_name TEXT NOT NULL DEFAULT '', s3_key TEXT NOT NULL, s3_bucket TEXT NOT NULL,
+          mime_type TEXT DEFAULT 'application/pdf', size_bytes INTEGER, status TEXT NOT NULL DEFAULT 'active',
+          extracted_data JSONB, extracted_at TIMESTAMPTZ, retired_at TIMESTAMPTZ, retired_by INTEGER,
+          created_at TIMESTAMPTZ DEFAULT NOW(), created_by INTEGER
+        )
+      `).then(() => pool.query(`
         SELECT id, display_name, extracted_data, extracted_at, created_at
         FROM engagement_letters
         WHERE firm_id = $1 AND relationship_id = $2 AND status = 'active'
         ORDER BY created_at DESC
         LIMIT 4
-      `).catch(() => ({ rows: [] })),
+      `, [firmId, id])).catch(() => ({ rows: [] })),
 
     ]);
 
