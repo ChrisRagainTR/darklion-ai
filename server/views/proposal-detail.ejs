@@ -187,6 +187,11 @@ function render(p) {
         <div style="font-size:0.78rem;font-weight:700;color:var(--muted);margin-bottom:0.5rem;">ADD-ONS</div>
         ${p.add_ons.map(a => `<div style="font-size:0.82rem;display:flex;justify-content:space-between;padding:0.25rem 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span>${escHtml(a.description)}</span><span style="color:var(--gold)">+$${a.monthlyPrice}/mo</span></div>`).join('')}
       </div>` : ''}
+      ${(p.backwork||[]).length ? `
+      <div style="margin-top:1rem;">
+        <div style="font-size:0.78rem;font-weight:700;color:var(--muted);margin-bottom:0.5rem;">ONE-TIME FEES</div>
+        ${p.backwork.map(b => `<div style="font-size:0.82rem;display:flex;justify-content:space-between;padding:0.25rem 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span>${escHtml(b.description)}</span><span style="color:#ed8936;">$${(b.flatFee||0).toLocaleString()} one-time</span></div>`).join('')}
+      </div>` : ''}
     </div>` : ''}
 
     <!-- Acceptance Details -->

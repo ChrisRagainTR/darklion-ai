@@ -196,6 +196,10 @@ app.use('/firms', firmsRouter);
 // --- Auth (QBO/Gusto OAuth callbacks — public) ---
 app.use('/auth', authRouter);
 
+// --- Public API routes (no auth) — MUST be before requireFirm mounts ---
+const proposalsPublicRouter = require('./routes/proposals-public');
+app.use('/api/proposals/public', apiLimiter, proposalsPublicRouter);
+
 // --- API routes (JWT required) ---
 app.use('/api', requireFirm, apiLimiter, apiRouter);
 
@@ -230,10 +234,6 @@ app.use('/api/billing', requireFirm, apiLimiter, billingRouter);
 
 const taxDeliveryRouter = require('./routes/tax-delivery');
 app.use('/api/tax-deliveries', requireFirm, apiLimiter, taxDeliveryRouter);
-
-// Proposals — public (no auth) — must be BEFORE requireFirm
-const proposalsPublicRouter = require('./routes/proposals-public');
-app.use('/api/proposals/public', proposalsPublicRouter);
 
 // Proposals — staff (auth required)
 const proposalsRouter = require('./routes/proposals');
