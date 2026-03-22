@@ -189,6 +189,7 @@ router.get('/:relId/summary', async (req, res) => {
       a.customers.some(c => c.subscriptions?.some(s => s.status === 'past_due'))
     );
 
+    console.log(`[billing] ${relId} summary: ${results.length} accounts, ${results.reduce((s,a)=>s+(a.customers?.length||0),0)} customers, MRR $${total_mrr.toFixed(2)}`);
     res.json({ configured: true, accounts: results, total_mrr, has_past_due });
   } catch (err) {
     console.error('GET /billing/:relId/summary error:', err);

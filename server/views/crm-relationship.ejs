@@ -1154,20 +1154,27 @@
     } catch(e) { toast(e.message, 'error'); }
   }
 
-  async function loadBillingSummary(el) {
+  async function loadBillingSummary(containerEl) {
+    // billing-summary div is injected by renderBillingConfig — wait a tick for DOM
+    await new Promise(r => setTimeout(r, 50));
     const summaryEl = document.getElementById('billing-summary');
-    if (!summaryEl) return;
+    if (!summaryEl) {
+      console.warn('[billing] billing-summary not in DOM');
+      return;
+    }
     summaryEl.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Fetching from Stripe…</div></div>';
     try {
       const res = await apiFetch(`/api/billing/${relId}/summary`);
-      const data = res.ok ? await res.json() : null;
-      if (!data || !data.configured) {
-        summaryEl.innerHTML = '<div style="color:var(--muted);font-size:0.84rem;">No Stripe data found for these emails.</div>';
+      const raw = await res.json();
+      if (!res.ok) throw new Error(raw.error || 'Stripe request failed');
+      if (!raw.configured) {
+        summaryEl.innerHTML = '<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No Stripe data found for these emails.</div>';
         return;
       }
-      renderBillingSummary(summaryEl, data);
+      renderBillingSummary(summaryEl, raw);
     } catch(e) {
-      summaryEl.innerHTML = `<div style="color:var(--muted);font-size:0.84rem;">Failed to load: ${esc(e.message)}</div>`;
+      console.error('[billing] loadBillingSummary error:', e);
+      summaryEl.innerHTML = `<div style="color:#f56565;font-size:0.84rem;padding:0.5rem 0;">⚠️ ${esc(e.message)}</div>`;
     }
   }
 
