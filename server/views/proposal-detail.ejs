@@ -68,6 +68,7 @@
 
 <script>
 const proposalId = window.location.pathname.split('/')[2];
+let _proposalToken = null;
 const API = '/api/proposals';
 
 function showToast(msg, isErr=false) {
@@ -107,6 +108,7 @@ async function load() {
 }
 
 function render(p) {
+  _proposalToken = p.public_token || null;
   const origin = window.location.origin;
   const link = origin + '/p/' + p.public_token;
   const canShowLink = ['sent','viewed','accepted','signed'].includes(p.status);
@@ -143,6 +145,7 @@ function render(p) {
         </div>
         <div class="detail-actions">
           ${p.status !== 'signed' ? `<a href="/proposals/${p.id}/edit" class="btn btn-outline btn-sm">Edit</a>` : `<span title="Signed proposals cannot be edited — create a new proposal instead" style="font-size:0.78rem;color:var(--muted);font-style:italic;">🔒 Signed — cannot edit</span>`}
+          ${p.status === 'signed' && p.public_token ? `<button class="btn btn-gold btn-sm" onclick="downloadSignedLOE()">⬇ Download Signed LOE</button>` : ''}
           <button class="btn btn-danger btn-sm" onclick="deleteProposal()">Delete</button>
           ${canSaveCRM ? `<button class="btn btn-gold btn-sm" onclick="saveToCRM()">💾 Save to CRM</button>` : ''}
         </div>
@@ -277,6 +280,13 @@ async function saveToCRM() {
 
 function copyLink(url) {
   navigator.clipboard.writeText(url).then(() => showToast('Copied!')).catch(() => showToast('Copy failed', true));
+}
+
+function downloadSignedLOE() {
+  if (!_proposalToken) { showToast('No token available', true); return; }
+  // Open the sign page with ?download=1 — it will auto-trigger the print/download dialog
+  const url = '/p/' + _proposalToken + '/sign?download=1';
+  window.open(url, '_blank');
 }
 
 load();

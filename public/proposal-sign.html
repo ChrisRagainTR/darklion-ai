@@ -176,6 +176,10 @@ async function init() {
 
     if (engagement.status === 'signed') {
       showSuccess();
+      // If ?download=1, auto-trigger download after a short delay for the page to render
+      if (new URLSearchParams(location.search).get('download') === '1') {
+        setTimeout(() => downloadDoc(), 800);
+      }
       return;
     }
 
