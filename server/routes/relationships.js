@@ -200,6 +200,148 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// GET /:id/snapshot — tax deliveries, last 5 threads, activity feed
+router.get('/:id/snapshot', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+
+  try {
+    // Verify relationship belongs to firm
+    const { rows: relRows } = await pool.query(
+      'SELECT id FROM relationships WHERE id = $1 AND firm_id = $2', [id, firmId]
+    );
+    if (!relRows.length) return res.status(404).json({ error: 'Not found' });
+
+    // Get all people + company IDs for this relationship
+    const [peopleRes, companiesRes] = await Promise.all([
+      pool.query('SELECT id FROM people WHERE relationship_id = $1 AND firm_id = $2', [id, firmId]),
+      pool.query('SELECT id FROM companies WHERE relationship_id = $1 AND firm_id = $2', [id, firmId]),
+    ]);
+
+    const personIds = peopleRes.rows.map(r => r.id);
+    const companyIds = companiesRes.rows.map(r => r.id);
+
+    const [taxRes, threadsRes, activityRes] = await Promise.all([
+
+      // ── Tax deliveries ──────────────────────────────────────────────
+      pool.query(`
+        SELECT td.id, td.title, td.tax_year, td.status, td.company_id, td.updated_at, td.created_at,
+          co.company_name,
+          (SELECT json_agg(row_to_json(s)) FROM (
+            SELECT tds.person_id, p.first_name || ' ' || p.last_name AS person_name, tds.approved_at
+            FROM tax_delivery_signers tds
+            JOIN people p ON p.id = tds.person_id
+            WHERE tds.delivery_id = td.id
+          ) s) AS signers
+        FROM tax_deliveries td
+        LEFT JOIN companies co ON co.id = td.company_id
+        WHERE td.firm_id = $1
+          AND (
+            td.company_id = ANY($2::int[])
+            OR td.id IN (SELECT delivery_id FROM tax_delivery_signers WHERE person_id = ANY($3::int[]))
+          )
+        ORDER BY td.tax_year DESC, td.updated_at DESC
+        LIMIT 12
+      `, [firmId, companyIds, personIds]),
+
+      // ── Last 5 threads (across all people) ─────────────────────────
+      personIds.length
+        ? pool.query(`
+          SELECT mt.id, mt.subject, mt.status, mt.last_message_at, mt.person_id,
+            p.first_name || ' ' || p.last_name AS person_name,
+            (SELECT body FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) AS last_body,
+            (SELECT sender_type FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) AS last_sender_type,
+            (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL)::int AS unread_count
+          FROM message_threads mt
+          JOIN people p ON p.id = mt.person_id
+          WHERE mt.firm_id = $1 AND mt.person_id = ANY($2::int[])
+          ORDER BY mt.last_message_at DESC NULLS LAST
+          LIMIT 5
+        `, [firmId, personIds])
+        : Promise.resolve({ rows: [] }),
+
+      // ── Activity feed (synthesized from multiple tables) ────────────
+      pool.query(`
+        SELECT * FROM (
+
+          -- Documents uploaded
+          SELECT
+            'document' AS type,
+            COALESCE(d.display_name, 'Document') AS title,
+            '📄' AS icon,
+            d.created_at AS event_at,
+            CASE d.owner_type
+              WHEN 'person' THEN (SELECT first_name || ' ' || last_name FROM people WHERE id = d.owner_id)
+              WHEN 'company' THEN (SELECT company_name FROM companies WHERE id = d.owner_id)
+              ELSE 'Firm'
+            END AS entity_name
+          FROM documents d
+          WHERE d.firm_id = $1
+            AND (
+              (d.owner_type = 'person' AND d.owner_id = ANY($2::int[]))
+              OR (d.owner_type = 'company' AND d.owner_id = ANY($3::int[]))
+              OR (d.owner_type = 'relationship' AND d.owner_id = $4)
+            )
+
+          UNION ALL
+
+          -- Tax delivery events (non-draft)
+          SELECT
+            'tax' AS type,
+            CASE td.status
+              WHEN 'sent'     THEN 'Tax return sent: ' || td.title
+              WHEN 'signed'   THEN 'Tax return signed: ' || td.title
+              WHEN 'approved' THEN 'Tax return approved: ' || td.title
+              WHEN 'changes_requested' THEN 'Changes requested: ' || td.title
+              ELSE 'Tax return updated: ' || td.title
+            END AS title,
+            '📊' AS icon,
+            td.updated_at AS event_at,
+            COALESCE(co.company_name, (
+              SELECT first_name || ' ' || last_name FROM people p
+              JOIN tax_delivery_signers tds ON tds.person_id = p.id
+              WHERE tds.delivery_id = td.id LIMIT 1
+            ), 'Personal Return') AS entity_name
+          FROM tax_deliveries td
+          LEFT JOIN companies co ON co.id = td.company_id
+          WHERE td.firm_id = $1 AND td.status != 'draft'
+            AND (
+              td.company_id = ANY($3::int[])
+              OR td.id IN (SELECT delivery_id FROM tax_delivery_signers WHERE person_id = ANY($2::int[]))
+            )
+
+          UNION ALL
+
+          -- Message thread activity
+          SELECT
+            'message' AS type,
+            COALESCE(NULLIF(mt.subject, ''), 'Message thread') AS title,
+            '💬' AS icon,
+            mt.last_message_at AS event_at,
+            p.first_name || ' ' || p.last_name AS entity_name
+          FROM message_threads mt
+          JOIN people p ON p.id = mt.person_id
+          WHERE mt.firm_id = $1 AND mt.person_id = ANY($2::int[])
+
+        ) feed
+        ORDER BY event_at DESC NULLS LAST
+        LIMIT 10
+      `, [firmId, personIds, companyIds, id]),
+
+    ]);
+
+    res.json({
+      tax_deliveries: taxRes.rows,
+      threads: threadsRes.rows,
+      activity: activityRes.rows,
+    });
+
+  } catch (err) {
+    console.error('GET /relationships/:id/snapshot error:', err);
+    res.status(500).json({ error: 'Failed to fetch snapshot' });
+  }
+});
+
 // GET /:id/companies — list companies in this relationship
 router.get('/:id/companies', async (req, res) => {
   const firmId = req.firm.id;
