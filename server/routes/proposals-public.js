@@ -165,7 +165,19 @@ router.get('/:token/engagement', async (req, res) => {
     );
     if (!rows.length) return res.status(404).json({ error: 'No engagement found — please accept the proposal first' });
 
-    res.json(rows[0]);
+    const eng = rows[0];
+    // Ensure JSONB fields are parsed arrays (pg may return as string in some configs)
+    const parseJsonField = (v) => {
+      if (Array.isArray(v)) return v;
+      if (typeof v === 'string') { try { return JSON.parse(v); } catch(e) { return []; } }
+      return v || [];
+    };
+    eng.tiers = parseJsonField(eng.tiers);
+    eng.add_ons = parseJsonField(eng.add_ons);
+    eng.backwork = parseJsonField(eng.backwork);
+    eng.selected_tier_indices = parseJsonField(eng.selected_tier_indices);
+
+    res.json(eng);
   } catch (err) {
     console.error('GET /proposals/public/:token/engagement error:', err);
     res.status(500).json({ error: 'Failed to fetch engagement' });
