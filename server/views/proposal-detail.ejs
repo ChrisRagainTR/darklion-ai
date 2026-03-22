@@ -142,7 +142,7 @@ function render(p) {
           <div class="detail-meta">Created ${fmtDate(p.created_at)}</div>
         </div>
         <div class="detail-actions">
-          <a href="/proposals/${p.id}/edit" class="btn btn-outline btn-sm">Edit</a>
+          ${p.status !== 'signed' ? `<a href="/proposals/${p.id}/edit" class="btn btn-outline btn-sm">Edit</a>` : `<span title="Signed proposals cannot be edited — create a new proposal instead" style="font-size:0.78rem;color:var(--muted);font-style:italic;">🔒 Signed — cannot edit</span>`}
           <button class="btn btn-danger btn-sm" onclick="deleteProposal()">Delete</button>
           ${canSaveCRM ? `<button class="btn btn-gold btn-sm" onclick="saveToCRM()">💾 Save to CRM</button>` : ''}
         </div>

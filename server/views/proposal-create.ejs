@@ -545,6 +545,13 @@ async function loadForEdit() {
     });
     if (!r.ok) { showToast('Failed to load proposal', true); renderTiers(); return; }
     const p = await r.json();
+
+    // Block editing signed proposals — redirect to detail page
+    if (p.status === 'signed') {
+      showToast('Signed proposals cannot be edited. Create a new proposal instead.', true);
+      setTimeout(() => { window.location = '/proposals/' + editId; }, 1800);
+      return;
+    }
     document.getElementById('f-title').value = p.title || '';
     document.getElementById('f-client-name').value = p.client_name || '';
     document.getElementById('f-client-email').value = p.client_email || '';
