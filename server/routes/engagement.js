@@ -78,6 +78,15 @@ router.post('/:relId/upload', upload.single('file'), async (req, res) => {
 
     const displayName = req.file.originalname.replace(/\.pdf$/i, '').replace(/_/g, ' ');
 
+    // Enforce 6-letter limit per relationship
+    const { rows: countRows } = await pool.query(
+      'SELECT COUNT(*)::int AS count FROM engagement_letters WHERE relationship_id = $1 AND firm_id = $2',
+      [relId, firmId]
+    );
+    if (countRows[0].count >= 6) {
+      return res.status(400).json({ error: 'Maximum of 6 engagement letters per relationship. Retire existing letters before uploading new ones.' });
+    }
+
     // Insert record immediately so we can return an id
     const { rows } = await pool.query(`
       INSERT INTO engagement_letters (firm_id, relationship_id, display_name, s3_key, s3_bucket, mime_type, size_bytes, status, created_by)
