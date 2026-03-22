@@ -844,7 +844,7 @@ function renderRelationships(list) {
       <th>Name</th><th>Service Tier</th><th>Companies</th><th>People</th><th>Billing</th><th>Actions</th>
     </tr></thead>
     <tbody>${list.map(r => `
-      <tr onclick="window.location.href='/crm/relationship/'+r.id">
+      <tr onclick="window.location.href='/crm/relationship/${r.id}'">
         <td style="font-weight:600;">${esc(r.name)}</td>
         <td>${tierBadge(r.service_tier)}</td>
         <td>${r.company_count ?? 0}</td>
