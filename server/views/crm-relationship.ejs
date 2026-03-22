@@ -251,11 +251,27 @@
 
 <!-- Tab: Engagement -->
 <div id="tab-engagement" class="tab-content">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-    <div>
-      <div style="font-size:1rem;font-weight:700;margin-bottom:0.2rem;">Engagement Letters</div>
-      <div style="font-size:0.82rem;color:var(--muted);">Signed engagement letters for this relationship</div>
+  <!-- Summary bar -->
+  <div id="engagement-summary-bar" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;">
+      <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.25rem;">Contracted MRR</div>
+      <div id="eng-contracted-mrr" style="font-size:1.4rem;font-weight:800;color:var(--gold);">—</div>
     </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;">
+      <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.25rem;">Billed MRR (Stripe)</div>
+      <div id="eng-billed-mrr" style="font-size:1.4rem;font-weight:800;color:var(--text);">—</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;">
+      <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.25rem;">Stripe Status</div>
+      <div id="eng-stripe-status" style="font-size:0.9rem;font-weight:700;margin-top:0.2rem;">—</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;">
+      <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.25rem;">Active Letters</div>
+      <div id="eng-active-count" style="font-size:1.4rem;font-weight:800;color:var(--text);">—</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+    <div style="font-size:0.82rem;color:var(--muted);">Signed engagement letters for this relationship</div>
     <button class="btn btn-gold btn-sm" onclick="openEngagementUpload()">↑ Upload Letter</button>
   </div>
   <div id="engagement-list"><div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div></div>
@@ -815,9 +831,42 @@
       engLetters = res.ok ? await res.json() : [];
       renderEngagementList();
       el.dataset.loaded = '1';
+      updateEngagementSummary();
     } catch(e) {
       el.innerHTML = '<div style="color:var(--muted);padding:1rem;">Failed to load engagement letters.</div>';
     }
+  }
+
+  async function updateEngagementSummary() {
+    // Contracted MRR from active engagement letters
+    const active = engLetters.filter(l => l.status === 'active' && l.extracted_data && l.extracted_data.total_monthly);
+    const contractedMRR = active.reduce((s, l) => s + Number(l.extracted_data.total_monthly), 0);
+    const countEl = document.getElementById('eng-active-count');
+    const contractedEl = document.getElementById('eng-contracted-mrr');
+    if (countEl) countEl.textContent = engLetters.filter(l => l.status === 'active').length;
+    if (contractedEl) contractedEl.textContent = contractedMRR > 0 ? `$${contractedMRR.toFixed(0)}/mo` : '—';
+
+    // Billed MRR + status from Stripe
+    try {
+      const res = await apiFetch(`/api/billing/${relId}/summary`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const billedEl = document.getElementById('eng-billed-mrr');
+      const statusEl = document.getElementById('eng-stripe-status');
+      if (!data.configured || !data.total_mrr) {
+        if (billedEl) billedEl.textContent = 'Not configured';
+        if (statusEl) { statusEl.textContent = '—'; }
+        return;
+      }
+      if (billedEl) { billedEl.textContent = `$${data.total_mrr.toFixed(0)}/mo`; billedEl.style.color = '#3ecf8e'; }
+      if (statusEl) {
+        if (data.has_past_due) {
+          statusEl.innerHTML = '<span style="color:#ed8936;">⚠️ Past Due</span>';
+        } else {
+          statusEl.innerHTML = '<span style="color:#3ecf8e;">✓ Current</span>';
+        }
+      }
+    } catch(e) { /* billing not configured */ }
   }
 
   function renderEngagementList() {
