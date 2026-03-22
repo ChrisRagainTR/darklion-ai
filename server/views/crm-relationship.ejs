@@ -64,7 +64,8 @@
   .entity-row-badges { display: flex; gap: 0.3rem; flex-wrap: wrap; }
 
   /* ── Entity mini cards (2-per-row grid) ── */
-  .entity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+  .entity-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.65rem; }
+  @media (max-width: 900px) { .entity-grid { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 600px) { .entity-grid { grid-template-columns: 1fr; } }
   .entity-mini-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 0.85rem; display: flex; flex-direction: column; gap: 0.35rem; transition: border-color 0.15s; }
   .entity-mini-card:hover { border-color: rgba(201,168,76,0.35); }
