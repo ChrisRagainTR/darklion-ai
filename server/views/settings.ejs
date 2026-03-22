@@ -39,11 +39,11 @@
       <div class="card-title" style="margin-bottom:0.5rem;">📋 Setup Instructions</div>
       <div class="instructions">
         <ol>
-          <li>Add your domain above — you'll receive a DNS TXT verification token.</li>
-          <li>In your DNS provider, add a <strong>TXT record</strong> for your domain with the provided value.</li>
-          <li>Click <strong>Check Verification</strong> once the DNS record has propagated (may take a few minutes).</li>
-          <li>In your <strong>Railway dashboard</strong>, add the custom domain to your DarkLion service and set up a <strong>CNAME</strong> pointing to <code>darklion.ai</code>.</li>
-          <li>Once verified, proposal links will automatically use your custom domain.</li>
+          <li><strong>Enter your domain below</strong> (e.g. <code>my.yourdomain.com</code>) — you'll get a TXT verification token and CNAME target.</li>
+          <li><strong>Log in to your DNS provider</strong> (GoDaddy, Cloudflare, Namecheap, etc.) and add both records shown — the TXT record to verify ownership, and the CNAME record to point traffic to DarkLion.</li>
+          <li><strong>In your Railway dashboard</strong>, go to your DarkLion service → Settings → Networking → Add Custom Domain → enter your domain. Railway will handle the SSL certificate automatically.</li>
+          <li><strong>Click "Check Verification"</strong> once your DNS records have propagated. Usually under 30 minutes.</li>
+          <li>Once verified, all proposal links for your firm will automatically use your custom domain. ✅</li>
         </ol>
       </div>
     </div>
@@ -120,7 +120,24 @@ function renderDomains(domains) {
             </tr>
           </tbody>
         </table>
-        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.75rem;">Also add a CNAME: Name = <strong>${txtName}</strong>, Value = <strong>your Railway domain</strong> (e.g. darklion-ai-production.up.railway.app)</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.5rem;font-weight:700;">Then add a CNAME record to point your domain at DarkLion:</div>
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;margin-bottom:0.75rem;">
+          <thead>
+            <tr style="background:rgba(255,255,255,0.04);">
+              <th style="text-align:left;padding:5px 10px;border:1px solid var(--border);color:var(--muted);font-weight:600;width:20%;">Type</th>
+              <th style="text-align:left;padding:5px 10px;border:1px solid var(--border);color:var(--muted);font-weight:600;width:20%;">Name</th>
+              <th style="text-align:left;padding:5px 10px;border:1px solid var(--border);color:var(--muted);font-weight:600;">Value (points to)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:6px 10px;border:1px solid var(--border);font-family:monospace;">CNAME</td>
+              <td style="padding:6px 10px;border:1px solid var(--border);font-family:monospace;">${txtName}</td>
+              <td style="padding:6px 10px;border:1px solid var(--border);font-family:monospace;">darklion.ai</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.75rem;">⚠️ DNS changes can take up to 24 hours to propagate, though usually under 30 minutes. After adding both records, click "Check Verification" below.</div>
       </div>
       <button class="btn btn-outline btn-xs" onclick="verifyDomain(${d.id}, this)">🔍 Check Verification</button>
     ` : '';
