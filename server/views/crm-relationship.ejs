@@ -436,6 +436,34 @@
     // ── MAIN: operational data ─────────────────────────────────────
     let main = '';
 
+    // Threads (full width)
+    main += `<div class="ov-panel ov-full">
+      <div class="ov-panel-title"><span>💬 Recent Messages</span><a href="/messages" class="btn btn-ghost btn-xs">View all →</a></div>`;
+    if (!snap) {
+      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
+    } else if (!snap.threads || !snap.threads.length) {
+      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No message threads yet.</div>`;
+    } else {
+      main += `<div class="thread-strip">`;
+      snap.threads.forEach(t => {
+        const unread = t.unread_count > 0;
+        const lastBody = (t.last_body || '').replace(/<[^>]*>/g,'').slice(0, 80);
+        const when = t.last_message_at ? timeAgo(t.last_message_at) : '';
+        const fromClient = t.last_sender_type === 'client';
+        main += `<a href="/messages?thread=${t.id}" class="thread-card${unread ? ' has-unread' : ''}">
+          <div class="thread-person">${esc(t.person_name || 'Unknown')}</div>
+          <div class="thread-subject">${esc(t.subject || '(no subject)')}</div>
+          <div class="thread-preview">${fromClient ? '← ' : ''}${esc(lastBody) || '<em style="opacity:.5">No messages</em>'}</div>
+          <div class="thread-meta">
+            <span class="thread-time">${when}</span>
+            ${unread ? `<span class="thread-unread-badge">${t.unread_count}</span>` : ''}
+          </div>
+        </a>`;
+      });
+      main += `</div>`;
+    }
+    main += `</div>`;
+
     // Tax Status
     main += `<div class="ov-panel">
       <div class="ov-panel-title"><span>📊 Tax Status</span></div>`;
@@ -478,34 +506,6 @@
           </div>
         </div>`;
       });
-    }
-    main += `</div>`;
-
-    // Threads (full width)
-    main += `<div class="ov-panel ov-full">
-      <div class="ov-panel-title"><span>💬 Recent Messages</span><a href="/messages" class="btn btn-ghost btn-xs">View all →</a></div>`;
-    if (!snap) {
-      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
-    } else if (!snap.threads || !snap.threads.length) {
-      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No message threads yet.</div>`;
-    } else {
-      main += `<div class="thread-strip">`;
-      snap.threads.forEach(t => {
-        const unread = t.unread_count > 0;
-        const lastBody = (t.last_body || '').replace(/<[^>]*>/g,'').slice(0, 80);
-        const when = t.last_message_at ? timeAgo(t.last_message_at) : '';
-        const fromClient = t.last_sender_type === 'client';
-        main += `<a href="/messages?thread=${t.id}" class="thread-card${unread ? ' has-unread' : ''}">
-          <div class="thread-person">${esc(t.person_name || 'Unknown')}</div>
-          <div class="thread-subject">${esc(t.subject || '(no subject)')}</div>
-          <div class="thread-preview">${fromClient ? '← ' : ''}${esc(lastBody) || '<em style="opacity:.5">No messages</em>'}</div>
-          <div class="thread-meta">
-            <span class="thread-time">${when}</span>
-            ${unread ? `<span class="thread-unread-badge">${t.unread_count}</span>` : ''}
-          </div>
-        </a>`;
-      });
-      main += `</div>`;
     }
     main += `</div>`;
 
