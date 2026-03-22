@@ -469,22 +469,24 @@
     if (!people.length) {
       peopleHtml += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
     } else {
-      peopleHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 0.5rem;">`;
+      peopleHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;min-width:0;">`;
       people.forEach(p => {
         const initials = ((p.first_name||'').charAt(0)+(p.last_name||'').charAt(0)).toUpperCase()||'?';
         const portalBadge = p.portal_enabled ? `<span class="badge badge-green" style="font-size:0.6rem;">Portal</span>` : '';
         const filingBadge = p.filing_status ? `<span class="badge badge-muted" style="font-size:0.6rem;">${filingLabel(p.filing_status)}</span>` : '';
         const phone = p.phone ? `<a href="tel:${esc(p.phone)}" style="color:var(--muted);text-decoration:none;">${esc(fmtPhone(p.phone)||p.phone)}</a>` : '';
         const email = p.email ? `<a href="mailto:${esc(p.email)}" style="color:var(--muted);text-decoration:none;">${esc(p.email)}</a>` : '';
-        peopleHtml += `<a href="/crm/person/${p.id}" style="display:flex;flex-direction:column;gap:0.3rem;padding:0.65rem 0.75rem;border-radius:8px;background:rgba(255,255,255,0.04);box-shadow:0 1px 4px rgba(0,0,0,0.25);text-decoration:none;transition:background 0.15s;min-width:0;" onmouseover="this.style.background='rgba(201,168,76,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+        const rawEmail = p.email || '';
+        const rawPhone = fmtPhone(p.phone) || p.phone || '';
+        peopleHtml += `<div style="display:flex;flex-direction:column;gap:0.3rem;padding:0.65rem 0.75rem;border-radius:8px;background:rgba(255,255,255,0.04);box-shadow:0 1px 4px rgba(0,0,0,0.25);min-width:0;overflow:hidden;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(201,168,76,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'" onclick="window.location='/crm/person/${p.id}'">
           <div style="display:flex;align-items:center;gap:0.5rem;min-width:0;">
             <div style="width:28px;height:28px;border-radius:50%;background:rgba(201,168,76,0.15);display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;color:var(--gold);flex-shrink:0;">${initials}</div>
             <div style="font-size:0.85rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.first_name||'')} ${esc(p.last_name||'')}</div>
           </div>
-          ${email ? `<div style="font-size:0.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${email}</div>` : ''}
-          ${phone ? `<div style="font-size:0.72rem;color:var(--muted);">${phone}</div>` : ''}
+          ${rawEmail ? `<div style="font-size:0.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="event.stopPropagation()"><a href="mailto:${esc(rawEmail)}" style="color:var(--muted);text-decoration:none;">${esc(rawEmail)}</a></div>` : ''}
+          ${rawPhone ? `<div style="font-size:0.72rem;color:var(--muted);" onclick="event.stopPropagation()"><a href="tel:${esc(p.phone)}" style="color:var(--muted);text-decoration:none;">${esc(rawPhone)}</a></div>` : ''}
           ${(filingBadge||portalBadge) ? `<div style="display:flex;gap:0.25rem;margin-top:0.1rem;">${filingBadge}${portalBadge}</div>` : ''}
-        </a>`;
+        </div>`;
       });
       peopleHtml += `</div>`;
     }
@@ -495,14 +497,14 @@
     if (!companies.length) {
       companiesHtml += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
     } else {
-      companiesHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 0.5rem;">`;
+      companiesHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;min-width:0;">`;
       companies.forEach(co => {
         const name = co.company_name || co.name || 'Unknown';
         const initial = name.charAt(0).toUpperCase();
         const entityLabel = co.entity_type ? (entityTypeLabels[co.entity_type]||co.entity_type) : '';
         const qboBadge = co.realm_id ? `<span class="badge badge-green" style="font-size:0.6rem;">QBO</span>` : '';
         const entityBadge = co.entity_type ? `<span class="badge badge-blue" style="font-size:0.6rem;">${entityTypeLabels[co.entity_type]||esc(co.entity_type)}</span>` : '';
-        companiesHtml += `<a href="/crm/company/${co.id}" style="display:flex;flex-direction:column;gap:0.3rem;padding:0.65rem 0.75rem;border-radius:8px;background:rgba(255,255,255,0.04);box-shadow:0 1px 4px rgba(0,0,0,0.25);text-decoration:none;transition:background 0.15s;" onmouseover="this.style.background='rgba(201,168,76,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+        companiesHtml += `<a href="/crm/company/${co.id}" style="display:flex;flex-direction:column;gap:0.3rem;padding:0.65rem 0.75rem;border-radius:8px;background:rgba(255,255,255,0.04);box-shadow:0 1px 4px rgba(0,0,0,0.25);text-decoration:none;transition:background 0.15s;min-width:0;overflow:hidden;" onmouseover="this.style.background='rgba(201,168,76,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
           <div style="display:flex;align-items:center;gap:0.5rem;">
             <div style="width:28px;height:28px;border-radius:5px;background:rgba(201,168,76,0.15);display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;color:var(--gold);flex-shrink:0;">${initial}</div>
             <div style="font-size:0.85rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
