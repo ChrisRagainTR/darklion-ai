@@ -416,18 +416,24 @@
     const activeLetter = snap && snap.active_engagements && snap.active_engagements[0];
     const svcs = activeLetter && activeLetter.extracted_data && activeLetter.extracted_data.services;
     if (svcs) {
-      if (svcs.tax) html += `<span class="badge" style="background:rgba(99,179,237,0.15);color:#63b3ed;border:1px solid rgba(99,179,237,0.3);">Tax</span> `;
-      if (svcs.bookkeeping) html += `<span class="badge" style="background:rgba(62,207,142,0.12);color:#3ecf8e;border:1px solid rgba(62,207,142,0.25);">Bookkeeping</span> `;
-      if (svcs.financial_planning) html += `<span class="badge" style="background:rgba(201,168,76,0.15);color:var(--gold);border:1px solid rgba(201,168,76,0.3);">Financial Planning</span> `;
+      if (svcs.tax) html += `<span class="badge" style="background:rgba(99,179,237,0.18);color:#63b3ed;border:1px solid rgba(99,179,237,0.35);">Tax</span> `;
+      if (svcs.bookkeeping) html += `<span class="badge" style="background:rgba(167,139,250,0.18);color:#a78bfa;border:1px solid rgba(167,139,250,0.35);">Bookkeeping</span> `;
+      if (svcs.financial_planning) html += `<span class="badge" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);">Financial Planning</span> `;
     } else {
       if (r.service_tier) html += tierBadge(r.service_tier) + ' ';
     }
     // MRR from engagement
     if (activeLetter && activeLetter.extracted_data && activeLetter.extracted_data.total_monthly) {
-      html += `<span class="badge badge-gold">$${Number(activeLetter.extracted_data.total_monthly).toFixed(0)}/mo</span> `;
+      html += `<span class="badge" style="background:rgba(201,168,76,0.18);color:var(--gold);border:1px solid rgba(201,168,76,0.35);">$${Number(activeLetter.extracted_data.total_monthly).toFixed(0)}/mo</span> `;
     }
-    if (r.billing_status) html += billingBadge(r.billing_status) + ' ';
-    if (r.created_at) html += `<span class="badge badge-muted">Since ${fmtDate(r.created_at)}</span>`;
+    if (r.billing_status) {
+      const bc = {active:'rgba(62,207,142,0.15)',past_due:'rgba(237,137,54,0.15)',cancelled:'rgba(245,101,101,0.15)',inactive:'rgba(143,163,184,0.12)'};
+      const bt = {active:'#3ecf8e',past_due:'#ed8936',cancelled:'#f56565',inactive:'var(--muted)'};
+      const bl = {active:'Active',past_due:'Past Due',cancelled:'Cancelled',inactive:'Inactive'};
+      const s = r.billing_status;
+      html += `<span class="badge" style="background:${bc[s]||bc.inactive};color:${bt[s]||bt.inactive};border:1px solid ${bt[s]||bt.inactive}40;">${bl[s]||s}</span> `;
+    }
+    if (r.created_at) html += `<span class="badge" style="background:rgba(148,163,184,0.1);color:var(--muted);border:1px solid rgba(148,163,184,0.2);">Since ${fmtDate(r.created_at)}</span>`;
     document.getElementById('entity-badges').innerHTML = html;
   }
 
