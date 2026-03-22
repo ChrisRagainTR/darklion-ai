@@ -92,7 +92,9 @@
     .loe-monthly-table th:last-child { text-align: right; }
     .loe-services-table td, .loe-monthly-table td { padding: 7px 12px; border-bottom: 1px solid #e5e2eb; vertical-align: top; text-align: left; }
     .loe-svc-name { font-weight: 500; text-align: left; }
-    .loe-svc-price { text-align: right !important; font-weight: 600; color: #1a1a2e; white-space: nowrap; vertical-align: top; }
+    .loe-svc-name { width: 75%; }
+    .loe-svc-price { text-align: right !important; font-weight: 600; color: #1a1a2e; white-space: nowrap; vertical-align: top; width: 25%; }
+    .loe-svc-status { text-align: right !important; width: 25%; }
     .loe-svc-status { text-align: right; }
     .loe-status-included { color: #059669; font-weight: 600; font-size: 12px; }
     .loe-total-row td { font-weight: 700; color: #462161; border-top: 2px solid #462161; padding: 8px 12px; }
@@ -259,7 +261,10 @@ function renderPdfOnlyMode() {
     .loe-cover-header-block { border-bottom-color: #462161; }
     table th { background: #462161 !important; color: #fff !important; }
     .loe-svc-price, .loe-total-row td:last-child, .loe-bw-total-row td:last-child,
-    .loe-monthly-table th:last-child, .loe-svc-price-hdr, .loe-backwork-table td:last-child { text-align: right !important; }
+    .loe-monthly-table th:last-child, .loe-svc-price-hdr, .loe-backwork-table td:last-child,
+    .loe-svc-status { text-align: right !important; }
+    .loe-svc-name { width: 75% !important; }
+    .loe-svc-price, .loe-svc-status { width: 25% !important; }
   `;
   document.head.appendChild(pdfStyle);
 
