@@ -141,12 +141,78 @@
       .header-logo .hl-name { display: none; }
       .inbox-panel { width: 240px; }
     }
+
+    /* ── MOBILE (iPhone) ── */
+    @media (max-width: 600px) {
+      /* Full-width layout — no sidebar visible */
+      .main {
+        left: 0 !important;
+        flex-direction: column !important;
+        height: calc(100dvh - var(--header-h)) !important;
+      }
+
+      /* Inbox fills screen by default */
+      .inbox-panel {
+        width: 100% !important;
+        height: 100% !important;
+        border-right: none !important;
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 10;
+        background: var(--navy);
+        transition: transform 0.25s ease;
+      }
+      .inbox-panel.slide-away {
+        transform: translateX(-100%);
+      }
+
+      /* Thread detail slides in from right */
+      .detail-panel {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 20;
+        background: var(--navy);
+        transform: translateX(100%);
+        transition: transform 0.25s ease;
+      }
+      .detail-panel.slide-in {
+        transform: translateX(0);
+      }
+
+      /* Back button */
+      .mobile-back-btn {
+        display: flex !important;
+        align-items: center;
+        gap: 0.4rem;
+        background: none;
+        border: none;
+        color: var(--gold);
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0.5rem 0;
+      }
+
+      /* Inbox header tweaks */
+      .inbox-header { padding: 1rem; }
+      .inbox-header h2 { font-size: 1.1rem; }
+
+      /* Slightly larger touch targets */
+      .thread-card { padding: 1rem; }
+      .reply-box textarea { min-height: 60px; font-size: 1rem; }
+      .reply-box { padding: 0.75rem 1rem; }
+      .detail-messages { padding: 1rem; }
+      .detail-header { padding: 0.75rem 1rem; }
+
+      /* Always show resolve actions on mobile (no hover) */
+      .thread-card-actions { display: flex !important; }
+    }
 </style>
 
 <main class="main">
 
   <!-- Inbox panel -->
-  <div class="inbox-panel">
+  <div class="inbox-panel" id="inboxPanel">
     <div class="inbox-header">
       <h2>💬 Messages</h2>
       <input type="text" class="inbox-search" id="searchBox" placeholder="Search by name…" oninput="filterThreads()">
@@ -162,6 +228,7 @@
 
   <!-- Thread detail -->
   <div class="detail-panel" id="detailPanel">
+    <button class="mobile-back-btn" id="mobileBackBtn" style="display:none;padding:0.75rem 1rem;border-bottom:1px solid var(--border);width:100%;text-align:left;" onclick="closeMobileThread()">← Back to Messages</button>
     <div class="no-thread-selected" id="noThreadSelected">
       <div class="nts-icon">💬</div>
       <div>Select a thread to read messages</div>
@@ -603,6 +670,41 @@ async function removeCompanyTag(threadId, companyId) {
   loadThread(threadId);
 }
 
+
+// ── MOBILE SLIDE NAVIGATION ──────────────────────────────────────────────────
+const _isMobile = () => window.innerWidth <= 600;
+
+function openMobileThread() {
+  if (!_isMobile()) return;
+  document.getElementById('inboxPanel').classList.add('slide-away');
+  document.getElementById('detailPanel').classList.add('slide-in');
+  document.getElementById('mobileBackBtn').style.display = 'flex';
+}
+
+function closeMobileThread() {
+  document.getElementById('inboxPanel').classList.remove('slide-away');
+  document.getElementById('detailPanel').classList.remove('slide-in');
+}
+
+// Patch loadThread to trigger mobile slide
+const _origLoadThread = loadThread;
+window._loadingThread = false;
+// Override inline — we intercept after the call via a wrapper below:
+const _loadThreadWithMobile = async (threadId, silent = false) => {
+  await _origLoadThread(threadId, silent);
+  if (!silent) openMobileThread();
+};
+// Replace global
+window.loadThread = _loadThreadWithMobile;
+// Re-bind inbox list clicks (renderInbox uses onclick="loadThread(...)" which reads window.loadThread)
+// Works automatically since renderInbox references loadThread by name at call time.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── SERVICE WORKER ────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Initial load — show spinner on first load only
 loadInbox(true);
