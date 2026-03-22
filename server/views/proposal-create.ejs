@@ -302,7 +302,7 @@ const WEALTH_DEFAULTS = [
 ];
 
 let tiers = JSON.parse(JSON.stringify(TAX_DEFAULTS));
-let recommendedTier = TAX_DEFAULTS.findIndex(t => t.isRecommended);
+recommendedTier = TAX_DEFAULTS.findIndex(t => t.isRecommended);
 if (recommendedTier < 0) recommendedTier = 1;
 
 function setType(t) {
