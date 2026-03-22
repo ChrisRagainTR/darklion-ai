@@ -17,7 +17,16 @@ router.get('/', async (req, res) => {
        ORDER BY p.created_at DESC`,
       [firmId]
     );
-    res.json(rows);
+
+    // Attach firm's primary custom domain to all proposals
+    const { rows: domRows } = await pool.query(
+      'SELECT domain FROM firm_domains WHERE firm_id = $1 AND verified_at IS NOT NULL ORDER BY created_at ASC LIMIT 1',
+      [firmId]
+    );
+    const customDomain = domRows[0]?.domain || null;
+    const enriched = rows.map(p => ({ ...p, custom_domain: customDomain }));
+
+    res.json(enriched);
   } catch (err) {
     console.error('GET /proposals error:', err);
     res.status(500).json({ error: 'Failed to fetch proposals' });
@@ -65,7 +74,16 @@ router.post('/', async (req, res) => {
         public_token, expires_at || null, userId || null,
       ]
     );
-    res.status(201).json(rows[0]);
+    const proposal = rows[0];
+
+    // Get firm's primary custom domain (if any)
+    const { rows: domRows } = await pool.query(
+      'SELECT domain FROM firm_domains WHERE firm_id = $1 AND verified_at IS NOT NULL ORDER BY created_at ASC LIMIT 1',
+      [firmId]
+    );
+    proposal.custom_domain = domRows[0]?.domain || null;
+
+    res.status(201).json(proposal);
   } catch (err) {
     console.error('POST /proposals error:', err);
     res.status(500).json({ error: 'Failed to create proposal' });
@@ -95,6 +113,13 @@ router.get('/:id([0-9]+)', async (req, res) => {
       'SELECT * FROM proposal_engagements WHERE proposal_id = $1 ORDER BY created_at DESC LIMIT 1',
       [id]
     );
+
+    // Get firm's primary custom domain (if any)
+    const { rows: domRows } = await pool.query(
+      'SELECT domain FROM firm_domains WHERE firm_id = $1 AND verified_at IS NOT NULL ORDER BY created_at ASC LIMIT 1',
+      [firmId]
+    );
+    proposal.custom_domain = domRows[0]?.domain || null;
 
     res.json({
       ...proposal,

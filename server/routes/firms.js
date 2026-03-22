@@ -562,5 +562,99 @@ router.get('/team/:userId/avatar', requireFirm, async (req, res) => {
   }
 });
 
+// ===================== CUSTOM DOMAINS =====================
+const { invalidateDomainCache } = require('../middleware/domainFirm');
+
+// GET /firms/domains — list domains for current firm
+router.get('/domains', requireFirm, async (req, res) => {
+  const firmId = req.firm.id;
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, domain, verified_at, verification_token, created_at FROM firm_domains WHERE firm_id = $1 ORDER BY created_at DESC',
+      [firmId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('[GET /firms/domains]', err);
+    res.status(500).json({ error: 'Failed to fetch domains' });
+  }
+});
+
+// POST /firms/domains — add a custom domain
+router.post('/domains', requireFirm, async (req, res) => {
+  const firmId = req.firm.id;
+  const { domain } = req.body;
+  if (!domain || !domain.trim()) return res.status(400).json({ error: 'Domain is required' });
+  const cleanDomain = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  const verificationToken = 'darklion-verify=' + crypto.randomBytes(16).toString('hex');
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO firm_domains (firm_id, domain, verification_token)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (domain) DO NOTHING
+       RETURNING *`,
+      [firmId, cleanDomain, verificationToken]
+    );
+    if (!rows.length) return res.status(409).json({ error: 'Domain already registered' });
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('[POST /firms/domains]', err);
+    res.status(500).json({ error: 'Failed to add domain' });
+  }
+});
+
+// POST /firms/domains/:id/verify — check DNS TXT record
+router.post('/domains/:id/verify', requireFirm, async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM firm_domains WHERE id = $1 AND firm_id = $2',
+      [id, firmId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Domain not found' });
+    const dom = rows[0];
+
+    // DNS lookup for TXT records
+    const dns = require('dns').promises;
+    let verified = false;
+    try {
+      const records = await dns.resolveTxt(dom.domain);
+      verified = records.flat().some(r => r === dom.verification_token);
+    } catch (_) { /* DNS lookup failed */ }
+
+    if (verified) {
+      await pool.query(
+        'UPDATE firm_domains SET verified_at = NOW() WHERE id = $1',
+        [id]
+      );
+      invalidateDomainCache(dom.domain);
+      res.json({ ok: true, verified: true, message: 'Domain verified!' });
+    } else {
+      res.json({ ok: false, verified: false, message: `DNS TXT record not found. Add TXT record: ${dom.verification_token}` });
+    }
+  } catch (err) {
+    console.error('[POST /firms/domains/:id/verify]', err);
+    res.status(500).json({ error: 'Verification failed' });
+  }
+});
+
+// DELETE /firms/domains/:id — remove domain
+router.delete('/domains/:id', requireFirm, async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query(
+      'DELETE FROM firm_domains WHERE id = $1 AND firm_id = $2 RETURNING domain',
+      [id, firmId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Domain not found' });
+    invalidateDomainCache(rows[0].domain);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete domain' });
+  }
+});
+
 module.exports = router;
 module.exports.auditLog = auditLog;

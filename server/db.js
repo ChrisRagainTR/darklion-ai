@@ -691,6 +691,17 @@ async function initDB() {
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    -- ===================== FIRM CUSTOM DOMAINS =====================
+    CREATE TABLE IF NOT EXISTS firm_domains (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+      domain TEXT NOT NULL UNIQUE,
+      verified_at TIMESTAMPTZ,
+      verification_token TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_firm_domains_domain ON firm_domains(domain);
   `);
 }
 

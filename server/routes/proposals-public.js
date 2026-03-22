@@ -268,7 +268,10 @@ router.get('/:token/pdf', async (req, res) => {
     const { generatePDF } = require('../services/pdf');
 
     // Use the live sign page in pdf-only mode so the full LOE + audit trail renders
-    const appUrl = process.env.APP_URL || 'https://darklion.ai';
+    // Use custom domain if the request came from one, otherwise fall back to APP_URL
+    const appUrl = req.customDomain
+      ? 'https://' + req.customDomain
+      : (process.env.APP_URL || 'https://darklion.ai');
     const pageUrl = `${appUrl}/p/${token}/sign?pdf=1`;
 
     const pdfResult = await generatePDF(null, pageUrl);

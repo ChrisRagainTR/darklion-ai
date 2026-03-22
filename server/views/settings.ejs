@@ -1,0 +1,160 @@
+<%- include('partials/shell-top', { title: 'Settings', activeNav: 'settings' }) %>
+<%- include('partials/shell-globals') %>
+
+<style>
+  .settings-wrap { max-width: 760px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .settings-section { margin-bottom: 2.5rem; }
+  .settings-section h2 { font-size: 1rem; font-weight: 700; margin-bottom: 0.25rem; color: var(--text); }
+  .settings-section p { font-size: 0.82rem; color: var(--muted); margin-bottom: 1rem; }
+  .domain-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 1rem; background: var(--charcoal); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.5rem; }
+  .domain-row .domain-name { font-size: 0.88rem; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .domain-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+  .dns-info { background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.2); border-radius: 6px; padding: 0.6rem 0.85rem; font-size: 0.78rem; color: var(--muted); margin-top: 0.35rem; margin-bottom: 0.25rem; font-family: monospace; word-break: break-all; }
+  .add-domain-row { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+  .add-domain-row .form-control { flex: 1; }
+  .instructions { background: var(--charcoal); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+  .instructions ol { padding-left: 1.25rem; }
+  .instructions li { margin-bottom: 0.35rem; }
+  .instructions code { background: rgba(255,255,255,0.07); padding: 0.1em 0.35em; border-radius: 3px; font-size: 0.85em; color: var(--text); }
+</style>
+
+<div class="settings-wrap">
+  <h1 style="font-size:1.35rem;font-weight:800;margin-bottom:2rem;">⚙️ Settings</h1>
+
+  <!-- ============ CUSTOM DOMAINS ============ -->
+  <div class="settings-section">
+    <h2>🌐 Custom Domains</h2>
+    <p>Let clients access proposals and the portal via your own domain (e.g. <code>my.sentineltax.co</code>) instead of darklion.ai.</p>
+
+    <div id="domains-list">
+      <div class="loading-state"><div class="loading-spinner"></div></div>
+    </div>
+
+    <div class="add-domain-row">
+      <input type="text" class="form-control" id="new-domain-input" placeholder="e.g. my.sentineltax.co" autocomplete="off">
+      <button class="btn btn-gold" onclick="addDomain()">+ Add Domain</button>
+    </div>
+
+    <div style="margin-top:1.5rem;">
+      <div class="card-title" style="margin-bottom:0.5rem;">📋 Setup Instructions</div>
+      <div class="instructions">
+        <ol>
+          <li>Add your domain above — you'll receive a DNS TXT verification token.</li>
+          <li>In your DNS provider, add a <strong>TXT record</strong> for your domain with the provided value.</li>
+          <li>Click <strong>Check Verification</strong> once the DNS record has propagated (may take a few minutes).</li>
+          <li>In your <strong>Railway dashboard</strong>, add the custom domain to your DarkLion service and set up a <strong>CNAME</strong> pointing to <code>darklion.ai</code>.</li>
+          <li>Once verified, proposal links will automatically use your custom domain.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/firms';
+let token = null;
+
+async function apiFetch(path, opts = {}) {
+  if (!token) {
+    token = localStorage.getItem('dl_token');
+    if (!token) { window.location = '/login'; return null; }
+  }
+  const res = await fetch(API + path, {
+    ...opts,
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  if (res.status === 401) { localStorage.removeItem('dl_token'); window.location = '/login'; return null; }
+  return res;
+}
+
+function toast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => el.className = 'toast', 3500);
+}
+
+async function loadDomains() {
+  const res = await apiFetch('/domains');
+  if (!res) return;
+  const domains = await res.json();
+  renderDomains(domains);
+}
+
+function renderDomains(domains) {
+  const el = document.getElementById('domains-list');
+  if (!domains.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:1.5rem 0;text-align:left;color:var(--muted);font-size:0.85rem;">No custom domains yet. Add one below.</div>';
+    return;
+  }
+  el.innerHTML = domains.map(d => {
+    const verified = !!d.verified_at;
+    const badge = verified
+      ? '<span class="badge badge-green">✓ Verified</span>'
+      : '<span class="badge badge-orange">⏳ Pending</span>';
+    const dnsBlock = !verified ? `
+      <div class="dns-info">
+        Add DNS TXT record:<br>
+        <strong>${d.verification_token}</strong>
+      </div>
+      <button class="btn btn-outline btn-xs" onclick="verifyDomain(${d.id}, this)">🔍 Check Verification</button>
+    ` : '';
+    return `
+      <div class="domain-row" id="domain-row-${d.id}">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <span class="domain-name">${d.domain}</span>
+            ${badge}
+          </div>
+          ${dnsBlock}
+        </div>
+        <div class="domain-actions">
+          <button class="btn btn-danger btn-xs" onclick="deleteDomain(${d.id}, '${d.domain}')">🗑 Remove</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function addDomain() {
+  const input = document.getElementById('new-domain-input');
+  const domain = input.value.trim();
+  if (!domain) return toast('Enter a domain name', true);
+  const res = await apiFetch('/domains', { method: 'POST', body: JSON.stringify({ domain }) });
+  if (!res) return;
+  if (res.ok) {
+    input.value = '';
+    toast('Domain added — add the DNS TXT record to verify');
+    loadDomains();
+  } else {
+    const err = await res.json();
+    toast(err.error || 'Failed to add domain', true);
+  }
+}
+
+async function verifyDomain(id, btn) {
+  btn.disabled = true;
+  btn.textContent = '⏳ Checking…';
+  const res = await apiFetch(`/domains/${id}/verify`, { method: 'POST' });
+  if (!res) return;
+  const data = await res.json();
+  toast(data.message || (data.verified ? 'Verified!' : 'Not verified yet'), !data.verified);
+  if (data.verified) loadDomains();
+  else { btn.disabled = false; btn.textContent = '🔍 Check Verification'; }
+}
+
+async function deleteDomain(id, domain) {
+  if (!confirm(`Remove domain "${domain}"?`)) return;
+  const res = await apiFetch(`/domains/${id}`, { method: 'DELETE' });
+  if (!res) return;
+  if (res.ok) { toast('Domain removed'); loadDomains(); }
+  else { const err = await res.json(); toast(err.error || 'Failed to remove domain', true); }
+}
+
+// Init
+loadDomains();
+</script>
+
+<%- include('partials/shell-close') %>

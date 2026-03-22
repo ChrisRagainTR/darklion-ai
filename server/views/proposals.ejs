@@ -173,7 +173,7 @@ function renderList() {
 
   list.innerHTML = filtered.map(p => {
     const origin = window.location.origin;
-    const link = origin + '/p/' + p.public_token;
+    const link = p.custom_domain ? 'https://' + p.custom_domain + '/p/' + p.public_token : origin + '/p/' + p.public_token;
     const canCopyLink = ['sent','viewed','accepted'].includes(p.status);
     return `<div class="proposal-card" data-status="${p.status}" onclick="window.location='/proposals/${p.id}'" style="cursor:pointer;">
       <div class="proposal-main">

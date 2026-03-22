@@ -513,7 +513,7 @@ document.getElementById('save-draft-btn').addEventListener('click', async () => 
 document.getElementById('save-send-btn').addEventListener('click', async () => {
   const result = await saveProposal('sent');
   if (result) {
-    const link = window.location.origin + '/p/' + result.public_token;
+    const link = result.custom_domain ? 'https://' + result.custom_domain + '/p/' + result.public_token : window.location.origin + '/p/' + result.public_token;
     document.getElementById('send-link-input').value = link;
     document.getElementById('view-proposal-link').href = '/proposals/' + result.id;
     document.getElementById('send-modal').classList.add('open');

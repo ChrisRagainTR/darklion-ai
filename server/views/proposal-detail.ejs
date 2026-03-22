@@ -110,7 +110,7 @@ async function load() {
 function render(p) {
   _proposalToken = p.public_token || null;
   const origin = window.location.origin;
-  const link = origin + '/p/' + p.public_token;
+  const link = p.custom_domain ? 'https://' + p.custom_domain + '/p/' + p.public_token : origin + '/p/' + p.public_token;
   const canShowLink = ['sent','viewed','accepted','signed'].includes(p.status);
 
   const tiers = p.tiers || [];

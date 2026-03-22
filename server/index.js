@@ -77,6 +77,10 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: false })); // needed for Pusher auth endpoint
 
+// --- Custom domain firm resolution ---
+const { domainFirmMiddleware } = require('./middleware/domainFirm');
+app.use(domainFirmMiddleware);
+
 // --- Force HTTPS in production ---
 if (IS_PROD) {
   app.use((req, res, next) => {
@@ -221,6 +225,7 @@ app.use('/api/templates', requireFirm, apiLimiter, templatesRouter);
 const dashboardRouter = require('./routes/dashboard');
 app.use('/api/dashboard', requireFirm, apiLimiter, dashboardRouter);
 app.get('/templates', (req, res) => res.render('templates', { title: 'Message Templates', activeNav: 'templates' }));
+app.get('/settings', (req, res) => res.render('settings', { title: 'Settings', activeNav: 'settings' }));
 
 const pipelinesRouter = require('./routes/pipelines');
 app.use('/api/pipelines', requireFirm, apiLimiter, pipelinesRouter);
