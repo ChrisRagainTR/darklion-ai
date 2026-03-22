@@ -1097,7 +1097,10 @@
             <button class="btn btn-outline btn-sm" onclick="addBillingEmail()">Add</button>
           </div>
         </div>
-        <button class="btn btn-gold btn-sm" id="billing-save-btn" onclick="saveBillingConfig()">Save &amp; Refresh</button>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <button class="btn btn-gold btn-sm" id="billing-save-btn" onclick="saveBillingConfig()">Save</button>
+          <button class="btn btn-outline btn-sm" onclick="loadBillingSummary(document.getElementById('billing-content'))" title="Refresh Stripe data">↻ Refresh</button>
+        </div>
       </div>
       <div id="billing-summary" style="flex:1;min-width:300px;">`;
 
