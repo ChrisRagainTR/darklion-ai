@@ -619,8 +619,10 @@ router.post('/domains/:id/verify', requireFirm, async (req, res) => {
     const dns = require('dns').promises;
     let verified = false;
     try {
+      // TXT record is at darklion.<basedomain> e.g. darklion.sentineltax.co
       const parts = dom.domain.split('.');
-      const txtHost = parts.length > 2 ? `_darklion.${parts[0]}.${parts.slice(1).join('.')}` : `_darklion.${dom.domain}`;
+      const baseDomain = parts.length > 2 ? parts.slice(1).join('.') : dom.domain;
+      const txtHost = `darklion.${baseDomain}`;
       const records = await dns.resolveTxt(txtHost);
       verified = records.flat().some(r => r === dom.verification_token);
     } catch (_) { /* DNS lookup failed or record not yet propagated */ }

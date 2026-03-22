@@ -97,12 +97,12 @@ function renderDomains(domains) {
     // Extract subdomain part for DNS name field (e.g. "my.sentineltax.co" -> "my")
     const domainParts = d.domain.split('.');
     const subName = domainParts.length > 2 ? domainParts[0] : '@';
-    // TXT record uses _darklion prefix to avoid conflicting with the CNAME on same name
-    const txtName = subName === '@' ? '_darklion' : '_darklion.' + subName;
+    // TXT record uses darklion name to avoid conflicting with the CNAME on same name
+    const txtName = subName === '@' ? 'darklion' : 'darklion';
     const dnsBlock = !verified ? `
       <div class="dns-info" style="margin-top:0.75rem;">
         <div style="font-size:0.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Step 1 — Add this DNS TXT record to verify ownership:</div>
-        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.5rem;">The TXT record uses a <code>_darklion</code> prefix so it doesn't conflict with the CNAME record in Step 2.</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.5rem;">The TXT record uses a <code>darklion</code> prefix so it doesn't conflict with the CNAME record in Step 2.</div>
         <table style="width:100%;border-collapse:collapse;font-size:0.82rem;margin-bottom:0.75rem;">
           <thead>
             <tr style="background:rgba(255,255,255,0.04);">
