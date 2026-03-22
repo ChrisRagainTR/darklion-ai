@@ -437,39 +437,11 @@
     const taxStatusLabels = { draft:'Draft', sent:'Sent', approved:'Approved', signed:'Signed', changes_requested:'Changes Req.', cancelled:'Cancelled' };
 
     // ── MAIN: operational data ─────────────────────────────────────
+    // Layout: left col = Tax Status (top) + Activity (below), right col = Messages (tall, spans both rows)
     let main = '';
     const currentYear = new Date().getFullYear();
 
-    // Stacked message threads (full width, top)
-    main += `<div class="ov-panel ov-full">
-      <div class="ov-panel-title"><span>💬 Recent Messages</span><a href="/messages" class="btn btn-ghost btn-xs">View all →</a></div>`;
-    if (!snap) {
-      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
-    } else if (!snap.threads || !snap.threads.length) {
-      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No message threads yet.</div>`;
-    } else {
-      snap.threads.forEach(t => {
-        const unread = t.unread_count > 0;
-        const lastBody = (t.last_body || '').replace(/<[^>]*>/g,'').slice(0, 100);
-        const when = t.last_message_at ? timeAgo(t.last_message_at) : '';
-        const fromClient = t.last_sender_type === 'client';
-        const initials = t.person_name ? t.person_name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
-        main += `<a href="/messages?thread=${t.id}" class="thread-row${unread ? ' has-unread' : ''}">
-          <div class="thread-row-avatar">${initials}</div>
-          <div class="thread-row-body">
-            <div class="thread-row-top">
-              <span class="thread-row-name">${esc(t.person_name || 'Unknown')}${unread ? `<span class="thread-unread-badge">${t.unread_count}</span>` : ''}</span>
-              <span class="thread-row-time">${when}</span>
-            </div>
-            <div class="thread-row-subject">${esc(t.subject || '(no subject)')}</div>
-            <div class="thread-row-preview">${fromClient ? '← ' : ''}${esc(lastBody) || '<em style="opacity:.5">No messages</em>'}</div>
-          </div>
-        </a>`;
-      });
-    }
-    main += `</div>`;
-
-    // Tax Status — last 2 years only, height = content
+    // Tax Status — left col, row 1 — last 2 years, height=content
     const recentTax = snap ? (snap.tax_deliveries || []).filter(td => {
       const yr = parseInt(td.tax_year);
       return !yr || yr >= currentYear - 1;
@@ -478,7 +450,7 @@
       <div class="ov-panel-title"><span>📊 Tax Status</span></div>`;
     if (!snap) {
       main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
-    } else if (!recentTax.length) {
+    } else if (!recentTax || !recentTax.length) {
       main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No recent tax deliveries.</div>`;
     } else {
       recentTax.forEach(td => {
@@ -497,7 +469,7 @@
     }
     main += `</div>`;
 
-    // Recent Activity — below tax status
+    // Recent Activity — left col, row 2 — directly below Tax Status
     main += `<div class="ov-panel" style="align-self:start;">
       <div class="ov-panel-title"><span>🕐 Recent Activity</span></div>`;
     if (!snap) {
@@ -514,6 +486,35 @@
             <div class="act-meta">${esc(a.entity_name||'')}${when ? ' · ' + when : ''}</div>
           </div>
         </div>`;
+      });
+    }
+    main += `</div>`;
+
+    // Recent Messages — right col, spans both rows (row 1+2)
+    main += `<div class="ov-panel" style="grid-row: span 2;">
+      <div class="ov-panel-title"><span>💬 Recent Messages</span><a href="/messages" class="btn btn-ghost btn-xs">View all →</a></div>`;
+    if (!snap) {
+      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
+    } else if (!snap.threads || !snap.threads.length) {
+      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No message threads yet.</div>`;
+    } else {
+      snap.threads.forEach(t => {
+        const unread = t.unread_count > 0;
+        const lastBody = (t.last_body || '').replace(/<[^>]*>/g,'').slice(0, 120);
+        const when = t.last_message_at ? timeAgo(t.last_message_at) : '';
+        const fromClient = t.last_sender_type === 'client';
+        const initials = t.person_name ? t.person_name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
+        main += `<a href="/messages?thread=${t.id}" class="thread-row${unread ? ' has-unread' : ''}">
+          <div class="thread-row-avatar">${initials}</div>
+          <div class="thread-row-body">
+            <div class="thread-row-top">
+              <span class="thread-row-name">${esc(t.person_name || 'Unknown')}${unread ? `<span class="thread-unread-badge">${t.unread_count}</span>` : ''}</span>
+              <span class="thread-row-time">${when}</span>
+            </div>
+            <div class="thread-row-subject">${esc(t.subject || '(no subject)')}</div>
+            <div class="thread-row-preview">${fromClient ? '← ' : ''}${esc(lastBody) || '<em style="opacity:.5">No messages</em>'}</div>
+          </div>
+        </a>`;
       });
     }
     main += `</div>`;
