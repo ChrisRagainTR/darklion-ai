@@ -411,10 +411,10 @@ router.get('/:id/snapshot', async (req, res) => {
           created_at TIMESTAMPTZ DEFAULT NOW(), created_by INTEGER
         )
       `).then(() => pool.query(`
-        SELECT id, display_name, extracted_data, extracted_at, created_at
+        SELECT DISTINCT ON (id) id, display_name, extracted_data, extracted_at, created_at
         FROM engagement_letters
         WHERE firm_id = $1 AND relationship_id = $2 AND status = 'active'
-        ORDER BY created_at DESC
+        ORDER BY id, created_at DESC
         LIMIT 4
       `, [firmId, id])).catch(() => ({ rows: [] })),
 

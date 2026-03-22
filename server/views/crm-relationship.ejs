@@ -14,7 +14,8 @@
   .tab-content.active { display: block; }
 
   /* ── Entity header ── */
-  .entity-header { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); background: rgba(15,25,35,0.4); flex-wrap: wrap; }
+  .entity-header { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); background: rgba(15,25,35,0.4); flex-wrap: wrap; position: static !important; }
+  .tab-bar { position: static !important; }
   .entity-back { font-size: 0.82rem; color: var(--muted); text-decoration: none; white-space: nowrap; }
   .entity-back:hover { color: var(--gold); }
   .entity-header-content { flex: 1; min-width: 0; }
@@ -552,7 +553,9 @@
       centerCol += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No active engagement letters.</div>`;
     } else {
       centerCol += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">`;
-      snap.active_engagements.forEach(l => {
+      // Deduplicate by id
+      const seen = new Set();
+      snap.active_engagements.filter(l => { if(seen.has(l.id)) return false; seen.add(l.id); return true; }).forEach(l => {
         const d = l.extracted_data;
         const svcPills = d&&d.services?[
           d.services.tax?`<span style="padding:0.08rem 0.35rem;border-radius:20px;font-size:0.62rem;font-weight:700;background:rgba(99,179,237,0.15);color:#63b3ed;">Tax</span>`:'',
@@ -600,7 +603,7 @@
 
     // ── RIGHT COL: Billing + Team ────────────────────────────────────
     let rightCol = `<div class="ov-panel" id="ov-billing-panel" style="align-self:start;">
-      <div class="ov-panel-title"><span>💳 Billing</span><a href="#" onclick="switchTab('billing',document.querySelectorAll('.tab-item')[4]);return false;" class="btn btn-ghost btn-xs">Details →</a></div>`;
+      <div class="ov-panel-title"><span>💳 Billing</span><a href="#" onclick="switchTab('billing',document.querySelectorAll('.tab-item')[4]);return false;" class="btn btn-ghost btn-xs">View →</a></div>`;
     if (!snap) {
       rightCol += `<div style="color:var(--muted);font-size:0.78rem;">Loading…</div>`;
     } else {
