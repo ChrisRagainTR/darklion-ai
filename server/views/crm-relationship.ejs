@@ -135,7 +135,7 @@
   .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.15rem; }
 
   /* ── Overview dashboard grid ── */
-  .ov-outer { display: grid; grid-template-columns: 1fr 260px; gap: 0.85rem; padding: 1rem 1.5rem; align-items: start; }
+  .ov-outer { display: grid; grid-template-columns: 1fr 320px; gap: 0.85rem; padding: 1rem 1.5rem; align-items: start; }
   .ov-main { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
   .ov-full { grid-column: 1 / -1; }
   .ov-sidebar { display: flex; flex-direction: column; gap: 0.85rem; }
@@ -419,60 +419,11 @@
     const entityTypeLabels = { llc:'LLC', s_corp:'S-Corp', c_corp:'C-Corp', partnership:'Partnership', sole_prop:'Sole Prop', trust:'Trust', nonprofit:'Non-Profit', other:'Other' };
     const taxStatusColors = { draft:'#8fa3b8', sent:'#63b3ed', approved:'#3ecf8e', signed:'#3ecf8e', changes_requested:'#ed8936', cancelled:'#f56565' };
     const taxStatusLabels = { draft:'Draft', sent:'Sent', approved:'Approved', signed:'Signed', changes_requested:'Changes Req.', cancelled:'Cancelled' };
-    const tierLabels = { standard:'Standard', legacy_blueprint:'Legacy Blueprint', tax_only:'Tax Only', full_service:'Full Service' };
 
-    // ── MAIN panels ───────────────────────────────────────────────
+    // ── MAIN: operational data ─────────────────────────────────────
     let main = '';
 
-    // People panel
-    main += `<div class="ov-panel">
-      <div class="ov-panel-title"><span>👤 People (${people.length})</span><a href="/crm/people?add=1" class="btn btn-ghost btn-xs">+ Add</a></div>`;
-    if (!people.length) {
-      main += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
-    } else {
-      main += `<div class="entity-grid">`;
-      people.forEach(p => {
-        const initials = ((p.first_name||'').charAt(0) + (p.last_name||'').charAt(0)).toUpperCase() || '?';
-        const portalBadge = p.portal_enabled ? `<span class="badge badge-green" style="font-size:0.62rem;">Portal</span>` : '';
-        const filingBadge = p.filing_status ? `<span class="badge badge-muted" style="font-size:0.62rem;">${filingLabel(p.filing_status)}</span>` : '';
-        const meta = [p.email, p.phone].filter(Boolean).join(' · ');
-        main += `<div class="entity-mini-card">
-          <div class="entity-mini-top"><div class="entity-mini-avatar">${initials}</div>
-          <div class="entity-mini-name"><a href="/crm/person/${p.id}">${esc(p.first_name||'')} ${esc(p.last_name||'')}</a></div></div>
-          ${meta ? `<div class="entity-mini-meta">${esc(meta)}</div>` : ''}
-          <div class="entity-mini-footer"><div class="entity-mini-badges">${filingBadge}${portalBadge}</div>
-          <a href="/crm/person/${p.id}" class="btn btn-ghost btn-xs" style="padding:0.15rem 0.45rem;">→</a></div>
-        </div>`;
-      });
-      main += `</div>`;
-    }
-    main += `</div>`;
-
-    // Companies panel
-    main += `<div class="ov-panel">
-      <div class="ov-panel-title"><span>🏢 Companies (${companies.length})</span><a href="/crm/companies?add=1" class="btn btn-ghost btn-xs">+ Add</a></div>`;
-    if (!companies.length) {
-      main += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
-    } else {
-      main += `<div class="entity-grid">`;
-      companies.forEach(co => {
-        const name = co.company_name || co.name || 'Unknown';
-        const initial = name.charAt(0).toUpperCase();
-        const entityBadge = co.entity_type ? `<span class="badge badge-blue" style="font-size:0.62rem;">${entityTypeLabels[co.entity_type]||esc(co.entity_type)}</span>` : '';
-        const qboBadge = co.realm_id ? `<span class="badge badge-green" style="font-size:0.62rem;">QBO</span>` : '';
-        main += `<div class="entity-mini-card">
-          <div class="entity-mini-top"><div class="entity-mini-avatar square">${initial}</div>
-          <div class="entity-mini-name"><a href="/crm/company/${co.id}">${esc(name)}</a></div></div>
-          ${co.entity_type ? `<div class="entity-mini-meta">${entityTypeLabels[co.entity_type]||esc(co.entity_type)}</div>` : ''}
-          <div class="entity-mini-footer"><div class="entity-mini-badges">${entityBadge}${qboBadge}</div>
-          <a href="/crm/company/${co.id}" class="btn btn-ghost btn-xs" style="padding:0.15rem 0.45rem;">→</a></div>
-        </div>`;
-      });
-      main += `</div>`;
-    }
-    main += `</div>`;
-
-    // Tax Status panel
+    // Tax Status
     main += `<div class="ov-panel">
       <div class="ov-panel-title"><span>📊 Tax Status</span></div>`;
     if (!snap) {
@@ -490,13 +441,13 @@
           (td.company_id ? `<a href="/crm/company/${td.company_id}" style="color:var(--text);text-decoration:none;">${esc(td.title||name)}</a>` : esc(td.title||name)) +
           `</span>
           <div class="tax-status-dot" style="background:${dotColor};" title="${label}"></div>
-          <span style="font-size:0.7rem;color:${dotColor};font-weight:600;min-width:60px;text-align:right;">${label}</span>
+          <span style="font-size:0.7rem;color:${dotColor};font-weight:600;min-width:55px;text-align:right;">${label}</span>
         </div>`;
       });
     }
     main += `</div>`;
 
-    // Recent Activity panel
+    // Recent Activity
     main += `<div class="ov-panel">
       <div class="ov-panel-title"><span>🕐 Recent Activity</span></div>`;
     if (!snap) {
@@ -517,7 +468,7 @@
     }
     main += `</div>`;
 
-    // Threads (full width in main)
+    // Threads (full width)
     main += `<div class="ov-panel ov-full">
       <div class="ov-panel-title"><span>💬 Recent Messages</span><a href="/messages" class="btn btn-ghost btn-xs">View all →</a></div>`;
     if (!snap) {
@@ -545,10 +496,70 @@
     }
     main += `</div>`;
 
-    // ── SIDEBAR ───────────────────────────────────────────────────
+    // ── SIDEBAR: who is this account ──────────────────────────────
     let sidebar = '';
 
-    // Team panel
+    // People summary
+    sidebar += `<div class="ov-panel">
+      <div class="ov-panel-title"><span>👤 People (${people.length})</span><a href="/crm/people?add=1" class="btn btn-ghost btn-xs">+ Add</a></div>`;
+    if (!people.length) {
+      sidebar += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
+    } else {
+      people.forEach(p => {
+        const initials = ((p.first_name||'').charAt(0) + (p.last_name||'').charAt(0)).toUpperCase() || '?';
+        const portalBadge = p.portal_enabled ? `<span class="badge badge-green" style="font-size:0.6rem;">Portal</span>` : '';
+        const filingBadge = p.filing_status ? `<span class="badge badge-muted" style="font-size:0.6rem;">${filingLabel(p.filing_status)}</span>` : '';
+        sidebar += `<div class="team-member">
+          <div class="team-avatar">${initials}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="team-name"><a href="/crm/person/${p.id}" style="color:var(--text);text-decoration:none;">${esc(p.first_name||'')} ${esc(p.last_name||'')}</a></div>
+            <div class="team-role">${p.email ? esc(p.email) : ''}</div>
+          </div>
+          <div style="display:flex;gap:0.25rem;flex-wrap:wrap;justify-content:flex-end;">${filingBadge}${portalBadge}</div>
+        </div>`;
+      });
+    }
+    sidebar += `</div>`;
+
+    // Companies summary
+    sidebar += `<div class="ov-panel">
+      <div class="ov-panel-title"><span>🏢 Companies (${companies.length})</span><a href="/crm/companies?add=1" class="btn btn-ghost btn-xs">+ Add</a></div>`;
+    if (!companies.length) {
+      sidebar += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
+    } else {
+      companies.forEach(co => {
+        const name = co.company_name || co.name || 'Unknown';
+        const initial = name.charAt(0).toUpperCase();
+        const entityLabel = co.entity_type ? (entityTypeLabels[co.entity_type] || co.entity_type) : '';
+        const qboBadge = co.realm_id ? `<span class="badge badge-green" style="font-size:0.6rem;">QBO</span>` : '';
+        sidebar += `<div class="team-member">
+          <div class="team-avatar" style="border-radius:5px;">${initial}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="team-name"><a href="/crm/company/${co.id}" style="color:var(--text);text-decoration:none;">${esc(name)}</a></div>
+            <div class="team-role">${entityLabel}</div>
+          </div>
+          ${qboBadge}
+        </div>`;
+      });
+    }
+    sidebar += `</div>`;
+
+    // Engagement summary (from snap)
+    sidebar += `<div class="ov-panel">
+      <div class="ov-panel-title"><span>📄 Engagement</span><a href="#" onclick="switchTab('engagement',document.querySelectorAll('.tab-item')[1]);return false;" class="btn btn-ghost btn-xs">View →</a></div>`;
+    if (!snap) {
+      sidebar += `<div style="color:var(--muted);font-size:0.78rem;">Loading…</div>`;
+    } else if (!snap.engagement_count) {
+      sidebar += `<div style="color:var(--muted);font-size:0.78rem;">No engagement letters on file.</div>`;
+    } else {
+      sidebar += `<div style="font-size:0.82rem;">${snap.engagement_count} letter${snap.engagement_count !== 1 ? 's' : ''} on file</div>`;
+      if (snap.latest_engagement) {
+        sidebar += `<div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem;">Latest: ${fmtDate(snap.latest_engagement)}</div>`;
+      }
+    }
+    sidebar += `</div>`;
+
+    // Team
     sidebar += `<div class="ov-panel" id="team-panel">
       <div class="ov-panel-title"><span>👥 Account Team</span></div>
       <div id="team-members-list"><div style="color:var(--muted);font-size:0.78rem;">Loading…</div></div>
@@ -558,7 +569,7 @@
       </div>
     </div>`;
 
-    // Details panel
+    // Details
     sidebar += `<div class="ov-panel">
       <div class="ov-panel-title">Details <button class="btn btn-ghost btn-xs" onclick="openEditModal()">Edit</button></div>
       <div class="info-row"><span class="info-label">Tier</span><span class="info-val">${r.service_tier ? tierBadge(r.service_tier) : '<span style="color:var(--muted);">—</span>'}</span></div>
@@ -572,9 +583,9 @@
         <div class="ov-sidebar">${sidebar}</div>
       </div>`;
 
-    // Load team after render
     loadTeamPanel();
   }
+
 
     function timeAgo(dateStr) {
     const d = new Date(dateStr);
