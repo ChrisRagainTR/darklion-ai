@@ -63,7 +63,7 @@
   .table-wrap td { padding: 0.7rem 1rem; font-size: 0.85rem; border-bottom: 1px solid rgba(201,168,76,0.07); vertical-align: middle; }
   .table-wrap tr:last-child td { border-bottom: none; }
   .table-wrap tr:hover td { background: rgba(201,168,76,0.03); }
-  td.amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.amount, th.amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   td.amount.drillable { cursor: pointer; transition: color 0.15s; }
   td.amount.drillable:hover { color: var(--gold-light) !important; text-decoration: underline; }
   .badge-pending { background: rgba(237,137,54,0.12); color: var(--orange); }
@@ -1724,8 +1724,10 @@
     html += '</colgroup>';
     html += '<thead><tr>';
     for (let i = 0; i < colCount; i++) {
-      const title = columns[i]?.ColTitle || '';
-      html += i === 0 ? `<th>${esc(title)}</th>` : `<th class="amount">${esc(title)}</th>`;
+      const title = columns[i]?.ColTitle || (i === 0 ? '' : '');
+      html += i === 0
+        ? `<th style="text-align:left;">${esc(title)}</th>`
+        : `<th class="amount" style="text-align:right;padding-right:1rem;">${esc(title)}</th>`;
     }
     html += '</tr></thead>';
     html += '<tbody>';
@@ -1772,7 +1774,7 @@
         const drillable = !isNaN(num) && num !== 0 && sDate && eDate && !isTotal ? ' drillable' : '';
         const drillAttr = drillable
           ? ` data-account="${esc(accountName)}" data-start="${esc(sDate)}" data-end="${esc(eDate)}" onclick="bk_openDrilldown('${esc(accountName)}','${esc(sDate)}','${esc(eDate)}','${display.replace(/['"<>]/g,'')}')"` : '';
-        html += `<td class="amount${drillable}"${drillAttr} style="${isTotal ? 'font-weight:700;' : ''}">${display}</td>`;
+        html += `<td class="amount${drillable}"${drillAttr} style="padding-right:1rem;${isTotal ? 'font-weight:700;' : ''}">${display}</td>`;
       }
     }
     html += '</tr>';
