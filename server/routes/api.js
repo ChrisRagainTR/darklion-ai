@@ -217,9 +217,8 @@ router.get('/companies/:id([0-9]+)', async (req, res) => {
     );
     co.people = peopleRows;
 
-    // Add migration for new columns if not exist, fetch bookkeeper name
+    // Fetch bookkeeper name if set
     try {
-      await pool.query(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS bookkeeper_id INTEGER, ADD COLUMN IF NOT EXISTS bookkeeping_service TEXT`);
       if (co.bookkeeper_id) {
         const { rows: bkRows } = await pool.query(
           'SELECT id, COALESCE(display_name, name) AS name FROM firm_users WHERE id = $1 AND firm_id = $2',

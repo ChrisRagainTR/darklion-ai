@@ -371,6 +371,16 @@ async function initDB() {
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
 
+    -- Add bookkeeper_id and bookkeeping_service to companies (idempotent)
+    DO $$ BEGIN
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS bookkeeper_id INTEGER;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+    DO $$ BEGIN
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS bookkeeping_service TEXT DEFAULT 'none';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
     -- Add folder_section and folder_category to documents (idempotent)
     DO $$ BEGIN
       ALTER TABLE documents ADD COLUMN IF NOT EXISTS folder_section TEXT DEFAULT 'firm_uploaded';
