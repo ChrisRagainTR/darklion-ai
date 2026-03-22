@@ -470,14 +470,15 @@
         const filingBadge = p.filing_status ? `<span class="badge badge-muted" style="font-size:0.6rem;">${filingLabel(p.filing_status)}</span>` : '';
         const phone = p.phone ? `<a href="tel:${esc(p.phone)}" style="color:var(--muted);text-decoration:none;">${esc(fmtPhone(p.phone)||p.phone)}</a>` : '';
         const email = p.email ? `<a href="mailto:${esc(p.email)}" style="color:var(--muted);text-decoration:none;">${esc(p.email)}</a>` : '';
-        peopleHtml += `<div class="team-member" style="padding:0.5rem 0;">
-          <div class="team-avatar" style="width:32px;height:32px;font-size:0.8rem;">${initials}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:0.86rem;font-weight:700;"><a href="/crm/person/${p.id}" style="color:var(--text);text-decoration:none;">${esc(p.first_name||'')} ${esc(p.last_name||'')}</a></div>
-            <div style="font-size:0.72rem;color:var(--muted);">${[email, phone].filter(Boolean).join(' · ')}</div>
+        peopleHtml += `<a href="/crm/person/${p.id}" style="display:flex;flex-direction:column;gap:0.3rem;padding:0.65rem 0.75rem;border-radius:8px;background:rgba(255,255,255,0.04);box-shadow:0 1px 4px rgba(0,0,0,0.25);text-decoration:none;transition:background 0.15s;" onmouseover="this.style.background='rgba(201,168,76,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(201,168,76,0.15);display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;color:var(--gold);flex-shrink:0;">${initials}</div>
+            <div style="font-size:0.85rem;font-weight:700;color:var(--text);">${esc(p.first_name||'')} ${esc(p.last_name||'')}</div>
           </div>
-          <div style="display:flex;gap:0.25rem;flex-wrap:wrap;justify-content:flex-end;">${filingBadge}${portalBadge}</div>
-        </div>`;
+          ${email ? `<div style="font-size:0.72rem;color:var(--muted);">${email}</div>` : ''}
+          ${phone ? `<div style="font-size:0.72rem;color:var(--muted);">${phone}</div>` : ''}
+          ${(filingBadge||portalBadge) ? `<div style="display:flex;gap:0.25rem;margin-top:0.1rem;">${filingBadge}${portalBadge}</div>` : ''}
+        </a>`;
       });
       peopleHtml += `</div>`;
     }
@@ -495,14 +496,14 @@
         const entityLabel = co.entity_type ? (entityTypeLabels[co.entity_type]||co.entity_type) : '';
         const qboBadge = co.realm_id ? `<span class="badge badge-green" style="font-size:0.6rem;">QBO</span>` : '';
         const entityBadge = co.entity_type ? `<span class="badge badge-blue" style="font-size:0.6rem;">${entityTypeLabels[co.entity_type]||esc(co.entity_type)}</span>` : '';
-        companiesHtml += `<div class="team-member" style="padding:0.5rem 0;">
-          <div class="team-avatar" style="width:32px;height:32px;border-radius:6px;font-size:0.8rem;">${initial}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:0.86rem;font-weight:700;"><a href="/crm/company/${co.id}" style="color:var(--text);text-decoration:none;">${esc(name)}</a></div>
-            <div style="font-size:0.72rem;color:var(--muted);">${entityLabel}</div>
+        companiesHtml += `<a href="/crm/company/${co.id}" style="display:flex;flex-direction:column;gap:0.3rem;padding:0.65rem 0.75rem;border-radius:8px;background:rgba(255,255,255,0.04);box-shadow:0 1px 4px rgba(0,0,0,0.25);text-decoration:none;transition:background 0.15s;" onmouseover="this.style.background='rgba(201,168,76,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <div style="width:28px;height:28px;border-radius:5px;background:rgba(201,168,76,0.15);display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;color:var(--gold);flex-shrink:0;">${initial}</div>
+            <div style="font-size:0.85rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
           </div>
-          <div style="display:flex;gap:0.25rem;">${entityBadge}${qboBadge}</div>
-        </div>`;
+          ${entityLabel ? `<div style="font-size:0.72rem;color:var(--muted);">${esc(entityLabel)}</div>` : ''}
+          ${(entityBadge||qboBadge) ? `<div style="display:flex;gap:0.25rem;margin-top:0.1rem;">${entityBadge}${qboBadge}</div>` : ''}
+        </a>`;
       });
       companiesHtml += `</div>`;
     }
