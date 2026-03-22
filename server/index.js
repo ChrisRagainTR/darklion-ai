@@ -228,6 +228,24 @@ app.use('/api/billing', requireFirm, apiLimiter, billingRouter);
 const taxDeliveryRouter = require('./routes/tax-delivery');
 app.use('/api/tax-deliveries', requireFirm, apiLimiter, taxDeliveryRouter);
 
+// Proposals — public (no auth) — must be BEFORE requireFirm
+const proposalsPublicRouter = require('./routes/proposals-public');
+app.use('/api/proposals/public', proposalsPublicRouter);
+
+// Proposals — staff (auth required)
+const proposalsRouter = require('./routes/proposals');
+app.use('/api/proposals', requireFirm, apiLimiter, proposalsRouter);
+
+// Proposal pages (staff)
+app.get('/proposals', (req, res) => res.render('proposals', { title: 'Proposals', activeNav: 'proposals' }));
+app.get('/proposals/new', (req, res) => res.render('proposal-create', { title: 'New Proposal', activeNav: 'proposals' }));
+app.get('/proposals/:id([0-9]+)', (req, res) => res.render('proposal-detail', { title: 'Proposal', activeNav: 'proposals' }));
+app.get('/proposals/:id([0-9]+)/edit', (req, res) => res.render('proposal-create', { title: 'Edit Proposal', activeNav: 'proposals' }));
+
+// Public client-facing proposal pages (no auth)
+app.get('/p/:token', (req, res) => res.sendFile(path.join(publicDir, 'proposal-view.html')));
+app.get('/p/:token/sign', (req, res) => res.sendFile(path.join(publicDir, 'proposal-sign.html')));
+
 const portalAuthRouter = require('./routes/portal-auth');
 const portalRouter = require('./routes/portal');
 const { requirePortal } = require('./middleware/requirePortal');

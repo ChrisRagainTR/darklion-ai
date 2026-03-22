@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Engagement Letter — Sentinel Wealth &amp; Tax</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f1923; --gold: #c9a84c; --gold-light: #e2c068;
+      --text: #1a202c; --muted: #718096; --border: #e2e8f0;
+      --card-bg: #ffffff; --page-bg: #f7fafc;
+      --green: #38a169; --red: #e53e3e;
+    }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--page-bg); color: var(--text); }
+
+    .site-header { background: var(--navy); padding: 0.9rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    .site-logo { color: #fff; font-weight: 800; font-size: 1rem; }
+    .site-logo span { color: var(--gold); }
+    .secure-badge { background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.3); color: var(--gold); font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 999px; }
+
+    .content { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem; }
+
+    /* LOE Document styles */
+    .loe-doc { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 2.5rem; margin-bottom: 2rem; }
+
+    /* Signature card */
+    .sig-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; margin-bottom: 1.5rem; }
+    .sig-card h2 { font-size: 1.1rem; font-weight: 800; margin-bottom: 1.25rem; }
+    .signer-block { border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem; }
+    .signer-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+    .form-control { width: 100%; border: 1.5px solid var(--border); border-radius: 7px; padding: 0.5rem 0.75rem; font-size: 0.9rem; color: var(--text); outline: none; transition: border-color 0.15s; font-family: inherit; }
+    .form-control:focus { border-color: var(--gold); }
+
+    /* Canvas */
+    .canvas-wrap { position: relative; }
+    .sig-canvas { border: 2px solid var(--border); border-radius: 7px; background: #fff; width: 100%; cursor: crosshair; touch-action: none; display: block; }
+    .sig-canvas.active { border-color: var(--navy); }
+    .canvas-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 0.8rem; color: #cbd5e0; pointer-events: none; }
+    .clear-btn { margin-top: 0.4rem; font-size: 0.78rem; background: none; border: 1px solid var(--border); border-radius: 5px; padding: 0.25rem 0.6rem; cursor: pointer; color: var(--muted); }
+    .clear-btn:hover { border-color: var(--navy); color: var(--navy); }
+
+    /* Checkbox */
+    .agree-row { display: flex; align-items: flex-start; gap: 0.6rem; margin-top: 0.75rem; }
+    .agree-row input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--gold); flex-shrink: 0; }
+    .agree-row label { font-size: 0.82rem; color: var(--muted); line-height: 1.5; cursor: pointer; }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.7rem 1.5rem; border-radius: 8px; border: none; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.15s; text-decoration: none; font-family: inherit; width: 100%; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-gold { background: var(--gold); color: var(--navy); }
+    .btn-gold:not(:disabled):hover { background: var(--gold-light); }
+    .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--muted); }
+
+    .back-link { display: block; text-align: center; margin-top: 1rem; font-size: 0.82rem; color: var(--muted); cursor: pointer; text-decoration: underline; }
+
+    .success-state { text-align: center; padding: 3rem 1rem; }
+    .loading-state { text-align: center; padding: 3rem 1rem; }
+    .spin { display: inline-block; width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: var(--navy); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .content { padding: 1rem; }
+      .loe-doc { padding: 1.25rem; }
+    }
+  </style>
+
+  <!-- LOE Document Styles -->
+  <style id="loe-styles">
+    .loe-doc { font-family: 'Georgia', 'Times New Roman', serif; font-size: 0.92rem; line-height: 1.7; color: #1a202c; }
+    .loe-doc h1 { font-size: 1.25rem; font-weight: 700; text-align: center; margin-bottom: 0.25rem; }
+    .loe-doc .loe-subtitle { font-size: 0.85rem; text-align: center; color: #718096; margin-bottom: 1.5rem; }
+    .loe-doc .loe-firm { text-align: center; font-size: 0.82rem; color: #4a5568; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid #e2e8f0; }
+    .loe-doc .loe-firm strong { display: block; font-size: 1rem; color: #1a202c; }
+    .loe-doc .loe-parties { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+    .loe-doc .loe-parties p { margin-bottom: 0.4rem; font-size: 0.88rem; }
+    .loe-doc .loe-parties strong { color: #1a202c; }
+    .loe-doc h2 { font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1.5rem; margin-bottom: 0.5rem; color: #1a202c; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem; }
+    .loe-doc p { margin-bottom: 0.75rem; }
+    .loe-doc ul { margin: 0.5rem 0 0.75rem 1.5rem; }
+    .loe-doc ul li { margin-bottom: 0.25rem; }
+    .loe-doc .loe-fee-box { background: #fffbeb; border: 1px solid #f6e05e; border-radius: 8px; padding: 0.75rem 1rem; margin: 0.75rem 0; }
+    .loe-doc .loe-fee-box .fee-amount { font-size: 1.2rem; font-weight: 800; color: #744210; }
+    .loe-doc .loe-date-line { font-style: italic; color: #718096; font-size: 0.85rem; margin-bottom: 1.5rem; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-logo">Sentinel <span>Wealth &amp; Tax</span> | Engagement Letter</div>
+  <div class="secure-badge">🔒 Secure Document</div>
+</header>
+
+<div id="root" class="loading-state">
+  <div class="spin"></div>
+  <p style="margin-top:1rem;color:var(--muted);">Loading engagement letter…</p>
+</div>
+
+<script>
+const token = location.pathname.split('/').slice(-2)[0]; // /p/:token/sign
+const API_BASE = '/api/proposals/public/' + token;
+
+let engagement = null;
+let canvases = [];
+let canvasData = [null, null]; // base64 for each signer
+let drawing = [false, false];
+
+async function init() {
+  try {
+    const r = await fetch(API_BASE + '/engagement');
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      showError(err.error || 'Engagement not found. Please accept the proposal first.');
+      return;
+    }
+    engagement = await r.json();
+
+    if (engagement.status === 'signed') {
+      showSuccess();
+      return;
+    }
+
+    renderSignPage();
+  } catch(e) {
+    showError('Failed to load. Please try again.');
+  }
+}
+
+function showError(msg) {
+  document.getElementById('root').innerHTML = `
+    <div class="content">
+      <div style="text-align:center;padding:3rem 1rem;">
+        <div style="font-size:3rem;margin-bottom:1rem;">😕</div>
+        <div style="font-size:1.25rem;font-weight:800;margin-bottom:0.5rem;">Engagement Not Found</div>
+        <p style="color:var(--muted);">${escHtml(msg)}</p>
+        <a href="/p/${token}" style="display:inline-block;margin-top:1.5rem;font-size:0.85rem;color:var(--navy);">← Return to Proposal</a>
+      </div>
+    </div>`;
+}
+
+function showSuccess() {
+  document.getElementById('root').innerHTML = `
+    <div class="content">
+      <div class="success-state">
+        <div style="font-size:3rem;margin-bottom:1rem;">✅</div>
+        <div style="font-size:1.5rem;font-weight:800;margin-bottom:0.5rem;">Engagement Signed!</div>
+        <p style="color:var(--muted);margin-bottom:1.5rem;">Your engagement letter has been fully executed. Your advisor will be in touch shortly.</p>
+        <button class="btn btn-gold" style="max-width:280px;margin:0 auto;" onclick="downloadDoc()">⬇ Download / Print Copy</button>
+        <p style="margin-top:0.75rem;font-size:0.8rem;color:var(--muted);">You may close this window.</p>
+      </div>
+    </div>`;
+}
+
+function downloadDoc() {
+  const w = window.open('', '_blank');
+  if (!w) return;
+  const loeHtml = generateLOEForPrint(engagement);
+  w.document.write(loeHtml);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 500);
+}
+
+function renderSignPage() {
+  const eng = engagement;
+  const isDual = eng.require_dual_signature;
+  const loeHtml = eng.engagement_type === 'wealth' ? generateWealthLOE(eng) : generateTaxLOE(eng);
+  const sigTitle = isDual ? 'Sign This Agreement — Both Parties Required' : 'Sign This Agreement';
+
+  document.getElementById('root').innerHTML = `
+    <div class="content">
+      <div class="loe-doc" id="loe-document">${loeHtml}</div>
+
+      <div class="sig-card">
+        <h2>✍️ ${escHtml(sigTitle)}</h2>
+        ${renderSignerBlock(0, isDual ? 'First Signer' : 'Your Signature')}
+        ${isDual ? renderSignerBlock(1, 'Second Signer') : ''}
+
+        <button class="btn btn-gold" id="sign-btn" onclick="submitSignatures()" disabled>
+          Sign &amp; Accept Agreement
+        </button>
+        <a class="back-link" onclick="resetAndGoBack()">← Choose a Different Package</a>
+      </div>
+    </div>`;
+
+  initCanvases(isDual ? 2 : 1);
+  updateSignBtn();
+}
+
+function renderSignerBlock(i, label) {
+  return `<div class="signer-block" id="signer-block-${i}">
+    <div class="signer-label">${escHtml(label)}</div>
+    <div class="form-group">
+      <label>Full Legal Name</label>
+      <input type="text" class="form-control" id="sig-name-${i}" placeholder="Type your full legal name" oninput="updateSignBtn()">
+    </div>
+    <div class="form-group">
+      <label>Signature</label>
+      <div class="canvas-wrap">
+        <canvas id="sig-canvas-${i}" class="sig-canvas" height="140"></canvas>
+        <div class="canvas-label" id="canvas-hint-${i}">Sign here with mouse or finger</div>
+      </div>
+      <button class="clear-btn" onclick="clearCanvas(${i})">Clear</button>
+    </div>
+    <div class="agree-row">
+      <input type="checkbox" id="agree-${i}" onchange="updateSignBtn()">
+      <label for="agree-${i}">I agree this electronic signature is legally binding and serves as my signature on the above Engagement Letter.</label>
+    </div>
+  </div>`;
+}
+
+function initCanvases(count) {
+  for (let i = 0; i < count; i++) {
+    const canvas = document.getElementById('sig-canvas-' + i);
+    if (!canvas) continue;
+    canvases[i] = canvas;
+
+    // Retina scaling
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const w = canvas.offsetWidth || 600;
+    canvas.width = w * dpr;
+    canvas.height = 140 * dpr;
+    canvas.style.height = '140px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.strokeStyle = '#1a202c';
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    let isDrawing = false;
+    let lastX = 0, lastY = 0;
+
+    function getPos(e) {
+      const r = canvas.getBoundingClientRect();
+      if (e.touches) {
+        return [e.touches[0].clientX - r.left, e.touches[0].clientY - r.top];
+      }
+      return [e.clientX - r.left, e.clientY - r.top];
+    }
+
+    function startDraw(e) {
+      e.preventDefault();
+      isDrawing = true;
+      [lastX, lastY] = getPos(e);
+      canvas.classList.add('active');
+      const hint = document.getElementById('canvas-hint-' + i);
+      if (hint) hint.style.display = 'none';
+    }
+    function draw(e) {
+      if (!isDrawing) return;
+      e.preventDefault();
+      const [x, y] = getPos(e);
+      const c = canvas.getContext('2d');
+      c.beginPath();
+      c.moveTo(lastX, lastY);
+      c.lineTo(x, y);
+      c.stroke();
+      [lastX, lastY] = [x, y];
+    }
+    function endDraw(e) {
+      if (!isDrawing) return;
+      isDrawing = false;
+      canvasData[i] = canvas.toDataURL('image/png');
+      updateSignBtn();
+    }
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', endDraw);
+  }
+}
+
+function clearCanvas(i) {
+  const canvas = canvases[i];
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  canvasData[i] = null;
+  const hint = document.getElementById('canvas-hint-' + i);
+  if (hint) hint.style.display = '';
+  canvas.classList.remove('active');
+  updateSignBtn();
+}
+
+function updateSignBtn() {
+  const isDual = engagement && engagement.require_dual_signature;
+  const count = isDual ? 2 : 1;
+  let ready = true;
+  for (let i = 0; i < count; i++) {
+    const name = document.getElementById('sig-name-' + i)?.value.trim();
+    const agreed = document.getElementById('agree-' + i)?.checked;
+    const hasCanvas = !!canvasData[i];
+    if (!name || !agreed || !hasCanvas) { ready = false; break; }
+  }
+  const btn = document.getElementById('sign-btn');
+  if (btn) btn.disabled = !ready;
+}
+
+async function submitSignatures() {
+  const btn = document.getElementById('sign-btn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  const isDual = engagement.require_dual_signature;
+  const count = isDual ? 2 : 1;
+
+  try {
+    let lastResult;
+    for (let i = 0; i < count; i++) {
+      const name = document.getElementById('sig-name-' + i).value.trim();
+      const sig = canvasData[i];
+      const r = await fetch(API_BASE + '/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signerIndex: i, signed_by_name: name, signature_data: sig }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to submit signature');
+      }
+      lastResult = await r.json();
+    }
+    engagement.status = 'signed';
+    showSuccess();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Sign & Accept Agreement';
+    alert(e.message || 'Failed to submit. Please try again.');
+  }
+}
+
+async function resetAndGoBack() {
+  if (!confirm('This will cancel your selection and return to the proposal. Continue?')) return;
+  try {
+    await fetch(API_BASE + '/reset', { method: 'POST' });
+  } catch(e) {}
+  window.location = '/p/' + token;
+}
+
+// ============================================================
+// LOE GENERATION
+// ============================================================
+
+function fmtDate(d) {
+  if (!d) return new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function getTierName(eng) {
+  const tiers = eng.tiers || [];
+  if (eng.engagement_type === 'wealth') {
+    const indices = eng.selected_tier_indices || [];
+    if (indices.length) return indices.map(i => (tiers[i] && tiers[i].name) || '').filter(Boolean).join(' + ');
+    return tiers[0]?.name || 'Selected Package';
+  }
+  const idx = eng.selected_tier_index;
+  if (idx !== null && idx !== undefined && tiers[idx]) return tiers[idx].name;
+  return tiers[0]?.name || 'Selected Package';
+}
+
+function getTierBullets(eng) {
+  const tiers = eng.tiers || [];
+  if (eng.engagement_type === 'wealth') {
+    const indices = eng.selected_tier_indices || [];
+    return indices.flatMap(i => (tiers[i] && tiers[i].bullets) || []);
+  }
+  const idx = eng.selected_tier_index;
+  if (idx !== null && idx !== undefined && tiers[idx]) return tiers[idx].bullets || [];
+  return tiers[0]?.bullets || [];
+}
+
+function generateTaxLOE(eng) {
+  const companyName = eng.company_name || eng.client_name || 'Client';
+  const contactName = eng.contact_name || eng.signed_by_name || companyName;
+  const contactEmail = eng.contact_email || '';
+  const address1 = eng.address_line1 || '';
+  const address2 = eng.address_line2 || '';
+  const entityType = eng.entity_type || 'Individual';
+  const owners = eng.owners || '';
+  const tierName = getTierName(eng);
+  const bullets = getTierBullets(eng);
+  const monthlyFee = parseFloat(eng.monthly_price) || 0;
+  const addOns = eng.add_ons || [];
+  const backwork = eng.backwork || [];
+  const isDual = eng.require_dual_signature;
+
+  const totalAddOns = addOns.reduce((s, a) => s + (parseFloat(a.monthlyPrice) || 0), 0);
+  const totalMonthly = monthlyFee + totalAddOns;
+
+  return `
+    <h1>ENGAGEMENT LETTER FOR TAX SERVICES</h1>
+    <div class="loe-subtitle">Sentinel Wealth &amp; Tax — Flat-Fee CPA Advisory</div>
+    <div class="loe-date-line">Effective Date: ${fmtDate(null)}</div>
+
+    <div class="loe-firm">
+      <strong>Sentinel Wealth &amp; Tax</strong>
+      Christopher G. Ragain, CPA/PFS<br>
+      Bonita Springs, Florida<br>
+      <a href="mailto:chris@sentinelwealth.co" style="color:inherit;">chris@sentinelwealth.co</a>
+    </div>
+
+    <div class="loe-parties">
+      <p><strong>Client:</strong> ${escHtml(companyName)}</p>
+      ${contactName && contactName !== companyName ? `<p><strong>Contact:</strong> ${escHtml(contactName)}</p>` : ''}
+      ${contactEmail ? `<p><strong>Email:</strong> ${escHtml(contactEmail)}</p>` : ''}
+      ${address1 ? `<p><strong>Address:</strong> ${escHtml(address1)}${address2 ? ', ' + escHtml(address2) : ''}</p>` : ''}
+      <p><strong>Entity Type:</strong> ${escHtml(entityType)}</p>
+      ${owners ? `<p><strong>Owners/Principals:</strong> ${escHtml(owners)}</p>` : ''}
+    </div>
+
+    <p>Dear ${escHtml(companyName)},</p>
+
+    <p>Thank you for selecting Sentinel Wealth &amp; Tax to serve your tax and advisory needs. This Engagement Letter confirms the scope of services, fees, and mutual responsibilities for our professional relationship.</p>
+
+    <h2>1. Scope of Services — ${escHtml(tierName)} Package</h2>
+    <p>We will provide the following services under your selected plan:</p>
+    <ul>
+      ${bullets.map(b => `<li>${escHtml(b)}</li>`).join('')}
+      ${addOns.map(a => `<li>${escHtml(a.description)} (Add-On)</li>`).join('')}
+    </ul>
+
+    ${backwork.length ? `
+    <h2>2. Back Work / Prior Year Services</h2>
+    <p>The following prior-period services have been agreed upon as one-time engagements:</p>
+    <ul>
+      ${backwork.map(b => `<li>${escHtml(b.description)} — $${parseFloat(b.flatFee||0).toFixed(2)} (flat fee)</li>`).join('')}
+    </ul>` : ''}
+
+    <h2>${backwork.length ? '3' : '2'}. Professional Fees</h2>
+    <div class="loe-fee-box">
+      <div class="fee-amount">$${totalMonthly.toFixed(2)}/month</div>
+      <div style="font-size:0.82rem;color:#92400e;margin-top:0.25rem;">
+        Base (${escHtml(tierName)}): $${monthlyFee.toFixed(2)}/mo
+        ${addOns.map(a => `<br>+ ${escHtml(a.description)}: $${parseFloat(a.monthlyPrice||0).toFixed(2)}/mo`).join('')}
+      </div>
+    </div>
+    <p>Fees are billed monthly in advance via ACH or credit card on file. The flat-fee structure covers all services listed above for the applicable tax year. Additional services outside this scope will be quoted and agreed upon separately before work commences.</p>
+
+    <h2>${backwork.length ? '4' : '3'}. Term and Renewal</h2>
+    <p>This engagement begins on the effective date above and continues on a month-to-month basis unless either party provides thirty (30) days' written notice of termination. Either party may terminate this engagement at any time with such notice, subject to payment of fees for services already rendered.</p>
+
+    <h2>${backwork.length ? '5' : '4'}. Client Responsibilities</h2>
+    <p>Client agrees to:</p>
+    <ul>
+      <li>Provide complete, accurate, and timely information necessary for the preparation of tax returns and related services.</li>
+      <li>Review and approve all tax returns before filing and assume full responsibility for the accuracy of information provided.</li>
+      <li>Notify us promptly of any significant changes in financial circumstances, entity structure, or ownership.</li>
+      <li>Respond to correspondence and requests for information within a reasonable timeframe (typically 5 business days).</li>
+      <li>Maintain current payment method on file and authorize monthly billing as described above.</li>
+    </ul>
+
+    <h2>${backwork.length ? '6' : '5'}. Professional Standards</h2>
+    <p>Our services will be performed in accordance with applicable standards of the American Institute of Certified Public Accountants (AICPA) and the Florida Board of Accountancy. All work product is intended solely for your use and should not be provided to third parties without our express written consent.</p>
+
+    <h2>${backwork.length ? '7' : '6'}. Limitation of Liability</h2>
+    <p>In connection with this engagement, we shall not be liable to you for any claims, liabilities, or expenses relating to our services in excess of the fees paid to us in the twelve (12) months preceding the claim, except to the extent finally determined to have resulted from our own intentional misconduct or gross negligence. In no event shall we be liable for consequential, special, incidental, or punitive damages.</p>
+
+    <h2>${backwork.length ? '8' : '7'}. Dispute Resolution</h2>
+    <p>Any dispute arising under this agreement shall be resolved by binding arbitration in Collier County, Florida, in accordance with the rules of the American Arbitration Association. The prevailing party shall be entitled to recover reasonable attorneys' fees and costs.</p>
+
+    <h2>${backwork.length ? '9' : '8'}. Confidentiality</h2>
+    <p>We will keep all client information strictly confidential in accordance with our professional obligations and applicable law. We will not disclose your information to third parties except as required by law, with your consent, or as necessary to provide our services (e.g., cloud storage providers bound by equivalent confidentiality obligations).</p>
+
+    <h2>${backwork.length ? '10' : '9'}. Entire Agreement</h2>
+    <p>This Engagement Letter constitutes the entire agreement between the parties and supersedes all prior understandings, representations, or agreements. Any modification must be in writing and signed by both parties.</p>
+
+    <p>By signing below, ${isDual ? 'both parties acknowledge and' : 'you acknowledge and'} agree to the terms of this Engagement Letter.</p>
+  `;
+}
+
+function generateWealthLOE(eng) {
+  const companyName = eng.company_name || eng.client_name || 'Client';
+  const contactName = eng.contact_name || eng.signed_by_name || companyName;
+  const contactEmail = eng.contact_email || '';
+  const address1 = eng.address_line1 || '';
+  const address2 = eng.address_line2 || '';
+  const aumFee = parseFloat(eng.aum_fee_percent) || 0.69;
+  const tierName = getTierName(eng);
+  const bullets = getTierBullets(eng);
+  const monthlyFee = parseFloat(eng.monthly_price) || 0;
+  const isDual = eng.require_dual_signature;
+
+  return `
+    <h1>INVESTMENT ADVISORY AGREEMENT</h1>
+    <div class="loe-subtitle">Sentinel Wealth &amp; Tax — Wealth Management Services</div>
+    <div class="loe-date-line">Effective Date: ${fmtDate(null)}</div>
+
+    <div class="loe-firm">
+      <strong>Sentinel Wealth &amp; Tax</strong>
+      Christopher G. Ragain, CPA/PFS<br>
+      Bonita Springs, Florida<br>
+      <a href="mailto:chris@sentinelwealth.co" style="color:inherit;">chris@sentinelwealth.co</a>
+    </div>
+
+    <div class="loe-parties">
+      <p><strong>Client:</strong> ${escHtml(companyName)}</p>
+      ${contactName && contactName !== companyName ? `<p><strong>Contact:</strong> ${escHtml(contactName)}</p>` : ''}
+      ${contactEmail ? `<p><strong>Email:</strong> ${escHtml(contactEmail)}</p>` : ''}
+      ${address1 ? `<p><strong>Address:</strong> ${escHtml(address1)}${address2 ? ', ' + escHtml(address2) : ''}</p>` : ''}
+    </div>
+
+    <p>Dear ${escHtml(companyName)},</p>
+
+    <p>Thank you for entrusting Sentinel Wealth &amp; Tax with your investment advisory and wealth management needs. This Investment Advisory Agreement ("Agreement") sets forth the terms under which we will provide discretionary investment management and related financial planning services.</p>
+
+    <h2>1. Services — ${escHtml(tierName)} Program</h2>
+    <p>We will provide comprehensive wealth management services including:</p>
+    <ul>
+      ${bullets.map(b => `<li>${escHtml(b)}</li>`).join('')}
+      <li>Ongoing portfolio monitoring and rebalancing</li>
+      <li>Annual investment policy statement review</li>
+      <li>Coordination with tax planning strategies</li>
+    </ul>
+
+    <h2>2. Investment Discretion</h2>
+    <p>You hereby grant Sentinel Wealth &amp; Tax limited discretionary authority to manage the assets in your designated accounts. We will manage your portfolio in accordance with your stated investment objectives, risk tolerance, time horizon, and any specific restrictions you communicate to us in writing. We will act in your best interest at all times as your fiduciary.</p>
+
+    <h2>3. Advisory Fees</h2>
+    <div class="loe-fee-box">
+      <div class="fee-amount">${aumFee.toFixed(2)}% per year</div>
+      <div style="font-size:0.82rem;color:#92400e;margin-top:0.25rem;">
+        Annual AUM advisory fee, billed quarterly in arrears.<br>
+        ${monthlyFee > 0 ? `Planning retainer: $${monthlyFee.toFixed(2)}/month` : ''}
+      </div>
+    </div>
+    <p>The annual advisory fee of <strong>${aumFee.toFixed(2)}%</strong> is calculated on the average daily value of assets under management and billed quarterly in arrears. Fees are pro-rated for partial periods. In addition to our advisory fee, you may incur third-party charges such as custodial fees, fund expense ratios, and transaction costs, which are separate from and in addition to our fees.</p>
+
+    <h2>4. Custodial Arrangements</h2>
+    <p>Your assets will be held in custody by an independent, qualified custodian selected by you or mutually agreed upon. We do not maintain custody of client funds or securities. You will receive account statements directly from the custodian at least quarterly.</p>
+
+    <h2>5. Investment Risk Disclosure</h2>
+    <p>All investing involves risk, including the possible loss of principal. Past performance does not guarantee future results. Our recommendations are based on information you provide and our professional judgment; we cannot guarantee any specific investment outcome. You should review and update your investment profile with us whenever your financial situation or objectives change.</p>
+
+    <h2>6. Termination</h2>
+    <p>Either party may terminate this Agreement upon thirty (30) days' written notice. Upon termination, we will cease discretionary management and assist in the orderly transition of your account. Fees will be pro-rated through the termination date and any prepaid fees will be refunded.</p>
+
+    <h2>7. Fiduciary Duty</h2>
+    <p>Sentinel Wealth &amp; Tax acts as a fiduciary in providing investment advisory services. We are required to act in your best interest and to disclose any material conflicts of interest. Our detailed ADV Part 2A (Firm Brochure) and Part 2B (Brochure Supplement) are available upon request and describe our services, fees, conflicts of interest, and disciplinary history.</p>
+
+    <h2>8. Proxy Voting</h2>
+    <p>Unless you instruct us otherwise in writing, you will retain the right to vote proxies for all securities held in your accounts. We do not accept authority to vote client proxies.</p>
+
+    <h2>9. Limitation of Liability</h2>
+    <p>We shall not be liable for any loss arising from following your instructions, market conditions, or events outside our reasonable control. Our liability for any claim shall not exceed the fees paid in the twelve (12) months preceding the claim, except to the extent resulting from our own fraud, gross negligence, or willful misconduct.</p>
+
+    <h2>10. Arbitration</h2>
+    <p>Any controversy arising from or relating to this Agreement shall be submitted to binding arbitration in Collier County, Florida, before a panel of arbitrators in accordance with the rules of the Financial Industry Regulatory Authority (FINRA) or the American Arbitration Association, as applicable.</p>
+
+    <h2>11. Governing Law</h2>
+    <p>This Agreement shall be governed by and construed in accordance with the laws of the State of Florida, without regard to conflicts-of-law principles.</p>
+
+    <h2>12. Entire Agreement</h2>
+    <p>This Agreement constitutes the entire agreement between the parties and supersedes all prior negotiations, representations, or agreements. Any amendments must be in writing and signed by both parties.</p>
+
+    <p>By signing below, ${isDual ? 'both parties acknowledge and' : 'you acknowledge and'} agree to the terms of this Investment Advisory Agreement and confirm receipt of our ADV Part 2 Disclosure Brochure.</p>
+  `;
+}
+
+function generateLOEForPrint(eng) {
+  const loeHtml = eng.engagement_type === 'wealth' ? generateWealthLOE(eng) : generateTaxLOE(eng);
+  const auditHtml = generateSignatureAuditHtml(eng);
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Engagement Letter — Sentinel Wealth &amp; Tax</title>
+<style>
+  body { font-family: Georgia, 'Times New Roman', serif; font-size: 12pt; color: #1a202c; max-width: 720px; margin: 40px auto; line-height: 1.7; }
+  h1 { font-size: 16pt; text-align: center; }
+  h2 { font-size: 11pt; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 20px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  .loe-firm { text-align: center; font-size: 10pt; color: #4a5568; margin: 12px 0; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; }
+  .loe-parties { background: #f7fafc; border: 1px solid #e2e8f0; padding: 12px; margin: 12px 0; }
+  .loe-fee-box { background: #fffbeb; border: 1px solid #f6e05e; padding: 10px; margin: 10px 0; }
+  .loe-subtitle, .loe-date-line { text-align: center; color: #718096; font-size: 10pt; }
+  .audit { margin-top: 32px; border-top: 2px solid #1a202c; padding-top: 16px; }
+  .sig-box { display: inline-block; margin-right: 40px; vertical-align: top; }
+  .sig-box img { max-width: 220px; height: 80px; border-bottom: 1px solid #333; display: block; margin-bottom: 4px; }
+  .sig-box p { font-size: 10pt; margin: 2px 0; }
+  @media print { body { margin: 20px; } }
+</style></head><body>
+${loeHtml}
+${auditHtml}
+</body></html>`;
+}
+
+function generateSignatureAuditHtml(eng) {
+  const sigs = [];
+  if (eng.signed_by_name) {
+    sigs.push({
+      label: 'Client Signature',
+      name: eng.signed_by_name,
+      at: eng.signed_at,
+      ip: eng.signer_ip,
+      data: eng.signature_data,
+    });
+  }
+  if (eng.signed2_by_name) {
+    sigs.push({
+      label: 'Second Signer Signature',
+      name: eng.signed2_by_name,
+      at: eng.signed2_at,
+      ip: eng.signer2_ip,
+      data: eng.signature2_data,
+    });
+  }
+  if (!sigs.length) return '';
+
+  return `<div class="audit">
+    <strong style="font-size:10pt;text-transform:uppercase;letter-spacing:0.05em;">Electronic Signature Audit Trail</strong>
+    <p style="font-size:9pt;color:#718096;margin:6px 0;">This document was electronically executed via Sentinel Wealth &amp; Tax's secure proposal system.</p>
+    <div style="margin-top:16px;">
+      ${sigs.map(s => `<div class="sig-box">
+        <div class="sig-label" style="font-size:9pt;font-weight:700;text-transform:uppercase;color:#718096;margin-bottom:6px;">${escHtml(s.label)}</div>
+        ${s.data ? `<img src="${s.data}" alt="Signature">` : '<div style="width:220px;height:80px;border-bottom:1px solid #333;"></div>'}
+        <p><strong>${escHtml(s.name)}</strong></p>
+        <p style="font-size:9pt;color:#718096;">${s.at ? fmtDate(s.at) : 'Pending'}</p>
+        <p style="font-size:9pt;color:#718096;">IP: ${escHtml(s.ip || 'N/A')}</p>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+init();
+</script>
+</body>
+</html>
