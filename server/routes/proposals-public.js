@@ -271,18 +271,21 @@ router.get('/:token/pdf', async (req, res) => {
     const appUrl = process.env.APP_URL || 'https://darklion.ai';
     const pageUrl = `${appUrl}/p/${token}/sign?pdf=1`;
 
-    const pdfBuffer = await generatePDF(null, pageUrl);
+    const pdfResult = await generatePDF(null, pageUrl);
+    // Puppeteer v22+ returns Uint8Array — must convert to Buffer for res.send()
+    const pdfBuffer = Buffer.isBuffer(pdfResult) ? pdfResult : Buffer.from(pdfResult);
 
     const clientName = (prop[0].client_name || 'Engagement-Letter')
       .replace(/[^a-zA-Z0-9 ]/g, '')
       .trim();
 
     res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', pdfBuffer.length);
     res.setHeader(
       'Content-Disposition',
       `attachment; filename="${clientName} - Engagement Letter.pdf"`
     );
-    res.send(pdfBuffer);
+    res.end(pdfBuffer);
   } catch (err) {
     console.error('[GET /proposals/public/:token/pdf] error:', err);
     res.status(500).json({ error: 'PDF generation failed' });
