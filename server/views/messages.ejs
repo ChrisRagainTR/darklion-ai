@@ -144,32 +144,68 @@
 
     /* ── MOBILE (iPhone) ── */
     @media (max-width: 600px) {
+      /* Fixed full-screen container */
       .main {
+        position: fixed !important;
         left: 0 !important;
-        overflow-y: auto !important;
-        display: block !important;
-      }
-      .inbox-panel {
-        width: 100% !important;
-        height: auto !important;
-        border-right: none !important;
-        position: static !important;
-      }
-      .inbox-panel.mobile-hidden { display: none !important; }
-
-      .detail-panel {
-        width: 100% !important;
-        height: auto !important;
-        position: static !important;
-        display: none;
-      }
-      .detail-panel.mobile-visible {
+        top: var(--header-h) !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        overflow: hidden !important;
         display: flex !important;
         flex-direction: column !important;
       }
 
+      /* Inbox: fills container, scrolls internally */
+      .inbox-panel {
+        width: 100% !important;
+        flex: 1 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        border-right: none !important;
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+      }
+      .inbox-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+      .inbox-panel.mobile-hidden { display: none !important; }
+
+      /* Detail: fills container, flex column so reply box stays pinned */
+      .detail-panel {
+        width: 100% !important;
+        flex: 1 !important;
+        overflow: hidden !important;
+        display: none !important;
+        flex-direction: column !important;
+        height: 100% !important;
+      }
+      .detail-panel.mobile-visible { display: flex !important; }
+
+      /* Thread view fills remaining space */
+      #threadView {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        min-height: 0 !important;
+      }
+
+      /* Messages scroll, reply box stays at bottom */
+      .detail-messages {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding: 1rem !important;
+        min-height: 0 !important;
+      }
+      .detail-header { flex-shrink: 0 !important; padding: 0.75rem 1rem; flex-wrap: wrap; }
+      .reply-box { flex-shrink: 0 !important; padding: 0.75rem 1rem; }
+      .reply-box textarea { min-height: 60px; font-size: 1rem; }
+
+      /* Back button */
       .mobile-back-btn {
         display: flex !important;
+        flex-shrink: 0 !important;
         align-items: center;
         gap: 0.4rem;
         background: none;
@@ -184,10 +220,6 @@
       }
 
       .thread-card { padding: 1rem; }
-      .reply-box { padding: 0.75rem 1rem; }
-      .reply-box textarea { min-height: 60px; font-size: 1rem; }
-      .detail-messages { padding: 1rem; min-height: 200px; }
-      .detail-header { padding: 0.75rem 1rem; flex-wrap: wrap; }
       .thread-card-actions { display: flex !important; }
       .btn { padding: 0.55rem 1rem; }
     }
