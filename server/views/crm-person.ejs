@@ -1445,11 +1445,21 @@
   function resolveTemplateVars(body) {
     const p = personData || {};
     const firmName = (() => { try { return JSON.parse(atob(localStorage.getItem('dl_token').split('.')[1])).firmName || ''; } catch(e) { return ''; } })();
+    const companies = p.company_access || [];
+    let companyResolved;
+    if (companies.length === 1) {
+      companyResolved = companies[0].company_name || '{Company Name}';
+    } else if (companies.length > 1) {
+      // List all company names separated by " / " — staff deletes the ones they don't want
+      companyResolved = companies.map(c => c.company_name).filter(Boolean).join(' / ');
+    } else {
+      companyResolved = '{Company Name}';
+    }
     return body
       .replace(/\{First Name\}/g, p.first_name || '')
       .replace(/\{Last Name\}/g, p.last_name || '')
       .replace(/\{Full Name\}/g, [p.first_name, p.last_name].filter(Boolean).join(' ') || '')
-      .replace(/\{Company Name\}/g, '{Company Name}')   // not on person page — keep visible so staff fills it in
+      .replace(/\{Company Name\}/g, companyResolved)
       .replace(/\{Firm Name\}/g, firmName);
   }
 
