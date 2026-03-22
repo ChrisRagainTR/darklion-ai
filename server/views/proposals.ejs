@@ -134,7 +134,7 @@ function fmtDate(d) {
 
 async function loadStats() {
   try {
-    const r = await fetch(API + '/stats', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
+    const r = await fetch(API + '/stats', { headers: { Authorization: 'Bearer ' + localStorage.getItem('dl_token') } });
     if (!r.ok) return;
     const d = await r.json();
     document.getElementById('stat-total').textContent = d.total || 0;
@@ -147,7 +147,7 @@ async function loadStats() {
 
 async function loadProposals() {
   try {
-    const r = await fetch(API, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
+    const r = await fetch(API, { headers: { Authorization: 'Bearer ' + localStorage.getItem('dl_token') } });
     if (!r.ok) throw new Error('Failed');
     allProposals = await r.json();
     renderList();
@@ -222,7 +222,7 @@ document.getElementById('delete-confirm-btn').addEventListener('click', async ()
   try {
     const r = await fetch(API + '/' + deleteId, {
       method: 'DELETE',
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') },
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('dl_token') },
     });
     if (!r.ok) throw new Error('Failed');
     allProposals = allProposals.filter(p => p.id !== deleteId);

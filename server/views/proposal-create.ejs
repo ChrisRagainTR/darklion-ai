@@ -406,7 +406,7 @@ document.getElementById('rel-search').addEventListener('input', function() {
 async function fetchRels(q) {
   try {
     const r = await fetch('/api/relationships?q=' + encodeURIComponent(q) + '&limit=10', {
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('dl_token') }
     });
     if (!r.ok) return;
     const data = await r.json();
@@ -487,7 +487,7 @@ async function saveProposal(status) {
       method,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + localStorage.getItem('token'),
+        Authorization: 'Bearer ' + localStorage.getItem('dl_token'),
       },
       body: JSON.stringify(data),
     });
@@ -541,7 +541,7 @@ async function loadForEdit() {
   if (!editId) { renderTiers(); return; }
   try {
     const r = await fetch('/api/proposals/' + editId, {
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('dl_token') }
     });
     if (!r.ok) { showToast('Failed to load proposal', true); renderTiers(); return; }
     const p = await r.json();

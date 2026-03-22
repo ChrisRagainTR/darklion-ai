@@ -96,7 +96,7 @@ const TYPE_BADGE = {
 async function load() {
   try {
     const r = await fetch(API + '/' + proposalId, {
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('dl_token') }
     });
     if (!r.ok) throw new Error('Not found');
     const p = await r.json();
@@ -246,7 +246,7 @@ async function deleteProposal() {
   try {
     const r = await fetch(API + '/' + proposalId, {
       method: 'DELETE',
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('dl_token') }
     });
     if (!r.ok) throw new Error('Failed');
     showToast('Deleted');
@@ -260,7 +260,7 @@ async function saveToCRM() {
   try {
     const r = await fetch(API + '/' + proposalId + '/save-to-crm', {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('dl_token') }
     });
     if (!r.ok) { const e = await r.json(); throw new Error(e.error); }
     showToast('Saved to CRM engagement letters!');
