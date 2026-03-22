@@ -1449,7 +1449,7 @@
       .replace(/\{First Name\}/g, p.first_name || '')
       .replace(/\{Last Name\}/g, p.last_name || '')
       .replace(/\{Full Name\}/g, [p.first_name, p.last_name].filter(Boolean).join(' ') || '')
-      .replace(/\{Company Name\}/g, '')   // not available on person page — leave blank
+      .replace(/\{Company Name\}/g, '{Company Name}')   // not on person page — keep visible so staff fills it in
       .replace(/\{Firm Name\}/g, firmName);
   }
 
