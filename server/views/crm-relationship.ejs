@@ -463,6 +463,7 @@
     if (!people.length) {
       peopleHtml += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
     } else {
+      peopleHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 0.5rem;">`;
       people.forEach(p => {
         const initials = ((p.first_name||'').charAt(0)+(p.last_name||'').charAt(0)).toUpperCase()||'?';
         const portalBadge = p.portal_enabled ? `<span class="badge badge-green" style="font-size:0.6rem;">Portal</span>` : '';
@@ -478,6 +479,7 @@
           <div style="display:flex;gap:0.25rem;flex-wrap:wrap;justify-content:flex-end;">${filingBadge}${portalBadge}</div>
         </div>`;
       });
+      peopleHtml += `</div>`;
     }
     peopleHtml += `</div>`;
 
@@ -486,6 +488,7 @@
     if (!companies.length) {
       companiesHtml += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
     } else {
+      companiesHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 0.5rem;">`;
       companies.forEach(co => {
         const name = co.company_name || co.name || 'Unknown';
         const initial = name.charAt(0).toUpperCase();
@@ -501,6 +504,7 @@
           <div style="display:flex;gap:0.25rem;">${entityBadge}${qboBadge}</div>
         </div>`;
       });
+      companiesHtml += `</div>`;
     }
     companiesHtml += `</div>`;
 
