@@ -689,24 +689,25 @@
       <span>Recent Messages</span>
       <a href="#" onclick="switchTab('communication',document.querySelector('.tab-item:nth-child(4)'));return false;" style="font-size:0.72rem;color:var(--gold);">View all →</a>
     </div><div id="ov-person-msgs-inner" style="color:var(--muted);font-size:0.82rem;">Loading…</div>`;
-    apiFetch(`/api/messages?person_id=${personId}`).then(r=>r.json()).then(threads=>{
+    apiFetch(`/api/messages/person/${personId}`).then(r=>r.json()).then(threads=>{
       const el = document.getElementById('ov-person-msgs-inner');
       if (!el) return;
       const arr = Array.isArray(threads) ? threads : (threads.threads || threads.data || []);
-      if (!arr.length) { el.innerHTML=`<div style="font-style:italic;">No messages yet.</div>`; return; }
+      if (!arr.length) { el.innerHTML=`<div style="color:var(--muted);font-size:0.82rem;font-style:italic;">No messages yet.</div>`; return; }
       function relTime(ts) { if(!ts) return ''; const d=new Date(ts); const diff=Date.now()-d; if(diff<60000) return 'just now'; if(diff<3600000) return Math.floor(diff/60000)+'m ago'; if(diff<86400000) return Math.floor(diff/3600000)+'h ago'; return d.toLocaleDateString(); }
       el.innerHTML = arr.slice(0,3).map(t => {
         const subject = t.subject || '(no subject)';
-        const preview = t.lastPreview || t.preview || '';
+        const preview = t.lastPreview || '';
+        const unread = t.unreadCount > 0 ? `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;background:var(--gold);color:#0f1923;border-radius:9px;font-size:0.65rem;font-weight:800;padding:0 4px;flex-shrink:0;">${t.unreadCount}</span>` : '';
         return `<div style="padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;" onclick="switchTab('communication',document.querySelector('.tab-item:nth-child(4)'));setTimeout(()=>loadThread(${t.id}),200);">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
-            <span style="font-size:0.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(subject)}</span>
-            <span style="font-size:0.72rem;color:var(--muted);flex-shrink:0;">${relTime(t.lastMessageAt||t.created_at)}</span>
+            <span style="font-size:0.82rem;font-weight:${t.unreadCount>0?'700':'600'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${t.unreadCount>0?'var(--text)':'inherit'};">${esc(subject)}</span>
+            <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">${unread}<span style="font-size:0.72rem;color:var(--muted);">${relTime(t.lastMessageAt||t.createdAt)}</span></div>
           </div>
           <div style="font-size:0.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(preview)}</div>
         </div>`;
       }).join('');
-    }).catch(()=>{ const el=document.getElementById('ov-person-msgs-inner'); if(el) el.innerHTML='<span>—</span>'; });
+    }).catch(()=>{ const el=document.getElementById('ov-person-msgs-inner'); if(el) el.innerHTML='<span style="color:var(--muted);">—</span>'; });
   }
 
   // ── Docs: helpers ──
