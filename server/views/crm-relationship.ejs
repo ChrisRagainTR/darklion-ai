@@ -589,35 +589,6 @@
     }
     sidebar += `</div>`;
 
-    // Engagement summary (active letters from snap)
-    sidebar += `<div class="ov-panel">
-      <div class="ov-panel-title"><span>📄 Engagement</span><a href="#" onclick="switchTab('engagement',document.querySelectorAll('.tab-item')[1]);return false;" class="btn btn-ghost btn-xs">View →</a></div>`;
-    if (!snap) {
-      sidebar += `<div style="color:var(--muted);font-size:0.78rem;">Loading…</div>`;
-    } else if (!snap.active_engagements || !snap.active_engagements.length) {
-      sidebar += `<div style="color:var(--muted);font-size:0.78rem;">No active engagement letters.</div>`;
-    } else {
-      snap.active_engagements.forEach(l => {
-        const d = l.extracted_data;
-        if (!d) {
-          sidebar += `<div style="font-size:0.82rem;margin-bottom:0.4rem;">${esc(l.display_name)} <span style="font-size:0.7rem;color:var(--muted);">(extracting…)</span></div>`;
-          return;
-        }
-        const svcIcons = [
-          d.services?.tax ? '🧾 Tax' : '',
-          d.services?.bookkeeping ? '📒 Bookkeeping' : '',
-          d.services?.financial_planning ? '📈 Fin. Planning' : '',
-        ].filter(Boolean).join(' · ');
-        sidebar += `<div style="margin-bottom:0.6rem;">
-          <div style="font-size:0.82rem;font-weight:700;">${esc(l.display_name)}</div>
-          ${svcIcons ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:0.1rem;">${svcIcons}</div>` : ''}
-          ${d.total_monthly ? `<div style="font-size:0.85rem;font-weight:700;color:var(--gold);margin-top:0.2rem;">$${Number(d.total_monthly).toFixed(2)}/mo</div>` : ''}
-          ${d.term_end_date ? `<div style="font-size:0.7rem;color:var(--muted);">Term ends ${fmtDate(d.term_end_date)}</div>` : ''}
-        </div>`;
-      });
-    }
-    sidebar += `</div>`;
-
     // Team
     sidebar += `<div class="ov-panel" id="team-panel">
       <div class="ov-panel-title">
