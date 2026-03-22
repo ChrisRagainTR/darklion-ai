@@ -1477,24 +1477,280 @@ function generateWealthLOE(eng) {
 function generateLOEForPrint(eng) {
   const loeHtml = eng.engagement_type === 'wealth' ? generateWealthLOE(eng) : generateTaxLOE(eng);
   const auditHtml = generateSignatureAuditHtml(eng);
+  const clientName = eng.company_name || eng.client_name || '';
+  const contactName = eng.contact_name || '';
+  const addr1 = eng.address_line1 || '';
+  const addr2 = eng.address_line2 || '';
+  const email = eng.contact_email || '';
+
   return `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Engagement Letter — Sentinel Wealth &amp; Tax</title>
+<html><head>
+<meta charset="UTF-8">
+<title>Engagement Letter — ${escHtml(clientName)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  body { font-family: Georgia, 'Times New Roman', serif; font-size: 12pt; color: #1a202c; max-width: 720px; margin: 40px auto; line-height: 1.7; }
-  h1 { font-size: 16pt; text-align: center; }
-  h2 { font-size: 11pt; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 20px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
-  .loe-firm { text-align: center; font-size: 10pt; color: #4a5568; margin: 12px 0; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; }
-  .loe-parties { background: #f7fafc; border: 1px solid #e2e8f0; padding: 12px; margin: 12px 0; }
-  .loe-fee-box { background: #fffbeb; border: 1px solid #f6e05e; padding: 10px; margin: 10px 0; }
-  .loe-subtitle, .loe-date-line { text-align: center; color: #718096; font-size: 10pt; }
-  .audit { margin-top: 32px; border-top: 2px solid #1a202c; padding-top: 16px; }
-  .sig-box { display: inline-block; margin-right: 40px; vertical-align: top; }
-  .sig-box img { max-width: 220px; height: 80px; border-bottom: 1px solid #333; display: block; margin-bottom: 4px; }
-  .sig-box p { font-size: 10pt; margin: 2px 0; }
-  @media print { body { margin: 20px; } }
-</style></head><body>
-${loeHtml}
-${auditHtml}
+  /* ── Page setup ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  @page { margin: 0.85in 0.9in; size: letter; }
+  body {
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    font-size: 10.5pt;
+    color: #1a1a2e;
+    line-height: 1.65;
+    background: white;
+  }
+
+  /* ── Cover header: logo right, client left ──────────────── */
+  .print-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 18pt;
+    border-bottom: 2pt solid #462161;
+    margin-bottom: 18pt;
+  }
+  .print-header-left {
+    flex: 1;
+  }
+  .print-confidential {
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-decoration: underline;
+    color: #462161;
+    margin-bottom: 8pt;
+  }
+  .print-client-name {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 3pt;
+  }
+  .print-client-details {
+    font-size: 9.5pt;
+    color: #374151;
+    line-height: 1.5;
+  }
+  .print-header-right img {
+    height: 52pt;
+    width: auto;
+    object-fit: contain;
+  }
+
+  /* ── Body typography ────────────────────────────────────── */
+  p { margin: 0 0 9pt 0; font-size: 10pt; }
+  h1 { font-size: 14pt; font-weight: 700; text-align: center; color: #462161; margin: 18pt 0 12pt; }
+  h2 {
+    font-size: 10.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #1a1a2e;
+    border-bottom: 1pt solid #e5e2eb;
+    padding-bottom: 3pt;
+    margin: 16pt 0 7pt;
+  }
+  h3 { font-size: 10pt; font-weight: 700; color: #1a1a2e; margin: 10pt 0 5pt; }
+  ul, ol { margin: 5pt 0 9pt 18pt; }
+  li { margin-bottom: 3pt; font-size: 10pt; }
+
+  /* ── Elections title ────────────────────────────────────── */
+  .loe-elections-title {
+    font-size: 12pt !important;
+    font-weight: 700 !important;
+    color: #462161 !important;
+    border-bottom: 1.5pt solid #462161 !important;
+    padding-bottom: 4pt !important;
+    margin: 16pt 0 10pt !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+  }
+  .loe-cover-heading {
+    font-size: 10.5pt !important;
+    font-weight: 700 !important;
+    color: #462161 !important;
+    margin: 12pt 0 5pt !important;
+    text-transform: none !important;
+    border-bottom: none !important;
+    letter-spacing: 0 !important;
+  }
+  .loe-fee-line { font-size: 10pt; font-weight: 600; color: #462161; margin: 4pt 0 8pt; }
+
+  /* ── Section headings (body) ─────────────────────────────── */
+  .loe-section-heading {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #462161;
+    border-bottom: 1.5pt solid #462161;
+    padding-bottom: 3pt;
+    margin: 16pt 0 7pt;
+  }
+
+  /* ── Tables ─────────────────────────────────────────────── */
+  .loe-services-table, .loe-monthly-table, .loe-backwork-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6pt 0 10pt;
+    font-size: 9.5pt;
+  }
+  .loe-services-table th, .loe-monthly-table th, .loe-backwork-table th {
+    background: #462161;
+    color: white;
+    padding: 5pt 8pt;
+    text-align: left;
+    font-weight: 600;
+    font-size: 9pt;
+  }
+  .loe-monthly-table th:last-child, .loe-backwork-table th:last-child { text-align: right; }
+  .loe-services-table td, .loe-monthly-table td, .loe-backwork-table td {
+    padding: 4.5pt 8pt;
+    border-bottom: 0.5pt solid #e5e2eb;
+    vertical-align: top;
+  }
+  .loe-svc-name { font-weight: 500; }
+  .loe-svc-price { text-align: right; font-weight: 600; white-space: nowrap; }
+  .loe-svc-status { text-align: right; }
+  .loe-status-included { color: #059669; font-weight: 600; font-size: 9pt; }
+  .loe-total-row td {
+    font-weight: 700;
+    color: #462161;
+    border-top: 1.5pt solid #462161;
+    padding: 5pt 8pt;
+    background: #faf8ff;
+  }
+  .loe-total-row td:last-child { text-align: right; }
+  .loe-monthly-table tbody tr:nth-child(even):not(.loe-total-row) { background: #faf8ff; }
+  .loe-services-table tbody tr:nth-child(even) { background: #faf8ff; }
+  .loe-svc-name-hdr { text-align: left; }
+  .loe-svc-price-hdr { text-align: right; }
+
+  /* ── Backwork section ────────────────────────────────────── */
+  .loe-backwork-section { margin: 10pt 0 14pt; }
+  .loe-backwork-title { font-size: 10pt; font-weight: 700; text-decoration: underline; color: #1a1a2e; margin-bottom: 5pt; }
+  .loe-backwork-table th { background: #462161; }
+  .loe-backwork-table th:last-child { text-align: right; }
+  .loe-bw-total-row td { font-weight: 700; color: #462161; border-top: 1pt solid #462161; background: #faf8ff; }
+
+  /* ── Election box ────────────────────────────────────────── */
+  .loe-election-box {
+    border: 1pt solid #462161;
+    border-radius: 4pt;
+    padding: 8pt 12pt;
+    margin: 10pt 0;
+    background: #faf8ff;
+  }
+  .loe-election-summary { width: 100%; font-size: 10pt; }
+  .loe-election-summary td { padding: 2pt 0; }
+  .loe-agreement-title { text-align: center; font-size: 13pt !important; font-weight: 700 !important; color: #462161 !important; margin: 18pt 0 12pt !important; border: none !important; }
+  .loe-checkbox-line { font-size: 10pt; margin: 4pt 0; }
+
+  /* ── Service lists ───────────────────────────────────────── */
+  .loe-service-list, .loe-doc-list { margin: 5pt 0 9pt 18pt; list-style-type: disc; }
+  .loe-bk-list, .loe-planning-list { margin: 5pt 0 9pt 18pt; list-style-type: decimal; }
+  .loe-service-list li, .loe-bk-list li, .loe-doc-list li, .loe-planning-list li { margin-bottom: 3pt; }
+
+  /* ── Acceptance / signature block ───────────────────────── */
+  .loe-acceptance-block { margin-top: 28pt; padding-top: 16pt; border-top: 1.5pt solid #462161; }
+  .loe-acceptance-title { text-align: center; font-size: 12pt !important; font-weight: 700 !important; color: #462161 !important; border: none !important; margin-bottom: 10pt !important; }
+  .loe-sig-label { margin-top: 16pt; font-size: 10pt; }
+  .loe-sig-block { margin: 8pt 0 16pt; }
+  .loe-sig-name-italic { font-style: italic; font-size: 14pt; font-family: Georgia, serif; color: #1a1a2e; }
+  .loe-sig-line { width: 180pt; border-bottom: 0.75pt solid #1a1a2e; margin: 3pt 0; }
+  .loe-sig-detail { font-size: 9pt; color: #6b7280; margin: 1pt 0; }
+  .loe-sig-closing { font-style: italic; margin-bottom: 14pt; font-size: 10pt; }
+  .loe-accepted-agreed { font-weight: 700; font-size: 10pt; margin-top: 20pt; margin-bottom: 10pt; text-decoration: underline; }
+  .loe-sig-lines { display: flex; gap: 30pt; align-items: flex-end; margin-top: 6pt; }
+  .loe-sig-line-group { display: flex; flex-direction: column; }
+  .loe-sig-line-long { width: 220pt; border-bottom: 0.75pt solid #1a1a2e; margin-bottom: 3pt; height: 22pt; }
+  .loe-sig-line-short { width: 120pt; border-bottom: 0.75pt solid #1a1a2e; margin-bottom: 3pt; height: 22pt; }
+  .loe-sig-line-label { font-size: 8.5pt; color: #6b7280; }
+
+  /* ── Confidential header (used in cover pages) ──────────── */
+  .loe-confidential { font-size: 9pt; font-weight: 700; letter-spacing: 1.5px; color: #462161; margin-bottom: 16pt; text-align: left; }
+  .loe-client-info { margin-bottom: 16pt; }
+  .loe-client-info p { margin: 1pt 0; font-size: 10pt; }
+  .loe-client-name { font-size: 12pt; font-weight: 700; }
+  .loe-tax-confidential { font-size: 9pt; font-weight: 700; text-decoration: underline; margin-bottom: 14pt; color: #1a1a2e; }
+
+  /* ── Consent page ────────────────────────────────────────── */
+  .loe-consent-block { margin-top: 28pt; padding-top: 14pt; border-top: 0.75pt solid #e5e2eb; }
+  .loe-consent-heading { font-size: 11pt; font-weight: 700; color: #1a1a2e; border-bottom: 0.75pt solid #e5e2eb; padding-bottom: 4pt; margin-bottom: 10pt; margin-top: 20pt; }
+  .loe-consent-options { margin: 10pt 0; }
+  .loe-consent-option { margin: 5pt 0; font-size: 10pt; }
+  .loe-consent-x { display: inline-block; border: 0.75pt solid #1a1a2e; font-weight: 700; font-size: 9pt; margin-right: 6pt; text-align: center; min-width: 18pt; padding: 0 2pt; }
+  .loe-consent-blank { display: inline-block; border: 0.75pt solid #1a1a2e; font-size: 9pt; margin-right: 6pt; min-width: 18pt; color: transparent; }
+  .loe-consent-signatures { display: flex; gap: 30pt; margin: 16pt 0; padding: 10pt 0; border-top: 0.75pt solid #e5e2eb; }
+  .loe-consent-sig-col { flex: 1; }
+  .loe-consent-sig-field { margin: 8pt 0; font-size: 9.5pt; }
+  .loe-tigta-notice { font-size: 8.5pt; color: #6b7280; margin-top: 16pt; padding-top: 8pt; border-top: 0.75pt solid #e5e2eb; font-style: italic; }
+
+  /* ── Signature audit trail (bottom of print) ─────────────── */
+  .print-audit {
+    margin-top: 32pt;
+    padding-top: 14pt;
+    border-top: 2pt solid #462161;
+    page-break-inside: avoid;
+  }
+  .print-audit-title {
+    font-size: 9.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #462161;
+    margin-bottom: 8pt;
+  }
+  .print-audit-note { font-size: 8.5pt; color: #6b7280; margin-bottom: 12pt; }
+  .print-sig-blocks { display: flex; gap: 32pt; flex-wrap: wrap; }
+  .print-sig-block { flex: 1; min-width: 180pt; }
+  .print-sig-label { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; color: #6b7280; margin-bottom: 6pt; }
+  .print-sig-img { border-bottom: 1pt solid #333; padding-bottom: 4pt; margin-bottom: 6pt; min-height: 50pt; }
+  .print-sig-img img { max-height: 60pt; max-width: 200pt; object-fit: contain; }
+  .print-sig-name { font-size: 10pt; font-weight: 700; margin-bottom: 2pt; }
+  .print-sig-meta { font-size: 8.5pt; color: #6b7280; line-height: 1.4; }
+
+  /* Hide the LOE body's own PRIVATE & CONFIDENTIAL + client block since print-header renders them */
+  .loe-body .loe-confidential,
+  .loe-body .loe-tax-confidential,
+  .loe-body .loe-client-info { display: none; }
+
+  @media print {
+    body { margin: 0; }
+    .loe-section { page-break-inside: avoid; }
+    h2, .loe-section-heading { page-break-after: avoid; }
+    .loe-services-table, .loe-monthly-table, .loe-backwork-table { page-break-inside: avoid; }
+    .print-audit { page-break-before: auto; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ── Cover header: client left, logo right ── -->
+  <div class="print-header">
+    <div class="print-header-left">
+      <div class="print-confidential">Private &amp; Confidential</div>
+      ${clientName ? `<div class="print-client-name">${escHtml(clientName)}</div>` : ''}
+      <div class="print-client-details">
+        ${contactName && contactName !== clientName ? `${escHtml(contactName)}<br>` : ''}
+        ${email ? `${escHtml(email)}<br>` : ''}
+        ${addr1 ? `${escHtml(addr1)}<br>` : ''}
+        ${addr2 ? `${escHtml(addr2)}` : ''}
+      </div>
+    </div>
+    <div class="print-header-right">
+      <img src="https://darklion.ai/sentinel-logo.png" alt="Sentinel Wealth &amp; Tax">
+    </div>
+  </div>
+
+  <!-- ── LOE body (skips cover PRIVATE & CONFIDENTIAL block since we render it above) ── -->
+  <div class="loe-body">
+    ${loeHtml}
+  </div>
+
+  <!-- ── Signature audit trail ── -->
+  ${auditHtml}
+
 </body></html>`;
 }
 
@@ -1520,16 +1776,20 @@ function generateSignatureAuditHtml(eng) {
   }
   if (!sigs.length) return '';
 
-  return `<div class="audit">
-    <strong style="font-size:10pt;text-transform:uppercase;letter-spacing:0.05em;">Electronic Signature Audit Trail</strong>
-    <p style="font-size:9pt;color:#718096;margin:6px 0;">This document was electronically executed via Sentinel Wealth &amp; Tax's secure proposal system.</p>
-    <div style="margin-top:16px;">
-      ${sigs.map(s => `<div class="sig-box">
-        <div class="sig-label" style="font-size:9pt;font-weight:700;text-transform:uppercase;color:#718096;margin-bottom:6px;">${escHtml(s.label)}</div>
-        ${s.data ? `<img src="${s.data}" alt="Signature">` : '<div style="width:220px;height:80px;border-bottom:1px solid #333;"></div>'}
-        <p><strong>${escHtml(s.name)}</strong></p>
-        <p style="font-size:9pt;color:#718096;">${s.at ? fmtDate(s.at) : 'Pending'}</p>
-        <p style="font-size:9pt;color:#718096;">IP: ${escHtml(s.ip || 'N/A')}</p>
+  return `<div class="print-audit">
+    <div class="print-audit-title">Electronic Signature Audit Trail</div>
+    <div class="print-audit-note">This document was electronically executed via Sentinel Wealth &amp; Tax's secure proposal system.</div>
+    <div class="print-sig-blocks">
+      ${sigs.map(s => `<div class="print-sig-block">
+        <div class="print-sig-label">${escHtml(s.label)}</div>
+        <div class="print-sig-img">
+          ${s.data ? `<img src="${s.data}" alt="Signature">` : '<div style="height:50pt;"></div>'}
+        </div>
+        <div class="print-sig-name">${escHtml(s.name)}</div>
+        <div class="print-sig-meta">
+          ${s.at ? escHtml(fmtDate(s.at)) : 'Date: pending'}<br>
+          IP Address: ${escHtml(s.ip || 'N/A')}
+        </div>
       </div>`).join('')}
     </div>
   </div>`;
