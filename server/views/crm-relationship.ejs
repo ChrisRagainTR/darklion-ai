@@ -367,6 +367,14 @@
   function filingLabel(s) {
     return { single:'Single', mfj:'MFJ', mfs:'MFS', hoh:'HOH', qw:'QW', married_joint:'MFJ', married_separate:'MFS', head_household:'HOH', widow:'QW' }[s] || (s||'');
   }
+  function fmtPhone(p) {
+    if (!p) return '';
+    const d = p.replace(/\D/g,'');
+    if (d.length === 10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+    if (d.length === 11 && d[0]==='1') return `(${d.slice(1,4)}) ${d.slice(4,7)}-${d.slice(7)}`;
+    return p;
+  }
+
   function fmtDate(d) {
     if (!d) return '—';
     return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
