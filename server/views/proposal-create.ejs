@@ -207,7 +207,7 @@
 
 <script>
 let engagementType = 'tax';
-let recommendedTier = 0;
+let recommendedTier = 1; // set properly after defaults load
 let editId = null;
 let relationships = [];
 
@@ -219,17 +219,91 @@ if (pathParts.length >= 3 && /^\d+$/.test(pathParts[2])) {
 }
 
 const TAX_DEFAULTS = [
-  { name: 'Essential', subtitle: 'For straightforward tax situations', price: 63, bullets: ['Federal & state tax return', 'Year-round CPA access', 'Annual planning meeting'] },
-  { name: 'Standard', subtitle: 'Most popular — great for retirees', price: 83, bullets: ['Everything in Essential', 'Roth conversion analysis', 'IRMAA & Medicare planning', 'RMD strategy'] },
-  { name: 'Comprehensive', subtitle: 'Full-service retirement tax planning', price: 104, bullets: ['Everything in Standard', 'Capital gains planning', 'QCD strategies', 'Proactive quarterly check-ins'] },
+  {
+    name: 'Tax Subscription',
+    subtitle: 'Essential tax management for individuals & businesses',
+    price: 250,
+    bullets: [
+      'Personal & Business Tax Return Preparation',
+      'Proactive Tax Strategy & Projections',
+      'Quarterly Estimated Tax Planning',
+      'Year-Round CPA Support & Consultations',
+      'IRS Compliance & Representation',
+    ],
+    isRecommended: false,
+  },
+  {
+    name: 'Tax + Bookkeeping',
+    subtitle: 'Complete tax & financial record management',
+    price: 500,
+    bullets: [
+      'Monthly Bookkeeping & Reconciliation',
+      'Financial Statement Preparation',
+      'Cash Flow Monitoring & Analysis',
+      'Payroll Tax Compliance & Reporting',
+      'Year-End Close & Adjusting Entries',
+    ],
+    isRecommended: true,
+  },
+  {
+    name: 'Tax + Bookkeeping + Financial Planning',
+    subtitle: 'Full-service tax, bookkeeping & wealth strategy',
+    price: 1000,
+    bullets: [
+      'Comprehensive Financial Plan & Roadmap',
+      'Investment Management & Portfolio Oversight',
+      'Retirement & Cashflow Planning',
+      'Estate & Legacy Planning',
+      'Insurance & Risk Assessment',
+    ],
+    isRecommended: false,
+  },
 ];
 const WEALTH_DEFAULTS = [
-  { name: 'Growth', subtitle: 'For accumulation-focused portfolios', price: 0, bullets: ['Investment advisory', 'Portfolio review', 'Quarterly statements'] },
-  { name: 'Income', subtitle: 'For income-oriented retirees', price: 0, bullets: ['Income strategy', 'Portfolio management', 'Tax-efficient withdrawals'] },
-  { name: 'Legacy', subtitle: 'Comprehensive wealth stewardship', price: 0, bullets: ['Full wealth management', 'Estate coordination', 'Family office services'] },
+  {
+    name: 'Tax & Planning',
+    subtitle: 'Comprehensive tax strategy & financial planning',
+    price: 299,
+    bullets: [
+      'Tax Return Preparation & Planning',
+      'Proactive Tax Strategy & Projections',
+      'Retirement Income Strategies',
+      'Tax-Advantaged Distribution Planning',
+      'Year-Round Advisory Support',
+    ],
+    isRecommended: false,
+  },
+  {
+    name: 'Legacy Blueprint',
+    subtitle: 'Full-service financial planning & life oversight',
+    price: 599,
+    bullets: [
+      'Healthcare & Medicaid Planning',
+      'Estate & Legacy Planning',
+      'Fraud Protection & Tech Safety',
+      'Emergency Procedures & Household Vault',
+      'Wellness Checks & Ongoing Support',
+    ],
+    isRecommended: true,
+  },
+  {
+    name: 'Investment Management',
+    subtitle: 'Discretionary portfolio management + full planning',
+    price: 0,
+    bullets: [
+      'Customized Investment Portfolio',
+      'Ongoing Portfolio Monitoring & Rebalancing',
+      'Tax-Efficient Investment Strategies',
+      'Quarterly Performance Reviews',
+      'Dedicated Portfolio Manager',
+    ],
+    isRecommended: false,
+  },
 ];
 
 let tiers = JSON.parse(JSON.stringify(TAX_DEFAULTS));
+let recommendedTier = TAX_DEFAULTS.findIndex(t => t.isRecommended);
+if (recommendedTier < 0) recommendedTier = 1;
 
 function setType(t) {
   engagementType = t;
@@ -237,8 +311,10 @@ function setType(t) {
   document.getElementById('type-wealth').classList.toggle('selected', t === 'wealth');
   document.getElementById('tax-extras').style.display = t === 'tax' ? '' : 'none';
   document.getElementById('wealth-extras').style.display = t === 'wealth' ? '' : 'none';
-  tiers = JSON.parse(JSON.stringify(t === 'tax' ? TAX_DEFAULTS : WEALTH_DEFAULTS));
-  recommendedTier = 1;
+  const defaults = t === 'tax' ? TAX_DEFAULTS : WEALTH_DEFAULTS;
+  tiers = JSON.parse(JSON.stringify(defaults));
+  recommendedTier = defaults.findIndex(d => d.isRecommended);
+  if (recommendedTier < 0) recommendedTier = 1;
   renderTiers();
 }
 
