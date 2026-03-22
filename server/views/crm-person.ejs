@@ -420,6 +420,13 @@
         <option value="widow">Qualifying Widow(er)</option>
       </select>
     </div>
+    <div class="form-group" style="position:relative;">
+      <label>Spouse <span style="font-weight:400;color:var(--muted);font-size:0.78rem;">(must be in same relationship)</span></label>
+      <input type="text" class="form-control" id="ef-spouse-search" placeholder="Search by name…" autocomplete="off"
+        oninput="efSpouseFilter(this.value)" onfocus="efSpouseOpen()" onblur="setTimeout(efSpouseClose,150)">
+      <input type="hidden" id="ef-spouse-id">
+      <div id="ef-spouse-options" style="display:none;position:absolute;z-index:200;background:var(--charcoal);border:1px solid var(--border);border-radius:8px;width:100%;max-height:180px;overflow-y:auto;top:calc(100% - 2px);box-shadow:0 4px 16px rgba(0,0,0,0.4);"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
       <button class="btn btn-gold" id="ef-submit" onclick="submitEdit()">Save Changes</button>
@@ -955,7 +962,66 @@
     } catch(e) { toast('Failed to save notes', 'error'); }
   }
 
-  function openEditModal() {
+    // ── Spouse search dropdown (edit modal) ──
+  let efSpousePeople = [];
+
+  async function efSpouseLoadPeople() {
+    if (!personData || !personData.relationship_id) { efSpousePeople = []; return; }
+    try {
+      const res = await apiFetch(`/api/relationships/${personData.relationship_id}`);
+      if (!res.ok) { efSpousePeople = []; return; }
+      const data = await res.json();
+      // Exclude self
+      efSpousePeople = (data.people || []).filter(p => p.id !== parseInt(personId));
+    } catch(e) { efSpousePeople = []; }
+  }
+
+  function efSpouseFilter(q) {
+    const filtered = q
+      ? efSpousePeople.filter(p => (`${p.first_name} ${p.last_name}`).toLowerCase().includes(q.toLowerCase()))
+      : efSpousePeople;
+    efSpouseRender(filtered);
+    efSpouseOpen();
+    // If the search box is cleared, also clear the hidden id
+    if (!q.trim()) document.getElementById('ef-spouse-id').value = '';
+  }
+
+  function efSpouseRender(list) {
+    const el = document.getElementById('ef-spouse-options');
+    if (!list.length) {
+      el.innerHTML = `<div style="padding:0.6rem 0.9rem;color:var(--muted);font-size:0.84rem;font-style:italic;">No other people in this relationship</div>`;
+    } else {
+      el.innerHTML = list.map(p =>
+        `<div style="padding:0.55rem 0.9rem;cursor:pointer;font-size:0.88rem;border-bottom:1px solid var(--border);"
+          onmousedown="efSpouseSelect(${p.id},'${esc((p.first_name||'')+' '+(p.last_name||''))}')"
+          onmouseover="this.style.background='rgba(201,168,76,0.1)'" onmouseout="this.style.background=''"
+        >${esc((p.first_name||'')+' '+(p.last_name||''))}</div>`
+      ).join('');
+    }
+  }
+
+  function efSpouseOpen() {
+    const el = document.getElementById('ef-spouse-options');
+    efSpouseRender(efSpousePeople);
+    el.style.display = 'block';
+  }
+
+  function efSpouseClose() {
+    document.getElementById('ef-spouse-options').style.display = 'none';
+  }
+
+  function efSpouseSelect(id, name) {
+    document.getElementById('ef-spouse-id').value = id;
+    document.getElementById('ef-spouse-search').value = name;
+    efSpouseClose();
+  }
+
+  function efSpouseClear() {
+    document.getElementById('ef-spouse-id').value = '';
+    document.getElementById('ef-spouse-search').value = '';
+  }
+
+  async function openEditModal() {
     if (!personData) return;
     document.getElementById('ef-fname').value = personData.first_name || '';
     document.getElementById('ef-lname').value = personData.last_name || '';
@@ -963,6 +1029,14 @@
     document.getElementById('ef-phone').value = personData.phone || '';
     document.getElementById('ef-dob').value = personData.date_of_birth || '';
     document.getElementById('ef-filing').value = personData.filing_status || '';
+    // Spouse
+    document.getElementById('ef-spouse-id').value = personData.spouse_id || '';
+    if (personData.spouse) {
+      document.getElementById('ef-spouse-search').value = `${personData.spouse.first_name||''} ${personData.spouse.last_name||''}`.trim();
+    } else {
+      document.getElementById('ef-spouse-search').value = '';
+    }
+    await efSpouseLoadPeople();
     document.getElementById('edit-modal').classList.remove('hidden');
   }
   function closeModal() { document.getElementById('edit-modal').classList.add('hidden'); }
@@ -972,6 +1046,7 @@
     const errEl = document.getElementById('edit-error');
     errEl.style.display = 'none';
     btn.disabled = true; btn.textContent = 'Saving…';
+    const spouseIdRaw = document.getElementById('ef-spouse-id').value;
     const body = {
       first_name: document.getElementById('ef-fname').value.trim(),
       last_name: document.getElementById('ef-lname').value.trim(),
@@ -979,6 +1054,7 @@
       phone: document.getElementById('ef-phone').value.trim(),
       date_of_birth: document.getElementById('ef-dob').value || null,
       filing_status: document.getElementById('ef-filing').value,
+      spouse_id: spouseIdRaw ? parseInt(spouseIdRaw) : null,
     };
     try {
       const res = await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify(body) });

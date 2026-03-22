@@ -128,6 +128,18 @@ router.get('/:id', async (req, res) => {
     `, [id]);
 
     person.company_access = accessRows;
+
+    // Include spouse data if set
+    if (person.spouse_id) {
+      const { rows: spouseRows } = await pool.query(
+        'SELECT id, first_name, last_name, email, phone, filing_status, portal_enabled FROM people WHERE id = $1 AND firm_id = $2',
+        [person.spouse_id, firmId]
+      );
+      person.spouse = spouseRows[0] || null;
+    } else {
+      person.spouse = null;
+    }
+
     res.json(person);
   } catch (err) {
     console.error('GET /people/:id error:', err);
@@ -180,7 +192,7 @@ router.put('/:id', async (req, res) => {
         email = COALESCE($4, email),
         phone = COALESCE($5, phone),
         filing_status = COALESCE($6, filing_status),
-        spouse_id = COALESCE($7, spouse_id),
+        spouse_id = CASE WHEN $14::BOOLEAN THEN $7::INT ELSE spouse_id END,
         portal_enabled = COALESCE($8, portal_enabled),
         stanford_tax_url = COALESCE($9, stanford_tax_url),
         notes = COALESCE($10, notes),
@@ -195,16 +207,41 @@ router.put('/:id', async (req, res) => {
       email !== undefined ? email : null,
       phone !== undefined ? phone : null,
       filing_status || null,
-      spouse_id !== undefined ? spouse_id : null,
+      spouse_id !== undefined ? spouse_id : null,    // $7
       portal_enabled !== undefined ? portal_enabled : null,
       stanford_tax_url !== undefined ? stanford_tax_url : null,
       notes !== undefined ? notes : null,
       date_of_birth_encrypted !== undefined ? date_of_birth_encrypted : null,
       id,
       firmId,
+      spouse_id !== undefined,                        // $14: whether spouse_id was explicitly passed
     ]);
 
-    res.json(sanitizePerson(rows[0]));
+    const updated = rows[0];
+
+    // ── Bidirectional spouse linking ──
+    // If spouse_id is being explicitly set (including null to clear it):
+    if (spouse_id !== undefined) {
+      const prevSpouseId = existing[0].spouse_id;
+
+      // If we had an old spouse and it's changing, clear the reverse link on the old spouse
+      if (prevSpouseId && prevSpouseId !== spouse_id) {
+        await pool.query(
+          'UPDATE people SET spouse_id = NULL, updated_at = NOW() WHERE id = $1 AND firm_id = $2 AND spouse_id = $3',
+          [prevSpouseId, firmId, id]
+        );
+      }
+
+      // If setting a new spouse, set the reverse link on them too
+      if (spouse_id) {
+        await pool.query(
+          'UPDATE people SET spouse_id = $1, updated_at = NOW() WHERE id = $2 AND firm_id = $3',
+          [id, spouse_id, firmId]
+        );
+      }
+    }
+
+    res.json(sanitizePerson(updated));
   } catch (err) {
     console.error('PUT /people/:id error:', err);
     res.status(500).json({ error: 'Failed to update person' });
