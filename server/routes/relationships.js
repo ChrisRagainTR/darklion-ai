@@ -401,13 +401,14 @@ router.get('/:id/snapshot', async (req, res) => {
         LIMIT 10
       `, [firmId, personIds, companyIds, id]),
 
-      // ── Engagement letter count ─────────────────────────────────
+      // ── Active engagement letters ───────────────────────────────
       pool.query(`
-        SELECT COUNT(*)::int AS count, MAX(created_at) AS latest
-        FROM documents
-        WHERE firm_id = $1 AND owner_type = 'relationship' AND owner_id = $2
-          AND folder_category = 'engagement'
-      `, [firmId, id]),
+        SELECT id, display_name, extracted_data, extracted_at, created_at
+        FROM engagement_letters
+        WHERE firm_id = $1 AND relationship_id = $2 AND status = 'active'
+        ORDER BY created_at DESC
+        LIMIT 3
+      `).catch(() => ({ rows: [] })),
 
     ]);
 
@@ -415,8 +416,7 @@ router.get('/:id/snapshot', async (req, res) => {
       tax_deliveries: taxRes.rows,
       threads: threadsRes.rows,
       activity: activityRes.rows,
-      engagement_count: engRes.rows[0]?.count || 0,
-      latest_engagement: engRes.rows[0]?.latest || null,
+      active_engagements: engRes.rows || [],
     });
 
   } catch (err) {

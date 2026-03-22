@@ -256,4 +256,63 @@ If no companies match above 0.6 confidence, return an empty companies array.`,
   }
 }
 
-module.exports = { categorizeTransactions, researchVendor, researchAllVendors, classifyMessage };
+// Extract structured data from an engagement letter PDF buffer
+async function extractEngagementLetter(pdfBuffer) {
+  // Convert PDF to base64 for Claude's document API
+  const base64Pdf = pdfBuffer.toString('base64');
+
+  const response = await client.messages.create({
+    model: MODEL_SMART,
+    max_tokens: 1024,
+    messages: [{
+      role: 'user',
+      content: [
+        {
+          type: 'document',
+          source: {
+            type: 'base64',
+            media_type: 'application/pdf',
+            data: base64Pdf,
+          },
+        },
+        {
+          type: 'text',
+          text: `Extract the key engagement details from this engagement letter. Return ONLY valid JSON with this exact structure:
+
+{
+  "client_name": "full name or entity name from the top of the letter",
+  "entity_name": "company/entity name if applicable, else null",
+  "term_end_date": "YYYY-MM-DD or null",
+  "services": {
+    "tax": true or false,
+    "bookkeeping": true or false,
+    "financial_planning": true or false
+  },
+  "monthly_line_items": [
+    { "description": "...", "amount": 0.00 }
+  ],
+  "total_monthly": 0.00,
+  "one_time_fees": [
+    { "description": "...", "amount": 0.00 }
+  ],
+  "ai_summary": "2-3 sentence plain English summary: who this is for, what services are covered, what the total monthly fee is, and any one-time fees"
+}
+
+Rules:
+- amounts should be numbers (not strings)
+- term_end_date from the "12 month term will end on" line
+- monthly_line_items: each row in the fee table that has a dollar amount
+- one_time_fees: the One-Time Services section
+- Respond ONLY with the JSON object, no other text`,
+        },
+      ],
+    }],
+  });
+
+  const text = response.content[0]?.text || '{}';
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Could not parse extraction response');
+  return JSON.parse(jsonMatch[0]);
+}
+
+module.exports = { categorizeTransactions, researchVendor, researchAllVendors, classifyMessage, extractEngagementLetter };

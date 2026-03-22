@@ -256,11 +256,6 @@
     <button class="btn btn-gold btn-sm" onclick="openEngagementUpload()">↑ Upload Letter</button>
   </div>
   <div id="engagement-list"><div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div></div>
-  <div class="placeholder-section" style="margin-top:1rem;">
-    <div class="ph-icon">🤖</div>
-    <div class="ph-title">AI Extraction Coming Soon</div>
-    <div class="ph-desc">AI extraction of engagement details coming in Phase 14b</div>
-  </div>
 </div>
 
 <!-- Tab: Workflow -->
@@ -567,18 +562,32 @@
     }
     sidebar += `</div>`;
 
-    // Engagement summary (from snap)
+    // Engagement summary (active letters from snap)
     sidebar += `<div class="ov-panel">
       <div class="ov-panel-title"><span>📄 Engagement</span><a href="#" onclick="switchTab('engagement',document.querySelectorAll('.tab-item')[1]);return false;" class="btn btn-ghost btn-xs">View →</a></div>`;
     if (!snap) {
       sidebar += `<div style="color:var(--muted);font-size:0.78rem;">Loading…</div>`;
-    } else if (!snap.engagement_count) {
-      sidebar += `<div style="color:var(--muted);font-size:0.78rem;">No engagement letters on file.</div>`;
+    } else if (!snap.active_engagements || !snap.active_engagements.length) {
+      sidebar += `<div style="color:var(--muted);font-size:0.78rem;">No active engagement letters.</div>`;
     } else {
-      sidebar += `<div style="font-size:0.82rem;">${snap.engagement_count} letter${snap.engagement_count !== 1 ? 's' : ''} on file</div>`;
-      if (snap.latest_engagement) {
-        sidebar += `<div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem;">Latest: ${fmtDate(snap.latest_engagement)}</div>`;
-      }
+      snap.active_engagements.forEach(l => {
+        const d = l.extracted_data;
+        if (!d) {
+          sidebar += `<div style="font-size:0.82rem;margin-bottom:0.4rem;">${esc(l.display_name)} <span style="font-size:0.7rem;color:var(--muted);">(extracting…)</span></div>`;
+          return;
+        }
+        const svcIcons = [
+          d.services?.tax ? '🧾 Tax' : '',
+          d.services?.bookkeeping ? '📒 Bookkeeping' : '',
+          d.services?.financial_planning ? '📈 Fin. Planning' : '',
+        ].filter(Boolean).join(' · ');
+        sidebar += `<div style="margin-bottom:0.6rem;">
+          <div style="font-size:0.82rem;font-weight:700;">${esc(l.display_name)}</div>
+          ${svcIcons ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:0.1rem;">${svcIcons}</div>` : ''}
+          ${d.total_monthly ? `<div style="font-size:0.85rem;font-weight:700;color:var(--gold);margin-top:0.2rem;">$${Number(d.total_monthly).toFixed(2)}/mo</div>` : ''}
+          ${d.term_end_date ? `<div style="font-size:0.7rem;color:var(--muted);">Term ends ${fmtDate(d.term_end_date)}</div>` : ''}
+        </div>`;
+      });
     }
     sidebar += `</div>`;
 
@@ -726,23 +735,26 @@
 
   // ── Engagement tab ────────────────────────────────────────────────
   let engDocs = [];
+  // ── Engagement tab ──────────────────────────────────────────────
+  let engLetters = [];
+
   async function loadEngagement() {
     const el = document.getElementById('engagement-list');
     if (el.dataset.loaded) return;
     el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>';
     try {
-      const res = await apiFetch(`/api/documents?owner_type=relationship&owner_id=${relId}&folder_category=engagement`);
-      engDocs = await res.json();
-      renderEngagement();
+      const res = await apiFetch(`/api/engagement/${relId}`);
+      engLetters = res.ok ? await res.json() : [];
+      renderEngagementList();
       el.dataset.loaded = '1';
     } catch(e) {
       el.innerHTML = '<div style="color:var(--muted);padding:1rem;">Failed to load engagement letters.</div>';
     }
   }
 
-  function renderEngagement() {
+  function renderEngagementList() {
     const el = document.getElementById('engagement-list');
-    if (!engDocs.length) {
+    if (!engLetters.length) {
       el.innerHTML = `<div class="placeholder-section">
         <div class="ph-icon">📄</div>
         <div class="ph-title">No Engagement Letters</div>
@@ -750,32 +762,130 @@
       </div>`;
       return;
     }
-    const rows = engDocs.map(doc => {
-      const uploadDate = fmtDate(doc.created_at);
-      const uploadedBy = doc.uploaded_by_type === 'staff' ? 'Staff' : 'Client';
-      return `<div class="doc-row">
-        <span class="doc-icon">📄</span>
-        <div class="doc-info">
-          <div class="doc-name">${esc(doc.display_name || 'Engagement Letter')}</div>
-          <div class="doc-meta">Uploaded ${uploadDate} · ${uploadedBy}</div>
-        </div>
-        <button class="btn-dl" onclick="downloadEngDoc(${doc.id}, this)">⬇ Download</button>
-      </div>`;
-    }).join('');
-    el.innerHTML = `<div class="card" style="padding:0.5rem 1rem;">${rows}</div>`;
+    const active = engLetters.filter(l => l.status === 'active');
+    const retired = engLetters.filter(l => l.status === 'retired');
+    let html = '';
+
+    active.forEach(l => { html += renderEngLetterCard(l, false); });
+    if (retired.length) {
+      html += `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin:1.25rem 0 0.6rem;padding-top:0.75rem;border-top:1px solid var(--border);">Retired (${retired.length})</div>`;
+      retired.forEach(l => { html += renderEngLetterCard(l, true); });
+    }
+    el.innerHTML = html;
   }
 
-  async function downloadEngDoc(id, btn) {
+  function renderEngLetterCard(l, isRetired) {
+    const d = l.extracted_data;
+    const isExtracting = !d && !isRetired;
+    const servicePills = d && d.services ? [
+      d.services.tax ? `<span style="padding:0.1rem 0.45rem;border-radius:20px;font-size:0.65rem;font-weight:700;background:rgba(99,179,237,0.15);color:#63b3ed;border:1px solid rgba(99,179,237,0.25);">Tax</span>` : '',
+      d.services.bookkeeping ? `<span style="padding:0.1rem 0.45rem;border-radius:20px;font-size:0.65rem;font-weight:700;background:rgba(62,207,142,0.12);color:#3ecf8e;border:1px solid rgba(62,207,142,0.25);">Bookkeeping</span>` : '',
+      d.services.financial_planning ? `<span style="padding:0.1rem 0.45rem;border-radius:20px;font-size:0.65rem;font-weight:700;background:rgba(201,168,76,0.15);color:var(--gold);border:1px solid rgba(201,168,76,0.25);">Financial Planning</span>` : '',
+    ].filter(Boolean).join(' ') : '';
+
+    const retiredBadge = isRetired ? `<span style="padding:0.1rem 0.5rem;border-radius:20px;font-size:0.65rem;font-weight:700;background:rgba(143,163,184,0.12);color:var(--muted);border:1px solid rgba(143,163,184,0.2);">Retired ${l.retired_at ? fmtDate(l.retired_at) : ''}</span>` : '';
+
+    let feeHtml = '';
+    if (d && d.monthly_line_items && d.monthly_line_items.length) {
+      feeHtml = `<div style="margin-top:0.75rem;">
+        <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">Fee Schedule</div>
+        <table style="width:100%;border-collapse:collapse;">`;
+      d.monthly_line_items.forEach(item => {
+        feeHtml += `<tr><td style="font-size:0.82rem;padding:0.2rem 0;">${esc(item.description)}</td><td style="font-size:0.82rem;text-align:right;padding:0.2rem 0;font-variant-numeric:tabular-nums;">$${Number(item.amount).toFixed(2)}/mo</td></tr>`;
+      });
+      if (d.total_monthly) {
+        feeHtml += `<tr style="border-top:1px solid var(--border);"><td style="font-size:0.85rem;font-weight:700;padding:0.3rem 0;">Total Monthly</td><td style="font-size:0.85rem;font-weight:700;text-align:right;color:var(--gold);padding:0.3rem 0;">$${Number(d.total_monthly).toFixed(2)}/mo</td></tr>`;
+      }
+      if (d.one_time_fees && d.one_time_fees.length) {
+        feeHtml += `<tr><td colspan="2" style="padding-top:0.4rem;font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;">One-Time Fees</td></tr>`;
+        d.one_time_fees.forEach(item => {
+          feeHtml += `<tr><td style="font-size:0.82rem;padding:0.15rem 0;">${esc(item.description)}</td><td style="font-size:0.82rem;text-align:right;padding:0.15rem 0;">$${Number(item.amount).toFixed(2)}</td></tr>`;
+        });
+      }
+      feeHtml += `</table></div>`;
+    }
+
+    const summaryHtml = d && d.ai_summary ? `<div style="font-size:0.8rem;color:var(--muted);margin-top:0.6rem;line-height:1.5;border-left:2px solid var(--border);padding-left:0.6rem;">${esc(d.ai_summary)}</div>` : '';
+
+    const extractingHtml = isExtracting ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;"><div class="loading-spinner" style="width:14px;height:14px;border-width:2px;"></div> Extracting data with AI…</div>` : '';
+
+    const termHtml = d && d.term_end_date ? `<span style="font-size:0.72rem;color:var(--muted);">Term ends ${fmtDate(d.term_end_date)}</span>` : '';
+
+    const actions = isRetired
+      ? `<button class="btn btn-ghost btn-xs" onclick="engReactivate(${l.id})">Reactivate</button>`
+      : `<button class="btn btn-outline btn-xs" onclick="engDownload(${l.id}, this)">⬇ View</button>
+         <button class="btn btn-ghost btn-xs" style="color:var(--muted);" onclick="engRetire(${l.id})">Retire</button>`;
+
+    const cardOpacity = isRetired ? 'opacity:0.65;' : '';
+    const goldBorder = !isRetired ? 'border-color:rgba(201,168,76,0.3);' : '';
+
+    return `<div style="background:var(--card);border:1px solid var(--border);${goldBorder}${cardOpacity}border-radius:10px;padding:1rem 1.1rem;margin-bottom:0.85rem;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;margin-bottom:0.35rem;">
+        <div style="min-width:0;">
+          <div style="font-weight:700;font-size:0.92rem;margin-bottom:0.25rem;">${esc(l.display_name || 'Engagement Letter')}</div>
+          <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">${servicePills}${retiredBadge}${termHtml}</div>
+        </div>
+        <div style="display:flex;gap:0.4rem;flex-shrink:0;">${actions}</div>
+      </div>
+      ${feeHtml}${summaryHtml}${extractingHtml}
+    </div>`;
+  }
+
+  async function engDownload(id, btn) {
     if (btn) { btn.disabled = true; btn.textContent = '…'; }
     try {
-      const res = await apiFetch(`/api/documents/${id}/url`);
+      const res = await apiFetch(`/api/engagement/${relId}/${id}/url`);
       const data = await res.json();
       if (data.url) window.open(data.url, '_blank');
-    } catch(e) { toast('Failed to get download link', 'error'); }
-    if (btn) { btn.disabled = false; btn.textContent = '⬇ Download'; }
+    } catch(e) { toast('Failed to get link', 'error'); }
+    if (btn) { btn.disabled = false; btn.textContent = '⬇ View'; }
   }
 
-  // ── Engagement upload modal ───────────────────────────────────────
+  async function engRetire(id) {
+    if (!await window.dlConfirm('Retire this engagement letter? It will remain in history but marked inactive.', { title:'Retire Letter', confirmLabel:'Retire', icon:'📁' })) return;
+    try {
+      const res = await apiFetch(`/api/engagement/${relId}/${id}/retire`, { method: 'POST' });
+      if (!res.ok) throw new Error((await res.json()).error);
+      toast('Engagement letter retired');
+      const el = document.getElementById('engagement-list');
+      delete el.dataset.loaded;
+      await loadEngagement();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function engReactivate(id) {
+    try {
+      const res = await apiFetch(`/api/engagement/${relId}/${id}/reactivate`, { method: 'POST' });
+      if (!res.ok) throw new Error((await res.json()).error);
+      toast('Engagement letter reactivated');
+      const el = document.getElementById('engagement-list');
+      delete el.dataset.loaded;
+      await loadEngagement();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // Poll for extraction completion after upload
+  function pollExtraction(letterId, maxAttempts = 12) {
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await apiFetch(`/api/engagement/${relId}/${letterId}/extracted`);
+        const data = await res.json();
+        if (data.extracted_at) {
+          clearInterval(interval);
+          // Refresh the list
+          const listEl = document.getElementById('engagement-list');
+          delete listEl.dataset.loaded;
+          await loadEngagement();
+          toast('AI extraction complete');
+        }
+        if (attempts >= maxAttempts) clearInterval(interval);
+      } catch(e) { clearInterval(interval); }
+    }, 5000);
+  }
+
+  // ── Engagement upload modal ──────────────────────────────────────
   let _engFile = null;
   function openEngagementUpload() {
     _engFile = null;
@@ -808,7 +918,6 @@
       if (e.dataTransfer.files[0]) setEngFile(e.dataTransfer.files[0]);
     });
     fileInput.addEventListener('change', () => { if (fileInput.files[0]) setEngFile(fileInput.files[0]); });
-
     document.getElementById('engagement-upload-modal').addEventListener('click', e => {
       if (e.target === document.getElementById('engagement-upload-modal')) closeEngagementModal();
     });
@@ -824,21 +933,21 @@
     try {
       const fd = new FormData();
       fd.append('file', _engFile);
-      fd.append('owner_type', 'relationship');
-      fd.append('owner_id', relId);
-      fd.append('folder_section', 'firm_uploaded');
-      fd.append('folder_category', 'engagement');
-      fd.append('doc_type', 'engagement');
-      const res = await fetch('/api/documents/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
+      const res = await fetch(`/api/engagement/${relId}/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: fd,
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload failed');
-      msgEl.textContent = 'Uploaded successfully!'; msgEl.style.display = '';
-      // Reload engagement list
+      submitBtn.textContent = '✓ Uploaded';
+      // Reload list immediately (shows "extracting" state)
       const listEl = document.getElementById('engagement-list');
       delete listEl.dataset.loaded;
-      engDocs = [];
       await loadEngagement();
-      setTimeout(() => { closeEngagementModal(); toast('Engagement letter uploaded'); }, 800);
+      // Poll for extraction
+      if (data.id) pollExtraction(data.id);
+      setTimeout(() => { closeEngagementModal(); toast('Uploaded — AI extraction in progress…'); }, 700);
     } catch(e) {
       errEl.textContent = e.message; errEl.style.display = '';
       submitBtn.disabled = false; submitBtn.textContent = 'Upload';
