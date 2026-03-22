@@ -177,6 +177,12 @@ async function init() {
     }
     engagement = await r.json();
 
+    // PDF-only mode: Puppeteer loads this page to render the LOE for printing
+    if (new URLSearchParams(location.search).get('pdf') === '1') {
+      renderPdfOnlyMode();
+      return;
+    }
+
     if (engagement.status === 'signed') {
       showSuccess();
       // If ?download=1, auto-trigger download after a short delay for the page to render
@@ -218,17 +224,25 @@ function showSuccess() {
 }
 
 function downloadDoc() {
-  const clientName = (engagement.company_name || engagement.client_name || 'Client').replace(/[^a-zA-Z0-9 ]/g, '');
-  const w = window.open('', '_blank');
-  if (!w) return;
-  w.document.open();
-  w.document.write(generateLOEForPrint(engagement));
-  w.document.close();
-  w.document.title = 'Engagement Letter — ' + clientName;
-  w.focus();
-  // Wait for images (logo) to load before printing
-  w.onload = () => setTimeout(() => w.print(), 300);
-  setTimeout(() => w.print(), 1200); // fallback if onload doesn't fire
+  // Server-side PDF: no print dialog, no browser headers, pixel-perfect
+  window.location.href = API_BASE + '/pdf';
+}
+
+function renderPdfOnlyMode() {
+  // Puppeteer calls this page with ?pdf=1 to get a clean, printable version
+  const eng = engagement;
+  const loeHtml = eng.engagement_type === 'wealth' ? generateWealthLOE(eng) : generateTaxLOE(eng);
+  const auditHtml = generateSignatureAuditHtml(eng);
+
+  // Apply minimal print-friendly styles + the existing LOE styles already in <head>
+  document.getElementById('root').innerHTML = `
+    <div style="max-width:860px;margin:0 auto;padding:1.5rem 1.25rem;">
+      <div class="loe-content">${loeHtml}${auditHtml}</div>
+    </div>`;
+
+  // Hide nav header so PDF is clean
+  const header = document.querySelector('header');
+  if (header) header.style.display = 'none';
 }
 
 function renderSignPage() {

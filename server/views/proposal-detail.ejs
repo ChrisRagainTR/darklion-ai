@@ -284,9 +284,8 @@ function copyLink(url) {
 
 function downloadSignedLOE() {
   if (!_proposalToken) { showToast('No token available', true); return; }
-  // Open the sign page with ?download=1 — it will auto-trigger the print/download dialog
-  const url = '/p/' + _proposalToken + '/sign?download=1';
-  window.open(url, '_blank');
+  // Hit the server-side PDF endpoint — no print dialog, real PDF
+  window.location.href = '/api/proposals/public/' + _proposalToken + '/pdf';
 }
 
 load();

@@ -249,6 +249,46 @@ router.post('/:token/sign', async (req, res) => {
   }
 });
 
+// GET /:token/pdf — generate and stream a real PDF of the signed engagement letter
+router.get('/:token/pdf', async (req, res) => {
+  const { token } = req.params;
+  try {
+    const { rows: prop } = await pool.query(
+      'SELECT id, client_name FROM proposals WHERE public_token = $1',
+      [token]
+    );
+    if (!prop.length) return res.status(404).json({ error: 'Not found' });
+
+    const { rows: engRows } = await pool.query(
+      'SELECT * FROM proposal_engagements WHERE proposal_id = $1 ORDER BY created_at DESC LIMIT 1',
+      [prop[0].id]
+    );
+    if (!engRows.length) return res.status(404).json({ error: 'No engagement found' });
+
+    const { generatePDF } = require('../services/pdf');
+
+    // Use the live sign page in pdf-only mode so the full LOE + audit trail renders
+    const appUrl = process.env.APP_URL || 'https://darklion.ai';
+    const pageUrl = `${appUrl}/p/${token}/sign?pdf=1`;
+
+    const pdfBuffer = await generatePDF(null, pageUrl);
+
+    const clientName = (prop[0].client_name || 'Engagement-Letter')
+      .replace(/[^a-zA-Z0-9 ]/g, '')
+      .trim();
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${clientName} - Engagement Letter.pdf"`
+    );
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('[GET /proposals/public/:token/pdf] error:', err);
+    res.status(500).json({ error: 'PDF generation failed' });
+  }
+});
+
 // POST /:token/reset — client resets acceptance (go back to package selection)
 router.post('/:token/reset', async (req, res) => {
   const { token } = req.params;
