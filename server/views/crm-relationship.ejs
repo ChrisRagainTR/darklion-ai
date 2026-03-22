@@ -1099,7 +1099,10 @@
         </div>
 
       </div>
-      <div id="billing-summary" style="flex:1;min-width:300px;">`;
+      <div id="billing-summary" style="flex:1;min-width:300px;">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:0.5rem;">
+          <button class="btn btn-ghost btn-xs" onclick="loadBillingSummary(document.getElementById('billing-content'))">↻ Refresh</button>
+        </div>`;
 
     if (!accounts.length || !emails.length) {
       html += `<div class="placeholder-section"><div class="ph-icon">💳</div>
@@ -1198,68 +1201,61 @@
 
     data.accounts.forEach(account => {
       if (account.error) {
-        html += `<div class="card" style="margin-bottom:0.85rem;"><div class="card-title">${esc(account.label)}</div><div style="color:var(--muted);font-size:0.84rem;">⚠️ ${esc(account.error)}</div></div>`;
+        html += `<div style="color:#f56565;font-size:0.84rem;margin-bottom:0.75rem;">⚠️ ${esc(account.label)}: ${esc(account.error)}</div>`;
         return;
       }
-      if (!account.customers.length) {
-        html += `<div class="card" style="margin-bottom:0.85rem;"><div class="card-title">${esc(account.label)}</div><div style="color:var(--muted);font-size:0.84rem;">No customers found for these emails.</div></div>`;
-        return;
-      }
+      // Filter out customers with no subscriptions and no invoices
+      const validCustomers = (account.customers || []).filter(c => !c.error && (c.subscriptions?.length || c.invoices?.length));
+      if (!validCustomers.length) return; // skip entire account section if nothing to show
 
-      html += `<div style="margin-bottom:0.5rem;font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;">${esc(account.label)}</div>`;
+      html += `<div style="margin-bottom:0.6rem;font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;">${esc(account.label)}</div>`;
+      html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;margin-bottom:1rem;">`;
 
-      account.customers.forEach(cust => {
-        if (cust.error) {
-          html += `<div class="card" style="margin-bottom:0.75rem;"><div style="color:var(--muted);font-size:0.84rem;">${esc(cust.email)}: ${esc(cust.error)}</div></div>`;
-          return;
-        }
-
-        html += `<div class="card" style="margin-bottom:0.75rem;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-            <div>
-              <div style="font-weight:700;font-size:0.92rem;">${esc(cust.name)}</div>
-              <div style="font-size:0.76rem;color:var(--muted);">${esc(cust.email)}</div>
+      validCustomers.forEach(cust => {
+        html += `<div class="card" style="margin-bottom:0;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.65rem;gap:0.5rem;">
+            <div style="min-width:0;">
+              <div style="font-weight:700;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(cust.name)}</div>
+              <div style="font-size:0.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(cust.email)}</div>
             </div>
-            ${cust.total_monthly > 0 ? `<div style="font-size:1.1rem;font-weight:800;color:var(--gold);">$${cust.total_monthly.toFixed(2)}/mo</div>` : ''}
+            ${cust.total_monthly > 0 ? `<div style="font-size:1rem;font-weight:800;color:var(--gold);flex-shrink:0;">$${cust.total_monthly.toFixed(0)}<span style="font-size:0.65rem;font-weight:500;color:var(--muted);">/mo</span></div>` : ''}
           </div>`;
 
         if (cust.subscriptions.length) {
-          html += `<div style="margin-bottom:0.75rem;">`;
           cust.subscriptions.forEach(sub => {
             const dot = statusColor[sub.status] || '#8fa3b8';
             const lbl = statusLabel[sub.status] || sub.status;
-            const nextDate = sub.current_period_end ? new Date(sub.current_period_end * 1000).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
-            html += `<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.85rem;margin-bottom:0.5rem;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
-                <div style="display:flex;align-items:center;gap:0.5rem;">
-                  <div style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></div>
-                  <span style="font-size:0.8rem;font-weight:700;color:${dot};">${lbl}</span>
+            const nextDate = sub.current_period_end ? new Date(sub.current_period_end * 1000).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+            html += `<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:7px;padding:0.5rem 0.7rem;margin-bottom:0.4rem;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.3rem;">
+                <div style="display:flex;align-items:center;gap:0.4rem;">
+                  <div style="width:7px;height:7px;border-radius:50%;background:${dot};flex-shrink:0;"></div>
+                  <span style="font-size:0.75rem;font-weight:700;color:${dot};">${lbl}</span>
                 </div>
-                ${nextDate ? `<span style="font-size:0.72rem;color:var(--muted);">Renews ${nextDate}</span>` : ''}
+                ${nextDate ? `<span style="font-size:0.68rem;color:var(--muted);">↻ ${nextDate}</span>` : ''}
               </div>`;
             sub.items.forEach(item => {
-              html += `<div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:0.15rem 0;">
-                <span>${esc(item.description)}</span>
+              html += `<div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:0.1rem 0;">
+                <span style="color:var(--muted);">${esc(item.description)}</span>
                 <span style="font-variant-numeric:tabular-nums;">$${item.amount.toFixed(2)}/${item.interval}</span>
               </div>`;
             });
             html += `</div>`;
           });
-          html += `</div>`;
         }
 
         if (cust.invoices.length) {
-          html += `<div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;">Recent Invoices</div>`;
+          html += `<div style="font-size:0.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin:0.4rem 0 0.25rem;">Invoices</div>`;
           html += `<table style="width:100%;border-collapse:collapse;">`;
           cust.invoices.forEach(inv => {
-            const invDate = new Date(inv.created * 1000).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+            const invDate = new Date(inv.created * 1000).toLocaleDateString('en-US',{month:'short',day:'numeric'});
             const paidBadge = inv.paid
-              ? `<span style="padding:0.08rem 0.4rem;border-radius:20px;font-size:0.65rem;font-weight:700;background:rgba(62,207,142,0.12);color:#3ecf8e;">✓ Paid</span>`
-              : `<span style="padding:0.08rem 0.4rem;border-radius:20px;font-size:0.65rem;font-weight:700;background:rgba(237,137,54,0.12);color:#ed8936;">Unpaid</span>`;
+              ? `<span style="font-size:0.62rem;font-weight:700;color:#3ecf8e;">✓</span>`
+              : `<span style="font-size:0.62rem;font-weight:700;color:#ed8936;">!</span>`;
             html += `<tr style="border-top:1px solid rgba(255,255,255,0.04);">
-              <td style="font-size:0.78rem;padding:0.3rem 0;color:var(--muted);">${invDate}</td>
-              <td style="font-size:0.78rem;padding:0.3rem 0;text-align:right;font-variant-numeric:tabular-nums;">$${inv.amount_due.toFixed(2)}</td>
-              <td style="padding:0.3rem 0 0.3rem 0.5rem;text-align:right;">${paidBadge}</td>
+              <td style="font-size:0.75rem;padding:0.2rem 0;color:var(--muted);">${invDate}</td>
+              <td style="font-size:0.75rem;padding:0.2rem 0;text-align:right;font-variant-numeric:tabular-nums;">$${inv.amount_due.toFixed(2)}</td>
+              <td style="padding:0.2rem 0 0.2rem 0.4rem;text-align:right;">${paidBadge}</td>
             </tr>`;
           });
           html += `</table>`;
@@ -1267,6 +1263,8 @@
 
         html += `</div>`;
       });
+
+      html += `</div>`;
     });
 
     el.innerHTML = html;
