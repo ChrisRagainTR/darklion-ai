@@ -766,10 +766,16 @@
     const retired = engLetters.filter(l => l.status === 'retired');
     let html = '';
 
-    active.forEach(l => { html += renderEngLetterCard(l, false); });
+    if (active.length) {
+      html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;">`;
+      active.forEach(l => { html += renderEngLetterCard(l, false); });
+      html += `</div>`;
+    }
     if (retired.length) {
       html += `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin:1.25rem 0 0.6rem;padding-top:0.75rem;border-top:1px solid var(--border);">Retired (${retired.length})</div>`;
+      html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;">`;
       retired.forEach(l => { html += renderEngLetterCard(l, true); });
+      html += `</div>`;
     }
     el.innerHTML = html;
   }
