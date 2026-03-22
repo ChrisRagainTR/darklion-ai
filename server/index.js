@@ -218,6 +218,9 @@ app.get('/pipelines', (req, res) => res.render('pipelines', { title: 'Pipelines'
 const engagementRouter = require('./routes/engagement');
 app.use('/api/engagement', requireFirm, apiLimiter, engagementRouter);
 
+const billingRouter = require('./routes/billing');
+app.use('/api/billing', requireFirm, apiLimiter, billingRouter);
+
 const taxDeliveryRouter = require('./routes/tax-delivery');
 app.use('/api/tax-deliveries', requireFirm, apiLimiter, taxDeliveryRouter);
 

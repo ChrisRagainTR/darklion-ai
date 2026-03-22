@@ -1042,28 +1042,225 @@
   }
 
   // ── Billing tab ───────────────────────────────────────────────────
-  function renderBilling() {
-    if (!relData) return;
-    const r = relData;
+  // ── Billing tab ──────────────────────────────────────────────────
+  let billingConfig = null;
+
+  async function renderBilling() {
     const el = document.getElementById('billing-content');
-    const tierLabels = { standard:'Standard', legacy_blueprint:'Legacy Blueprint', tax_only:'Tax Only', full_service:'Full Service' };
-    let html = `<div style="max-width:600px;">
-      <div class="card">
-        <div class="card-title">Service &amp; Billing</div>
-        <div class="info-row"><span class="info-label">Service Tier</span><span class="info-val">${r.service_tier ? tierBadge(r.service_tier) : '<span style="color:var(--muted);">—</span>'}</span></div>
-        <div class="info-row"><span class="info-label">Billing</span><span class="info-val">${r.billing_status ? billingBadge(r.billing_status) : '<span style="color:var(--muted);">—</span>'}</span></div>
-        ${r.stripe_customer_id ? `<div class="info-row"><span class="info-label">Stripe Customer</span><span class="info-val" style="font-family:monospace;font-size:0.82rem;">${esc(r.stripe_customer_id)}</span></div>` : ''}
-        ${r.stripe_subscription_id ? `<div class="info-row"><span class="info-label">Stripe Sub</span><span class="info-val" style="font-family:monospace;font-size:0.82rem;">${esc(r.stripe_subscription_id)}</span></div>` : ''}
-        <div style="margin-top:1rem;">
-          <button class="btn btn-outline btn-sm" onclick="openEditModal()">✏️ Edit Billing Info</button>
+    el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading billing config…</div></div>';
+
+    // Load config
+    try {
+      const res = await apiFetch(`/api/billing/${relId}/config`);
+      billingConfig = res.ok ? await res.json() : { billing_accounts: [], billing_emails: [] };
+    } catch(e) { billingConfig = { billing_accounts: [], billing_emails: [] }; }
+
+    renderBillingConfig(el);
+
+    // If configured, load live Stripe data
+    if (billingConfig.billing_accounts.length && billingConfig.billing_emails.length) {
+      loadBillingSummary(el);
+    }
+  }
+
+  function renderBillingConfig(el) {
+    const cfg = billingConfig || {};
+    const accounts = cfg.billing_accounts || [];
+    const emails = cfg.billing_emails || [];
+
+    let html = `<div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1.5rem;">
+      <div class="card" style="min-width:280px;flex:0 0 auto;">
+        <div class="card-title">Stripe Configuration</div>
+        <div style="margin-bottom:0.75rem;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">Accounts</div>
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.84rem;margin-bottom:0.35rem;cursor:pointer;">
+            <input type="checkbox" id="ba-sentinel-tax" ${accounts.includes('sentinel_tax') ? 'checked' : ''}>
+            Sentinel Tax
+          </label>
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.84rem;cursor:pointer;">
+            <input type="checkbox" id="ba-sentinel-pcs" ${accounts.includes('sentinel_pcs') ? 'checked' : ''}>
+            Sentinel Private Client Services
+          </label>
         </div>
+        <div style="margin-bottom:0.75rem;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">Lookup Emails</div>
+          <div id="billing-emails-list">`;
+    emails.forEach((e, i) => {
+      html += `<div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.3rem;">
+        <span style="flex:1;font-size:0.84rem;">${esc(e)}</span>
+        <button class="btn btn-ghost btn-xs" onclick="removeBillingEmail(${i})" style="color:var(--muted);">✕</button>
+      </div>`;
+    });
+    html += `</div>
+          <div style="display:flex;gap:0.4rem;margin-top:0.5rem;">
+            <input type="email" class="form-control" id="billing-email-input" placeholder="Add email…" style="flex:1;">
+            <button class="btn btn-outline btn-sm" onclick="addBillingEmail()">Add</button>
+          </div>
+        </div>
+        <button class="btn btn-gold btn-sm" id="billing-save-btn" onclick="saveBillingConfig()">Save &amp; Refresh</button>
       </div>
-      <div class="placeholder-section">
-        <div class="ph-icon">💳</div>
-        <div class="ph-title">Stripe Integration Coming Soon</div>
-        <div class="ph-desc">Automated billing, invoice generation, and payment tracking will appear here.</div>
-      </div>
-    </div>`;
+      <div id="billing-summary" style="flex:1;min-width:300px;">`;
+
+    if (!accounts.length || !emails.length) {
+      html += `<div class="placeholder-section"><div class="ph-icon">💳</div>
+        <div class="ph-title">Not Configured</div>
+        <div class="ph-desc">Select at least one Stripe account and add a lookup email to see billing data.</div>
+      </div>`;
+    } else {
+      html += `<div class="loading-state"><div class="loading-spinner"></div><div>Fetching from Stripe…</div></div>`;
+    }
+
+    html += `</div></div>`;
+    el.innerHTML = html;
+
+    // Wire Enter key on email input
+    const inp = document.getElementById('billing-email-input');
+    if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') addBillingEmail(); });
+  }
+
+  function addBillingEmail() {
+    const inp = document.getElementById('billing-email-input');
+    const val = inp.value.trim().toLowerCase();
+    if (!val || !val.includes('@')) { toast('Enter a valid email', 'error'); return; }
+    if (!billingConfig.billing_emails) billingConfig.billing_emails = [];
+    if (billingConfig.billing_emails.includes(val)) { toast('Already added', 'error'); return; }
+    billingConfig.billing_emails.push(val);
+    inp.value = '';
+    renderBillingConfig(document.getElementById('billing-content'));
+  }
+
+  function removeBillingEmail(idx) {
+    billingConfig.billing_emails.splice(idx, 1);
+    renderBillingConfig(document.getElementById('billing-content'));
+  }
+
+  async function saveBillingConfig() {
+    const btn = document.getElementById('billing-save-btn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    const accounts = [];
+    if (document.getElementById('ba-sentinel-tax')?.checked) accounts.push('sentinel_tax');
+    if (document.getElementById('ba-sentinel-pcs')?.checked) accounts.push('sentinel_pcs');
+    billingConfig.billing_accounts = accounts;
+    try {
+      const res = await apiFetch(`/api/billing/${relId}/config`, {
+        method: 'PUT',
+        body: JSON.stringify({ billing_accounts: accounts, billing_emails: billingConfig.billing_emails || [] }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      billingConfig = await res.json();
+      btn.textContent = '✓ Saved';
+      setTimeout(() => renderBilling(), 400);
+    } catch(e) { toast(e.message, 'error'); btn.disabled = false; btn.textContent = 'Save & Refresh'; }
+  }
+
+  async function loadBillingSummary(el) {
+    const summaryEl = document.getElementById('billing-summary');
+    if (!summaryEl) return;
+    summaryEl.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Fetching from Stripe…</div></div>';
+    try {
+      const res = await apiFetch(`/api/billing/${relId}/summary`);
+      const data = res.ok ? await res.json() : null;
+      if (!data || !data.configured) {
+        summaryEl.innerHTML = '<div style="color:var(--muted);font-size:0.84rem;">No Stripe data found for these emails.</div>';
+        return;
+      }
+      renderBillingSummary(summaryEl, data);
+    } catch(e) {
+      summaryEl.innerHTML = `<div style="color:var(--muted);font-size:0.84rem;">Failed to load: ${esc(e.message)}</div>`;
+    }
+  }
+
+  function renderBillingSummary(el, data) {
+    const statusColor = { active:'#3ecf8e', past_due:'#ed8936', canceled:'#f56565', trialing:'#63b3ed', unpaid:'#f56565', incomplete:'#8fa3b8' };
+    const statusLabel = { active:'Active', past_due:'Past Due', canceled:'Canceled', trialing:'Trial', unpaid:'Unpaid', incomplete:'Incomplete' };
+
+    let html = '';
+
+    // MRR header
+    if (data.total_mrr > 0) {
+      const pastDueBadge = data.has_past_due ? `<span style="margin-left:0.75rem;padding:0.15rem 0.6rem;border-radius:20px;font-size:0.72rem;font-weight:700;background:rgba(237,137,54,0.15);color:#ed8936;border:1px solid rgba(237,137,54,0.3);">⚠️ Past Due</span>` : '';
+      html += `<div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:10px;padding:0.85rem 1.1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.1rem;">Total MRR</div>
+          <div style="font-size:1.5rem;font-weight:800;color:var(--gold);">$${data.total_mrr.toFixed(2)}<span style="font-size:0.75rem;font-weight:500;color:var(--muted);">/mo</span></div>
+        </div>
+        <div>${pastDueBadge}</div>
+      </div>`;
+    }
+
+    data.accounts.forEach(account => {
+      if (account.error) {
+        html += `<div class="card" style="margin-bottom:0.85rem;"><div class="card-title">${esc(account.label)}</div><div style="color:var(--muted);font-size:0.84rem;">⚠️ ${esc(account.error)}</div></div>`;
+        return;
+      }
+      if (!account.customers.length) {
+        html += `<div class="card" style="margin-bottom:0.85rem;"><div class="card-title">${esc(account.label)}</div><div style="color:var(--muted);font-size:0.84rem;">No customers found for these emails.</div></div>`;
+        return;
+      }
+
+      html += `<div style="margin-bottom:0.5rem;font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;">${esc(account.label)}</div>`;
+
+      account.customers.forEach(cust => {
+        if (cust.error) {
+          html += `<div class="card" style="margin-bottom:0.75rem;"><div style="color:var(--muted);font-size:0.84rem;">${esc(cust.email)}: ${esc(cust.error)}</div></div>`;
+          return;
+        }
+
+        html += `<div class="card" style="margin-bottom:0.75rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+            <div>
+              <div style="font-weight:700;font-size:0.92rem;">${esc(cust.name)}</div>
+              <div style="font-size:0.76rem;color:var(--muted);">${esc(cust.email)}</div>
+            </div>
+            ${cust.total_monthly > 0 ? `<div style="font-size:1.1rem;font-weight:800;color:var(--gold);">$${cust.total_monthly.toFixed(2)}/mo</div>` : ''}
+          </div>`;
+
+        if (cust.subscriptions.length) {
+          html += `<div style="margin-bottom:0.75rem;">`;
+          cust.subscriptions.forEach(sub => {
+            const dot = statusColor[sub.status] || '#8fa3b8';
+            const lbl = statusLabel[sub.status] || sub.status;
+            const nextDate = sub.current_period_end ? new Date(sub.current_period_end * 1000).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+            html += `<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.85rem;margin-bottom:0.5rem;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <div style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></div>
+                  <span style="font-size:0.8rem;font-weight:700;color:${dot};">${lbl}</span>
+                </div>
+                ${nextDate ? `<span style="font-size:0.72rem;color:var(--muted);">Renews ${nextDate}</span>` : ''}
+              </div>`;
+            sub.items.forEach(item => {
+              html += `<div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:0.15rem 0;">
+                <span>${esc(item.description)}</span>
+                <span style="font-variant-numeric:tabular-nums;">$${item.amount.toFixed(2)}/${item.interval}</span>
+              </div>`;
+            });
+            html += `</div>`;
+          });
+          html += `</div>`;
+        }
+
+        if (cust.invoices.length) {
+          html += `<div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;">Recent Invoices</div>`;
+          html += `<table style="width:100%;border-collapse:collapse;">`;
+          cust.invoices.forEach(inv => {
+            const invDate = new Date(inv.created * 1000).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+            const paidBadge = inv.paid
+              ? `<span style="padding:0.08rem 0.4rem;border-radius:20px;font-size:0.65rem;font-weight:700;background:rgba(62,207,142,0.12);color:#3ecf8e;">✓ Paid</span>`
+              : `<span style="padding:0.08rem 0.4rem;border-radius:20px;font-size:0.65rem;font-weight:700;background:rgba(237,137,54,0.12);color:#ed8936;">Unpaid</span>`;
+            html += `<tr style="border-top:1px solid rgba(255,255,255,0.04);">
+              <td style="font-size:0.78rem;padding:0.3rem 0;color:var(--muted);">${invDate}</td>
+              <td style="font-size:0.78rem;padding:0.3rem 0;text-align:right;font-variant-numeric:tabular-nums;">$${inv.amount_due.toFixed(2)}</td>
+              <td style="padding:0.3rem 0 0.3rem 0.5rem;text-align:right;">${paidBadge}</td>
+            </tr>`;
+          });
+          html += `</table>`;
+        }
+
+        html += `</div>`;
+      });
+    });
+
     el.innerHTML = html;
   }
 
