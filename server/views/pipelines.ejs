@@ -303,7 +303,7 @@
   }
 
   // ── PIPELINE LIST ─────────────────────────────────
-  window.loadList = function loadList() {
+  function loadList() {
     var path = '/templates' + (showingArchived ? '?archived=true' : '');
     api('GET', path).then(function(templates) {
       var tbody = document.getElementById('pipe-tbody');
@@ -840,6 +840,8 @@
       .then(function(members) { teamMembers = members; })
       .catch(function() {});
   }
+
+  window.loadList = loadList; // expose for retry link
 
   // ── INIT ──────────────────────────────────────────
   loadTeam();
