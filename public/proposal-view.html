@@ -159,7 +159,11 @@ async function init() {
     }
     proposal = await r.json();
 
-    if (['accepted','signed'].includes(proposal.status)) {
+    if (proposal.status === 'signed') {
+      showSigned();
+      return;
+    }
+    if (proposal.status === 'accepted') {
       showAccepted();
       return;
     }
@@ -181,6 +185,7 @@ function showError(msg) {
 }
 
 function showAccepted() {
+  // Accepted but not yet signed — can still change package
   document.getElementById('root').innerHTML = `
     <div class="hero" style="padding:1.5rem;">
       <div class="hero-eyebrow">Proposal for ${escHtml(proposal.client_name||'')}</div>
@@ -195,6 +200,24 @@ function showAccepted() {
         <div style="margin-top:1rem;">
           <button class="btn btn-outline" style="font-size:0.82rem;" onclick="resetAcceptance()">← Choose a Different Package</button>
         </div>
+      </div>
+    </div>`;
+}
+
+function showSigned() {
+  // Fully signed — download only, no ability to change anything
+  document.getElementById('root').innerHTML = `
+    <div class="hero" style="padding:1.5rem;">
+      <div class="hero-eyebrow">Engagement Letter — ${escHtml(proposal.client_name||'')}</div>
+      <h1>${escHtml(proposal.title||'Service Engagement Proposal')}</h1>
+    </div>
+    <div class="content">
+      <div class="accepted-state">
+        <div class="state-icon">✅</div>
+        <div class="state-title">Engagement Letter Signed</div>
+        <div class="state-sub">Your engagement has been fully executed. You can download your signed copy below.</div>
+        <a href="/p/${token}/sign?download=1" target="_blank" class="btn btn-gold" style="max-width:320px;margin:0 auto;">⬇ Download Signed Copy</a>
+        <p style="margin-top:1.25rem;font-size:0.82rem;color:var(--muted);">Questions? Contact your advisor directly.</p>
       </div>
     </div>`;
 }
