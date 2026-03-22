@@ -25,7 +25,17 @@
     </div>
     <div class="form-group">
       <label>Message Body</label>
-      <textarea class="form-control" id="tmpl-body" rows="10" placeholder="Write the template message here…" style="resize:vertical;font-family:inherit;font-size:0.88rem;line-height:1.6;"></textarea>
+      <div style="margin-bottom:0.5rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">Insert Variable — click to insert at cursor</div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+          <button type="button" class="tmpl-var-chip" onclick="insertVar('{First Name}')">👤 First Name</button>
+          <button type="button" class="tmpl-var-chip" onclick="insertVar('{Last Name}')">👤 Last Name</button>
+          <button type="button" class="tmpl-var-chip" onclick="insertVar('{Full Name}')">👤 Full Name</button>
+          <button type="button" class="tmpl-var-chip" onclick="insertVar('{Company Name}')">🏢 Company Name</button>
+          <button type="button" class="tmpl-var-chip" onclick="insertVar('{Firm Name}')">🏛 Firm Name</button>
+        </div>
+      </div>
+      <textarea class="form-control" id="tmpl-body" rows="10" placeholder="Write the template message here… Use the buttons above to insert personalization variables." style="resize:vertical;font-family:inherit;font-size:0.88rem;line-height:1.6;"></textarea>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
@@ -36,9 +46,41 @@
 
 <%- include('partials/shell-globals') %>
 
+<style>
+  .tmpl-var-chip {
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.35);
+    color: var(--gold);
+    border-radius: 20px;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    font-family: inherit;
+  }
+  .tmpl-var-chip:hover {
+    background: rgba(201,168,76,0.2);
+    border-color: rgba(201,168,76,0.6);
+  }
+</style>
+
 <script>
   let templates = [];
   let editingId = null;
+
+  function insertVar(tag) {
+    const ta = document.getElementById('tmpl-body');
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const before = ta.value.slice(0, start);
+    const after = ta.value.slice(end);
+    ta.value = before + tag + after;
+    // Place cursor after the inserted tag
+    const newPos = start + tag.length;
+    ta.setSelectionRange(newPos, newPos);
+    ta.focus();
+  }
 
   async function loadTemplates() {
     try {
