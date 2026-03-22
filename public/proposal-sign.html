@@ -107,7 +107,7 @@
     .loe-agreement-title { text-align: left; font-size: 20px !important; margin: 28px 0 20px !important; border: none !important; color: #462161 !important; font-weight: 800 !important; }
     .loe-section { margin-bottom: 16px; }
     .loe-section-heading { font-size: 16px; font-weight: 700; color: #462161; border-bottom: 2px solid #462161; padding-bottom: 6px; margin: 32px 0 16px; }
-    .loe-checkbox-line { font-size: 14px; margin: 6px 0; padding-left: 4px; }
+    .loe-checkbox-line { font-size: 14px; margin: 10px 0 6px; padding: 8px 12px; background: rgba(70,33,97,0.06); border-left: 3px solid #462161; border-radius: 4px; display: flex; align-items: center; font-weight: 600; color: #1a1a2e; }
     .loe-service-list, .loe-doc-list { margin: 12px 0 16px 24px; padding-left: 8px; list-style-type: disc; }
     .loe-bk-list, .loe-planning-list { margin: 12px 0 16px 24px; padding-left: 8px; list-style-type: decimal; }
     .loe-service-list li, .loe-bk-list li, .loe-doc-list li, .loe-planning-list li { margin-bottom: 8px; line-height: 1.6; padding-left: 4px; }
@@ -1132,9 +1132,9 @@ function generateWealthLOE(eng) {
   const tpServiceRows = makeRows(TAX_PLANNING_SERVICES);
   const bpServiceRows = makeRows(LEGACY_BLUEPRINT_SERVICES);
 
-  const tpCheck = hasTP ? '&#9745;' : '&#9744;';
-  const bpCheck = hasBP ? '&#9745;' : '&#9744;';
-  const imCheck = hasIM ? '&#9745;' : '&#9744;';
+  const tpCheck = hasTP ? `<span style="display:inline-block;width:16px;height:16px;border:2px solid #462161;background:#462161;color:white;text-align:center;line-height:14px;font-size:12px;font-weight:900;margin-right:6px;vertical-align:middle;">✓</span>` : `<span style="display:inline-block;width:16px;height:16px;border:2px solid #999;background:white;margin-right:6px;vertical-align:middle;"></span>`;
+  const bpCheck = hasBP ? `<span style="display:inline-block;width:16px;height:16px;border:2px solid #462161;background:#462161;color:white;text-align:center;line-height:14px;font-size:12px;font-weight:900;margin-right:6px;vertical-align:middle;">✓</span>` : `<span style="display:inline-block;width:16px;height:16px;border:2px solid #999;background:white;margin-right:6px;vertical-align:middle;"></span>`;
+  const imCheck = hasIM ? `<span style="display:inline-block;width:16px;height:16px;border:2px solid #462161;background:#462161;color:white;text-align:center;line-height:14px;font-size:12px;font-weight:900;margin-right:6px;vertical-align:middle;">✓</span>` : `<span style="display:inline-block;width:16px;height:16px;border:2px solid #999;background:white;margin-right:6px;vertical-align:middle;"></span>`;
 
   const elections = [];
   if (hasTP) elections.push('Taxes &amp; Planning');
@@ -1709,7 +1709,7 @@ function generateLOEForPrint(eng) {
   .loe-election-summary { width: 100%; font-size: 10pt; }
   .loe-election-summary td { padding: 2pt 0; }
   .loe-agreement-title { text-align: center; font-size: 13pt !important; font-weight: 700 !important; color: #462161 !important; margin: 18pt 0 12pt !important; border: none !important; }
-  .loe-checkbox-line { font-size: 10pt; margin: 4pt 0; }
+  .loe-checkbox-line { font-size: 10pt; margin: 8pt 0 4pt; padding: 6pt 10pt; background: rgba(70,33,97,0.05); border-left: 3pt solid #462161; border-radius: 3pt; display: flex; align-items: center; font-weight: 600; }
 
   /* ── Service lists ───────────────────────────────────────── */
   .loe-service-list, .loe-doc-list { margin: 5pt 0 9pt 18pt; list-style-type: disc; }
