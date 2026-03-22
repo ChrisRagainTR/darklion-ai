@@ -219,7 +219,8 @@ router.get('/:id/team', async (req, res) => {
     if (!rel.length) return res.status(404).json({ error: 'Not found' });
 
     const { rows } = await pool.query(`
-      SELECT fu.id, COALESCE(fu.display_name, fu.name) AS name, fu.email, fu.role, fu.avatar_url
+      SELECT fu.id, COALESCE(fu.display_name, fu.name) AS name, fu.email, fu.role, fu.avatar_url,
+             fu.credentials, (fu.invite_token IS NOT NULL AND fu.accepted_at IS NULL) AS pending
       FROM relationship_team rt
       JOIN firm_users fu ON fu.id = rt.firm_user_id
       WHERE rt.relationship_id = $1

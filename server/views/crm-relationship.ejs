@@ -2,7 +2,7 @@
 
 <style>
   /* ── Layout ── */
-  .detail-grid { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; padding: 1.5rem; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 380px; gap: 1.5rem; padding: 1.5rem; }
   @media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
 
   /* ── Tab bar ── */
@@ -135,7 +135,7 @@
   .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.15rem; }
 
   /* ── Overview dashboard grid ── */
-  .ov-outer { display: grid; grid-template-columns: 1fr 320px; gap: 0.85rem; padding: 1rem 1.5rem; align-items: start; }
+  .ov-outer { display: grid; grid-template-columns: 1fr 380px; gap: 0.85rem; padding: 1rem 1.5rem; align-items: start; }
   .ov-main { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
   .ov-full { grid-column: 1 / -1; }
   .ov-sidebar { display: flex; flex-direction: column; gap: 0.85rem; }
@@ -160,6 +160,7 @@
   .act-meta { font-size: 0.7rem; color: var(--muted); }
 
   /* ── Team member chips ── */
+  /* entity rows used by people/companies in sidebar */
   .team-member { display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
   .team-member:last-child { border-bottom: none; }
   .team-avatar { width: 26px; height: 26px; border-radius: 50%; background: rgba(201,168,76,0.15); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: var(--gold); flex-shrink: 0; overflow: hidden; }
@@ -168,7 +169,19 @@
   .team-role { font-size: 0.68rem; color: var(--muted); }
   .team-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; padding: 0.1rem 0.3rem; border-radius: 3px; flex-shrink: 0; }
   .team-remove:hover { color: #f56565; }
-  .team-add-row { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+  /* 2-per-row team grid */
+  .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .team-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.7rem; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.3rem; position: relative; }
+  .team-card-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(201,168,76,0.15); display: flex; align-items: center; justify-content: center; font-size: 0.82rem; font-weight: 700; color: var(--gold); overflow: hidden; flex-shrink: 0; }
+  .team-card-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .team-card-name { font-size: 0.78rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+  .team-card-title { font-size: 0.68rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+  .team-card-remove { position: absolute; top: 0.25rem; right: 0.3rem; background: none; border: none; color: transparent; cursor: pointer; font-size: 0.72rem; padding: 0; line-height: 1; border-radius: 3px; }
+  .team-card:hover .team-card-remove { color: var(--muted); }
+  .team-card-remove:hover { color: #f56565 !important; }
+  .team-card.pending { opacity: 0.6; }
+  /* add row */
+  .team-add-row { display: flex; gap: 0.4rem; margin-top: 0.6rem; }
   .team-add-select { flex: 1; min-width: 0; padding: 0.3rem 0.5rem; background: var(--navy); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.78rem; outline: none; }
   .team-add-select:focus { border-color: var(--gold); }
   .team-add-btn { background: var(--gold); color: var(--navy); border: none; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
@@ -561,10 +574,13 @@
 
     // Team
     sidebar += `<div class="ov-panel" id="team-panel">
-      <div class="ov-panel-title"><span>👥 Account Team</span></div>
+      <div class="ov-panel-title">
+        <span>👥 Account Team</span>
+        <button class="btn btn-ghost btn-xs" onclick="document.getElementById('team-add-row').style.display='flex';document.getElementById('team-add-select').focus()">+ Team</button>
+      </div>
       <div id="team-members-list"><div style="color:var(--muted);font-size:0.78rem;">Loading…</div></div>
       <div class="team-add-row" id="team-add-row" style="display:none;">
-        <select class="team-add-select" id="team-add-select"><option value="">Add member…</option></select>
+        <select class="team-add-select" id="team-add-select"><option value="">Select member…</option></select>
         <button class="team-add-btn" onclick="addTeamMember()">Add</button>
       </div>
     </div>`;
@@ -625,33 +641,38 @@
 
     const assignedIds = new Set(_assignedTeam.map(m => m.id));
 
-    // Render assigned members
+    // Render 2-per-row card grid
     if (!_assignedTeam.length) {
-      listEl.innerHTML = `<div style="color:var(--muted);font-size:0.78rem;margin-bottom:0.3rem;">No team assigned.</div>`;
+      listEl.innerHTML = `<div style="color:var(--muted);font-size:0.78rem;margin-bottom:0.3rem;">No team assigned yet.</div>`;
     } else {
-      listEl.innerHTML = _assignedTeam.map(m => {
+      listEl.innerHTML = `<div class="team-grid">` + _assignedTeam.map(m => {
         const initials = m.name ? m.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
         const avatarHtml = m.avatar_url
           ? `<img src="${m.avatar_url}" alt="${esc(m.name)}">`
           : initials;
-        const roleLabel = m.role === 'owner' ? 'Owner' : m.role === 'admin' ? 'Admin' : 'Staff';
-        return `<div class="team-member" id="tm-${m.id}">
-          <div class="team-avatar">${avatarHtml}</div>
-          <div style="flex:1;min-width:0;">
-            <div class="team-name">${esc(m.name||m.email)}</div>
-            <div class="team-role">${roleLabel}</div>
-          </div>
-          <button class="team-remove" onclick="removeTeamMember(${m.id})" title="Remove">✕</button>
+        const title = m.credentials ? esc(m.credentials) : (m.role === 'owner' ? 'Owner' : m.role === 'admin' ? 'Admin' : 'Staff');
+        const pendingClass = m.pending ? ' pending' : '';
+        return `<div class="team-card${pendingClass}" id="tm-${m.id}">
+          <button class="team-card-remove" onclick="removeTeamMember(${m.id})" title="Remove">✕</button>
+          <div class="team-card-avatar">${avatarHtml}</div>
+          <div class="team-card-name">${esc(m.name||m.email)}</div>
+          <div class="team-card-title">${title}${m.pending ? ' · Pending' : ''}</div>
         </div>`;
-      }).join('');
+      }).join('') + `</div>`;
     }
 
-    // Populate add-select with unassigned staff
+    // Populate dropdown — include pending staff
     if (addSelect) {
-      const unassigned = _allStaff.filter(s => !s.pending && !assignedIds.has(s.id));
-      addSelect.innerHTML = `<option value="">Add member…</option>` +
-        unassigned.map(s => `<option value="${s.id}">${esc(s.display_name||s.name||s.email)}</option>`).join('');
-      if (addRow) addRow.style.display = unassigned.length ? 'flex' : 'none';
+      const unassigned = _allStaff.filter(s => !assignedIds.has(s.id));
+      addSelect.innerHTML = `<option value="">Select member…</option>` +
+        unassigned.map(s => {
+          const label = (s.display_name||s.name||s.email) + (s.pending ? ' (pending)' : '');
+          return `<option value="${s.id}">${esc(label)}</option>`;
+        }).join('');
+      // Only auto-hide if no unassigned remain and row is not already visible
+      if (!unassigned.length && addRow && addRow.style.display !== 'flex') {
+        addRow.style.display = 'none';
+      }
     }
   }
 
