@@ -853,6 +853,7 @@
       // If bookkeeping tab was clicked before company loaded, init now
       if (window._bkPendingInit) { window._bkPendingInit = false; bk_initBookkeeping(); }
     } catch(e) {
+      console.error('loadCompany error:', e);
       document.getElementById('entity-name').textContent = 'Error loading';
     }
   }
@@ -1373,11 +1374,8 @@
       if (!res.ok) { const d = await res.json(); throw new Error(d.error||'Failed'); }
       closeModal();
       toast('Company updated');
-      await loadCompany();
-      // Switch to Overview so user sees updated data immediately
-      const ovTab = document.querySelector('.tab-item[onclick*="overview"]');
-      if (ovTab && !ovTab.classList.contains('active')) switchTab('overview', ovTab);
-    } catch(e) { document.getElementById('edit-error').textContent = e.message; document.getElementById('edit-error').style.display = ''; }
+      setTimeout(() => window.location.reload(), 800);
+    } catch(e) { console.error('submitEdit error:', e); document.getElementById('edit-error').textContent = e.message; document.getElementById('edit-error').style.display = ''; }
   }
 
   async function detachPerson(personId) {

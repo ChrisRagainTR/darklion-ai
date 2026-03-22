@@ -851,10 +851,7 @@
       if (!res.ok) { const d = await res.json(); throw new Error(d.error||'Failed'); }
       closeModal();
       toast('Person updated');
-      await loadPerson();
-      // Switch to Overview so user sees updated data immediately
-      const ovTab = document.querySelector('.tab-item[onclick*="overview"]');
-      if (ovTab && !ovTab.classList.contains('active')) switchTab('overview', ovTab);
+      setTimeout(() => window.location.reload(), 800);
     } catch(e) { document.getElementById('edit-error').textContent = e.message; document.getElementById('edit-error').style.display = ''; }
   }
 
