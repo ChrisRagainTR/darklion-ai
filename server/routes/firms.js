@@ -615,13 +615,15 @@ router.post('/domains/:id/verify', requireFirm, async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: 'Domain not found' });
     const dom = rows[0];
 
-    // DNS lookup for TXT records
+    // DNS lookup for TXT records — check _darklion.<subdomain> to avoid CNAME conflict
     const dns = require('dns').promises;
     let verified = false;
     try {
-      const records = await dns.resolveTxt(dom.domain);
+      const parts = dom.domain.split('.');
+      const txtHost = parts.length > 2 ? `_darklion.${parts[0]}.${parts.slice(1).join('.')}` : `_darklion.${dom.domain}`;
+      const records = await dns.resolveTxt(txtHost);
       verified = records.flat().some(r => r === dom.verification_token);
-    } catch (_) { /* DNS lookup failed */ }
+    } catch (_) { /* DNS lookup failed or record not yet propagated */ }
 
     if (verified) {
       await pool.query(
