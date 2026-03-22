@@ -159,6 +159,7 @@
     @media (max-width: 600px) {
       :root { --sidebar-w: 0px; }
       .sidebar { display: none; }
+      .header-search-wrap, .header-divider { display: none; }
     }
 
   </style>
@@ -167,7 +168,7 @@
 
   <!-- TOP HEADER -->
   <header class="top-header">
-    <a class="header-logo" href="/dashboard">
+    <a class="header-logo" id="header-logo-link" href="/dashboard">
       <img src="/lion-logo.png" alt="DL">
       <div class="logo-name">Dark<span>Lion</span></div>
     </a>
@@ -207,6 +208,16 @@
     <a class="nav-item <%= activeNav==='messages'?'active':'' %>" href="/messages">💬 <span>Messages</span></a>
     <a class="nav-item <%= activeNav==='statements-calendar'?'active':'' %>" href="/statements-calendar">📅 <span>Statement Calendar</span></a>
   </aside>
+
+  <script>
+    (function() {
+      const isPwa = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+      if (isPwa) {
+        const logo = document.getElementById('header-logo-link');
+        if (logo) logo.href = '/messages';
+      }
+    })();
+  </script>
 
   <main class="main">
 
