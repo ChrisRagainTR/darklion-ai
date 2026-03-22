@@ -146,37 +146,28 @@
     @media (max-width: 600px) {
       .main {
         left: 0 !important;
-        flex-direction: row !important;
-        overflow: hidden !important;
+        overflow-y: auto !important;
+        display: block !important;
       }
-
-      /* Inbox panel — full width, hides when thread open */
       .inbox-panel {
-        width: 100vw !important;
-        flex-shrink: 0 !important;
+        width: 100% !important;
+        height: auto !important;
         border-right: none !important;
-        transition: margin-left 0.25s ease;
+        position: static !important;
       }
-      .inbox-panel.slide-away {
-        margin-left: -100vw;
-      }
+      .inbox-panel.mobile-hidden { display: none !important; }
 
-      /* Detail panel — full width, always in flow */
       .detail-panel {
-        width: 100vw !important;
-        flex-shrink: 0 !important;
-        overflow: hidden;
+        width: 100% !important;
+        height: auto !important;
+        position: static !important;
+        display: none;
+      }
+      .detail-panel.mobile-visible {
         display: flex !important;
         flex-direction: column !important;
       }
 
-      /* Detail messages — must scroll on iOS */
-      .detail-messages {
-        -webkit-overflow-scrolling: touch;
-        overflow-y: auto !important;
-      }
-
-      /* Back button */
       .mobile-back-btn {
         display: flex !important;
         align-items: center;
@@ -184,27 +175,20 @@
         background: none;
         border: none;
         color: var(--gold);
-        font-size: 0.9rem;
+        font-size: 0.95rem;
         font-weight: 600;
         cursor: pointer;
         padding: 0.75rem 1rem;
         border-bottom: 1px solid var(--border);
         width: 100%;
-        text-align: left;
-        -webkit-tap-highlight-color: transparent;
       }
 
-      /* Touch targets */
       .thread-card { padding: 1rem; }
       .reply-box { padding: 0.75rem 1rem; }
       .reply-box textarea { min-height: 60px; font-size: 1rem; }
-      .detail-messages { padding: 1rem; }
+      .detail-messages { padding: 1rem; min-height: 200px; }
       .detail-header { padding: 0.75rem 1rem; flex-wrap: wrap; }
-
-      /* Always show resolve buttons on mobile */
       .thread-card-actions { display: flex !important; }
-
-      /* Buttons need tap-friendly sizing */
       .btn { padding: 0.55rem 1rem; }
     }
 </style>
@@ -676,15 +660,19 @@ const _isMobile = () => window.innerWidth <= 600;
 
 function openMobileThread() {
   if (!_isMobile()) return;
-  document.getElementById('inboxPanel').classList.add('slide-away');
+  document.getElementById('inboxPanel').classList.add('mobile-hidden');
+  document.getElementById('detailPanel').classList.add('mobile-visible');
   document.getElementById('mobileBackBtn').style.display = 'flex';
+  window.scrollTo(0, 0);
 }
 
 function closeMobileThread() {
-  document.getElementById('inboxPanel').classList.remove('slide-away');
+  document.getElementById('inboxPanel').classList.remove('mobile-hidden');
+  document.getElementById('detailPanel').classList.remove('mobile-visible');
   document.getElementById('mobileBackBtn').style.display = 'none';
   activeThreadId = null;
   renderInbox();
+  window.scrollTo(0, 0);
 }
 
 // Patch loadThread to trigger mobile slide
