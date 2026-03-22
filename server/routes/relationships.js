@@ -407,7 +407,7 @@ router.get('/:id/snapshot', async (req, res) => {
         FROM engagement_letters
         WHERE firm_id = $1 AND relationship_id = $2 AND status = 'active'
         ORDER BY created_at DESC
-        LIMIT 3
+        LIMIT 4
       `).catch(() => ({ rows: [] })),
 
     ]);

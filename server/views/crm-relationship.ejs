@@ -485,8 +485,35 @@
     }
     main += `</div>`;
 
-    // Recent Messages — right col, spans both rows (row 1+2)
-    main += `<div class="ov-panel" style="grid-column:2;grid-row:1/span 2;">
+    // Engagement summary — right col, row 1
+    main += `<div class="ov-panel" style="grid-column:2;grid-row:1;align-self:start;">
+      <div class="ov-panel-title"><span>📄 Active Engagement</span><a href="#" onclick="switchTab('engagement',document.querySelectorAll('.tab-item')[1]);return false;" class="btn btn-ghost btn-xs">View all →</a></div>`;
+    if (!snap) {
+      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
+    } else if (!snap.active_engagements || !snap.active_engagements.length) {
+      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No active engagement letters.</div>`;
+    } else {
+      main += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">`;
+      snap.active_engagements.forEach(l => {
+        const d = l.extracted_data;
+        const svcPills = d && d.services ? [
+          d.services.tax ? `<span style="padding:0.08rem 0.35rem;border-radius:20px;font-size:0.62rem;font-weight:700;background:rgba(99,179,237,0.15);color:#63b3ed;">Tax</span>` : '',
+          d.services.bookkeeping ? `<span style="padding:0.08rem 0.35rem;border-radius:20px;font-size:0.62rem;font-weight:700;background:rgba(62,207,142,0.12);color:#3ecf8e;">Books</span>` : '',
+          d.services.financial_planning ? `<span style="padding:0.08rem 0.35rem;border-radius:20px;font-size:0.62rem;font-weight:700;background:rgba(201,168,76,0.15);color:var(--gold);">FP</span>` : '',
+        ].filter(Boolean).join(' ') : '<span style="font-size:0.72rem;color:var(--muted);">Extracting…</span>';
+        const price = d && d.total_monthly ? `<div style="font-size:0.88rem;font-weight:800;color:var(--gold);">$${Number(d.total_monthly).toFixed(0)}<span style="font-size:0.65rem;font-weight:500;color:var(--muted);">/mo</span></div>` : '';
+        main += `<div style="background:rgba(201,168,76,0.04);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:0.6rem 0.75rem;">
+          <div style="font-size:0.78rem;font-weight:700;margin-bottom:0.3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(l.display_name)}</div>
+          <div style="display:flex;gap:0.25rem;flex-wrap:wrap;margin-bottom:0.3rem;">${svcPills}</div>
+          ${price}
+        </div>`;
+      });
+      main += `</div>`;
+    }
+    main += `</div>`;
+
+    // Recent Messages — right col, row 2
+    main += `<div class="ov-panel" style="grid-column:2;grid-row:2;">
       <div class="ov-panel-title"><span>💬 Recent Messages</span><a href="/messages" class="btn btn-ghost btn-xs">View all →</a></div>`;
     if (!snap) {
       main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
