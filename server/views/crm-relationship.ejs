@@ -647,18 +647,29 @@
     } else {
       listEl.innerHTML = `<div class="team-grid">` + _assignedTeam.map(m => {
         const initials = m.name ? m.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
-        const avatarHtml = m.avatar_url
-          ? `<img src="${m.avatar_url}" alt="${esc(m.name)}">`
-          : initials;
         const title = m.credentials ? esc(m.credentials) : (m.role === 'owner' ? 'Owner' : m.role === 'admin' ? 'Admin' : 'Staff');
         const pendingClass = m.pending ? ' pending' : '';
         return `<div class="team-card${pendingClass}" id="tm-${m.id}">
           <button class="team-card-remove" onclick="removeTeamMember(${m.id})" title="Remove">✕</button>
-          <div class="team-card-avatar">${avatarHtml}</div>
+          <div class="team-card-avatar" id="tca-${m.id}">${initials}</div>
           <div class="team-card-name">${esc(m.name||m.email)}</div>
           <div class="team-card-title">${title}${m.pending ? ' · Pending' : ''}</div>
         </div>`;
       }).join('') + `</div>`;
+      // Async-load signed avatar URLs
+      _assignedTeam.forEach(m => {
+        if (!m.avatar_url) return; // no avatar key, keep initials
+        apiFetch(`/firms/team/${m.id}/avatar`).then(r => r.json()).then(d => {
+          if (!d.url) return;
+          const el = document.getElementById(`tca-${m.id}`);
+          if (!el) return;
+          const img = document.createElement('img');
+          img.src = d.url;
+          img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;';
+          img.onerror = () => img.remove();
+          img.onload = () => { el.textContent = ''; el.appendChild(img); };
+        }).catch(() => {});
+      });
     }
 
     // Populate dropdown — include pending staff
