@@ -174,6 +174,45 @@ router.get('/:relId/:id/url', async (req, res) => {
   }
 });
 
+// POST /:relId/:id/re-extract — re-run AI extraction on existing letter
+router.post('/:relId/:id/re-extract', async (req, res) => {
+  const firmId = req.firm.id;
+  const { relId, id } = req.params;
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, s3_key, s3_bucket FROM engagement_letters WHERE id = $1 AND relationship_id = $2 AND firm_id = $3',
+      [id, relId, firmId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    const letter = rows[0];
+
+    // Reset extracted_data
+    await pool.query('UPDATE engagement_letters SET extracted_data = NULL, extracted_at = NULL WHERE id = $1', [id]);
+
+    // Re-download and extract async
+    setImmediate(async () => {
+      try {
+        const buffer = await downloadFile({ key: letter.s3_key, bucket: letter.s3_bucket });
+        const extracted = await extractEngagementLetter(buffer);
+        await pool.query(
+          'UPDATE engagement_letters SET extracted_data = $1, extracted_at = NOW() WHERE id = $2',
+          [JSON.stringify(extracted), letter.id]
+        );
+      } catch(e) {
+        console.error('[engagement] re-extraction failed for letter', letter.id, e.message);
+        await pool.query(
+          "UPDATE engagement_letters SET extracted_data = $1, extracted_at = NOW() WHERE id = $2",
+          [JSON.stringify({ error: e.message, ai_summary: 'Re-extraction failed.' }), letter.id]
+        );
+      }
+    });
+
+    res.json({ ok: true, extracting: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /:relId/:id/extracted — poll for extracted data (client polls after upload)
 router.get('/:relId/:id/extracted', async (req, res) => {
   const firmId = req.firm.id;

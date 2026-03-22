@@ -888,6 +888,7 @@
     const actions = isRetired
       ? `<button class="btn btn-ghost btn-xs" onclick="engReactivate(${l.id})">Reactivate</button>`
       : `<button class="btn btn-outline btn-xs" onclick="engDownload(${l.id}, this)">⬇ View</button>
+         <button class="btn btn-ghost btn-xs" onclick="engReExtract(${l.id})" title="Re-run AI extraction">🔄</button>
          <button class="btn btn-ghost btn-xs" style="color:var(--muted);" onclick="engRetire(${l.id})">Retire</button>`;
 
     const cardOpacity = isRetired ? 'opacity:0.65;' : '';
@@ -924,6 +925,18 @@
       const el = document.getElementById('engagement-list');
       delete el.dataset.loaded;
       await loadEngagement();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function engReExtract(id) {
+    toast('Re-extracting with AI…');
+    try {
+      const res = await apiFetch(`/api/engagement/${relId}/${id}/re-extract`, { method: 'POST' });
+      if (!res.ok) throw new Error((await res.json()).error);
+      const listEl = document.getElementById('engagement-list');
+      delete listEl.dataset.loaded;
+      await loadEngagement();
+      if (id) pollExtraction(id);
     } catch(e) { toast(e.message, 'error'); }
   }
 

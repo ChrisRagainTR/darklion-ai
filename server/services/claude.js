@@ -303,6 +303,10 @@ Rules:
 - term_end_date from the "12 month term will end on" line
 - monthly_line_items: each row in the fee table that has a dollar amount
 - one_time_fees: the One-Time Services section
+- services.tax = true ONLY if there is an explicit "Tax Services" or "Tax" section header in the letter
+- services.bookkeeping = true ONLY if there is an explicit "Bookkeeping Services" or "Bookkeeping" section header in the letter
+- services.financial_planning = true ONLY if there is an explicit "Financial Planning Services" or "Financial Planning" section header in the letter
+- Do NOT infer services from the fee table or boilerplate text — only from dedicated service sections
 - Respond ONLY with the JSON object, no other text`,
         },
       ],
