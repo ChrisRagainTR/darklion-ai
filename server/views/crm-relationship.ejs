@@ -135,12 +135,14 @@
   .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.15rem; }
 
   /* ── Overview dashboard grid ── */
-  .ov-outer { display: grid; grid-template-columns: 1fr 380px; gap: 0.85rem; padding: 1rem 1.5rem; align-items: start; }
-  .ov-main { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
-  .ov-full { grid-column: 1 / -1; }
-  .ov-sidebar { display: flex; flex-direction: column; gap: 0.85rem; }
-  @media (max-width: 960px) { .ov-outer { grid-template-columns: 1fr; } .ov-sidebar { display: grid; grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 600px) { .ov-main { grid-template-columns: 1fr; } .ov-sidebar { grid-template-columns: 1fr; } }
+  /* ── Overview grid ── */
+  .ov-page { padding: 0.85rem 1.5rem; display: flex; flex-direction: column; gap: 0.85rem; }
+  /* Top row: people + companies side by side */
+  .ov-top { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+  /* Bottom area: 3 columns — left (tax+activity), center (engagement+messages), right (billing+team) */
+  .ov-bottom { display: grid; grid-template-columns: 1fr 1fr 320px; gap: 0.85rem; align-items: start; }
+  @media (max-width: 1100px) { .ov-bottom { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 768px) { .ov-top { grid-template-columns: 1fr; } .ov-bottom { grid-template-columns: 1fr; } }
   .ov-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; overflow: hidden; }
   .ov-panel-title { font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between; }
 
@@ -397,18 +399,31 @@
   }
 
   // ── Header ────────────────────────────────────────────────────────
-  function renderHeader(r) {
+  function renderHeader(r, snap) {
     document.title = `${r.name || 'Relationship'} — DarkLion CRM`;
     document.getElementById('entity-name').textContent = r.name || 'Unnamed Relationship';
-    let html = `<span class="badge badge-muted">Relationship</span>`;
-    if (r.service_tier) html += ` ${tierBadge(r.service_tier)}`;
-    if (r.billing_status) html += ` ${billingBadge(r.billing_status)}`;
+    let html = '';
+    // Service pills from active engagement letter
+    const activeLetter = snap && snap.active_engagements && snap.active_engagements[0];
+    const svcs = activeLetter && activeLetter.extracted_data && activeLetter.extracted_data.services;
+    if (svcs) {
+      if (svcs.tax) html += `<span class="badge" style="background:rgba(99,179,237,0.15);color:#63b3ed;border:1px solid rgba(99,179,237,0.3);">Tax</span> `;
+      if (svcs.bookkeeping) html += `<span class="badge" style="background:rgba(62,207,142,0.12);color:#3ecf8e;border:1px solid rgba(62,207,142,0.25);">Bookkeeping</span> `;
+      if (svcs.financial_planning) html += `<span class="badge" style="background:rgba(201,168,76,0.15);color:var(--gold);border:1px solid rgba(201,168,76,0.3);">Financial Planning</span> `;
+    } else {
+      if (r.service_tier) html += tierBadge(r.service_tier) + ' ';
+    }
+    // MRR from engagement
+    if (activeLetter && activeLetter.extracted_data && activeLetter.extracted_data.total_monthly) {
+      html += `<span class="badge badge-gold">$${Number(activeLetter.extracted_data.total_monthly).toFixed(0)}/mo</span> `;
+    }
+    if (r.billing_status) html += billingBadge(r.billing_status) + ' ';
+    if (r.created_at) html += `<span class="badge badge-muted">Since ${fmtDate(r.created_at)}</span>`;
     document.getElementById('entity-badges').innerHTML = html;
   }
 
   // ── Overview ──────────────────────────────────────────────────────
   function renderOverview(r) {
-    // Kick off snapshot fetch in parallel; render entities immediately
     renderDashboard(r, null);
     loadSnapshot(r);
   }
@@ -418,6 +433,7 @@
       const res = await apiFetch(`/api/relationships/${relId}/snapshot`);
       if (!res.ok) throw new Error('snapshot failed');
       const snap = await res.json();
+      renderHeader(r, snap);
       renderDashboard(r, snap);
     } catch(e) {
       renderDashboard(r, { tax_deliveries: [], threads: [], activity: [], error: true });
@@ -430,167 +446,161 @@
     const entityTypeLabels = { llc:'LLC', s_corp:'S-Corp', c_corp:'C-Corp', partnership:'Partnership', sole_prop:'Sole Prop', trust:'Trust', nonprofit:'Non-Profit', other:'Other' };
     const taxStatusColors = { draft:'#8fa3b8', sent:'#63b3ed', approved:'#3ecf8e', signed:'#3ecf8e', changes_requested:'#ed8936', cancelled:'#f56565' };
     const taxStatusLabels = { draft:'Draft', sent:'Sent', approved:'Approved', signed:'Signed', changes_requested:'Changes Req.', cancelled:'Cancelled' };
-
-    // ── MAIN: operational data ─────────────────────────────────────
-    // Layout: left col = Tax Status (top) + Activity (below), right col = Messages (tall, spans both rows)
-    let main = '';
     const currentYear = new Date().getFullYear();
 
-    // Tax Status — left col, row 1 — last 2 years, height=content
-    const recentTax = snap ? (snap.tax_deliveries || []).filter(td => {
-      const yr = parseInt(td.tax_year);
-      return !yr || yr >= currentYear - 1;
-    }) : null;
-    main += `<div class="ov-panel" style="grid-column:1;grid-row:1;align-self:start;">
+    // ── TOP ROW: People | Companies ──────────────────────────────────
+    let peopleHtml = `<div class="ov-panel">
+      <div class="ov-panel-title"><span>👤 People (${people.length})</span><a href="/crm/people?add=1" class="btn btn-ghost btn-xs">+ Add</a></div>`;
+    if (!people.length) {
+      peopleHtml += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
+    } else {
+      people.forEach(p => {
+        const initials = ((p.first_name||'').charAt(0)+(p.last_name||'').charAt(0)).toUpperCase()||'?';
+        const portalBadge = p.portal_enabled ? `<span class="badge badge-green" style="font-size:0.6rem;">Portal</span>` : '';
+        const filingBadge = p.filing_status ? `<span class="badge badge-muted" style="font-size:0.6rem;">${filingLabel(p.filing_status)}</span>` : '';
+        const phone = p.phone ? `<a href="tel:${esc(p.phone)}" style="color:var(--muted);text-decoration:none;">${esc(fmtPhone(p.phone)||p.phone)}</a>` : '';
+        const email = p.email ? `<a href="mailto:${esc(p.email)}" style="color:var(--muted);text-decoration:none;">${esc(p.email)}</a>` : '';
+        peopleHtml += `<div class="team-member" style="padding:0.5rem 0;">
+          <div class="team-avatar" style="width:32px;height:32px;font-size:0.8rem;">${initials}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:0.86rem;font-weight:700;"><a href="/crm/person/${p.id}" style="color:var(--text);text-decoration:none;">${esc(p.first_name||'')} ${esc(p.last_name||'')}</a></div>
+            <div style="font-size:0.72rem;color:var(--muted);">${[email, phone].filter(Boolean).join(' · ')}</div>
+          </div>
+          <div style="display:flex;gap:0.25rem;flex-wrap:wrap;justify-content:flex-end;">${filingBadge}${portalBadge}</div>
+        </div>`;
+      });
+    }
+    peopleHtml += `</div>`;
+
+    let companiesHtml = `<div class="ov-panel">
+      <div class="ov-panel-title"><span>🏢 Companies (${companies.length})</span><a href="/crm/companies?add=1" class="btn btn-ghost btn-xs">+ Add</a></div>`;
+    if (!companies.length) {
+      companiesHtml += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
+    } else {
+      companies.forEach(co => {
+        const name = co.company_name || co.name || 'Unknown';
+        const initial = name.charAt(0).toUpperCase();
+        const entityLabel = co.entity_type ? (entityTypeLabels[co.entity_type]||co.entity_type) : '';
+        const qboBadge = co.realm_id ? `<span class="badge badge-green" style="font-size:0.6rem;">QBO</span>` : '';
+        const entityBadge = co.entity_type ? `<span class="badge badge-blue" style="font-size:0.6rem;">${entityTypeLabels[co.entity_type]||esc(co.entity_type)}</span>` : '';
+        companiesHtml += `<div class="team-member" style="padding:0.5rem 0;">
+          <div class="team-avatar" style="width:32px;height:32px;border-radius:6px;font-size:0.8rem;">${initial}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:0.86rem;font-weight:700;"><a href="/crm/company/${co.id}" style="color:var(--text);text-decoration:none;">${esc(name)}</a></div>
+            <div style="font-size:0.72rem;color:var(--muted);">${entityLabel}</div>
+          </div>
+          <div style="display:flex;gap:0.25rem;">${entityBadge}${qboBadge}</div>
+        </div>`;
+      });
+    }
+    companiesHtml += `</div>`;
+
+    // ── LEFT COL: Tax Status + Activity ─────────────────────────────
+    const recentTax = snap ? (snap.tax_deliveries||[]).filter(td => { const yr=parseInt(td.tax_year); return !yr||yr>=currentYear-1; }) : null;
+    let leftCol = `<div class="ov-panel" style="align-self:start;">
       <div class="ov-panel-title"><span>📊 Tax Status</span></div>`;
     if (!snap) {
-      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
-    } else if (!recentTax || !recentTax.length) {
-      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No recent tax deliveries.</div>`;
+      leftCol += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
+    } else if (!recentTax||!recentTax.length) {
+      leftCol += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No recent deliveries.</div>`;
     } else {
       recentTax.forEach(td => {
-        const dotColor = taxStatusColors[td.status] || '#8fa3b8';
-        const label = taxStatusLabels[td.status] || td.status;
-        const name = td.company_name || (td.signers && td.signers[0] ? td.signers[0].person_name : 'Personal');
-        main += `<div class="tax-row">
-          <span class="tax-year-pill">${td.tax_year || '—'}</span>
+        const dotColor = taxStatusColors[td.status]||'#8fa3b8';
+        const label = taxStatusLabels[td.status]||td.status;
+        const name = td.company_name||(td.signers&&td.signers[0]?td.signers[0].person_name:'Personal');
+        leftCol += `<div class="tax-row">
+          <span class="tax-year-pill">${td.tax_year||'—'}</span>
           <span class="tax-title" title="${esc(td.title||'')}">` +
-          (td.company_id ? `<a href="/crm/company/${td.company_id}" style="color:var(--text);text-decoration:none;">${esc(td.title||name)}</a>` : esc(td.title||name)) +
+          (td.company_id?`<a href="/crm/company/${td.company_id}" style="color:var(--text);text-decoration:none;">${esc(td.title||name)}</a>`:esc(td.title||name)) +
           `</span>
           <div class="tax-status-dot" style="background:${dotColor};" title="${label}"></div>
           <span style="font-size:0.7rem;color:${dotColor};font-weight:600;min-width:55px;text-align:right;">${label}</span>
         </div>`;
       });
     }
-    main += `</div>`;
-
-    // Recent Activity — left col, row 2 — directly below Tax Status
-    main += `<div class="ov-panel" style="grid-column:1;grid-row:2;align-self:start;">
+    leftCol += `</div>`;
+    leftCol += `<div class="ov-panel" style="align-self:start;">
       <div class="ov-panel-title"><span>🕐 Recent Activity</span></div>`;
     if (!snap) {
-      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
-    } else if (!snap.activity || !snap.activity.length) {
-      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No activity yet.</div>`;
+      leftCol += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
+    } else if (!snap.activity||!snap.activity.length) {
+      leftCol += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No activity yet.</div>`;
     } else {
       snap.activity.forEach(a => {
-        const when = a.event_at ? timeAgo(a.event_at) : '';
-        main += `<div class="act-row">
-          <span class="act-icon">${a.icon}</span>
-          <div class="act-body">
-            <div class="act-title" title="${esc(a.title)}">${esc(a.title)}</div>
-            <div class="act-meta">${esc(a.entity_name||'')}${when ? ' · ' + when : ''}</div>
-          </div>
-        </div>`;
+        const when = a.event_at?timeAgo(a.event_at):'';
+        leftCol += `<div class="act-row"><span class="act-icon">${a.icon}</span>
+          <div class="act-body"><div class="act-title" title="${esc(a.title)}">${esc(a.title)}</div>
+          <div class="act-meta">${esc(a.entity_name||'')}${when?' · '+when:''}</div></div></div>`;
       });
     }
-    main += `</div>`;
+    leftCol += `</div>`;
 
-    // Engagement summary — right col, row 1
-    main += `<div class="ov-panel" style="grid-column:2;grid-row:1;align-self:start;">
+    // ── CENTER COL: Engagement + Messages ───────────────────────────
+    let centerCol = `<div class="ov-panel" style="align-self:start;">
       <div class="ov-panel-title"><span>📄 Active Engagement</span><a href="#" onclick="switchTab('engagement',document.querySelectorAll('.tab-item')[1]);return false;" class="btn btn-ghost btn-xs">View all →</a></div>`;
     if (!snap) {
-      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
-    } else if (!snap.active_engagements || !snap.active_engagements.length) {
-      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No active engagement letters.</div>`;
+      centerCol += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
+    } else if (!snap.active_engagements||!snap.active_engagements.length) {
+      centerCol += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No active engagement letters.</div>`;
     } else {
-      main += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">`;
+      centerCol += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">`;
       snap.active_engagements.forEach(l => {
         const d = l.extracted_data;
-        const svcPills = d && d.services ? [
-          d.services.tax ? `<span style="padding:0.08rem 0.35rem;border-radius:20px;font-size:0.62rem;font-weight:700;background:rgba(99,179,237,0.15);color:#63b3ed;">Tax</span>` : '',
-          d.services.bookkeeping ? `<span style="padding:0.08rem 0.35rem;border-radius:20px;font-size:0.62rem;font-weight:700;background:rgba(62,207,142,0.12);color:#3ecf8e;">Books</span>` : '',
-          d.services.financial_planning ? `<span style="padding:0.08rem 0.35rem;border-radius:20px;font-size:0.62rem;font-weight:700;background:rgba(201,168,76,0.15);color:var(--gold);">FP</span>` : '',
-        ].filter(Boolean).join(' ') : '<span style="font-size:0.72rem;color:var(--muted);">Extracting…</span>';
-        const price = d && d.total_monthly ? `<div style="font-size:0.88rem;font-weight:800;color:var(--gold);">$${Number(d.total_monthly).toFixed(0)}<span style="font-size:0.65rem;font-weight:500;color:var(--muted);">/mo</span></div>` : '';
-        main += `<div style="background:rgba(201,168,76,0.04);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:0.6rem 0.75rem;">
+        const svcPills = d&&d.services?[
+          d.services.tax?`<span style="padding:0.08rem 0.35rem;border-radius:20px;font-size:0.62rem;font-weight:700;background:rgba(99,179,237,0.15);color:#63b3ed;">Tax</span>`:'',
+          d.services.bookkeeping?`<span style="padding:0.08rem 0.35rem;border-radius:20px;font-size:0.62rem;font-weight:700;background:rgba(62,207,142,0.12);color:#3ecf8e;">Books</span>`:'',
+          d.services.financial_planning?`<span style="padding:0.08rem 0.35rem;border-radius:20px;font-size:0.62rem;font-weight:700;background:rgba(201,168,76,0.15);color:var(--gold);">FP</span>`:'',
+        ].filter(Boolean).join(' '):'<span style="font-size:0.72rem;color:var(--muted);">Extracting…</span>';
+        const price = d&&d.total_monthly?`<div style="font-size:0.88rem;font-weight:800;color:var(--gold);">$${Number(d.total_monthly).toFixed(0)}<span style="font-size:0.65rem;font-weight:500;color:var(--muted);">/mo</span></div>`:'';
+        centerCol += `<div style="background:rgba(201,168,76,0.04);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:0.6rem 0.75rem;">
           <div style="font-size:0.78rem;font-weight:700;margin-bottom:0.3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(l.display_name)}</div>
           <div style="display:flex;gap:0.25rem;flex-wrap:wrap;margin-bottom:0.3rem;">${svcPills}</div>
           ${price}
         </div>`;
       });
-      main += `</div>`;
+      centerCol += `</div>`;
     }
-    main += `</div>`;
+    centerCol += `</div>`;
 
-    // Recent Messages — right col, row 2
-    main += `<div class="ov-panel" style="grid-column:2;grid-row:2;">
+    centerCol += `<div class="ov-panel">
       <div class="ov-panel-title"><span>💬 Recent Messages</span><a href="/messages" class="btn btn-ghost btn-xs">View all →</a></div>`;
     if (!snap) {
-      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
-    } else if (!snap.threads || !snap.threads.length) {
-      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No message threads yet.</div>`;
+      centerCol += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
+    } else if (!snap.threads||!snap.threads.length) {
+      centerCol += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No message threads yet.</div>`;
     } else {
       snap.threads.forEach(t => {
-        const unread = t.unread_count > 0;
-        const lastBody = (t.last_body || '').replace(/<[^>]*>/g,'').slice(0, 120);
-        const when = t.last_message_at ? timeAgo(t.last_message_at) : '';
-        const fromClient = t.last_sender_type === 'client';
-        const initials = t.person_name ? t.person_name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
-        main += `<a href="/messages?thread=${t.id}" class="thread-row${unread ? ' has-unread' : ''}">
-          <div class="thread-row-avatar">${initials}</div>
+        const unread = t.unread_count>0;
+        const lastBody = (t.last_body||'').replace(/<[^>]*>/g,'').slice(0,120);
+        const when = t.last_message_at?timeAgo(t.last_message_at):'';
+        const fromClient = t.last_sender_type==='client';
+        const ini = t.person_name?t.person_name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2):'?';
+        centerCol += `<a href="/messages?thread=${t.id}" class="thread-row${unread?' has-unread':''}">
+          <div class="thread-row-avatar">${ini}</div>
           <div class="thread-row-body">
             <div class="thread-row-top">
-              <span class="thread-row-name">${esc(t.person_name || 'Unknown')}${unread ? `<span class="thread-unread-badge">${t.unread_count}</span>` : ''}</span>
+              <span class="thread-row-name">${esc(t.person_name||'Unknown')}${unread?`<span class="thread-unread-badge">${t.unread_count}</span>`:''}</span>
               <span class="thread-row-time">${when}</span>
             </div>
-            <div class="thread-row-subject">${esc(t.subject || '(no subject)')}</div>
-            <div class="thread-row-preview">${fromClient ? '← ' : ''}${esc(lastBody) || '<em style="opacity:.5">No messages</em>'}</div>
+            <div class="thread-row-subject">${esc(t.subject||'(no subject)')}</div>
+            <div class="thread-row-preview">${fromClient?'← ':''}${esc(lastBody)||'<em style="opacity:.5">No messages</em>'}</div>
           </div>
         </a>`;
       });
     }
-    main += `</div>`;
+    centerCol += `</div>`;
 
-    // ── SIDEBAR: who is this account ──────────────────────────────
-    let sidebar = '';
-
-    // People summary
-    sidebar += `<div class="ov-panel">
-      <div class="ov-panel-title"><span>👤 People (${people.length})</span><a href="/crm/people?add=1" class="btn btn-ghost btn-xs">+ Add</a></div>`;
-    if (!people.length) {
-      sidebar += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
+    // ── RIGHT COL: Billing + Team ────────────────────────────────────
+    let rightCol = `<div class="ov-panel" id="ov-billing-panel" style="align-self:start;">
+      <div class="ov-panel-title"><span>💳 Billing</span><a href="#" onclick="switchTab('billing',document.querySelectorAll('.tab-item')[4]);return false;" class="btn btn-ghost btn-xs">Details →</a></div>`;
+    if (!snap) {
+      rightCol += `<div style="color:var(--muted);font-size:0.78rem;">Loading…</div>`;
     } else {
-      people.forEach(p => {
-        const initials = ((p.first_name||'').charAt(0) + (p.last_name||'').charAt(0)).toUpperCase() || '?';
-        const portalBadge = p.portal_enabled ? `<span class="badge badge-green" style="font-size:0.6rem;">Portal</span>` : '';
-        const filingBadge = p.filing_status ? `<span class="badge badge-muted" style="font-size:0.6rem;">${filingLabel(p.filing_status)}</span>` : '';
-        sidebar += `<div class="team-member">
-          <div class="team-avatar">${initials}</div>
-          <div style="flex:1;min-width:0;">
-            <div class="team-name"><a href="/crm/person/${p.id}" style="color:var(--text);text-decoration:none;">${esc(p.first_name||'')} ${esc(p.last_name||'')}</a></div>
-            <div class="team-role">${p.email ? esc(p.email) : ''}</div>
-          </div>
-          <div style="display:flex;gap:0.25rem;flex-wrap:wrap;justify-content:flex-end;">${filingBadge}${portalBadge}</div>
-        </div>`;
-      });
+      rightCol += `<div id="ov-billing-content"><div style="color:var(--muted);font-size:0.78rem;">Loading billing…</div></div>`;
     }
-    sidebar += `</div>`;
+    rightCol += `</div>`;
 
-    // Companies summary
-    sidebar += `<div class="ov-panel">
-      <div class="ov-panel-title"><span>🏢 Companies (${companies.length})</span><a href="/crm/companies?add=1" class="btn btn-ghost btn-xs">+ Add</a></div>`;
-    if (!companies.length) {
-      sidebar += `<div style="color:var(--muted);font-size:0.8rem;">None yet.</div>`;
-    } else {
-      companies.forEach(co => {
-        const name = co.company_name || co.name || 'Unknown';
-        const initial = name.charAt(0).toUpperCase();
-        const entityLabel = co.entity_type ? (entityTypeLabels[co.entity_type] || co.entity_type) : '';
-        const qboBadge = co.realm_id ? `<span class="badge badge-green" style="font-size:0.6rem;">QBO</span>` : '';
-        sidebar += `<div class="team-member">
-          <div class="team-avatar" style="border-radius:5px;">${initial}</div>
-          <div style="flex:1;min-width:0;">
-            <div class="team-name"><a href="/crm/company/${co.id}" style="color:var(--text);text-decoration:none;">${esc(name)}</a></div>
-            <div class="team-role">${entityLabel}</div>
-          </div>
-          ${qboBadge}
-        </div>`;
-      });
-    }
-    sidebar += `</div>`;
-
-    // Team
-    sidebar += `<div class="ov-panel" id="team-panel">
+    rightCol += `<div class="ov-panel" id="team-panel">
       <div class="ov-panel-title">
         <span>👥 Account Team</span>
         <button class="btn btn-ghost btn-xs" onclick="document.getElementById('team-add-row').style.display='flex';document.getElementById('team-add-select').focus()">+ Team</button>
@@ -602,22 +612,58 @@
       </div>
     </div>`;
 
-    // Details
-    sidebar += `<div class="ov-panel">
-      <div class="ov-panel-title">Details <button class="btn btn-ghost btn-xs" onclick="openEditModal()">Edit</button></div>
-      <div class="info-row"><span class="info-label">Tier</span><span class="info-val">${r.service_tier ? tierBadge(r.service_tier) : '<span style="color:var(--muted);">—</span>'}</span></div>
-      <div class="info-row"><span class="info-label">Billing</span><span class="info-val">${r.billing_status ? billingBadge(r.billing_status) : '<span style="color:var(--muted);">—</span>'}</span></div>
-      <div class="info-row"><span class="info-label">Since</span><span class="info-val">${fmtDate(r.created_at)}</span></div>
-    </div>`;
-
     document.getElementById('overview-dashboard').innerHTML = `
-      <div class="ov-outer">
-        <div class="ov-main">${main}</div>
-        <div class="ov-sidebar">${sidebar}</div>
+      <div class="ov-page">
+        <div class="ov-top">${peopleHtml}${companiesHtml}</div>
+        <div class="ov-bottom">
+          <div style="display:flex;flex-direction:column;gap:0.85rem;">${leftCol}</div>
+          <div style="display:flex;flex-direction:column;gap:0.85rem;">${centerCol}</div>
+          <div style="display:flex;flex-direction:column;gap:0.85rem;">${rightCol}</div>
+        </div>
       </div>`;
 
     loadTeamPanel();
+    loadOvBilling();
   }
+
+  async function loadOvBilling() {
+    const el = document.getElementById('ov-billing-content');
+    if (!el) return;
+    try {
+      const res = await apiFetch(`/api/billing/${relId}/summary`);
+      if (!res.ok) throw new Error('billing failed');
+      const data = await res.json();
+      if (!data.configured || !data.accounts || !data.total_mrr) {
+        el.innerHTML = `<div style="color:var(--muted);font-size:0.78rem;">Not configured — <a href="#" onclick="switchTab('billing',document.querySelectorAll('.tab-item')[4]);return false;" style="color:var(--gold);">Set up →</a></div>`;
+        return;
+      }
+      const pastDue = data.has_past_due ? `<span style="margin-left:0.4rem;padding:0.08rem 0.4rem;border-radius:20px;font-size:0.65rem;font-weight:700;background:rgba(237,137,54,0.15);color:#ed8936;">⚠️ Past Due</span>` : '';
+      let html = `<div style="margin-bottom:0.65rem;">
+        <div style="font-size:1.25rem;font-weight:800;color:var(--gold);">$${data.total_mrr.toFixed(2)}<span style="font-size:0.72rem;font-weight:500;color:var(--muted);">/mo MRR</span>${pastDue}</div>
+      </div>`;
+      data.accounts.forEach(acc => {
+        if (!acc.customers || !acc.customers.length) return;
+        acc.customers.filter(c => c.subscriptions && c.subscriptions.length).forEach(cust => {
+          cust.subscriptions.forEach(sub => {
+            const dot = ({active:'#3ecf8e',past_due:'#ed8936',canceled:'#f56565'})[sub.status]||'#8fa3b8';
+            html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.25rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+              <div style="display:flex;align-items:center;gap:0.4rem;min-width:0;">
+                <div style="width:7px;height:7px;border-radius:50%;background:${dot};flex-shrink:0;"></div>
+                <span style="font-size:0.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(cust.name)}</span>
+              </div>
+              <span style="font-size:0.78rem;font-weight:700;flex-shrink:0;margin-left:0.5rem;">$${sub.total_monthly.toFixed(0)}/mo</span>
+            </div>`;
+          });
+        });
+      });
+      el.innerHTML = html;
+    } catch(e) {
+      if (document.getElementById('ov-billing-content')) {
+        document.getElementById('ov-billing-content').innerHTML = `<div style="color:var(--muted);font-size:0.78rem;">Could not load billing.</div>`;
+      }
+    }
+  }
+
 
 
     function timeAgo(dateStr) {
