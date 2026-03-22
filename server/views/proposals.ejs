@@ -97,7 +97,7 @@
 <div class="modal-overlay" id="delete-modal">
   <div class="modal">
     <h2>Delete Proposal?</h2>
-    <p style="font-size:0.85rem;color:var(--muted);">This cannot be undone. All acceptance and signature data will be lost.</p>
+    <p id="delete-modal-warning" style="font-size:0.85rem;color:var(--muted);">This cannot be undone. All acceptance and signature data will be lost.</p>
     <div class="modal-actions">
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('delete-modal').classList.remove('open')">Cancel</button>
       <button class="btn btn-danger btn-sm" id="delete-confirm-btn">Delete</button>
@@ -174,7 +174,7 @@ function renderList() {
   list.innerHTML = filtered.map(p => {
     const origin = window.location.origin;
     const link = origin + '/p/' + p.public_token;
-    const canCopyLink = ['sent','viewed','accepted','signed'].includes(p.status);
+    const canCopyLink = ['sent','viewed','accepted'].includes(p.status);
     return `<div class="proposal-card" data-status="${p.status}" onclick="window.location='/proposals/${p.id}'" style="cursor:pointer;">
       <div class="proposal-main">
         <div class="proposal-client">${escHtml(p.client_name || '—')}</div>
@@ -188,6 +188,7 @@ function renderList() {
       </div>
       <div class="proposal-actions" onclick="event.stopPropagation()">
         ${canCopyLink ? `<button class="btn btn-outline btn-sm" onclick="copyLink('${escAttr(link)}')" style="font-size:0.75rem;padding:0.25rem 0.65rem;">Copy Link</button>` : ''}
+        ${p.status === 'signed' ? `<button class="btn btn-gold btn-sm" onclick="event.stopPropagation();toast('Onboarding coming soon!')" style="font-size:0.75rem;padding:0.25rem 0.65rem;">🚀 Start Onboarding</button>` : ''}
         <button class="icon-btn danger" title="Delete" onclick="confirmDelete(${p.id})">🗑️</button>
       </div>
     </div>`;
@@ -213,6 +214,15 @@ function doCopy() {
 
 function confirmDelete(id) {
   deleteId = id;
+  const proposal = allProposals.find(p => p.id === id);
+  const isSigned = proposal && proposal.status === 'signed';
+  const warningEl = document.getElementById('delete-modal-warning');
+  if (warningEl) {
+    warningEl.textContent = isSigned
+      ? '⚠️ This proposal has been signed. Deleting it will permanently remove the engagement letter and all signature data.'
+      : 'This cannot be undone. All acceptance and signature data will be lost.';
+    warningEl.style.color = isSigned ? 'var(--red)' : 'var(--muted)';
+  }
   document.getElementById('delete-modal').classList.add('open');
 }
 
