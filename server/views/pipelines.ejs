@@ -427,6 +427,19 @@
     attachDrag();
   }
 
+  var ENTITY_PILLS = {
+    's_corp':      { label: 'S-Corp',       color: '#3182ce' },
+    'c_corp':      { label: 'C-Corp',       color: '#553c9a' },
+    'llc':         { label: 'LLC',          color: '#2c7a7b' },
+    'partnership': { label: 'Partnership',  color: '#b7791f' },
+    'sole_prop':   { label: 'Sole Prop',    color: '#c05621' },
+    'trust':       { label: 'Trust',        color: '#6b46c1' },
+    'nonprofit':   { label: 'Non-Profit',   color: '#276749' },
+    'other':       { label: 'Other',        color: '#4a5568' },
+    'individual':  { label: 'Individual',   color: '#2b6cb0' },
+    'relationship':{ label: 'Relationship', color: '#744210' },
+  };
+
   function renderCard(job) {
     var name = esc(job.entity_name || '#' + job.entity_id);
     var updates = job.recent_updates || [];
@@ -434,6 +447,12 @@
     var overdue = job.due_date && new Date(job.due_date) < new Date();
     var assignIni = job.assigned_name ? initials(job.assigned_name) : '';
     var statusAttr = job.job_status && job.job_status !== 'active' ? ' data-status="' + job.job_status + '"' : '';
+
+    var pill = '';
+    if (job.crm_entity_type) {
+      var p = ENTITY_PILLS[job.crm_entity_type];
+      if (p) pill = '<span style="float:right;margin-left:0.4rem;margin-top:0.1rem;padding:0.1rem 0.45rem;border-radius:20px;font-size:0.62rem;font-weight:700;color:#fff;background:' + p.color + ';letter-spacing:0.03em;white-space:nowrap;">' + p.label + '</span>';
+    }
 
     var updatesHtml = updates.length ? updates.map(function(u) {
       var preview = u.body.length > 70 ? u.body.substring(0, 70) + '…' : u.body;
@@ -448,7 +467,7 @@
     }).join('') : '';
 
     return '<div class="job-card" data-job-id="' + job.id + '" draggable="true" onclick="openPanel(' + job.id + ')"' + statusAttr + '>' +
-      '<div class="job-name">' + name + '</div>' +
+      '<div class="job-name">' + pill + name + '</div>' +
       updatesHtml +
       '<div class="job-meta" style="margin-top:0.35rem;">' +
         (due ? '<span class="job-due' + (overdue ? ' overdue' : '') + '">📅 ' + due + '</span>' : '') +

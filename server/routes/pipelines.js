@@ -444,6 +444,17 @@ router.get('/instances/:id', async (req, res) => {
     for (const job of jobs) {
       job.entity_name = await resolveEntityName(job);
       job.recent_updates = (updatesMap[job.id] || []).slice(0, 3);
+      // Resolve CRM entity subtype for pill labels
+      try {
+        if (job.entity_type === 'company') {
+          const { rows } = await pool.query('SELECT entity_type FROM companies WHERE id = $1', [job.entity_id]);
+          job.crm_entity_type = rows[0]?.entity_type || null;
+        } else if (job.entity_type === 'person') {
+          job.crm_entity_type = 'individual';
+        } else if (job.entity_type === 'relationship') {
+          job.crm_entity_type = 'relationship';
+        }
+      } catch(_) {}
     }
 
     res.json({ ...inst, template: tmpl, stages, jobs });
