@@ -979,8 +979,10 @@
       closeModal();
       toast('Relationship updated');
       renderHeader(relData);
-      // Refresh details card
       renderOverview(relData);
+      // Switch to Overview so user sees updated data immediately
+      const ovTab = document.querySelector('.tab-item[onclick*="overview"]');
+      if (ovTab && !ovTab.classList.contains('active')) switchTab('overview', ovTab);
       // Re-render billing if active
       if (document.getElementById('tab-billing').classList.contains('active')) renderBilling();
     } catch(e) {

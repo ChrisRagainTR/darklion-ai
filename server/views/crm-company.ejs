@@ -1374,6 +1374,9 @@
       closeModal();
       toast('Company updated');
       await loadCompany();
+      // Switch to Overview so user sees updated data immediately
+      const ovTab = document.querySelector('.tab-item[onclick*="overview"]');
+      if (ovTab && !ovTab.classList.contains('active')) switchTab('overview', ovTab);
     } catch(e) { document.getElementById('edit-error').textContent = e.message; document.getElementById('edit-error').style.display = ''; }
   }
 
