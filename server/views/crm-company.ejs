@@ -965,14 +965,13 @@
 
   function buildDocsColumn(sectionDocs, title, icon, cats) {
     cats = cats || DOC_CATS_FIRM;
+    const isClientSection = title.toLowerCase().includes('client');
     const CURRENT_YEAR = new Date().getFullYear();
-    // Fixed year list: current year back to 2018
     const allYears = [];
     for (let y = CURRENT_YEAR; y >= 2018; y--) allYears.push(String(y));
     const recentYears = allYears.slice(0, 2);
     const priorYears  = allYears.slice(2);
 
-    // Index docs
     const byYearCat = {};
     sectionDocs.forEach(d => {
       const y   = d.year || String(CURRENT_YEAR);
@@ -982,34 +981,39 @@
       byYearCat[y][cat].push(d);
     });
 
-    const colKey = title.replace(/\s/g, '');
-
     function renderOneYear(yr, openByDefault) {
       const yrDocs = sectionDocs.filter(d => (d.year || String(CURRENT_YEAR)) === yr);
       const openClass = openByDefault ? ' open' : '';
-      return `<div class="year-folder${openClass}">
-        <div class="year-header" onclick="this.closest('.year-folder').classList.toggle('open')">
+      return `<div class="year-folder${openClass}" style="margin-bottom:0.4rem;">
+        <div class="year-header">
           <span class="yr-label">📅 ${yr} <span class="yr-count">${yrDocs.length}</span></span>
           <span class="yr-chevron">▼</span>
         </div>
-        <div class="year-body">
+        <div class="year-body" style="padding-left:1rem;">
           ${cats.map(cat => {
             const files = (byYearCat[yr] || {})[cat.key] || [];
-            return `<div class="cat-section-label">${cat.icon} ${cat.label} (${files.length})</div>
-            ${files.length === 0
-              ? `<div class="cat-empty-msg">No ${cat.label.toLowerCase()} documents for ${yr}</div>`
-              : files.map(f => `<div class="doc-row">
-                  ${docTypeBadge(f.mime_type, f.display_name)}
-                  <div class="doc-info">
-                    <div class="doc-name" onclick="downloadDoc(${f.id})">${esc(f.display_name||'Untitled')}</div>
-                    <div class="doc-badges">
-                      ${f.viewed_at ? '<span class="doc-badge doc-badge-viewed">✓ Viewed</span>' : ''}
-                      ${f.size_bytes ? `<span class="doc-badge doc-badge-type">${formatBytes(f.size_bytes)}</span>` : ''}
-                    </div>
-                  </div>
-                  <button class="btn-dl" onclick="downloadDoc(${f.id})">⬇ Download</button>
-                </div>`).join('')
-            }`;
+            const statusBadge = isClientSection
+              ? `<span class="doc-badge doc-badge-client">✓ Uploaded</span>`
+              : `<span class="doc-badge doc-badge-viewed">✓ Delivered</span>`;
+            return `<div style="margin-bottom:0.5rem;">
+              <div style="font-size:0.82rem;font-weight:700;color:var(--text);padding:0.4rem 0.5rem;margin-bottom:0.25rem;border-left:3px solid var(--gold);background:rgba(201,168,76,0.06);">${cat.icon} ${cat.label} <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${files.length})</span></div>
+              <div style="padding-left:0.5rem;">
+                ${files.length === 0
+                  ? `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`
+                  : files.map(f => `<div class="doc-row" data-docid="${f.id}">
+                      ${docTypeBadge(f.mime_type, f.display_name)}
+                      <div class="doc-info">
+                        <div class="doc-name doc-name-link" data-docid="${f.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(f.display_name||'Untitled')}</div>
+                        <div class="doc-badges">
+                          ${statusBadge}
+                          ${f.size_bytes ? `<span class="doc-badge doc-badge-type">${formatBytes(f.size_bytes)}</span>` : ''}
+                        </div>
+                      </div>
+                      <button class="btn-dl" data-docid="${f.id}">⬇ Download</button>
+                    </div>`).join('')
+                }
+              </div>
+            </div>`;
           }).join('')}
         </div>
       </div>`;
@@ -1019,12 +1023,12 @@
 
     let html = `<div class="docs-col-title">${icon} ${title} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
     recentYears.forEach(y => { html += renderOneYear(y, true); });
-    html += `<div class="year-folder">
-      <div class="year-header" onclick="this.closest('.year-folder').classList.toggle('open')">
+    html += `<div class="year-folder" style="margin-bottom:0.4rem;">
+      <div class="year-header">
         <span class="yr-label">📂 Prior Years <span class="yr-count">${priorCount}</span></span>
         <span class="yr-chevron">▼</span>
       </div>
-      <div class="year-body">
+      <div class="year-body" style="padding-left:0.5rem;">
         ${priorYears.map(y => renderOneYear(y, false)).join('')}
       </div>
     </div>`;
@@ -1053,6 +1057,24 @@
       <div>${buildDocsColumn(firmDocs, 'Delivered by Advisor', '📁', DOC_CATS_FIRM)}</div>
       <div>${buildDocsColumn(clientDocs, 'Uploaded by Client', '📤', DOC_CATS_CLIENT)}</div>
     </div>`;
+    // Wire year folder toggles
+    el.querySelectorAll('.year-header').forEach(h => {
+      h.addEventListener('click', () => h.closest('.year-folder').classList.toggle('open'));
+    });
+    // Wire doc name click to open
+    el.querySelectorAll('.doc-name-link').forEach(nameEl => {
+      nameEl.addEventListener('click', e => {
+        e.stopPropagation();
+        downloadDoc(parseInt(nameEl.dataset.docid));
+      });
+    });
+    // Wire download buttons
+    el.querySelectorAll('.btn-dl').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        downloadDoc(parseInt(btn.dataset.docid), btn);
+      });
+    });
   }
 
 
