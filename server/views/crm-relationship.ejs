@@ -141,7 +141,7 @@
   /* Top row: people + companies side by side */
   .ov-top { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
   /* Bottom area: 3 columns — left (tax+activity), center (engagement+messages), right (billing+team) */
-  .ov-bottom { display: grid; grid-template-columns: 1fr 1fr 320px; gap: 0.85rem; align-items: stretch; }
+  .ov-bottom { display: grid; grid-template-columns: 1fr 1fr 320px; gap: 0.85rem; align-items: start; }
   @media (max-width: 1100px) { .ov-bottom { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 768px) { .ov-top { grid-template-columns: 1fr; } .ov-bottom { grid-template-columns: 1fr; } }
   .ov-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; overflow: hidden; width: 100%; box-sizing: border-box; }
@@ -577,7 +577,7 @@
     }
     centerCol += `</div>`;
 
-    centerCol += `<div class="ov-panel" style="flex:1;">
+    centerCol += `<div class="ov-panel">
       <div class="ov-panel-title"><span>💬 Recent Messages</span><a href="/messages" class="btn btn-ghost btn-xs">View all →</a></div>`;
     if (!snap) {
       centerCol += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
@@ -615,7 +615,7 @@
     }
     rightCol += `</div>`;
 
-    rightCol += `<div class="ov-panel" id="team-panel" style="flex:1;">
+    rightCol += `<div class="ov-panel" id="team-panel">
       <div class="ov-panel-title">
         <span>👥 Account Team</span>
         <button class="btn btn-ghost btn-xs" onclick="document.getElementById('team-add-row').style.display='flex';document.getElementById('team-add-select').focus()">+ Team</button>
