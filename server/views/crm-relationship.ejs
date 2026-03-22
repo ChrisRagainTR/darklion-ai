@@ -187,19 +187,19 @@
   .team-add-btn { background: var(--gold); color: var(--navy); border: none; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
   .team-add-btn:hover { background: var(--gold-light); }
 
-  /* ── Thread strip ── */
-  .thread-strip { display: flex; gap: 0.6rem; overflow-x: auto; padding-bottom: 0.25rem; }
-  .thread-strip::-webkit-scrollbar { height: 3px; }
-  .thread-strip::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 2px; }
-  .thread-card { min-width: 195px; max-width: 215px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.75rem; cursor: pointer; transition: border-color 0.15s; flex-shrink: 0; text-decoration: none; display: block; }
-  .thread-card:hover { border-color: rgba(201,168,76,0.4); }
-  .thread-card.has-unread { border-left: 3px solid var(--gold); }
-  .thread-person { font-size: 0.7rem; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .thread-subject { font-size: 0.8rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.2rem; }
-  .thread-preview { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .thread-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 0.3rem; }
-  .thread-time { font-size: 0.68rem; color: var(--muted); }
-  .thread-unread-badge { background: var(--gold); color: var(--navy); font-size: 0.62rem; font-weight: 800; border-radius: 8px; padding: 0.05rem 0.35rem; }
+  /* ── Stacked thread rows ── */
+  .thread-row { display: flex; align-items: flex-start; gap: 0.7rem; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); text-decoration: none; transition: background 0.12s; border-radius: 6px; }
+  .thread-row:last-child { border-bottom: none; }
+  .thread-row:hover { background: rgba(255,255,255,0.025); }
+  .thread-row.has-unread { border-left: 2px solid var(--gold); padding-left: 0.5rem; }
+  .thread-row-avatar { width: 28px; height: 28px; border-radius: 50%; background: rgba(201,168,76,0.15); display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700; color: var(--gold); flex-shrink: 0; margin-top: 0.1rem; }
+  .thread-row-body { flex: 1; min-width: 0; }
+  .thread-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.15rem; }
+  .thread-row-name { font-size: 0.75rem; font-weight: 700; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thread-row-time { font-size: 0.67rem; color: var(--muted); flex-shrink: 0; }
+  .thread-row-subject { font-size: 0.8rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.15rem; }
+  .thread-row-preview { font-size: 0.73rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thread-unread-badge { display: inline-block; background: var(--gold); color: var(--navy); font-size: 0.6rem; font-weight: 800; border-radius: 8px; padding: 0.05rem 0.35rem; margin-left: 0.3rem; vertical-align: middle; }
 
   /* ── Save indicator ── */
   .save-indicator { font-size: 0.78rem; color: #3ecf8e; margin-top: 0.35rem; min-height: 1.1em; }
@@ -435,8 +435,9 @@
 
     // ── MAIN: operational data ─────────────────────────────────────
     let main = '';
+    const currentYear = new Date().getFullYear();
 
-    // Threads (full width)
+    // Stacked message threads (full width, top)
     main += `<div class="ov-panel ov-full">
       <div class="ov-panel-title"><span>💬 Recent Messages</span><a href="/messages" class="btn btn-ghost btn-xs">View all →</a></div>`;
     if (!snap) {
@@ -444,35 +445,40 @@
     } else if (!snap.threads || !snap.threads.length) {
       main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No message threads yet.</div>`;
     } else {
-      main += `<div class="thread-strip">`;
       snap.threads.forEach(t => {
         const unread = t.unread_count > 0;
-        const lastBody = (t.last_body || '').replace(/<[^>]*>/g,'').slice(0, 80);
+        const lastBody = (t.last_body || '').replace(/<[^>]*>/g,'').slice(0, 100);
         const when = t.last_message_at ? timeAgo(t.last_message_at) : '';
         const fromClient = t.last_sender_type === 'client';
-        main += `<a href="/messages?thread=${t.id}" class="thread-card${unread ? ' has-unread' : ''}">
-          <div class="thread-person">${esc(t.person_name || 'Unknown')}</div>
-          <div class="thread-subject">${esc(t.subject || '(no subject)')}</div>
-          <div class="thread-preview">${fromClient ? '← ' : ''}${esc(lastBody) || '<em style="opacity:.5">No messages</em>'}</div>
-          <div class="thread-meta">
-            <span class="thread-time">${when}</span>
-            ${unread ? `<span class="thread-unread-badge">${t.unread_count}</span>` : ''}
+        const initials = t.person_name ? t.person_name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
+        main += `<a href="/messages?thread=${t.id}" class="thread-row${unread ? ' has-unread' : ''}">
+          <div class="thread-row-avatar">${initials}</div>
+          <div class="thread-row-body">
+            <div class="thread-row-top">
+              <span class="thread-row-name">${esc(t.person_name || 'Unknown')}${unread ? `<span class="thread-unread-badge">${t.unread_count}</span>` : ''}</span>
+              <span class="thread-row-time">${when}</span>
+            </div>
+            <div class="thread-row-subject">${esc(t.subject || '(no subject)')}</div>
+            <div class="thread-row-preview">${fromClient ? '← ' : ''}${esc(lastBody) || '<em style="opacity:.5">No messages</em>'}</div>
           </div>
         </a>`;
       });
-      main += `</div>`;
     }
     main += `</div>`;
 
-    // Tax Status
-    main += `<div class="ov-panel">
+    // Tax Status — last 2 years only, height = content
+    const recentTax = snap ? (snap.tax_deliveries || []).filter(td => {
+      const yr = parseInt(td.tax_year);
+      return !yr || yr >= currentYear - 1;
+    }) : null;
+    main += `<div class="ov-panel" style="align-self:start;">
       <div class="ov-panel-title"><span>📊 Tax Status</span></div>`;
     if (!snap) {
       main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
-    } else if (!snap.tax_deliveries || !snap.tax_deliveries.length) {
-      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No tax deliveries yet.</div>`;
+    } else if (!recentTax.length) {
+      main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No recent tax deliveries.</div>`;
     } else {
-      snap.tax_deliveries.forEach(td => {
+      recentTax.forEach(td => {
         const dotColor = taxStatusColors[td.status] || '#8fa3b8';
         const label = taxStatusLabels[td.status] || td.status;
         const name = td.company_name || (td.signers && td.signers[0] ? td.signers[0].person_name : 'Personal');
@@ -488,8 +494,8 @@
     }
     main += `</div>`;
 
-    // Recent Activity
-    main += `<div class="ov-panel">
+    // Recent Activity — below tax status
+    main += `<div class="ov-panel" style="align-self:start;">
       <div class="ov-panel-title"><span>🕐 Recent Activity</span></div>`;
     if (!snap) {
       main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
