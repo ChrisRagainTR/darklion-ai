@@ -144,7 +144,7 @@
   .ov-bottom { display: grid; grid-template-columns: 1fr 1fr 320px; gap: 0.85rem; align-items: stretch; }
   @media (max-width: 1100px) { .ov-bottom { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 768px) { .ov-top { grid-template-columns: 1fr; } .ov-bottom { grid-template-columns: 1fr; } }
-  .ov-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; overflow: hidden; }
+  .ov-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; overflow: hidden; width: 100%; box-sizing: border-box; }
   .ov-panel-title { font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between; }
 
   /* ── Tax status rows ── */
@@ -631,9 +631,9 @@
       <div class="ov-page">
         <div class="ov-top">${peopleHtml}${companiesHtml}</div>
         <div class="ov-bottom">
-          <div style="display:flex;flex-direction:column;gap:0.85rem;">${leftCol}</div>
-          <div style="display:flex;flex-direction:column;gap:0.85rem;min-height:0;">${centerCol}</div>
-          <div style="display:flex;flex-direction:column;gap:0.85rem;min-height:0;">${rightCol}</div>
+          <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">${leftCol}</div>
+          <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">${centerCol}</div>
+          <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">${rightCol}</div>
         </div>
       </div>`;
 
