@@ -27,9 +27,10 @@
 
     /* Signature card */
     .sig-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; margin-bottom: 1.5rem; }
-    .sig-card h2 { font-size: 1.1rem; font-weight: 800; margin-bottom: 1.25rem; }
+    .sig-card h2 { font-size: 1.1rem; font-weight: 800; margin-bottom: 1.25rem; text-align: left; }
     .signer-block { border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem; }
-    .signer-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+    .signer-label { font-size: 0.78rem; font-weight: 700; color: #462161; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; text-align: left; }
+    .form-group label { text-align: left; }
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
     .form-control { width: 100%; border: 1.5px solid var(--border); border-radius: 7px; padding: 0.5rem 0.75rem; font-size: 0.9rem; color: var(--text); outline: none; transition: border-color 0.15s; font-family: inherit; }
@@ -49,9 +50,9 @@
     .agree-row label { font-size: 0.82rem; color: var(--muted); line-height: 1.5; cursor: pointer; }
 
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.7rem 1.5rem; border-radius: 8px; border: none; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.15s; text-decoration: none; font-family: inherit; width: 100%; }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-gold { background: var(--gold); color: var(--navy); }
-    .btn-gold:not(:disabled):hover { background: var(--gold-light); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-gold { background: #c9a84c; color: #0f1923; font-weight: 700; }
+    .btn-gold:not(:disabled):hover { background: #e2c068; }
     .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--muted); }
 
     .back-link { display: block; text-align: center; margin-top: 1rem; font-size: 0.82rem; color: var(--muted); cursor: pointer; text-decoration: underline; }
@@ -72,13 +73,14 @@
     .loe-content {
       color: #374151; line-height: 1.7; font-size: 14px;
       font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      text-align: left;
     }
-    .loe-content p { margin: 0 0 12px 0; }
+    .loe-content p { margin: 0 0 12px 0; text-align: left; }
     .loe-content h1, .loe-content h2, .loe-content h3 { color: #1a1a2e; margin-top: 28px; margin-bottom: 10px; }
     .loe-content h1 { font-size: 22px; }
     .loe-content h2 { font-size: 16px; border-bottom: 1px solid #e5e2eb; padding-bottom: 6px; }
     .loe-content h3 { font-size: 15px; font-weight: 600; }
-    .loe-confidential { text-align: center; font-size: 13px; font-weight: 700; letter-spacing: 2px; color: #462161; margin-bottom: 24px; }
+    .loe-confidential { text-align: left; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: #462161; margin-bottom: 18px; }
     .loe-client-info { margin-bottom: 24px; }
     .loe-client-info p { margin: 2px 0; }
     .loe-client-name { font-size: 16px; }
@@ -88,8 +90,8 @@
     .loe-services-table, .loe-monthly-table { width: 100%; border-collapse: collapse; margin: 12px 0 16px; font-size: 13px; }
     .loe-services-table th, .loe-monthly-table th { text-align: left; background: #7c4daa; padding: 8px 12px; font-weight: 600; color: white; font-size: 12px; }
     .loe-monthly-table th:last-child { text-align: right; }
-    .loe-services-table td, .loe-monthly-table td { padding: 7px 12px; border-bottom: 1px solid #e5e2eb; vertical-align: top; }
-    .loe-svc-name { font-weight: 500; }
+    .loe-services-table td, .loe-monthly-table td { padding: 7px 12px; border-bottom: 1px solid #e5e2eb; vertical-align: top; text-align: left; }
+    .loe-svc-name { font-weight: 500; text-align: left; }
     .loe-svc-price { text-align: right; font-weight: 600; color: #1a1a2e; white-space: nowrap; vertical-align: top; }
     .loe-svc-status { text-align: right; }
     .loe-status-included { color: #059669; font-weight: 600; font-size: 12px; }
@@ -98,7 +100,7 @@
     .loe-election-box { background: #f4f1f9; border: 2px solid #462161; border-radius: 8px; padding: 16px; margin: 20px 0; }
     .loe-election-summary { width: 100%; font-size: 14px; }
     .loe-election-summary td { padding: 4px 0; }
-    .loe-agreement-title { text-align: center; font-size: 22px !important; margin: 32px 0 24px !important; border: none !important; color: #462161 !important; }
+    .loe-agreement-title { text-align: left; font-size: 20px !important; margin: 28px 0 20px !important; border: none !important; color: #462161 !important; font-weight: 800 !important; }
     .loe-section { margin-bottom: 16px; }
     .loe-section-heading { font-size: 16px; font-weight: 700; color: #462161; border-bottom: 2px solid #462161; padding-bottom: 6px; margin: 32px 0 16px; }
     .loe-checkbox-line { font-size: 14px; margin: 6px 0; padding-left: 4px; }
@@ -106,7 +108,7 @@
     .loe-bk-list, .loe-planning-list { margin: 12px 0 16px 24px; padding-left: 8px; list-style-type: decimal; }
     .loe-service-list li, .loe-bk-list li, .loe-doc-list li, .loe-planning-list li { margin-bottom: 8px; line-height: 1.6; padding-left: 4px; }
     .loe-acceptance-block { margin-top: 40px; padding-top: 24px; border-top: 2px solid #462161; }
-    .loe-acceptance-title { text-align: center; color: #462161 !important; font-size: 18px !important; border: none !important; }
+    .loe-acceptance-title { text-align: left; color: #462161 !important; font-size: 16px !important; border: none !important; }
     .loe-sig-label { margin-top: 24px; }
     .loe-sig-block { margin: 12px 0 24px; }
     .loe-sig-name-italic { font-style: italic; font-size: 18px; font-family: Georgia, serif; color: #1a1a2e; }
@@ -146,7 +148,8 @@
 <body>
 
 <header class="site-header">
-  <div class="site-logo">Sentinel <span>Wealth &amp; Tax</span> | Engagement Letter</div>
+  <img src="/sentinel-logo.png" alt="Sentinel Wealth &amp; Tax" style="height:36px;object-fit:contain;" onerror="this.style.display='none';document.getElementById('fallback-logo').style.display=''">
+  <span id="fallback-logo" style="display:none;" class="site-logo">Sentinel <span>Wealth &amp; Tax</span></span>
   <div class="secure-badge">🔒 Secure Document</div>
 </header>
 
@@ -215,13 +218,17 @@ function showSuccess() {
 }
 
 function downloadDoc() {
+  const clientName = (engagement.company_name || engagement.client_name || 'Client').replace(/[^a-zA-Z0-9 ]/g, '');
   const w = window.open('', '_blank');
   if (!w) return;
-  const loeHtml = generateLOEForPrint(engagement);
-  w.document.write(loeHtml);
+  w.document.open();
+  w.document.write(generateLOEForPrint(engagement));
   w.document.close();
+  w.document.title = 'Engagement Letter — ' + clientName;
   w.focus();
-  setTimeout(() => w.print(), 500);
+  // Wait for images (logo) to load before printing
+  w.onload = () => setTimeout(() => w.print(), 300);
+  setTimeout(() => w.print(), 1200); // fallback if onload doesn't fire
 }
 
 function renderSignPage() {
@@ -1493,6 +1500,9 @@ function generateLOEForPrint(eng) {
   /* ── Page setup ─────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   @page { margin: 0.85in 0.9in; size: letter; }
+  @page { margin-top: 0.65in; }
+  /* Suppress browser print headers/footers where supported */
+  @page :first { margin-top: 0.65in; }
   body {
     font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
     font-size: 10.5pt;
@@ -1776,23 +1786,29 @@ function generateSignatureAuditHtml(eng) {
   }
   if (!sigs.length) return '';
 
-  return `<div class="print-audit">
-    <div class="print-audit-title">Electronic Signature Audit Trail</div>
-    <div class="print-audit-note">This document was electronically executed via Sentinel Wealth &amp; Tax's secure proposal system.</div>
-    <div class="print-sig-blocks">
-      ${sigs.map(s => `<div class="print-sig-block">
-        <div class="print-sig-label">${escHtml(s.label)}</div>
-        <div class="print-sig-img">
-          ${s.data ? `<img src="${s.data}" alt="Signature">` : '<div style="height:50pt;"></div>'}
-        </div>
-        <div class="print-sig-name">${escHtml(s.name)}</div>
-        <div class="print-sig-meta">
-          ${s.at ? escHtml(fmtDate(s.at)) : 'Date: pending'}<br>
-          IP Address: ${escHtml(s.ip || 'N/A')}
-        </div>
-      </div>`).join('')}
-    </div>
-  </div>`;
+  return sigs.map(s => `
+    <div style="margin-top:28pt;border:2pt solid #462161;border-radius:6pt;padding:18pt 20pt;page-break-inside:avoid;">
+      <div style="font-size:9pt;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#462161;margin-bottom:14pt;">
+        Electronic Signature &mdash; ${escHtml(s.label)}
+      </div>
+      <div style="border-bottom:1.5pt solid #1a1a2e;padding-bottom:8pt;margin-bottom:12pt;min-height:55pt;">
+        ${s.data ? `<img src="${s.data}" alt="Signature" style="max-height:55pt;max-width:240pt;object-fit:contain;">` : ''}
+      </div>
+      <table style="width:100%;font-size:9.5pt;border-collapse:collapse;">
+        <tr>
+          <td style="padding:2pt 0;width:90pt;font-weight:700;color:#1a1a2e;">Signed by:</td>
+          <td style="padding:2pt 0;color:#374151;">${escHtml(s.name)}</td>
+        </tr>
+        <tr>
+          <td style="padding:2pt 0;font-weight:700;color:#1a1a2e;">Date &amp; Time:</td>
+          <td style="padding:2pt 0;color:#374151;">${s.at ? escHtml(fmtDate(s.at)) : '—'}</td>
+        </tr>
+        <tr>
+          <td style="padding:2pt 0;font-weight:700;color:#1a1a2e;">IP Address:</td>
+          <td style="padding:2pt 0;color:#374151;">${escHtml(s.ip || 'N/A')}</td>
+        </tr>
+      </table>
+    </div>`).join('');
 }
 
 function escHtml(s) {
