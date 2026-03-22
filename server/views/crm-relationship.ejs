@@ -446,7 +446,7 @@
       const yr = parseInt(td.tax_year);
       return !yr || yr >= currentYear - 1;
     }) : null;
-    main += `<div class="ov-panel" style="align-self:start;">
+    main += `<div class="ov-panel" style="grid-column:1;grid-row:1;align-self:start;">
       <div class="ov-panel-title"><span>📊 Tax Status</span></div>`;
     if (!snap) {
       main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
@@ -470,7 +470,7 @@
     main += `</div>`;
 
     // Recent Activity — left col, row 2 — directly below Tax Status
-    main += `<div class="ov-panel" style="align-self:start;">
+    main += `<div class="ov-panel" style="grid-column:1;grid-row:2;align-self:start;">
       <div class="ov-panel-title"><span>🕐 Recent Activity</span></div>`;
     if (!snap) {
       main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
@@ -491,7 +491,7 @@
     main += `</div>`;
 
     // Recent Messages — right col, spans both rows (row 1+2)
-    main += `<div class="ov-panel" style="grid-row: span 2;">
+    main += `<div class="ov-panel" style="grid-column:2;grid-row:1/span 2;">
       <div class="ov-panel-title"><span>💬 Recent Messages</span><a href="/messages" class="btn btn-ghost btn-xs">View all →</a></div>`;
     if (!snap) {
       main += `<div style="color:var(--muted);font-size:0.78rem;padding:0.4rem 0;">Loading…</div>`;
