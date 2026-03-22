@@ -175,7 +175,7 @@ function renderList() {
     const origin = window.location.origin;
     const link = origin + '/p/' + p.public_token;
     const canCopyLink = ['sent','viewed','accepted','signed'].includes(p.status);
-    return `<div class="proposal-card" data-status="${p.status}">
+    return `<div class="proposal-card" data-status="${p.status}" onclick="window.location='/proposals/${p.id}'" style="cursor:pointer;">
       <div class="proposal-main">
         <div class="proposal-client">${escHtml(p.client_name || '—')}</div>
         <div class="proposal-title">${escHtml(p.title)}</div>
@@ -186,9 +186,8 @@ function renderList() {
           ${p.relationship_name ? `<span style="font-size:0.75rem;color:var(--muted)">· ${escHtml(p.relationship_name)}</span>` : ''}
         </div>
       </div>
-      <div class="proposal-actions">
-        ${canCopyLink ? `<button class="icon-btn" title="Copy link" onclick="copyLink('${escAttr(link)}')">🔗</button>` : ''}
-        <a href="/proposals/${p.id}" class="icon-btn" title="View">👁️</a>
+      <div class="proposal-actions" onclick="event.stopPropagation()">
+        ${canCopyLink ? `<button class="btn btn-outline btn-sm" onclick="copyLink('${escAttr(link)}')" style="font-size:0.75rem;padding:0.25rem 0.65rem;">Copy Link</button>` : ''}
         <button class="icon-btn danger" title="Delete" onclick="confirmDelete(${p.id})">🗑️</button>
       </div>
     </div>`;
