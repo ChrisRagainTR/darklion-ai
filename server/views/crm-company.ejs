@@ -1362,6 +1362,10 @@
   function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
 
   async function submitEdit() {
+    const btn = document.getElementById('ef-submit');
+    const errEl = document.getElementById('edit-error');
+    errEl.style.display = 'none';
+    btn.disabled = true; btn.textContent = 'Saving…';
     const body = {
       company_name: document.getElementById('ef-name').value.trim(),
       entity_type: document.getElementById('ef-entity-type').value,
@@ -1372,10 +1376,12 @@
     try {
       const res = await apiFetch(`/api/companies/${companyId}`, { method: 'PUT', body: JSON.stringify(body) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error||'Failed'); }
-      closeModal();
-      toast('Company updated');
-      setTimeout(() => window.location.reload(), 800);
-    } catch(e) { console.error('submitEdit error:', e); document.getElementById('edit-error').textContent = e.message; document.getElementById('edit-error').style.display = ''; }
+      btn.textContent = '✓ Saved';
+      setTimeout(() => { closeModal(); window.location.reload(); }, 600);
+    } catch(e) {
+      errEl.textContent = e.message; errEl.style.display = '';
+      btn.disabled = false; btn.textContent = 'Save Changes';
+    }
   }
 
   async function detachPerson(personId) {

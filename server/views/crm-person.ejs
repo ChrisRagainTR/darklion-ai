@@ -838,6 +838,10 @@
   function closeModal() { document.getElementById('edit-modal').classList.add('hidden'); }
 
   async function submitEdit() {
+    const btn = document.getElementById('ef-submit');
+    const errEl = document.getElementById('edit-error');
+    errEl.style.display = 'none';
+    btn.disabled = true; btn.textContent = 'Saving…';
     const body = {
       first_name: document.getElementById('ef-fname').value.trim(),
       last_name: document.getElementById('ef-lname').value.trim(),
@@ -849,10 +853,12 @@
     try {
       const res = await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify(body) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error||'Failed'); }
-      closeModal();
-      toast('Person updated');
-      setTimeout(() => window.location.reload(), 800);
-    } catch(e) { document.getElementById('edit-error').textContent = e.message; document.getElementById('edit-error').style.display = ''; }
+      btn.textContent = '✓ Saved';
+      setTimeout(() => { closeModal(); window.location.reload(); }, 600);
+    } catch(e) {
+      errEl.textContent = e.message; errEl.style.display = '';
+      btn.disabled = false; btn.textContent = 'Save Changes';
+    }
   }
 
   async function sendPortalInvite() {

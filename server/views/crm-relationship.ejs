@@ -970,22 +970,21 @@
       billing_status: document.getElementById('ef-billing').value || null,
     };
     const btn = document.getElementById('ef-submit');
-    btn.disabled = true;
+    btn.disabled = true; btn.textContent = 'Saving…';
     try {
       const res = await apiFetch(`/api/relationships/${relId}`, { method: 'PUT', body: JSON.stringify(body) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       const updated = await res.json();
       relData = { ...relData, ...updated };
-      closeModal();
-      toast('Relationship updated');
-      setTimeout(() => window.location.reload(), 800);
+      btn.textContent = '✓ Saved';
+      setTimeout(() => { closeModal(); window.location.reload(); }, 600);
       // Re-render billing if active
       if (document.getElementById('tab-billing').classList.contains('active')) renderBilling();
     } catch(e) {
       const errEl = document.getElementById('edit-error');
       errEl.textContent = e.message; errEl.style.display = '';
+      btn.disabled = false; btn.textContent = 'Save Changes';
     }
-    btn.disabled = false;
   }
 
   // ── Boot ──────────────────────────────────────────────────────────
