@@ -759,7 +759,7 @@
       const url = unsignedNavUrl(r);
       const sub = esc(r.tax_year||'') + ' · ' + r.days_waiting + 'd waiting' + (showRelationship && r.relationship_name ? ' · ' + esc(r.relationship_name) : '');
       if (!url) return '<div class="dash-intel-row"><div><div class="dash-intel-name">' + esc(name) + '</div><div class="dash-intel-sub">' + sub + '</div></div><span class="dash-intel-tag" style="background:rgba(245,101,101,0.12);color:var(--red);">Unsigned</span></div>';
-      return '<a href="' + url + '" class="dash-intel-row" style="text-decoration:none;"><div><div class="dash-intel-name">' + esc(name) + '</div><div class="dash-intel-sub">' + sub + '</div></div><span class="dash-intel-tag" style="background:rgba(245,101,101,0.12);color:var(--red);">Unsigned</span></a>';
+      return '<a href="' + url + '" class="dash-intel-row" style="text-decoration:none;" onclick="sessionStorage.setItem(\'openTab\',\'tax\')"><div><div class="dash-intel-name">' + esc(name) + '</div><div class="dash-intel-sub">' + sub + '</div></div><span class="dash-intel-tag" style="background:rgba(245,101,101,0.12);color:var(--red);">Unsigned</span></a>';
     }
 
     function renderUnsigned(items) {
@@ -768,11 +768,10 @@
       const el = document.getElementById('list-unsigned');
       if (!items.length) { el.innerHTML = '<div class="dash-intel-empty">✅ All returns signed</div>'; return; }
       let html = items.slice(0, 6).map(function(r) { return buildUnsignedRow(r, false); }).join('');
-      html += '<div class="dash-intel-row" id="unsigned-view-all-btn" style="cursor:pointer;justify-content:center;border-bottom:none;">' +
+      html += '<div class="dash-intel-row" onclick="showAllUnsigned()" style="cursor:pointer;justify-content:center;border-bottom:none;">' +
         '<span style="font-size:0.78rem;color:var(--gold);font-weight:600;">' + (items.length > 6 ? 'Show all ' + items.length + ' unsigned returns →' : 'View all →') + '</span>' +
         '</div>';
       el.innerHTML = html;
-      document.getElementById('unsigned-view-all-btn').addEventListener('click', showAllUnsigned);
     }
 
     function showAllUnsigned() {
