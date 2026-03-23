@@ -481,6 +481,11 @@ app.use((req, res, next) => {
 });
 
 async function start() {
+  // Start listening immediately so healthcheck passes while DB initializes
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`DarkLion server running on port ${PORT}`);
+  });
+
   await initDB();
   console.log('Database initialized');
 
@@ -488,10 +493,6 @@ async function start() {
 
   const { scheduleAt10PM } = require('./scheduler');
   scheduleAt10PM();
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`DarkLion server running on port ${PORT}`);
-  });
 }
 
 start().catch(err => {
