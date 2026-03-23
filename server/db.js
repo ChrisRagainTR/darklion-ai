@@ -534,6 +534,7 @@ async function initDB() {
     -- Team member credentials (e.g. CPA/PFS, CFP)
     DO $$ BEGIN
       ALTER TABLE firm_users ADD COLUMN IF NOT EXISTS credentials TEXT DEFAULT '';
+    ALTER TABLE firm_users ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ DEFAULT NULL;
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
 

@@ -347,7 +347,7 @@
                ${isOwner ? `<button class="btn btn-outline btn-sm" onclick="openEditModal(${u.id},'${esc(u.name||'')}','${esc(u.email)}')">Edit</button>` : ''}
                <button class="btn btn-outline btn-sm" onclick="toggleCompanyAccess(${u.id})">Companies</button>
                ${isOwner && u.pending ? `<button class="btn btn-outline btn-sm" style="color:var(--gold);border-color:var(--gold);" onclick="copyInviteLink(${u.id})">📋 Invite Link</button>` : ''}
-               ${isOwner ? `<button style="background:transparent;border:1px solid var(--red);color:var(--red);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.68rem;cursor:pointer;font-weight:600;" onclick="removeTeamMember(${u.id},'${esc(u.email)}')">Remove</button>` : ''}
+               ${isOwner ? `<button style="background:transparent;border:1px solid var(--red);color:var(--red);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.68rem;cursor:pointer;font-weight:600;" onclick="archiveTeamMember(${u.id},'${esc(u.email)}')">Archive</button>` : ''}
              </div>`
           : '<span style="color:var(--muted);font-size:0.72rem;">You</span>';
 
@@ -484,12 +484,12 @@
       }
     }
 
-    // ===== REMOVE =====
-    async function removeTeamMember(userId, email) {
-      if (!confirm(`Remove ${email} from your team?`)) return;
+    // ===== ARCHIVE =====
+    async function archiveTeamMember(userId, email) {
+      if (!confirm(`Archive ${email}? They will lose access but their data will be preserved.`)) return;
       try {
         const res = await apiFetch(`/firms/team/${userId}`, { method: 'DELETE' });
-        if (res.ok) { toast('Removed'); await loadTeam(); }
+        if (res.ok) { toast('Archived — access revoked'); await loadTeam(); }
         else { const d = await res.json(); toast(d.error || 'Failed', 'err'); }
       } catch(e) { toast(e.message, 'err'); }
     }

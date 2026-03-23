@@ -156,7 +156,7 @@ router.post('/login', loginLimiter, async (req, res) => {
               f.name as firm_name, f.plan
        FROM firm_users fu
        JOIN firms f ON f.id = fu.firm_id
-       WHERE fu.email = $1`,
+       WHERE fu.email = $1 AND fu.archived_at IS NULL`,
       [email]
     );
 
@@ -218,14 +218,17 @@ router.post('/invite', requireFirm, async (req, res) => {
     const inviteToken = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    // Insert or update pending invite
+    // Insert or update pending invite (also unarchives if previously archived)
     await pool.query(
-      `INSERT INTO firm_users (firm_id, name, email, role, invite_token, invite_expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO firm_users (firm_id, name, email, role, invite_token, invite_expires_at, archived_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NULL)
        ON CONFLICT (firm_id, email) DO UPDATE SET
          invite_token = EXCLUDED.invite_token,
          invite_expires_at = EXCLUDED.invite_expires_at,
          role = EXCLUDED.role,
+         archived_at = NULL,
+         accepted_at = NULL,
+         password_hash = NULL,
          name = COALESCE(NULLIF(EXCLUDED.name,''), firm_users.name)`,
       [firmId, name || '', email.trim().toLowerCase(), validRole, inviteToken, expiresAt]
     );
@@ -246,11 +249,11 @@ router.get('/team', requireFirm, async (req, res) => {
     const firmId = req.firm.id;
     const { rows: users } = await pool.query(
       `SELECT id, firm_id, name, display_name, email, role, credentials, accepted_at, created_at, last_login_at, invite_expires_at,
-              avatar_url,
-              (invite_token IS NOT NULL AND accepted_at IS NULL) as pending
+              avatar_url, archived_at,
+              (invite_token IS NOT NULL AND accepted_at IS NULL AND archived_at IS NULL) as pending
        FROM firm_users
        WHERE firm_id = $1
-       ORDER BY created_at ASC`,
+       ORDER BY archived_at NULLS FIRST, created_at ASC`,
       [firmId]
     );
 
@@ -331,12 +334,13 @@ router.delete('/team/:userId', requireFirm, async (req, res) => {
     if (targetUserId === req.firm.userId) return res.status(400).json({ error: 'Cannot remove yourself' });
 
     const { rowCount } = await pool.query(
-      'DELETE FROM firm_users WHERE id = $1 AND firm_id = $2',
-      [targetUserId, req.firm.id]
+      `UPDATE firm_users SET archived_at = NOW(), invite_token = NULL, invite_expires_at = NULL
+       WHERE id = $1 AND firm_id = $2 AND id != $3`,
+      [targetUserId, req.firm.id, req.firm.userId]
     );
-    if (rowCount === 0) return res.status(404).json({ error: 'User not found' });
+    if (rowCount === 0) return res.status(404).json({ error: 'User not found or cannot archive yourself' });
 
-    await auditLog(req.firm.id, 'team_remove', `Removed user ${targetUserId}`, req.ip);
+    await auditLog(req.firm.id, 'team_archive', `Archived user ${targetUserId}`, req.ip);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
