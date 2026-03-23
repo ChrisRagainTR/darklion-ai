@@ -1,0 +1,162 @@
+<%- include('partials/shell-top', { title: 'WebDAV Drive', activeNav: 'webdav-help' }) %>
+<%- include('partials/shell-globals') %>
+
+<style>
+  .webdav-wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .webdav-hero { margin-bottom: 2.5rem; }
+  .webdav-hero h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.4rem; }
+  .webdav-hero p { font-size: 0.9rem; color: var(--muted); max-width: 560px; line-height: 1.6; }
+  .os-section { margin-bottom: 2rem; }
+  .os-section h2 { font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--text); display: flex; align-items: center; gap: 0.4rem; }
+  .steps { list-style: none; padding: 0; }
+  .steps li { display: flex; gap: 0.85rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .steps li:last-child { border-bottom: none; }
+  .step-num { width: 24px; height: 24px; border-radius: 50%; background: rgba(201,168,76,0.15); color: var(--gold); font-size: 0.72rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .step-body { flex: 1; font-size: 0.88rem; line-height: 1.6; color: var(--text); }
+  .step-body strong { color: var(--gold); }
+  .copy-block { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem; background: var(--charcoal); border: 1px solid var(--border); border-radius: 7px; padding: 0.45rem 0.75rem; }
+  .copy-block code { font-family: 'Courier New', monospace; font-size: 0.85rem; color: var(--text); flex: 1; word-break: break-all; }
+  .copy-btn { background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.25); color: var(--gold); border-radius: 5px; padding: 0.2rem 0.6rem; font-size: 0.72rem; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+  .copy-btn:hover { background: rgba(201,168,76,0.2); }
+  .info-box { background: rgba(62,207,142,0.06); border: 1px solid rgba(62,207,142,0.18); border-radius: 8px; padding: 0.85rem 1rem; font-size: 0.83rem; color: var(--muted); line-height: 1.6; margin-top: 1rem; }
+  .info-box strong { color: var(--green); }
+  .folder-tree { font-family: 'Courier New', monospace; font-size: 0.82rem; color: var(--muted); background: var(--charcoal); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; line-height: 1.8; }
+  .folder-tree .gold { color: var(--gold); }
+  .folder-tree .green { color: var(--green); }
+  .divider { height: 1px; background: var(--border); margin: 2rem 0; }
+</style>
+
+<div class="webdav-wrap">
+  <div class="webdav-hero">
+    <h1>🗂️ WebDAV Drive</h1>
+    <p>Mount your DarkLion client document vault as a network drive on Mac or Windows. Access, upload, and organize client files directly from Finder or File Explorer — no browser needed.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Folder Structure</div>
+    <div class="folder-tree">
+      <span class="gold">DarkLion/</span><br>
+      &nbsp;&nbsp;<span class="gold">Smith Family/</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="gold">John Smith/</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="green">2024 - Tax/</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;John_Smith_1040_2024.pdf<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="green">2023 - Bookkeeping/</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="gold">Smith Family Trust/</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br>
+    </div>
+    <div class="info-box" style="margin-top:0.75rem;">
+      <strong>Read &amp; Write:</strong> You can drag files <em>in</em> to upload them to the client's document vault, or drag files <em>out</em> to download locally. Deletes are permanent.
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Mac Instructions -->
+  <div class="os-section">
+    <h2>🍎 Connect on Mac (Finder)</h2>
+    <ol class="steps">
+      <li>
+        <div class="step-num">1</div>
+        <div class="step-body">Open <strong>Finder</strong>, click <strong>Go</strong> in the menu bar, then <strong>Connect to Server…</strong> (or press <strong>⌘K</strong>)</div>
+      </li>
+      <li>
+        <div class="step-num">2</div>
+        <div class="step-body">
+          Enter the server address:
+          <div class="copy-block">
+            <code id="mac-url">https://darklion.ai/webdav</code>
+            <button class="copy-btn" onclick="copyText('mac-url', this)">Copy</button>
+          </div>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">3</div>
+        <div class="step-body">Click <strong>Connect</strong>. When prompted, select <strong>Registered User</strong>.</div>
+      </li>
+      <li>
+        <div class="step-num">4</div>
+        <div class="step-body">Enter your DarkLion <strong>email</strong> as the username and your DarkLion <strong>password</strong>. Click <strong>Connect</strong>.</div>
+      </li>
+      <li>
+        <div class="step-num">5</div>
+        <div class="step-body">The <strong>DarkLion</strong> drive will appear in Finder's sidebar under Locations. Double-click to browse client folders.</div>
+      </li>
+    </ol>
+    <div class="info-box">
+      <strong>Tip:</strong> To auto-mount on login, go to <strong>System Settings → General → Login Items</strong>, click <strong>+</strong>, and add the mounted drive.
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Windows Instructions -->
+  <div class="os-section">
+    <h2>🪟 Connect on Windows (File Explorer)</h2>
+    <ol class="steps">
+      <li>
+        <div class="step-num">1</div>
+        <div class="step-body">Open <strong>File Explorer</strong>, right-click <strong>This PC</strong>, and select <strong>Map network drive…</strong></div>
+      </li>
+      <li>
+        <div class="step-num">2</div>
+        <div class="step-body">Choose a drive letter, then enter the folder:
+          <div class="copy-block">
+            <code id="win-url">https://darklion.ai/webdav</code>
+            <button class="copy-btn" onclick="copyText('win-url', this)">Copy</button>
+          </div>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">3</div>
+        <div class="step-body">Check <strong>Connect using different credentials</strong>, then click <strong>Finish</strong>.</div>
+      </li>
+      <li>
+        <div class="step-num">4</div>
+        <div class="step-body">Enter your DarkLion <strong>email</strong> and <strong>password</strong>. Click <strong>OK</strong>.</div>
+      </li>
+      <li>
+        <div class="step-num">5</div>
+        <div class="step-body">The drive will appear in File Explorer as the letter you chose. Client folders are immediately accessible.</div>
+      </li>
+    </ol>
+    <div class="info-box">
+      <strong>Windows 10/11 note:</strong> If the connection fails, open <strong>Internet Options → Advanced</strong> and ensure <em>Enable WebDAV</em> is checked. Alternatively, use the <strong>WebDAV Redirector</strong> via <code>net use Z: https://darklion.ai/webdav</code> in a Command Prompt.
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Third-party clients -->
+  <div class="os-section">
+    <h2>🖥️ Third-Party Clients</h2>
+    <ol class="steps">
+      <li>
+        <div class="step-num">→</div>
+        <div class="step-body"><strong>Cyberduck</strong> (Mac/Windows) — free, reliable WebDAV client. Choose <em>WebDAV (HTTPS)</em> connection type.</div>
+      </li>
+      <li>
+        <div class="step-num">→</div>
+        <div class="step-body"><strong>Mountain Duck</strong> — mounts as a real drive letter (paid, Mac/Windows).</div>
+      </li>
+      <li>
+        <div class="step-num">→</div>
+        <div class="step-body"><strong>WinSCP</strong> (Windows) — free, supports WebDAV. Use HTTPS protocol, port 443.</div>
+      </li>
+    </ol>
+    <p style="font-size:0.82rem;color:var(--muted);margin-top:0.75rem;">Server URL: <code style="color:var(--gold)">https://darklion.ai/webdav</code> &mdash; Username: your email &mdash; Password: your DarkLion password</p>
+  </div>
+</div>
+
+<script>
+function copyText(id, btn) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+</script>
+
+<%- include('partials/shell-close') %>

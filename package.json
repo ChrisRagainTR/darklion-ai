@@ -30,6 +30,7 @@
     "pusher": "^5.3.3",
     "socket.io": "^4.8.3",
     "stripe": "^20.4.1",
-    "twilio": "^5.13.0"
+    "twilio": "^5.13.0",
+    "webdav-server": "^2.6.2"
   }
 }

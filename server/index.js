@@ -247,6 +247,10 @@ app.use('/firms', firmsRouter);
 // --- Auth (QBO/Gusto OAuth callbacks — public) ---
 app.use('/auth', authRouter);
 
+// --- WebDAV drive (handles its own Basic auth) ---
+const webdavRouter = require('./routes/webdav');
+app.use('/webdav', webdavRouter);
+
 // --- Public API routes (no auth) — MUST be before requireFirm mounts ---
 const proposalsPublicRouter = require('./routes/proposals-public');
 app.use('/api/proposals/public', apiLimiter, proposalsPublicRouter);
@@ -290,6 +294,7 @@ const dashboardRouter = require('./routes/dashboard');
 app.use('/api/dashboard', requireFirm, apiLimiter, dashboardRouter);
 app.get('/templates', (req, res) => res.render('templates', { title: 'Message Templates', activeNav: 'templates' }));
 app.get('/settings', (req, res) => res.render('settings', { title: 'Settings', activeNav: 'settings' }));
+app.get('/webdav-help', (req, res) => res.render('webdav-help', { title: 'WebDAV Drive', activeNav: 'webdav-help' }));
 app.get('/api-docs', (req, res) => res.render('api-docs', { title: 'DarkLion API Documentation' }));
 
 const pipelinesRouter = require('./routes/pipelines');
