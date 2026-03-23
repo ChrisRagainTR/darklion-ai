@@ -1231,7 +1231,7 @@
                         <div class="doc-badges">
                           ${statusBadge}
                           ${f.size_bytes ? `<span class="doc-badge doc-badge-type">${formatBytes(f.size_bytes)}</span>` : ''}
-                          ${f.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(f.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>` : ''}
+                          ${f.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(f.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'})}</span>` : ''}
                         </div>
                       </div>
                       <div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;">
