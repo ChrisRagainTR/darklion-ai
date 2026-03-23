@@ -1269,18 +1269,18 @@
     }
 
     // Show recent 2 years open, rest collapsed, all years always shown
-    const recentYears = allYears.slice(0, 2);
-    const priorYears = allYears.slice(2);
-    const priorCount = priorYears.reduce((n,y) => n + sectionDocs.filter(d => (d.year||String(CURRENT_YEAR)) === y).length, 0);
+    const _recentYrs = allYears.slice(0, 2);
+    const _priorYrs = allYears.slice(2);
+    const _priorCount = _priorYrs.reduce((n,y) => n + sectionDocs.filter(d => (d.year||String(CURRENT_YEAR)) === y).length, 0);
     let html = `<div class="docs-col-title">${icon} ${title} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
-    recentYears.forEach(y => { html += renderOneYear(y, true); });
+    _recentYrs.forEach(y => { html += renderOneYear(y, true); });
     html += `<div class="year-folder" style="margin-bottom:0.4rem;">
       <div class="year-header">
-        <span class="yr-label">📂 Prior Years <span class="yr-count">${priorCount}</span></span>
+        <span class="yr-label">📂 Prior Years <span class="yr-count">${_priorCount}</span></span>
         <span class="yr-chevron">▼</span>
       </div>
       <div class="year-body" style="padding-left:0.5rem;">
-        ${priorYears.map(y => renderOneYear(y, false)).join('')}
+        ${_priorYrs.map(y => renderOneYear(y, false)).join('')}
       </div>
     </div>`;
     return html;
