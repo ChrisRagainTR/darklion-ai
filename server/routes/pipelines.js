@@ -509,6 +509,37 @@ router.delete('/instances/:id', async (req, res) => {
 // JOB ENDPOINTS
 // ─────────────────────────────────────────────
 
+// GET /jobs — list all active pipeline jobs across all instances (Viktor + dashboard)
+router.get('/jobs', async (req, res) => {
+  const firmId = req.firm.id;
+  try {
+    const { rows } = await pool.query(`
+      SELECT pj.id, pj.title, pj.status, pj.entity_type, pj.entity_id,
+             pj.current_stage_id, ps.name AS stage_name, ps.position AS stage_position,
+             pt.id AS template_id, pt.name AS template_name,
+             pi.id AS instance_id,
+             c.company_name,
+             p.first_name || ' ' || p.last_name AS person_name,
+             r.name AS relationship_name, r.id AS relationship_id,
+             pj.created_at, pj.updated_at
+      FROM pipeline_jobs pj
+      JOIN pipeline_instances pi ON pi.id = pj.instance_id
+      JOIN pipeline_templates pt ON pt.id = pi.template_id
+      LEFT JOIN pipeline_stages ps ON ps.id = pj.current_stage_id
+      LEFT JOIN companies c ON c.id = pj.entity_id AND pj.entity_type = 'company'
+      LEFT JOIN people p ON p.id = pj.entity_id AND pj.entity_type = 'person'
+      LEFT JOIN relationships r ON r.id = COALESCE(c.relationship_id, p.relationship_id)
+      WHERE pi.firm_id = $1 AND pj.status NOT IN ('complete', 'archived')
+      ORDER BY ps.position ASC NULLS LAST, pj.updated_at DESC
+      LIMIT 200
+    `, [firmId]);
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /pipelines/jobs error:', err);
+    res.status(500).json({ error: 'Failed to fetch pipeline jobs' });
+  }
+});
+
 // GET /instances/:instanceId/jobs
 router.get('/instances/:instanceId/jobs', async (req, res) => {
   try {
