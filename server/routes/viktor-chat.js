@@ -242,6 +242,8 @@ function buildContextSummary(ctx) {
     summary += `NEW CLIENTS WITHOUT PIPELINE (${needs.new_clients_no_pipeline.length}): ${needs.new_clients_no_pipeline.map(r => r.name).join(', ')}\n\n`;
   }
 
+  summary += `\nNOTE: For engagement letter/billing details on a specific client, call GET /api/viktor/relationship/:id or GET /api/viktor/engagement-letters. For full message history, call GET /api/viktor/messages/:threadId.`;
+
   return summary;
 }
 

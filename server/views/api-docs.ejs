@@ -52,6 +52,9 @@
     <a href="#errors">Errors</a>
     <div class="sidebar-section">Viktor Context</div>
     <a href="#viktor-context">GET /api/viktor/context</a>
+    <a href="#viktor-relationship">GET /api/viktor/relationship/:id</a>
+    <a href="#viktor-engagements">GET /api/viktor/engagement-letters</a>
+    <a href="#viktor-messages">GET /api/viktor/messages/:threadId</a>
     <div class="sidebar-section">Relationships</div>
     <a href="#relationships-list">List relationships</a>
     <a href="#relationships-get">Get relationship</a>
@@ -121,8 +124,36 @@
       </tbody>
     </table>
 
-    <h2 id="viktor-context">Viktor Context</h2>
-    <p class="section-intro">The Viktor context endpoint is the primary tool for Viktor's morning briefings. It returns a complete snapshot of the firm's current state in a single request — pipeline status, urgent items, and everything that needs attention.</p>
+    <h2 id="viktor-context">Viktor Context & Deep Dive Endpoints</h2>
+    <p class="section-intro">Viktor has three layers of data access: firm-wide context for briefings, relationship deep dives for client-specific questions, engagement letter contract data, and full message thread contents.</p>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/viktor/context</span></h3>
+    <p class="endpoint-desc">Firm-wide snapshot for morning briefings. Pipeline, unsigned returns, stalled messages, proposals, new clients, expiring engagements, birthdays.</p>
+
+    <h3 id="viktor-relationship"><span class="method method-get">GET</span> <span class="endpoint-path">/api/viktor/relationship/:id</span></h3>
+    <p class="endpoint-desc">Everything about a specific relationship: people, companies, active engagement letter contract terms (monthly fees, services, term end date), message threads with last message preview, tax deliveries with signer status, proposals, and documents. Use this when a user asks about a specific client.</p>
+    <table class="params-table">
+      <thead><tr><th>Response Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>relationship</td><td>object</td><td>Relationship record</td></tr>
+        <tr><td>people</td><td>array</td><td>All people with contact info and portal status</td></tr>
+        <tr><td>companies</td><td>array</td><td>All companies with EIN and entity type</td></tr>
+        <tr><td>contracts</td><td>array</td><td>Active engagement letters with monthly_line_items, total_monthly, services, term_end_date, ai_summary</td></tr>
+        <tr><td>messages</td><td>array</td><td>Recent threads with last message body and unread count</td></tr>
+        <tr><td>tax_deliveries</td><td>array</td><td>Tax returns with signer status (signed/approved)</td></tr>
+        <tr><td>proposals</td><td>array</td><td>Recent proposals with monthly price</td></tr>
+        <tr><td>documents</td><td>array</td><td>Recent documents by year/category</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="viktor-engagements"><span class="method method-get">GET</span> <span class="endpoint-path">/api/viktor/engagement-letters</span></h3>
+    <p class="endpoint-desc">All active engagement letters across the entire firm, with full extracted contract data: client name, services elected, monthly line items, total monthly fee, one-time fees, term end date, and AI summary. Use this to answer billing and contract questions.</p>
+
+    <h3 id="viktor-messages"><span class="method method-get">GET</span> <span class="endpoint-path">/api/viktor/messages/:threadId</span></h3>
+    <p class="endpoint-desc">Full contents of a message thread — every message in order with sender type (staff/client), body, and timestamps. Get thread IDs from <code>/api/viktor/relationship/:id</code> or <code>/api/messages</code>.</p>
+
+    <h3 id="viktor-context-old"><span class="method method-get">GET</span> <span class="endpoint-path">/api/viktor/context</span> (detail)</h3>
+    <p class="endpoint-desc">Returns a comprehensive snapshot of the firm for Viktor's daily briefing. No parameters required.</p>
 
     <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/viktor/context</span></h3>
     <p class="endpoint-desc">Returns a comprehensive snapshot of the firm for Viktor's daily briefing. No parameters required.</p>
