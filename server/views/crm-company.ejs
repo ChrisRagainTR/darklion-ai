@@ -1234,7 +1234,11 @@
                           ${f.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(f.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>` : ''}
                         </div>
                       </div>
-                      <button class="btn-dl" data-docid="${f.id}">⬇ Download</button>
+                      <div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;">
+                        <button class="btn-dl" data-docid="${f.id}">⬇</button>
+                        <button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${f.id},${JSON.stringify(f.folder_section||'firm_uploaded')},${JSON.stringify(f.folder_category||'tax')},event)" title="Move">↕</button>
+                        <button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${f.id},event)" title="Delete">🗑</button>
+                      </div>
                     </div>`).join('')
                 }
               </div>
@@ -1381,6 +1385,45 @@
       const data = await res.json();
       if (data.url) window.open(data.url, '_blank');
     } catch(e) { toast('Failed to get download link', 'error'); }
+  }
+
+  async function deleteDoc(id, e) {
+    if (e) e.stopPropagation();
+    if (!await window.dlConfirm('Delete this document? This cannot be undone.', {title:'Delete Document', confirmLabel:'Delete', danger:true, icon:'🗑️'})) return;
+    try {
+      const res = await apiFetch(`/api/documents/${id}`, { method: 'DELETE' });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      toast('Document deleted');
+      loadDocs(true);
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  let _moveDocId = null;
+  function openMoveDocModal(id, currentSection, currentCategory, e) {
+    if (e) e.stopPropagation();
+    _moveDocId = id;
+    const modal = document.getElementById('move-doc-modal');
+    if (!modal) return;
+    document.getElementById('move-doc-section').value = currentSection || 'firm_uploaded';
+    document.getElementById('move-doc-category').value = currentCategory || 'tax';
+    modal.classList.add('open');
+  }
+  function closeMoveDocModal() {
+    const modal = document.getElementById('move-doc-modal');
+    if (modal) modal.classList.remove('open');
+    _moveDocId = null;
+  }
+  async function submitMoveDoc() {
+    if (!_moveDocId) return;
+    const section = document.getElementById('move-doc-section').value;
+    const category = document.getElementById('move-doc-category').value;
+    try {
+      const res = await apiFetch(`/api/documents/${_moveDocId}`, { method: 'PUT', body: JSON.stringify({ folder_section: section, folder_category: category }) });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      toast('Document moved');
+      closeMoveDocModal();
+      loadDocs(true);
+    } catch(e) { toast(e.message, 'error'); }
   }
 
   // ── TAX DELIVERIES ────────────────────────────────────────────────────────
@@ -3668,6 +3711,31 @@
       <button class="btn btn-outline btn-sm" id="tsm-reanalyze-btn" onclick="retrySummary(_tsmPendingDeliveryId)" style="margin-right:auto;">↺ Re-analyze</button>
       <button class="btn btn-outline btn-sm" onclick="closeTaxSummary()">Close</button>
       <button class="btn btn-gold" id="tsm-send-btn" onclick="confirmAndSendDelivery()" style="display:none;">Send to Client →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Move Document Modal -->
+<div class="modal-overlay" id="move-doc-modal" onclick="closeMoveDocModal()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:380px;">
+    <h2>Move Document</h2>
+    <div class="form-group">
+      <label>Section</label>
+      <select id="move-doc-section" class="form-control">
+        <option value="firm_uploaded">Delivered by Advisor</option>
+        <option value="client_uploaded">Client Uploaded</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="move-doc-category" class="form-control">
+        <option value="tax">Tax</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeMoveDocModal()">Cancel</button>
+      <button class="btn-submit" onclick="submitMoveDoc()">Move</button>
     </div>
   </div>
 </div>

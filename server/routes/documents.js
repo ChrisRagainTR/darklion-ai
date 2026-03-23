@@ -141,14 +141,16 @@ router.get('/:id/download', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const firmId = req.firm.id;
   const { id } = req.params;
-  const { display_name, doc_type, year, is_delivered } = req.body;
+  const { display_name, doc_type, year, is_delivered, folder_section, folder_category } = req.body;
 
   const sets = [];
   const params = [];
 
-  if (display_name !== undefined) { params.push(display_name); sets.push(`display_name = $${params.length}`); }
-  if (doc_type !== undefined)     { params.push(doc_type);     sets.push(`doc_type = $${params.length}`); }
-  if (year !== undefined)         { params.push(year);         sets.push(`year = $${params.length}`); }
+  if (display_name !== undefined)    { params.push(display_name);    sets.push(`display_name = $${params.length}`); }
+  if (doc_type !== undefined)        { params.push(doc_type);        sets.push(`doc_type = $${params.length}`); }
+  if (year !== undefined)            { params.push(year);            sets.push(`year = $${params.length}`); }
+  if (folder_section !== undefined)  { params.push(folder_section);  sets.push(`folder_section = $${params.length}`); }
+  if (folder_category !== undefined) { params.push(folder_category); sets.push(`folder_category = $${params.length}`); }
   if (is_delivered !== undefined) {
     const val = is_delivered === true || is_delivered === 'true' || is_delivered === 1;
     params.push(val);
