@@ -1271,14 +1271,27 @@ async function executeViktorTool(toolName, input, firmId, authHeader) {
 
     // ── delete_relationship ────────────────────────────────────────────────────
     case 'delete_relationship': {
-      const rel = await resolveRelationship(input.relationship_name, firmId);
-      if (!rel) throw new Error(`Relationship "${input.relationship_name}" not found`);
-      // Check it's empty
-      const { rows: people } = await pool.query(`SELECT id FROM people WHERE relationship_id=$1 LIMIT 1`, [rel.id]);
-      const { rows: companies } = await pool.query(`SELECT id FROM companies WHERE relationship_id=$1 LIMIT 1`, [rel.id]);
-      if (people.length || companies.length) throw new Error(`Relationship "${rel.name}" still has people or companies. Move them first.`);
-      await pool.query(`DELETE FROM relationships WHERE id=$1 AND firm_id=$2`, [rel.id, firmId]);
-      return { ok: true, deleted: rel.name };
+      // Find ALL relationships matching this name (handles duplicates)
+      const { rows: allRels } = await pool.query(
+        `SELECT id, name FROM relationships WHERE firm_id=$1 AND name ILIKE $2`,
+        [firmId, `%${input.relationship_name}%`]
+      );
+      if (!allRels.length) throw new Error(`Relationship "${input.relationship_name}" not found`);
+
+      let deletedCount = 0;
+      const skipped = [];
+      for (const rel of allRels) {
+        const { rows: people } = await pool.query(`SELECT id FROM people WHERE relationship_id=$1 LIMIT 1`, [rel.id]);
+        const { rows: companies } = await pool.query(`SELECT id FROM companies WHERE relationship_id=$1 LIMIT 1`, [rel.id]);
+        if (people.length || companies.length) {
+          skipped.push(`${rel.name} (ID ${rel.id}) — has ${people.length ? 'people' : ''}${companies.length ? ' companies' : ''}`);
+        } else {
+          await pool.query(`DELETE FROM relationships WHERE id=$1 AND firm_id=$2`, [rel.id, firmId]);
+          deletedCount++;
+        }
+      }
+      if (deletedCount === 0) throw new Error(`Could not delete "${input.relationship_name}" — ${skipped.join('; ')}. Move people/companies first.`);
+      return { ok: true, deleted: input.relationship_name, deleted_count: deletedCount, skipped: skipped.length > 0 ? skipped : undefined };
     }
 
     // ── update_notes ───────────────────────────────────────────────────────────
