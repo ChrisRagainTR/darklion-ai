@@ -27,6 +27,15 @@
   .year-folder.open .yr-chevron { transform: rotate(180deg); }
   .year-body { display: none; border-top: 1px solid var(--border); }
   .year-folder.open .year-body { display: block; }
+  .cat-folder { margin-bottom: 0.35rem; border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; }
+  .cat-folder-header { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.7rem; cursor: pointer; user-select: none; background: rgba(201,168,76,0.04); border-left: 3px solid var(--gold); }
+  .cat-folder-header:hover { background: rgba(201,168,76,0.08); }
+  .cat-folder-label { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+  .cat-folder-meta { font-size: 0.72rem; color: var(--muted); }
+  .cat-chevron { color: var(--muted); font-size: 0.75rem; transition: transform 0.15s; }
+  .cat-folder.open .cat-chevron { transform: rotate(180deg); }
+  .cat-folder-body { display: none; padding: 0.4rem 0.5rem; }
+  .cat-folder.open .cat-folder-body { display: block; }
   .section-heading { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 0.6rem 1.1rem 0.3rem; }
   .doc-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.1rem; border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
   .doc-row:hover { background: rgba(255,255,255,0.03); }
@@ -849,7 +858,12 @@
         <div class="year-body" style="padding-left:1rem;">`;
       PERSON_CATS.forEach(cat => {
         const catDocs = yrDocs.filter(d => (d.folder_category || 'other') === cat.key);
-        y += `<div style="margin-bottom:0.5rem;"><div style="font-size:0.82rem;font-weight:700;color:var(--text);padding:0.4rem 0.5rem;margin-bottom:0.25rem;border-left:3px solid var(--gold);background:rgba(201,168,76,0.06);">${cat.icon} ${cat.label} <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${catDocs.length})</span></div><div style="padding-left:0.5rem;">`;
+        y += `<div class="cat-folder${catDocs.length > 0 ? ' open' : ''}">
+          <div class="cat-folder-header" onclick="this.closest('.cat-folder').classList.toggle('open')">
+            <span class="cat-folder-label">${cat.icon} ${cat.label}</span>
+            <span style="display:flex;align-items:center;gap:0.5rem;"><span class="cat-folder-meta">${catDocs.length} file${catDocs.length !== 1 ? 's' : ''}</span><span class="cat-chevron">▼</span></span>
+          </div>
+          <div class="cat-folder-body">`;
         if (!catDocs.length) {
           y += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`;
         } else {
@@ -861,7 +875,7 @@
             y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(doc.display_name || 'Document')}</div><div class="doc-badges">${statusBadge}${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}${doc.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(doc.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'})}</span>` : ''}</div></div><div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;"><button class="btn-dl" data-docid="${doc.id}">⬇</button><button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${doc.id},${JSON.stringify(doc.folder_section||'firm_uploaded')},${JSON.stringify(doc.folder_category||'tax')},event,${JSON.stringify(doc.year||'')})" title="Move">↕</button><button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${doc.id},event)" title="Delete">🗑</button></div></div>`;
           });
         }
-        y += `</div></div>`;
+        y += `</div></div>`; // close cat-folder-body + cat-folder
       });
       y += `</div></div>`;
       return y;
