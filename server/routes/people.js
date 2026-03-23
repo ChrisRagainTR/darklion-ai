@@ -32,7 +32,11 @@ router.get('/', async (req, res) => {
     const { rows } = await pool.query(`
       SELECT
         p.*,
-        r.name AS relationship_name
+        r.name AS relationship_name,
+        COALESCE((
+          SELECT SUM((SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL AND m.is_internal = false))
+          FROM message_threads mt WHERE mt.person_id = p.id AND mt.firm_id = p.firm_id AND mt.status != 'archived'
+        ), 0) AS unread_count
       FROM people p
       LEFT JOIN relationships r ON r.id = p.relationship_id
       WHERE p.firm_id = $1

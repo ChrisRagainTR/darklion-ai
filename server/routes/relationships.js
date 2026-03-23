@@ -11,7 +11,14 @@ router.get('/', async (req, res) => {
       SELECT
         r.*,
         (SELECT COUNT(*) FROM companies c WHERE c.relationship_id = r.id) AS company_count,
-        (SELECT COUNT(*) FROM people p WHERE p.relationship_id = r.id) AS people_count
+        (SELECT COUNT(*) FROM people p WHERE p.relationship_id = r.id) AS people_count,
+        (SELECT COALESCE(SUM(
+          (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL AND m.is_internal = false)
+        ), 0)
+         FROM message_threads mt
+         JOIN people p2 ON p2.id = mt.person_id
+         WHERE p2.relationship_id = r.id AND mt.firm_id = r.firm_id AND mt.status != 'archived'
+        ) AS unread_count
       FROM relationships r
       WHERE r.firm_id = $1
       ORDER BY r.name ASC

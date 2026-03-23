@@ -845,7 +845,7 @@ function renderRelationships(list) {
     </tr></thead>
     <tbody>${list.map(r => `
       <tr onclick="window.location.href='/crm/relationship/${r.id}'">
-        <td style="font-weight:600;">${esc(r.name)}</td>
+        <td style="font-weight:600;">${esc(r.name)}${parseInt(r.unread_count||0)>0?` <span style="display:inline-flex;align-items:center;justify-content:center;background:#e74c3c;color:#fff;border-radius:999px;padding:0.1rem 0.45rem;font-size:0.65rem;font-weight:800;margin-left:0.35rem;">${r.unread_count}</span>`:''}</td>
         <td>${tierBadge(r.service_tier)}</td>
         <td>${r.company_count ?? 0}</td>
         <td>${r.people_count ?? 0}</td>
@@ -1031,7 +1031,7 @@ function renderPeople(list) {
     </tr></thead>
     <tbody>${list.map(p => `
       <tr onclick="window.location.href='/crm/person/${p.id}'">
-        <td style="font-weight:600;">${esc(p.first_name)} ${esc(p.last_name)}</td>
+        <td style="font-weight:600;">${esc(p.first_name)} ${esc(p.last_name)}${parseInt(p.unread_count||0)>0?` <span style="display:inline-flex;align-items:center;justify-content:center;background:#e74c3c;color:#fff;border-radius:999px;padding:0.1rem 0.45rem;font-size:0.65rem;font-weight:800;margin-left:0.35rem;">${p.unread_count}</span>`:''}</td>
         <td style="color:var(--muted);">${p.email ? esc(p.email) : '—'}</td>
         <td>${p.relationship_name ? `<span style="color:var(--gold);">${esc(p.relationship_name)}</span>` : '—'}</td>
         <td>${p.filing_status ? `<span class="badge badge-muted">${filingLabel(p.filing_status)}</span>` : '—'}</td>
