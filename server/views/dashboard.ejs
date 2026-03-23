@@ -486,13 +486,14 @@
       .dash-ai-messages { flex: 1; overflow-y: auto; padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.85rem; }
       .dash-ai-bubble { max-width: 90%; border-radius: 12px; padding: 0.65rem 0.9rem; font-size: 0.84rem; line-height: 1.55; }
       .dash-ai-bubble.agent { background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.2); color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; }
-      .dash-ai-bubble.user { background: var(--charcoal); border: 1px solid var(--border); color: var(--text); align-self: flex-end; border-bottom-right-radius: 4px; }
+      .dash-ai-bubble.user { background: var(--gold, #c9a84c); color: var(--navy, #0f1923); align-self: flex-end; margin-left: 2rem; border-bottom-right-radius: 4px; }
       .dash-ai-input-row { padding: 0.85rem 1.25rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; align-items: flex-end; }
       .dash-ai-input { flex: 1; background: var(--input-bg, rgba(255,255,255,0.04)); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.75rem; color: var(--text); font-size: 0.85rem; font-family: inherit; resize: none; min-height: 38px; max-height: 100px; }
       .dash-ai-input::placeholder { color: var(--muted); }
       .dash-ai-input:focus { outline: none; border-color: rgba(201,168,76,0.5); }
       .dash-ai-send { background: var(--gold); color: var(--navy); border: none; border-radius: 8px; width: 36px; height: 36px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.5; }
       .dash-ai-soon { font-size: 0.68rem; font-weight: 700; background: rgba(201,168,76,0.12); color: var(--gold); border-radius: 8px; padding: 0.15rem 0.5rem; letter-spacing: 0.05em; }
+      @keyframes pulse { 0%,100% { opacity:0.4 } 50% { opacity:1 } }
     </style>
 
     <div class="dash-overview-wrap">
@@ -605,7 +606,7 @@
         </div>
       </div>
 
-      <!-- ══ RIGHT: AI assistant (coming soon) ══ -->
+      <!-- ══ RIGHT: Viktor AI Chat ══ -->
       <div class="dash-right-col">
         <div class="dash-ai-header">
           <div class="dash-ai-avatar">
@@ -613,18 +614,20 @@
           </div>
           <div style="flex:1;min-width:0;">
             <div style="font-weight:700;font-size:0.88rem;">Viktor AI</div>
-            <div style="font-size:0.72rem;color:var(--muted);">Your firm intelligence assistant</div>
+            <div style="font-size:0.72rem;color:var(--muted);" id="viktor-status">Connecting…</div>
           </div>
-          <span class="dash-ai-soon">Coming Soon</span>
         </div>
 
         <div class="dash-ai-messages" id="dash-ai-messages">
-          <!-- Greeting message populated by JS -->
+          <div style="display:flex;align-items:center;gap:0.6rem;padding:1rem;color:var(--muted);font-size:0.82rem;">
+            <div style="width:18px;height:18px;border:2px solid var(--gold);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>
+            Loading Viktor…
+          </div>
         </div>
 
         <div class="dash-ai-input-row">
-          <textarea class="dash-ai-input" id="dash-ai-input" placeholder="Ask about your firm… (coming soon)" rows="1" disabled></textarea>
-          <button class="dash-ai-send" disabled title="Coming soon">↑</button>
+          <textarea class="dash-ai-input" id="dash-ai-input" placeholder="Ask Viktor anything about your firm…" rows="1" disabled></textarea>
+          <button class="dash-ai-send" id="dash-ai-send-btn" disabled title="Send">↑</button>
         </div>
       </div>
 
@@ -684,21 +687,6 @@
       const dateEl = document.getElementById('dash-date');
       if (greetEl) greetEl.textContent = greeting;
       if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
-
-      // AI placeholder message
-      const aiMsg = document.getElementById('dash-ai-messages');
-      if (aiMsg) {
-        aiMsg.innerHTML = `
-          <div class="dash-ai-bubble agent">
-            ${greeting} I'm Viktor — your firm intelligence assistant. I have full visibility into your clients, pipelines, messages, and more.
-          </div>
-          <div class="dash-ai-bubble agent">
-            The intelligence panel on the left shows what needs your attention today. Once connected, you'll be able to ask me things like <em>"Who should I call first?"</em> or <em>"Draft a follow-up for unsigned returns."</em>
-          </div>
-          <div class="dash-ai-bubble agent" style="color:var(--muted);font-style:italic;font-size:0.78rem;">
-            💡 Full Viktor integration coming soon — API access is live.
-          </div>`;
-      }
 
       const setStat = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
       const setBadge = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -917,6 +905,7 @@
 
     async function init() {
       loadDashboardIntel(); // non-blocking — runs in background
+      initViktor(); // start Viktor chat
 
       try {
         const res = await apiFetch('/api/companies');
@@ -2974,6 +2963,167 @@
       // If deep section was set, re-apply it after init in case init overwrites display
       if (_deepSection) showSection(_deepSection, null);
     });
+
+  // ══ VIKTOR AI CHAT ══════════════════════════════════════════════════════
+
+  async function initViktor() {
+    const statusEl = document.getElementById('viktor-status');
+    const inputEl = document.getElementById('dash-ai-input');
+    const sendBtn = document.getElementById('dash-ai-send-btn');
+    const messagesEl = document.getElementById('dash-ai-messages');
+
+    try {
+      // Get/create today's session
+      const sessionRes = await apiFetch('/api/viktor-chat/session');
+      if (!sessionRes.ok) {
+        setViktorStatus('Unavailable', false);
+        messagesEl.innerHTML = '<div class="dash-ai-bubble agent">Viktor is not available right now. Please check your account settings.</div>';
+        return;
+      }
+      const session = await sessionRes.json();
+
+      // If session has existing messages, render them
+      if (session.messages && session.messages.length > 0) {
+        renderViktorMessages(session.messages);
+        setViktorStatus('Online', true);
+        enableViktorInput();
+        return;
+      }
+
+      // No messages yet — generate morning briefing
+      setViktorStatus('Generating briefing…', false);
+      const briefingRes = await apiFetch('/api/viktor-chat/briefing', { method: 'POST', body: '{}' });
+      if (!briefingRes.ok) {
+        setViktorStatus('Online', true);
+        messagesEl.innerHTML = '<div class="dash-ai-bubble agent">Good morning! I\'m Viktor. Ask me anything about your firm — pipeline status, unsigned returns, stalled messages, or anything else you need.</div>';
+        enableViktorInput();
+        return;
+      }
+      const { messages } = await briefingRes.json();
+      renderViktorMessages(messages || []);
+      setViktorStatus('Online', true);
+      enableViktorInput();
+    } catch(e) {
+      console.error('Viktor init error:', e);
+      setViktorStatus('Offline', false);
+      const messagesEl = document.getElementById('dash-ai-messages');
+      if (messagesEl) messagesEl.innerHTML = '<div class="dash-ai-bubble agent" style="color:var(--muted);">Viktor is temporarily unavailable.</div>';
+    }
+  }
+
+  function setViktorStatus(text, online) {
+    const el = document.getElementById('viktor-status');
+    if (el) {
+      el.textContent = text;
+      el.style.color = online ? 'var(--green,#3ecf8e)' : 'var(--muted)';
+    }
+  }
+
+  function enableViktorInput() {
+    const inputEl = document.getElementById('dash-ai-input');
+    const sendBtn = document.getElementById('dash-ai-send-btn');
+    if (inputEl) { inputEl.disabled = false; inputEl.style.opacity = '1'; }
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
+  }
+
+  function renderViktorMessages(messages) {
+    const el = document.getElementById('dash-ai-messages');
+    if (!el) return;
+    el.innerHTML = messages.map(function(m) {
+      const isUser = m.role === 'user';
+      const text = m.content || '';
+      const rendered = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+      return '<div class="dash-ai-bubble ' + (isUser ? 'user' : 'agent') + '">' + rendered + '</div>';
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function appendViktorMessage(role, content) {
+    const el = document.getElementById('dash-ai-messages');
+    if (!el) return;
+    const rendered = content
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+    const div = document.createElement('div');
+    div.className = 'dash-ai-bubble ' + (role === 'user' ? 'user' : 'agent');
+    div.innerHTML = rendered;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  async function sendViktorMessage() {
+    const inputEl = document.getElementById('dash-ai-input');
+    const sendBtn = document.getElementById('dash-ai-send-btn');
+    const text = inputEl ? inputEl.value.trim() : '';
+    if (!text) return;
+
+    inputEl.value = '';
+    inputEl.disabled = true;
+    inputEl.style.height = 'auto';
+    if (sendBtn) { sendBtn.disabled = true; sendBtn.style.opacity = '0.5'; }
+
+    appendViktorMessage('user', text);
+
+    // Thinking indicator
+    const thinkingId = 'viktor-thinking-' + Date.now();
+    const el = document.getElementById('dash-ai-messages');
+    if (el) {
+      const thinking = document.createElement('div');
+      thinking.className = 'dash-ai-bubble agent';
+      thinking.id = thinkingId;
+      thinking.style.opacity = '0.6';
+      thinking.innerHTML = '<span style="animation:pulse 1s infinite">Viktor is thinking…</span>';
+      el.appendChild(thinking);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    try {
+      const res = await apiFetch('/api/viktor-chat/message', {
+        method: 'POST',
+        body: JSON.stringify({ message: text })
+      });
+      const thinkingEl = document.getElementById(thinkingId);
+      if (thinkingEl) thinkingEl.remove();
+
+      if (!res.ok) {
+        appendViktorMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+      } else {
+        const data = await res.json();
+        appendViktorMessage('assistant', data.reply || 'No response received.');
+      }
+    } catch(e) {
+      const thinkingEl = document.getElementById(thinkingId);
+      if (thinkingEl) thinkingEl.remove();
+      appendViktorMessage('assistant', 'Connection error. Please try again.');
+    }
+
+    inputEl.disabled = false;
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
+    inputEl.focus();
+  }
+
+  // Wire up send button and Enter key
+  document.addEventListener('DOMContentLoaded', function() {
+    const sendBtn = document.getElementById('dash-ai-send-btn');
+    const inputEl = document.getElementById('dash-ai-input');
+    if (sendBtn) sendBtn.addEventListener('click', sendViktorMessage);
+    if (inputEl) {
+      inputEl.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendViktorMessage();
+        }
+      });
+      // Auto-resize textarea
+      inputEl.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+      });
+    }
+  });
+
   </script>
 
 <!-- Unsigned Returns — Show All Modal -->

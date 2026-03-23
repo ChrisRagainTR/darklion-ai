@@ -719,6 +719,20 @@ async function initDB() {
     );
     CREATE INDEX IF NOT EXISTS api_tokens_by_firm ON api_tokens(firm_id);
     CREATE INDEX IF NOT EXISTS api_tokens_by_hash ON api_tokens(token_hash);
+
+    -- ===================== VIKTOR SESSIONS =====================
+    CREATE TABLE IF NOT EXISTS viktor_sessions (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES firm_users(id) ON DELETE CASCADE,
+      session_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      messages JSONB DEFAULT '[]',
+      briefing_generated BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(firm_id, user_id, session_date)
+    );
+    CREATE INDEX IF NOT EXISTS viktor_sessions_by_firm_user ON viktor_sessions(firm_id, user_id, session_date);
   `);
 }
 
