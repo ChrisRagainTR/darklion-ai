@@ -1671,12 +1671,33 @@
 
     // Income sources
     if (d.income_sources && d.income_sources.length) {
-      html += '<div><div class="tsm-section-title">Income Breakdown</div><table class="tsm-table"><thead><tr><th>Source</th><th style="text-align:right">Amount</th></tr></thead><tbody>';
+      html += '<div><div class="tsm-section-title">📊 Income Breakdown</div><table class="tsm-table"><thead><tr><th>Source</th><th style="text-align:right">Amount</th></tr></thead><tbody>';
       d.income_sources.forEach(function(s) {
         html += '<tr><td>' + esc(s.source) + (s.note ? ' <span style="color:var(--muted);font-size:0.75em">(' + esc(s.note) + ')</span>' : '') + '</td><td>' + fmt$(s.amount) + '</td></tr>';
       });
-      html += '<tr><td>Total Income</td><td>' + fmt$(d.total_income) + '</td></tr></tbody></table></div>';
+      html += '<tr><td><strong>Total Income (AGI)</strong></td><td><strong>' + fmt$(d.adjusted_gross_income || d.total_income) + '</strong></td></tr></tbody></table></div>';
     }
+
+    // Tax Computation — two-column layout
+    html += '<div><div class="tsm-section-title">🧾 Tax Computation</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">';
+    // Left: deductions
+    html += '<table class="tsm-table"><tbody>';
+    html += '<tr><td>Adjusted Gross Income</td><td>' + fmt$(d.adjusted_gross_income || d.total_income) + '</td></tr>';
+    (d.deductions || []).forEach(function(ded) {
+      html += '<tr><td style="color:var(--green,#3ecf8e)">' + esc(ded.name) + '</td><td style="color:var(--green,#3ecf8e)">(' + fmt$(ded.amount) + ')</td></tr>';
+    });
+    html += '<tr style="border-top:1px solid var(--border)"><td><strong>Taxable Income</strong></td><td><strong>' + fmt$(d.taxable_income) + '</strong></td></tr>';
+    html += '</tbody></table>';
+    // Right: tax calc
+    html += '<table class="tsm-table"><tbody>';
+    html += '<tr><td>Federal Income Tax</td><td>' + fmt$(d.tax_before_credits) + '</td></tr>';
+    if (d.credits > 0) html += '<tr><td style="color:var(--green,#3ecf8e)">Less: Credits</td><td style="color:var(--green,#3ecf8e)">(' + fmt$(d.credits) + ')</td></tr>';
+    html += '<tr><td><strong>Total Tax</strong></td><td><strong>' + fmt$(d.total_tax) + '</strong></td></tr>';
+    html += '<tr><td style="color:var(--muted)">Less: Payments &amp; Withholding</td><td style="color:var(--muted)">(' + fmt$(d.total_payments) + ')</td></tr>';
+    var refColor = d.is_refund ? 'var(--green,#3ecf8e)' : 'var(--red,#f56565)';
+    html += '<tr style="border-top:1px solid var(--border)"><td style="color:' + refColor + '"><strong>' + (d.is_refund ? 'Refund' : 'Balance Due') + '</strong></td><td style="color:' + refColor + '"><strong>' + fmt$(d.refund_or_owed_amount) + '</strong></td></tr>';
+    html += '</tbody></table>';
+    html += '</div></div>';
 
     // Savings highlights
     if (d.savings_highlights && d.savings_highlights.length) {
