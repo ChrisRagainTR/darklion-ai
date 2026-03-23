@@ -16,10 +16,10 @@ router.get('/', async (req, res) => {
   const year = parseInt(req.query.year) || new Date().getFullYear();
 
   try {
-    // Collect all customers + subscriptions + invoices from both accounts
-    const allCustomers = []; // { email, name, account, subscriptions, invoices }
+    // Collect all customers + subscriptions + invoices from both accounts (in parallel)
+    const allCustomers = [];
 
-    for (const acct of STRIPE_ACCOUNTS) {
+    await Promise.all(STRIPE_ACCOUNTS.map(async (acct) => {
       const stripe = getStripe(acct.key);
 
       // Page through all active subscriptions
@@ -88,34 +88,41 @@ router.get('/', async (req, res) => {
         custMap[custId].monthlyAmount += monthly;
       }
 
-      // Fetch invoices for this year for each customer
-      for (const [custId, cust] of Object.entries(custMap)) {
-        const yearStart = Math.floor(new Date(year, 0, 1).getTime() / 1000);
-        const yearEnd = Math.floor(new Date(year + 1, 0, 1).getTime() / 1000);
+      // Fetch invoices for all customers in parallel (10 at a time to avoid rate limits)
+      const yearStart = Math.floor(new Date(year, 0, 1).getTime() / 1000);
+      const yearEnd = Math.floor(new Date(year + 1, 0, 1).getTime() / 1000);
+      const custEntries = Object.entries(custMap);
 
-        try {
-          const invList = await stripe.invoices.list({
-            customer: custId,
-            created: { gte: yearStart, lt: yearEnd },
-            limit: 24,
-          });
-          cust.invoices = invList.data.map(inv => ({
-            id: inv.id,
-            amount: inv.amount_paid / 100,
-            status: inv.status,
-            paid: inv.paid,
-            period_start: inv.period_start,
-            period_end: inv.period_end,
-            due_date: inv.due_date,
-            created: inv.created,
-          }));
-        } catch(e) {
-          cust.invoices = [];
-        }
+      // Batch into groups of 10 for parallel fetching
+      for (let i = 0; i < custEntries.length; i += 10) {
+        const batch = custEntries.slice(i, i + 10);
+        await Promise.all(batch.map(async ([custId, cust]) => {
+          try {
+            const invList = await stripe.invoices.list({
+              customer: custId,
+              created: { gte: yearStart, lt: yearEnd },
+              limit: 24,
+            });
+            cust.invoices = invList.data.map(inv => ({
+              id: inv.id,
+              amount: inv.amount_paid / 100,
+              status: inv.status,
+              paid: inv.paid,
+              period_start: inv.period_start,
+              period_end: inv.period_end,
+              due_date: inv.due_date,
+              created: inv.created,
+            }));
+          } catch(e) {
+            cust.invoices = [];
+          }
+        }));
+      }
 
+      for (const cust of Object.values(custMap)) {
         allCustomers.push(cust);
       }
-    }
+    })); // end Promise.all accounts
 
     // Sort by monthly amount descending
     allCustomers.sort((a, b) => b.monthlyAmount - a.monthlyAmount);
