@@ -1018,7 +1018,7 @@
     const people = c.people || [];
     let peopleHtml = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;">
       <span>People</span>
-      <button class="btn btn-gold btn-sm" onclick="openAttachPersonModal()" style="font-size:0.72rem;padding:0.25rem 0.65rem;">+ Attach</button>
+      <button class="btn btn-gold btn-sm" onclick="openAttachPersonModal()" style="font-size:0.72rem;padding:0.25rem 0.65rem;">+ Person</button>
     </div>`;
     if (!people.length) {
       peopleHtml += `<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No people attached.</div>`;
@@ -1912,7 +1912,7 @@
   async function detachPerson(personId) {
     if (!confirm('Remove this person from the company?')) return;
     try {
-      await apiFetch(`/api/companies/${companyId}/people/${personId}`, { method: 'DELETE' });
+      await apiFetch(`/api/people/${personId}/company-access/${companyId}`, { method: 'DELETE' });
       toast('Person removed');
       await loadCompany();
     } catch(e) { toast('Failed to remove', 'error'); }
@@ -1951,7 +1951,7 @@
     const personId = document.getElementById('ap-person').value;
     const access = document.getElementById('ap-access').value;
     try {
-      const res = await apiFetch(`/api/companies/${companyId}/people`, { method: 'POST', body: JSON.stringify({ person_id: parseInt(personId), access_level: access }) });
+      const res = await apiFetch(`/api/people/${personId}/company-access`, { method: 'POST', body: JSON.stringify({ company_id: parseInt(companyId), access_level: access }) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error||'Failed'); }
       modal.remove();
       toast('Person attached');
