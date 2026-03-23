@@ -28,6 +28,27 @@ When presenting a morning briefing or task list, use this format:
 
 You have access to real-time firm data provided in the user message context.`;
 
+// Build system prompt — injects Viktor's stored context if available
+async function buildSystemPrompt(firmId) {
+  try {
+    const { rows } = await pool.query(
+      'SELECT context, updated_at FROM viktor_context WHERE firm_id = $1',
+      [firmId]
+    );
+    if (rows[0]?.context) {
+      const updatedAt = rows[0].updated_at ? new Date(rows[0].updated_at).toLocaleString('en-US', { timeZone: 'America/New_York' }) : 'unknown';
+      return `${VIKTOR_SYSTEM_PROMPT}
+
+<firm_context updated="${updatedAt} EST">
+${rows[0].context}
+</firm_context>
+
+Use the firm context above to answer staff questions accurately and specifically. Reference real client names, pipeline stages, and task priorities from the context when relevant. If a question falls outside what's covered in the context, answer as best you can from general knowledge and suggest they ask Viktor directly for deeper analysis.`;
+    }
+  } catch(e) { /* fall through to base prompt */ }
+  return VIKTOR_SYSTEM_PROMPT;
+}
+
 // GET /api/viktor-chat/session — get or create today's session
 router.get('/session', async (req, res) => {
   const firmId = req.firm.id;
@@ -87,7 +108,7 @@ router.post('/briefing', async (req, res) => {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1500,
-      system: VIKTOR_SYSTEM_PROMPT,
+      system: await buildSystemPrompt(firmId),
       messages: [{
         role: 'user',
         content: `${greeting}. Generate my daily briefing for today (${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}).\n\nCurrent firm data:\n${contextSummary}\n\nProvide a concise, actionable morning briefing with prioritized tasks. Be specific — use real client names and numbers from the data above.`
@@ -153,7 +174,7 @@ router.post('/message', async (req, res) => {
       const client = new Anthropic({ apiKey });
       const recentHistory = history.slice(-20).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
       recentHistory.push({ role: 'user', content: `[Current firm context]\n${contextSummary}\n\n---\n\n${cleanMsg}` });
-      const response = await client.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 1000, system: VIKTOR_SYSTEM_PROMPT, messages: recentHistory });
+      const response = await client.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 1000, system: await buildSystemPrompt(firmId), messages: recentHistory });
       const replyText = (response.content[0]?.text || 'I encountered an error.') + '\n\n*— Claude (fallback)*';
       const claudeMsg = { role: 'assistant', content: replyText, timestamp: new Date().toISOString(), from: 'claude' };
       userMsg.pending_reply = false;
@@ -184,7 +205,7 @@ router.post('/message', async (req, res) => {
         const client = new Anthropic({ apiKey });
         const recentHistory = msgs.slice(-20).filter(m => !m.pending_reply).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
         recentHistory.push({ role: 'user', content: `[Current firm context]\n${contextSummary}\n\n---\n\n${message.trim()}` });
-        const response = await client.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 1000, system: VIKTOR_SYSTEM_PROMPT, messages: recentHistory });
+        const response = await client.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 1000, system: await buildSystemPrompt(firmId), messages: recentHistory });
         const replyText = "*(Viktor is busy — Claude stepping in)*\n\n" + (response.content[0]?.text || 'I encountered an error.');
         const claudeMsg = { role: 'assistant', content: replyText, timestamp: new Date().toISOString(), from: 'claude_fallback' };
         const { rows: fresh } = await pool.query('SELECT messages FROM viktor_sessions WHERE firm_id=$1 AND user_id=$2 AND session_date=$3', [firmId, userId, today]);
@@ -378,7 +399,7 @@ router.post('/briefing-for/:userId', async (req, res) => {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1500,
-      system: VIKTOR_SYSTEM_PROMPT,
+      system: await buildSystemPrompt(firmId),
       messages: [{
         role: 'user',
         content: `${greeting}, ${targetUser.name}. Generate a personalized daily briefing for today (${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}).\n\nYou are briefing: ${targetUser.name}\n\nCurrent firm data:\n${contextSummary}\n\nProvide a concise, actionable morning briefing with prioritized tasks for ${targetUser.name}. Be specific — use real client names and numbers from the data above.`
@@ -402,6 +423,43 @@ router.post('/briefing-for/:userId', async (req, res) => {
   } catch (err) {
     console.error('[viktor-chat] POST /briefing-for error:', err);
     res.status(500).json({ error: err.message || 'Failed to generate briefing' });
+  }
+});
+
+// ===================== VIKTOR CONTEXT PROMPT =====================
+
+// PUT /api/viktor-chat/context — Viktor pushes the firm context prompt (API token auth)
+router.put('/context', async (req, res) => {
+  const firmId = req.firm.id;
+  const { context, updated_at } = req.body;
+  if (!context || !context.trim()) return res.status(400).json({ error: 'context is required' });
+  try {
+    await pool.query(
+      `INSERT INTO viktor_context (firm_id, context, updated_at, updated_by)
+       VALUES ($1, $2, $3, 'viktor')
+       ON CONFLICT (firm_id)
+       DO UPDATE SET context = $2, updated_at = $3, updated_by = 'viktor'`,
+      [firmId, context.trim(), updated_at || new Date().toISOString()]
+    );
+    res.json({ ok: true, updated_at: updated_at || new Date().toISOString() });
+  } catch (err) {
+    console.error('[viktor-chat] PUT /context error:', err);
+    res.status(500).json({ error: 'Failed to store context' });
+  }
+});
+
+// GET /api/viktor-chat/context — Viktor reads back what's live (API token auth)
+router.get('/context', async (req, res) => {
+  const firmId = req.firm.id;
+  try {
+    const { rows } = await pool.query(
+      'SELECT context, updated_at, updated_by FROM viktor_context WHERE firm_id = $1',
+      [firmId]
+    );
+    if (!rows[0]) return res.json({ context: null, updated_at: null });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch context' });
   }
 });
 

@@ -86,6 +86,7 @@
     <a href="#proposals-list">List proposals</a>
     <a href="#proposals-stats">Get stats</a>
     <div class="sidebar-section">Viktor Chat</div>
+    <a href="#viktor-context-prompt">PUT/GET context prompt</a>
     <a href="#viktor-session">Get/create session</a>
     <a href="#viktor-briefing">Generate briefing</a>
     <a href="#viktor-message">Send message</a>
@@ -369,6 +370,23 @@
         <tr><td>mrr</td><td>number</td><td>Monthly recurring revenue from signed engagements</td></tr>
       </tbody>
     </table>
+
+    <h2 id="viktor-context-prompt">Viktor Context Prompt</h2>
+    <p class="section-intro">Viktor pushes a structured firm context document to DarkLion on a schedule (overnight deep refresh + hourly during business hours). The built-in Claude assistant reads this context when answering staff questions — so staff get instant responses powered by Viktor's deep analysis. Accepts API token auth.</p>
+
+    <h3><span class="method method-put">PUT</span> <span class="endpoint-path">/api/viktor-chat/context</span></h3>
+    <p class="endpoint-desc">Viktor pushes the current firm context prompt. Overwrites the previous version. Claude will use this on every staff message until the next update.</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>context</td><td>string <span class="badge badge-required">required</span></td><td>The full context document — pipeline status, per-staff tasks, urgent items, client details, staff directory. Can be 5,000–15,000 tokens.</td></tr>
+        <tr><td>updated_at</td><td>string <span class="badge badge-optional">optional</span></td><td>ISO timestamp of when this context was generated. Shown to Claude so it knows how fresh the data is.</td></tr>
+      </tbody>
+    </table>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/viktor-chat/context</span></h3>
+    <p class="endpoint-desc">Read back the current stored context. Viktor uses this to verify what's live and diff against planned updates.</p>
+    <p>Response: <code>{ context, updated_at, updated_by }</code></p>
 
     <h2 id="viktor-session">Viktor Chat</h2>
     <p class="section-intro">The Viktor Chat API powers the live AI assistant in the DarkLion dashboard. Viktor has full access to firm context and can hold conversations with staff. Sessions are per-user per-day and auto-purge after 3 days. <strong>Note:</strong> These endpoints require JWT authentication (staff login) because Viktor needs a <code>userId</code> to store per-user sessions. API token auth is not supported here.</p>

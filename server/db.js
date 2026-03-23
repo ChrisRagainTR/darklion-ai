@@ -721,6 +721,15 @@ async function initDB() {
     CREATE INDEX IF NOT EXISTS api_tokens_by_hash ON api_tokens(token_hash);
 
     -- ===================== VIKTOR SESSIONS =====================
+    CREATE TABLE IF NOT EXISTS viktor_context (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+      context TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_by TEXT DEFAULT 'viktor',
+      UNIQUE(firm_id)
+    );
+
     CREATE TABLE IF NOT EXISTS viktor_sessions (
       id SERIAL PRIMARY KEY,
       firm_id INTEGER NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
