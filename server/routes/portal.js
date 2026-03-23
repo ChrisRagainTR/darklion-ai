@@ -15,10 +15,33 @@ function cancelPendingNotification(personId) {
 
 const router = Router();
 
+// ── Allowed file types ────────────────────────────────────────────────────────
+const _ALLOWED_MIME = new Set([
+  'application/pdf','application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain','text/csv',
+  'image/jpeg','image/png','image/gif','image/webp','image/heic','image/heif',
+  'application/zip','application/x-zip-compressed',
+]);
+const _ALLOWED_EXT = new Set([
+  '.pdf','.doc','.docx','.xls','.xlsx','.txt','.csv',
+  '.jpg','.jpeg','.png','.gif','.webp','.heic','.heif','.zip',
+]);
+function _fileFilter(req, file, cb) {
+  const ext = require('path').extname(file.originalname || '').toLowerCase();
+  if (!_ALLOWED_MIME.has(file.mimetype) || !_ALLOWED_EXT.has(ext)) {
+    return cb(new Error(`File type not allowed: ${ext || file.mimetype}. Allowed: PDF, Word, Excel, images, CSV, ZIP.`));
+  }
+  cb(null, true);
+}
+
 // Multer: memory storage for client uploads (max 50 MB)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: _fileFilter,
 });
 
 // --- GET /portal/me ---
@@ -940,7 +963,12 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
 });
 
 // --- POST /portal/upload ---
-router.post('/upload', upload.single('file'), async (req, res) => {
+router.post('/upload', (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    next();
+  });
+}, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
   const personId = req.portal.personId;

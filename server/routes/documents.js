@@ -8,9 +8,48 @@ const { uploadFile, getSignedDownloadUrl, deleteFile, buildKey, sanitizeFilename
 const router = Router();
 
 // Multer: memory storage only (no disk writes on Railway)
+// ── Allowed file types (MIME + extension allowlist) ──────────────────────────
+const ALLOWED_MIME_TYPES = new Set([
+  // Documents
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+  'text/csv',
+  // Images
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  // Archives (for tax packages)
+  'application/zip',
+  'application/x-zip-compressed',
+]);
+
+const ALLOWED_EXTENSIONS = new Set([
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.txt', '.csv', '.jpg', '.jpeg', '.png', '.gif', '.webp',
+  '.heic', '.heif', '.zip',
+]);
+
+function fileFilter(req, file, cb) {
+  const ext = require('path').extname(file.originalname || '').toLowerCase();
+  if (!ALLOWED_MIME_TYPES.has(file.mimetype) || !ALLOWED_EXTENSIONS.has(ext)) {
+    return cb(new Error(`File type not allowed: ${ext || file.mimetype}. Allowed: PDF, Word, Excel, images, CSV, ZIP.`));
+  }
+  cb(null, true);
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+  fileFilter,
 });
 
 const SAFE_COLUMNS = `
@@ -55,7 +94,12 @@ router.get('/', async (req, res) => {
 });
 
 // ── POST /documents/upload ──────────────────────────────────────────
-router.post('/upload', upload.single('file'), async (req, res) => {
+router.post('/upload', (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    next();
+  });
+}, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
   const firmId = req.firm.id;
