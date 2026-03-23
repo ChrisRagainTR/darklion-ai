@@ -479,7 +479,7 @@
     <div class="page-footer">
       <a href="/privacy">Privacy Policy</a> &nbsp;&middot;&nbsp;
       <a href="/terms">Terms of Service</a> &nbsp;&middot;&nbsp;
-      &copy; 2025 DarkLion AI
+      &copy; <span id="cy"></span> DarkLion AI
     </div>
   </div>
 
@@ -629,5 +629,6 @@
       });
     });
   </script>
+<script>document.getElementById("cy").textContent=new Date().getFullYear();</script>
 </body>
 </html>

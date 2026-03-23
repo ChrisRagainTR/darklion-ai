@@ -358,8 +358,9 @@
       <li><a href="/terms.html">Terms of Service</a></li>
       <li><a href="mailto:support@darklion.ai">Contact</a></li>
     </ul>
-    <p class="footer-copy">&copy; 2026 Dark Lion AI. All rights reserved.</p>
+    <p class="footer-copy">&copy; <span id="cy"></span> Dark Lion AI. All rights reserved.</p>
   </footer>
 
+<script>document.getElementById("cy").textContent=new Date().getFullYear();</script>
 </body>
 </html>
