@@ -2332,14 +2332,74 @@
         ${d.intro_note ? `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.2);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:0.95rem;line-height:1.7;color:var(--text,#e8edf2);">${esc(d.intro_note)}</div>` : ''}
         <div style="margin-top:1.5rem;">
           <p style="font-size:0.88rem;color:var(--muted,#8fa3b8);margin-bottom:1rem;">Please review your complete tax return carefully. You'll be able to approve or request changes before signing.</p>
-          <button class="btn-submit" onclick="renderTDStep2()" style="font-size:1rem;padding:0.75rem 2rem;">Review the Return →</button>
+          <button class="btn-submit" onclick="renderTDStep2()" style="font-size:1rem;padding:0.75rem 2rem;">View Your Tax Summary →</button>
         </div>
       `;
     }
     window.renderTDStep1 = renderTDStep1;
 
+    // ── Step 2: Tax Summary (AI-generated) ──────────────────────────────────
     async function renderTDStep2() {
-      document.getElementById('tdo-step-label').textContent = 'Step 2 of 4 — Review the Return';
+      document.getElementById('tdo-step-label').textContent = 'Step 2 of 5 — Your Tax Summary';
+      const d = _currentDelivery;
+      const content = document.getElementById('tdo-content');
+      content.innerHTML = `
+        <h2 style="font-size:1.2rem;font-weight:800;margin-bottom:0.5rem;">Your ${esc(d.tax_year)} Tax Summary</h2>
+        <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.25rem;">Prepared by your advisor — review before signing your return.</p>
+        <div id="portal-summary-body"><div style="display:flex;align-items:center;gap:0.75rem;color:var(--muted);padding:2rem 0;"><div style="width:22px;height:22px;border:2px solid #c9a84c;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div> Loading summary…</div></div>
+        <div style="margin-top:1.5rem;">
+          <button class="btn-submit" id="portal-summary-next-btn" onclick="renderTDStep3()" style="font-size:1rem;padding:0.75rem 2rem;">Review the Return →</button>
+        </div>`;
+
+      // Load stored summary from delivery
+      try {
+        const res = await fetch(`/portal/tax-deliveries/${d.id}/summary`, { headers: authHeader() });
+        const body = document.getElementById('portal-summary-body');
+        if (!body) return;
+        if (!res.ok) { body.innerHTML = '<p style="color:var(--muted);font-size:0.88rem;">Summary not available.</p>'; return; }
+        const s = await res.json();
+        if (!s.data) { body.innerHTML = '<p style="color:var(--muted);font-size:0.88rem;">Summary not available for this return.</p>'; return; }
+        const rd = s.data;
+        const fmt = (n) => { if (n == null) return '—'; const a = Math.abs(n); return (n < 0 ? '($' : '$') + Math.round(a).toLocaleString() + (n < 0 ? ')' : ''); };
+        const refColor = rd.is_refund ? '#3ecf8e' : '#f56565';
+        let html = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem;margin-bottom:1.25rem;">
+          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.85rem 1rem;"><div style="font-size:1.25rem;font-weight:800;color:#c9a84c;">${fmt(rd.total_income)}</div><div style="font-size:0.68rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:0.2rem;">Total Income</div></div>
+          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.85rem 1rem;"><div style="font-size:1.25rem;font-weight:800;color:#c9a84c;">${fmt(rd.total_tax)}</div><div style="font-size:0.68rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:0.2rem;">Federal Tax</div></div>
+          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.85rem 1rem;"><div style="font-size:1.25rem;font-weight:800;color:#c9a84c;">${rd.effective_rate || 0}%</div><div style="font-size:0.68rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:0.2rem;">Effective Rate</div></div>
+          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.85rem 1rem;"><div style="font-size:1.25rem;font-weight:800;color:${refColor};">${fmt(rd.refund_or_owed_amount)}</div><div style="font-size:0.68rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:0.2rem;">${rd.is_refund ? 'Your Refund' : 'Balance Due'}</div></div>
+        </div>`;
+        if (rd.savings_highlights && rd.savings_highlights.length) {
+          html += `<div style="margin-bottom:1.25rem;"><div style="font-size:0.72rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">💰 How We Saved You Money</div>`;
+          rd.savings_highlights.forEach(s => {
+            html += `<div style="background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.2);border-radius:10px;padding:0.75rem 1rem;margin-bottom:0.5rem;"><div style="font-size:1rem;font-weight:800;color:#c9a84c;">${s.amount}</div><div style="font-size:0.82rem;font-weight:700;margin:0.15rem 0;">${s.title}</div><div style="font-size:0.76rem;color:#8fa3b8;line-height:1.45;">${s.description}</div></div>`;
+          });
+          html += '</div>';
+        }
+        if (rd.strategies && rd.strategies.length) {
+          html += `<div style="margin-bottom:1.25rem;"><div style="font-size:0.72rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">🔭 Strategies for Next Year</div>`;
+          rd.strategies.forEach(s => {
+            html += `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.75rem 1rem;margin-bottom:0.5rem;"><div style="font-size:0.85rem;font-weight:700;">${s.title}${s.potential_savings ? ` <span style="color:#c9a84c;font-size:0.78rem;font-weight:600;">· ${s.potential_savings}</span>` : ''}</div><div style="font-size:0.78rem;color:#8fa3b8;margin-top:0.25rem;line-height:1.45;">${s.description}</div></div>`;
+          });
+          html += '</div>';
+        }
+        if (rd.estimated_payments_required && rd.federal_estimated_payments && rd.federal_estimated_payments.length) {
+          html += `<div style="margin-bottom:1.25rem;"><div style="font-size:0.72rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">📅 Estimated Tax Payments</div>`;
+          rd.federal_estimated_payments.forEach(p => {
+            html += `<div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.85rem;"><span>${p.quarter} Quarter — ${p.due_date}</span><span style="font-weight:700;color:#c9a84c;">${p.amount}</span></div>`;
+          });
+          html += '</div>';
+        }
+        body.innerHTML = html;
+      } catch(e) {
+        const body = document.getElementById('portal-summary-body');
+        if (body) body.innerHTML = '<p style="color:var(--muted);font-size:0.88rem;">Summary not available.</p>';
+      }
+    }
+    window.renderTDStep2 = renderTDStep2;
+
+    // ── Step 3: Review the Return ────────────────────────────────────────────
+    async function renderTDStep3() {
+      document.getElementById('tdo-step-label').textContent = 'Step 3 of 5 — Review the Return';
       const d = _currentDelivery;
       document.getElementById('tdo-content').innerHTML = `
         <h2 style="font-size:1.2rem;font-weight:800;margin-bottom:0.75rem;">Review Your Tax Return</h2>
@@ -2373,7 +2433,7 @@
         document.getElementById('tdo-pdf-area').innerHTML = '<p style="color:var(--muted);font-size:0.88rem;">Unable to load PDF. You can still approve or request changes.</p>';
       }
     }
-    window.renderTDStep2 = renderTDStep2;
+    window.renderTDStep3 = renderTDStep3;
 
     async function submitApprove() {
       const d = _currentDelivery;
@@ -2383,7 +2443,7 @@
         });
         if (!res.ok) { alert('Failed to submit approval. Please try again.'); return; }
         _currentDelivery.approved_at = new Date().toISOString();
-        renderTDStep3();
+        renderTDStep4();
       } catch(e) { alert('Network error. Please try again.'); }
     }
     window.submitApprove = submitApprove;
@@ -2409,8 +2469,8 @@
     }
     window.submitNeedsChanges = submitNeedsChanges;
 
-    async function renderTDStep3() {
-      document.getElementById('tdo-step-label').textContent = 'Step 3 of 4 — Sign';
+    async function renderTDStep4() {
+      document.getElementById('tdo-step-label').textContent = 'Step 4 of 5 — Sign';
       const d = _currentDelivery;
       const firmName = await getFirmName();
       const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -2450,7 +2510,7 @@
       // Set up canvas
       initSigCanvas();
     }
-    window.renderTDStep3 = renderTDStep3;
+    window.renderTDStep4 = renderTDStep4;
 
     function switchSigTab(tab) {
       const draw = document.getElementById('tdo-sig-draw-area');
@@ -2533,13 +2593,13 @@
           return;
         }
         const result = await res.json();
-        renderTDStep4(result.allSigned);
+        renderTDStep5(result.allSigned);
       } catch(e) { alert('Network error. Please try again.'); }
     }
     window.submitSignature = submitSignature;
 
-    async function renderTDStep4(allSigned) {
-      document.getElementById('tdo-step-label').textContent = 'Step 4 of 4 — Complete';
+    async function renderTDStep5(allSigned) {
+      document.getElementById('tdo-step-label').textContent = 'Step 5 of 5 — Complete';
       const d = _currentDelivery;
       document.getElementById('tdo-content').innerHTML = `
         <div style="text-align:center;padding:2rem 0;">
@@ -2563,7 +2623,7 @@
       // Reload deliveries to update tab
       loadTaxDeliveries().catch(() => {});
     }
-    window.renderTDStep4 = renderTDStep4;
+    window.renderTDStep5 = renderTDStep5;
 
   })();
   </script>

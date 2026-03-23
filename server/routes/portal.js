@@ -630,6 +630,25 @@ router.get('/tax-deliveries', async (req, res) => {
   }
 });
 
+// --- GET /portal/tax-deliveries/:id/summary ---
+router.get('/tax-deliveries/:id/summary', async (req, res) => {
+  const personId = req.portal.personId;
+  const id = parseInt(req.params.id);
+  try {
+    const signer = await getSignerForDelivery(id, personId);
+    if (!signer) return res.status(403).json({ error: 'Access denied' });
+    const { rows } = await pool.query(
+      'SELECT tax_report_data, tax_report_status FROM tax_deliveries WHERE id = $1',
+      [id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Not found' });
+    res.json({ status: rows[0].tax_report_status || 'none', data: rows[0].tax_report_data || null });
+  } catch (err) {
+    console.error('[portal] GET /tax-deliveries/:id/summary error:', err);
+    res.status(500).json({ error: 'Failed to fetch summary' });
+  }
+});
+
 // --- GET /portal/tax-deliveries/:id/download-review ---
 router.get('/tax-deliveries/:id/download-review', async (req, res) => {
   const personId = req.portal.personId;
