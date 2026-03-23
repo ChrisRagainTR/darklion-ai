@@ -359,3 +359,27 @@ DarkLion monitors the DB and fires alerts to Viktor (or staff inbox) when:
 - Staff dashboard shows active alerts; Viktor can resolve or act on them
 - All automation is auditable — logged in the existing audit trail
 
+
+---
+
+## Security Checklist (added 2026-03-23)
+
+Reviewed and confirmed done:
+- ✅ JWT secret — strong, in Railway env vars
+- ✅ All secrets in env vars, not in code
+- ✅ S3 private with signed URLs only
+- ✅ Rate limiting on all routes (staff login: 5/15min, portal login: 5/15min, register: 3/hr, API: 300/min)
+- ✅ HTTPS enforced via Cloudflare on darklion.ai + subdomains
+- ✅ Row-level tenant isolation (firm_id on all queries)
+- ✅ S3 versioning enabled on darklion-documents
+- ✅ S3 cross-region replication to darklion-documents-backup (us-west-2)
+- ✅ Pretty 404 page — detail pages redirect to /404 on not-found/forbidden
+
+### TODO — Do before real client data:
+- [ ] Run `npm audit` and patch any high/critical vulnerabilities
+- [ ] Verify Neon DB backup retention period and test a restore
+- [ ] Audit Railway env vars — confirm JWT_SECRET is strong (rotate if needed)
+- [ ] End-to-end tenant isolation test: create second test firm, try to access its data from main account — confirm 404
+- [ ] Portal isolation test: invite test person, log in as them, verify they can only see their own data
+- [ ] File upload server-side validation: reject executables (.exe, .sh, .bat etc.)
+- [ ] Review `OR firm_id IS NULL` on QBO company queries — clean up or scope properly
