@@ -105,7 +105,8 @@ router.get('/', async (req, res) => {
             });
             cust.invoices = invList.data.map(inv => ({
               id: inv.id,
-              amount: inv.amount_paid / 100,
+              // Use amount_paid if collected, otherwise amount_due (covers ACH delay, net terms)
+              amount: inv.paid ? (inv.amount_paid || inv.amount_due) / 100 : inv.amount_due / 100,
               status: inv.status,
               paid: inv.paid,
               period_start: inv.period_start,
@@ -137,9 +138,10 @@ router.get('/', async (req, res) => {
         const monthStart = Math.floor(new Date(year, i, 1).getTime() / 1000);
         const monthEnd = Math.floor(new Date(year, i + 1, 1).getTime() / 1000);
 
-        // Find invoice for this month
+        // Find invoice for this month — try period_start first, fall back to created date
         const inv = (cust.invoices || []).find(inv =>
-          inv.period_start >= monthStart && inv.period_start < monthEnd
+          (inv.period_start >= monthStart && inv.period_start < monthEnd) ||
+          ((!inv.period_start) && inv.created >= monthStart && inv.created < monthEnd)
         );
 
         let status, amount;
