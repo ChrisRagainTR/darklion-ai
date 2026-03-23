@@ -462,6 +462,7 @@
 
       /* Charts */
       .dash-chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; }
+      .dash-chart-inner { position: relative; height: 130px; width: 100%; }
       .dash-chart-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.85rem; }
 
       /* Right col — AI chat placeholder */
@@ -536,11 +537,11 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
           <div class="dash-chart-card">
             <div class="dash-chart-title">Proposals — Last 6 Months</div>
-            <canvas id="chart-proposals" height="130"></canvas>
+            <div class="dash-chart-inner"><canvas id="chart-proposals"></canvas></div>
           </div>
           <div class="dash-chart-card">
             <div class="dash-chart-title">Client Mix</div>
-            <canvas id="chart-clients" height="130"></canvas>
+            <div class="dash-chart-inner"><canvas id="chart-clients"></canvas></div>
           </div>
         </div>
 
@@ -827,12 +828,12 @@
     function setBadge(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
 
     function chartEmptyState(ctx, message) {
-      const parent = ctx.parentElement;
+      const inner = ctx.parentElement; // .dash-chart-inner
       ctx.style.display = 'none';
       const empty = document.createElement('div');
-      empty.style.cssText = 'display:flex;align-items:center;justify-content:center;height:130px;color:var(--muted);font-size:0.8rem;font-style:italic;';
+      empty.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:0.8rem;font-style:italic;';
       empty.textContent = message || 'No data yet';
-      parent.appendChild(empty);
+      inner.appendChild(empty);
     }
 
     function renderProposalChart(data) {
