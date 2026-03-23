@@ -121,7 +121,17 @@
       </li>
     </ol>
     <div class="info-box">
-      <strong>Windows 10/11 note:</strong> If the connection fails, open <strong>Internet Options → Advanced</strong> and ensure <em>Enable WebDAV</em> is checked. Alternatively, use the <strong>WebDAV Redirector</strong> via <code>net use Z: https://darklion.ai/webdav</code> in a Command Prompt.
+      <strong>Windows 10/11 / RDS Server fix (do this first if connection fails):</strong><br><br>
+      Windows blocks WebDAV over HTTPS to external servers by default. Run this one-time registry fix in an elevated Command Prompt or PowerShell on each machine (or once on the RDS server for all users):<br><br>
+      <div class="copy-block" style="margin-top:0.5rem;">
+        <code id="win-reg">reg add "HKLM\SYSTEM\CurrentControlSet\Services\WebClient\Parameters" /v BasicAuthLevel /t REG_DWORD /d 2 /f && net stop WebClient && net start WebClient</code>
+        <button class="copy-btn" onclick="copyText('win-reg', this)">Copy</button>
+      </div>
+      <br>Then map the drive using <strong>net use</strong> from Command Prompt:<br><br>
+      <div class="copy-block" style="margin-top:0.5rem;">
+        <code id="win-net">net use Z: https://darklion.ai/webdav /user:your@email.com yourpassword /persistent:yes</code>
+        <button class="copy-btn" onclick="copyText('win-net', this)">Copy</button>
+      </div>
     </div>
   </div>
 
