@@ -2,6 +2,9 @@ const jwt = require('jsonwebtoken');
 const { pool } = require('../db');
 
 function requireFirm(req, res, next) {
+  // Already authenticated via API token middleware — skip JWT check
+  if (req.firm && req.firm.isApiToken) return next();
+
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Authentication required' });
