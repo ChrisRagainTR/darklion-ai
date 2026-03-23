@@ -1774,6 +1774,7 @@
     }
 
     document.getElementById('tsm-body').innerHTML = html;
+    document.getElementById('tsm-footer').style.display = '';
   }
 
   async function deleteDelivery(id) {
@@ -3663,6 +3664,7 @@
       </div>
     </div>
     <div class="tsm-footer" id="tsm-footer" style="display:none;">
+      <button class="btn btn-outline btn-sm" id="tsm-reanalyze-btn" onclick="retrySummary(_tsmPendingDeliveryId)" style="margin-right:auto;">↺ Re-analyze</button>
       <button class="btn btn-outline btn-sm" onclick="closeTaxSummary()">Close</button>
       <button class="btn btn-gold" id="tsm-send-btn" onclick="confirmAndSendDelivery()" style="display:none;">Send to Client →</button>
     </div>
