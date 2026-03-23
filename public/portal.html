@@ -1774,6 +1774,7 @@
       document.getElementById('selectedFileName').textContent = f.name;
       document.getElementById('doUploadBtn').disabled = false;
     }
+    window._portalSetFile = setFile;
 
     // Handle drag-drop pre-load from page-wide drop handler
     modal.addEventListener('preload-file', function(e) {
@@ -2181,11 +2182,8 @@
           modal.classList.remove('hidden');
           document.getElementById('uploadErr').style.display = 'none';
           document.getElementById('uploadMsg').style.display = 'none';
-          document.getElementById('selectedFileName').textContent = '';
-          document.getElementById('doUploadBtn').disabled = true;
-          // Pre-load file using the setFile function (defined in wireEvents scope)
-          // Use a custom event to communicate the file
-          modal.dispatchEvent(new CustomEvent('preload-file', { detail: { file } }));
+          if (window._portalSetFile) window._portalSetFile(file);
+          else modal.dispatchEvent(new CustomEvent('preload-file', { detail: { file } }));
         }
       });
 

@@ -59,7 +59,10 @@
   .col-cards {
     overflow-y: auto; flex: 1; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem;
     scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.4) transparent;
+    min-height: 140px;
   }
+  .drop-placeholder { border: 2px dashed rgba(201,168,76,0.25); border-radius: 6px; padding: 2rem 1rem; text-align: center; color: rgba(201,168,76,0.4); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; pointer-events: none; }
+  .kanban-col.drag-over .drop-placeholder { border-color: var(--gold); color: var(--gold); }
   .col-cards::-webkit-scrollbar { width: 4px; }
   .col-cards::-webkit-scrollbar-track { background: transparent; }
   .col-cards::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.35); border-radius: 4px; }
@@ -419,6 +422,7 @@
         '<div class="col-cards" id="cards-' + stage.id + '">';
 
       stageJobs.forEach(function(job) { html += renderCard(job); });
+      if (!stageJobs.length) { html += '<div class="drop-placeholder">Drop here</div>'; }
 
       html += '</div></div>';
     });

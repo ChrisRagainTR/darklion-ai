@@ -98,7 +98,7 @@
   .period-actions .selected-label { flex: 1; font-size: 0.82rem; color: var(--muted); min-width: 0; }
   .period-actions .selected-label strong { color: var(--gold); }
   .report-section { margin-top: 1.5rem; }
-  .report-section h3 { font-size: 0.88rem; margin-bottom: 0.75rem; }
+  .report-section h3 { font-size: 0.88rem; margin-bottom: 0.75rem; position: sticky; top: 0; background: var(--bg); padding: 0.5rem 0; z-index: 5; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .report-section .table-wrap { margin-bottom: 1rem; }
   .report-row-header td { font-weight: 700; color: var(--gold); background: rgba(201,168,76,0.04); }
   .report-row-total td { font-weight: 700; border-top: 2px solid var(--border); }
@@ -856,6 +856,7 @@
           <option value="none">None</option>
           <option value="bank_feed">Bank Feed</option>
           <option value="accrual">Accrual</option>
+          <option value="client_prepared">Client Prepared</option>
         </select>
       </div>
     </div>
@@ -889,7 +890,7 @@
   }
   function esc(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   const _shellToast = window.toast;
-  function toast(msg, type='success') { _shellToast(msg, type === 'error' ? 'error' : undefined); }
+  function toast(msg, type) { if (typeof _shellToast === 'function') _shellToast(msg, type === 'error' ? 'error' : undefined); }
 
   function switchTab(name, el) {
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
@@ -934,7 +935,7 @@
         const updateDate = j.last_update_at ? new Date(j.last_update_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
         const updateAuthor = j.last_update_author || '';
         const lastUpdate = updateText ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">${esc(updateText)}<span style="font-size:0.72rem;color:rgba(143,163,184,0.6);margin-left:0.4rem;">— ${esc(updateAuthor)}${updateDate ? ', '+updateDate : ''}</span></div>` : '';
-        return `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+        return `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;cursor:pointer;" onclick="window.location.href='/pipelines?job=${j.id}'">
           <div style="flex:1;min-width:180px;"><div style="font-weight:700;font-size:0.95rem;">${esc(j.pipeline_name)}${yearBadge}</div>${lastUpdate}</div>
           <div style="text-align:center;min-width:140px;"><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Current Stage</div><div style="font-weight:700;color:${stageColor};font-size:0.9rem;">${esc(j.stage_name)}</div></div>
           <div style="text-align:center;min-width:100px;"><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Status</div><div style="font-weight:600;font-size:0.82rem;color:${statusColor};">${statusLabel}</div></div>
@@ -988,7 +989,7 @@
     if (c.status === 'dissolved') html += ` <span class="badge badge-red">Dissolved</span>`;
     if (c.realm_id) html += ` <span class="badge badge-green">QBO Connected</span>`;
     if (c.bookkeeping_service && c.bookkeeping_service !== 'none') {
-      const bkLabel = { bank_feed: 'Bank Feed', accrual: 'Accrual' }[c.bookkeeping_service] || c.bookkeeping_service;
+      const bkLabel = { bank_feed: 'Bank Feed', accrual: 'Accrual', client_prepared: 'Client Prepared' }[c.bookkeeping_service] || c.bookkeeping_service;
       html += ` <span class="badge" style="background:rgba(74,144,217,0.15);color:#4a90d9;border:1px solid rgba(74,144,217,0.3);">📒 ${esc(bkLabel)}</span>`;
     }
     document.getElementById('entity-badges').innerHTML = html;
@@ -1103,6 +1104,7 @@
           <option value="none">None</option>
           <option value="bank_feed">Bank Feed</option>
           <option value="accrual">Accrual</option>
+          <option value="client_prepared">Client Prepared</option>
         </select>
       </div>
       <button class="btn btn-gold btn-sm" onclick="saveBookkeepingSettings()" style="margin-bottom:0.75rem;">Save</button>
@@ -3516,6 +3518,7 @@
 </div>
 
 <script>
+  let uploadFile = null;
   function showUploadFile(f) {
     if (!f) return;
     document.getElementById('upload-dropzone-text').style.display = 'none';

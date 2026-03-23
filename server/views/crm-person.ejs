@@ -611,7 +611,7 @@
         const updateDate = j.last_update_at ? new Date(j.last_update_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
         const updateAuthor = j.last_update_author || '';
         const lastUpdate = updateText ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">${esc(updateText)}<span style="font-size:0.72rem;color:rgba(143,163,184,0.6);margin-left:0.4rem;">— ${esc(updateAuthor)}${updateDate ? ', '+updateDate : ''}</span></div>` : '';
-        return `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+        return `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;cursor:pointer;" onclick="window.location.href='/pipelines?job=${j.id}'">
           <div style="flex:1;min-width:180px;"><div style="font-weight:700;font-size:0.95rem;">${esc(j.pipeline_name)}${yearBadge}</div>${lastUpdate}</div>
           <div style="text-align:center;min-width:140px;"><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Current Stage</div><div style="font-weight:700;color:${stageColor};font-size:0.9rem;">${esc(j.stage_name)}</div></div>
           <div style="text-align:center;min-width:100px;"><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Status</div><div style="font-weight:600;font-size:0.82rem;color:${statusColor};">${statusLabel}</div></div>
