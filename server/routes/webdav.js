@@ -98,9 +98,13 @@ function parsePath(reqPath) {
   const clean = decodeURIComponent(reqPath).replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
   if (!clean) return { level: 'root', parts: [] };
   const parts = clean.split('/');
-  const levels = ['root', 'relationship', 'entity', 'yearcat', 'file'];
-  return { level: levels[Math.min(parts.length, 4)] || 'file', parts };
+  // Structure: relationship / entity / year / category / file
+  const levels = ['root', 'relationship', 'entity', 'year', 'category', 'file'];
+  return { level: levels[Math.min(parts.length, 5)] || 'file', parts };
 }
+
+// Categories to hide from the drive (internal/system use only)
+const HIDDEN_CATEGORIES = new Set(['message_docs']);
 
 // ─── DB helpers ─────────────────────────────────────────────────────────────
 
@@ -244,22 +248,23 @@ async function handlePropfind(req, res) {
         if (rel) {
           const entity = await getEntityByName(firmId, rel.id, entityName);
           if (entity) {
-            const { rows: cats } = await pool.query(
-              `SELECT DISTINCT year, folder_category FROM documents
-               WHERE owner_id=$1 AND owner_type=$2 AND firm_id=$3 AND year IS NOT NULL AND year != ''
-               ORDER BY year DESC, folder_category`,
+            const { rows: years } = await pool.query(
+              `SELECT DISTINCT year FROM documents
+               WHERE owner_id=$1 AND owner_type=$2 AND firm_id=$3
+                 AND year IS NOT NULL AND year != ''
+                 AND folder_category NOT IN ('message_docs')
+               ORDER BY year DESC`,
               [entity.id, entity.type, firmId]
             );
-            for (const cat of cats) {
-              const folderName = `${cat.year} - ${cat.folder_category}`;
-              responses.push(propfindResponse(makeHref('/webdav', relName, entityName, folderName) + '/', true, 0, null));
+            for (const row of years) {
+              responses.push(propfindResponse(makeHref('/webdav', relName, entityName, row.year) + '/', true, 0, null));
             }
           }
         }
       }
 
-    } else if (level === 'yearcat') {
-      const [relName, entityName, yearCat] = parts;
+    } else if (level === 'year') {
+      const [relName, entityName, year] = parts;
       responses.push(propfindResponse(baseHref.replace(/\/?$/, '/'), true, 0, null));
 
       if (depth !== '0') {
@@ -267,21 +272,39 @@ async function handlePropfind(req, res) {
         if (rel) {
           const entity = await getEntityByName(firmId, rel.id, entityName);
           if (entity) {
-            // Parse "2024 - Tax" → year=2024, category=Tax
-            const match = yearCat.match(/^(\d{4})\s*-\s*(.+)$/);
-            if (match) {
-              const [, year, category] = match;
-              const { rows: docs } = await pool.query(
-                `SELECT id, display_name, mime_type, size_bytes, created_at
-                 FROM documents
-                 WHERE owner_id=$1 AND owner_type=$2 AND firm_id=$3 AND year=$4 AND folder_category=$5
-                 ORDER BY display_name`,
-                [entity.id, entity.type, firmId, year, category]
-              );
-              for (const doc of docs) {
-                const href = makeHref('/webdav', relName, entityName, yearCat, doc.display_name);
-                responses.push(propfindResponse(href, false, doc.size_bytes, doc.created_at));
-              }
+            const { rows: cats } = await pool.query(
+              `SELECT DISTINCT folder_category FROM documents
+               WHERE owner_id=$1 AND owner_type=$2 AND firm_id=$3 AND year=$4
+                 AND folder_category NOT IN ('message_docs')
+               ORDER BY folder_category`,
+              [entity.id, entity.type, firmId, year]
+            );
+            for (const cat of cats) {
+              responses.push(propfindResponse(makeHref('/webdav', relName, entityName, year, cat.folder_category) + '/', true, 0, null));
+            }
+          }
+        }
+      }
+
+    } else if (level === 'category') {
+      const [relName, entityName, year, category] = parts;
+      responses.push(propfindResponse(baseHref.replace(/\/?$/, '/'), true, 0, null));
+
+      if (depth !== '0') {
+        const rel = await getRelationshipByName(firmId, relName);
+        if (rel) {
+          const entity = await getEntityByName(firmId, rel.id, entityName);
+          if (entity) {
+            const { rows: docs } = await pool.query(
+              `SELECT id, display_name, mime_type, size_bytes, created_at
+               FROM documents
+               WHERE owner_id=$1 AND owner_type=$2 AND firm_id=$3 AND year=$4 AND folder_category=$5
+               ORDER BY display_name`,
+              [entity.id, entity.type, firmId, year, category]
+            );
+            for (const doc of docs) {
+              const href = makeHref('/webdav', relName, entityName, year, category, doc.display_name);
+              responses.push(propfindResponse(href, false, doc.size_bytes, doc.created_at));
             }
           }
         }
@@ -289,20 +312,16 @@ async function handlePropfind(req, res) {
 
     } else if (level === 'file') {
       // Single file stat
-      const [relName, entityName, yearCat, filename] = parts;
+      const [relName, entityName, year, category, filename] = parts;
       const rel = await getRelationshipByName(firmId, relName);
       if (rel) {
         const entity = await getEntityByName(firmId, rel.id, entityName);
         if (entity) {
-          const match = yearCat.match(/^(\d{4})\s*-\s*(.+)$/);
-          if (match) {
-            const [, year, category] = match;
-            const doc = await getDocumentByFilename(firmId, entity.id, entity.type, year, category, filename);
-            if (doc) {
-              responses.push(propfindResponse(baseHref, false, doc.size_bytes, null));
-            } else {
-              return res.status(404).end();
-            }
+          const doc = await getDocumentByFilename(firmId, entity.id, entity.type, year, category, filename);
+          if (doc) {
+            responses.push(propfindResponse(baseHref, false, doc.size_bytes, null));
+          } else {
+            return res.status(404).end();
           }
         }
       }
@@ -325,17 +344,13 @@ async function handleGet(req, res) {
   const { level, parts } = parsePath(req.path);
 
   if (level === 'file') {
-    const [relName, entityName, yearCat, filename] = parts;
+    const [relName, entityName, year, category, filename] = parts;
     try {
       const rel = await getRelationshipByName(firmId, relName);
       if (!rel) return res.status(404).end();
 
       const entity = await getEntityByName(firmId, rel.id, entityName);
       if (!entity) return res.status(404).end();
-
-      const match = yearCat.match(/^(\d{4})\s*-\s*(.+)$/);
-      if (!match) return res.status(404).end();
-      const [, year, category] = match;
 
       const doc = await getDocumentByFilename(firmId, entity.id, entity.type, year, category, filename);
       if (!doc) return res.status(404).end();
@@ -377,7 +392,7 @@ async function handlePut(req, res) {
 
   if (level !== 'file') return res.status(409).end(); // Can only PUT files, not directories
 
-  const [relName, entityName, yearCat, filename] = parts;
+  const [relName, entityName, year, category, filename] = parts;
 
   try {
     const rel = await getRelationshipByName(firmId, relName);
@@ -385,10 +400,6 @@ async function handlePut(req, res) {
 
     const entity = await getEntityByName(firmId, rel.id, entityName);
     if (!entity) return res.status(409).end();
-
-    const match = yearCat.match(/^(\d{4})\s*-\s*(.+)$/);
-    if (!match) return res.status(409).end();
-    const [, year, category] = match;
 
     // Collect body
     const chunks = [];
@@ -439,7 +450,7 @@ async function handleDelete(req, res) {
 
   if (level !== 'file') return res.status(403).end();
 
-  const [relName, entityName, yearCat, filename] = parts;
+  const [relName, entityName, year, category, filename] = parts;
 
   try {
     const rel = await getRelationshipByName(firmId, relName);
@@ -447,10 +458,6 @@ async function handleDelete(req, res) {
 
     const entity = await getEntityByName(firmId, rel.id, entityName);
     if (!entity) return res.status(404).end();
-
-    const match = yearCat.match(/^(\d{4})\s*-\s*(.+)$/);
-    if (!match) return res.status(404).end();
-    const [, year, category] = match;
 
     const doc = await getDocumentByFilename(firmId, entity.id, entity.type, year, category, filename);
     if (!doc) return res.status(404).end();
