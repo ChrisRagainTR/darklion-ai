@@ -26,7 +26,7 @@ async function domainFirmMiddleware(req, res, next) {
   // Look up in DB
   try {
     const { rows } = await pool.query(
-      `SELECT f.id, f.name, f.slug, f.logo_url, fd.domain, fd.verified_at
+      `SELECT f.id, f.name, f.slug, fd.domain, fd.verified_at
        FROM firm_domains fd
        JOIN firms f ON f.id = fd.firm_id
        WHERE fd.domain = $1`,
