@@ -32,9 +32,16 @@ You have access to real-time firm data provided in the user message context.
 
 IMPORTANT — CRM data model:
 - Use create_person ONLY for actual human beings (individuals, not businesses)
-- Use create_relationship with a company parameter for business entities (LLC, Inc, Corp, etc.)
-- NEVER use create_person for a company name. If it ends in LLC, Inc, Corp, Services, Transport, etc. — it's a company.
-- People = humans with first/last names. Companies = businesses. Do not mix them.`;
+- Use create_company to add a business entity to an existing relationship
+- NEVER use create_person for a company name. If it ends in LLC, Inc, Corp, Services, Transport, LLC, PLLC, etc. — it's a company.
+- People = humans with first/last names. Companies = businesses. Do not mix them.
+
+IMPORTANT — Tool execution rules:
+- When asked to create multiple things (e.g. "add 4 companies"), use your tools in sequence — one tool call per company
+- After creating a record, verify it was created by checking your tool result — if you see an error or null, retry or report the failure
+- Never report success for an operation that returned an error
+- When in doubt about entity type (person vs company), ask before creating
+- Use the most specific tool available: prefer create_company over create_relationship for adding a company to an existing relationship`;
 
 // Build system prompt — injects Viktor's stored context if available
 async function buildSystemPrompt(firmId) {
@@ -114,7 +121,7 @@ router.post('/briefing', async (req, res) => {
 
     const client = new Anthropic({ apiKey });
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1500,
       system: await buildSystemPrompt(firmId),
       messages: [{
@@ -549,7 +556,7 @@ router.post('/message', async (req, res) => {
     ];
 
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       system: await buildSystemPrompt(firmId),
       tools: TOOLS,
@@ -634,7 +641,7 @@ router.post('/message', async (req, res) => {
       anthropicMessages.push({ role: 'user', content: toolResults });
 
       loopResponse = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1000,
         system: await buildSystemPrompt(firmId),
         tools: TOOLS,
@@ -1598,7 +1605,7 @@ router.post('/briefing-for/:userId', async (req, res) => {
 
     const client = new Anthropic({ apiKey });
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1500,
       system: await buildSystemPrompt(firmId),
       messages: [{
