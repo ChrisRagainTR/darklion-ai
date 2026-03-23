@@ -495,6 +495,31 @@ router.post('/message', async (req, res) => {
         }
       },
       {
+        name: 'delete_person',
+        description: 'Permanently delete a person record. Use to remove duplicates or incorrectly created records. WARNING: irreversible.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            person_name: { type: 'string', description: 'Name of the person to delete' },
+            person_id: { type: 'number', description: 'ID of the person to delete (more precise than name)' },
+            relationship_name: { type: 'string', description: 'Optional: relationship context to disambiguate' }
+          },
+          required: []
+        }
+      },
+      {
+        name: 'delete_company',
+        description: 'Permanently delete a company record. Use to remove duplicates or incorrectly created records. WARNING: irreversible.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            company_name: { type: 'string', description: 'Name of the company to delete' },
+            company_id: { type: 'number', description: 'ID of the company to delete (more precise than name)' }
+          },
+          required: []
+        }
+      },
+      {
         name: 'update_notes',
         description: 'Append or replace notes on a relationship, person, or company.',
         input_schema: {
@@ -527,7 +552,7 @@ router.post('/message', async (req, res) => {
       'create_tax_delivery', 'send_tax_delivery', 'create_proposal',
       'create_pipeline_job', 'close_pipeline_job', 'look_up_client',
       'draft_message', 'update_notes', 'send_portal_invite',
-      'move_company', 'move_person', 'delete_relationship'
+      'move_company', 'move_person', 'delete_relationship', 'delete_person', 'delete_company'
     ]);
 
     // ── Agentic loop — keep executing tools until Claude returns plain text ──
@@ -1300,6 +1325,40 @@ async function executeViktorTool(toolName, input, firmId, authHeader) {
       return { ok: true, deleted: input.relationship_name, deleted_count: deletedCount, skipped: skipped.length > 0 ? skipped : undefined };
     }
 
+    // ── delete_person ──────────────────────────────────────────────────────────
+    case 'delete_person': {
+      let person;
+      if (input.person_id) {
+        const { rows } = await pool.query('SELECT * FROM people WHERE id=$1 AND firm_id=$2', [input.person_id, firmId]);
+        person = rows[0];
+      } else if (input.person_name) {
+        person = await resolvePerson(input.person_name, firmId, input.relationship_name);
+      }
+      if (!person) throw new Error(`Person not found`);
+      const name = `${person.first_name} ${person.last_name}`.trim();
+      // Remove related records first
+      await pool.query('DELETE FROM person_company_access WHERE person_id=$1', [person.id]).catch(() => {});
+      await pool.query('DELETE FROM message_mentions mm USING messages m WHERE mm.message_id=m.id AND m.thread_id IN (SELECT id FROM message_threads WHERE person_id=$1)', [person.id]).catch(() => {});
+      await pool.query('DELETE FROM message_threads WHERE person_id=$1 AND firm_id=$2', [person.id, firmId]).catch(() => {});
+      await pool.query('DELETE FROM people WHERE id=$1 AND firm_id=$2', [person.id, firmId]);
+      return { ok: true, deleted: name, id: person.id };
+    }
+
+    // ── delete_company ─────────────────────────────────────────────────────────
+    case 'delete_company': {
+      let company;
+      if (input.company_id) {
+        const { rows } = await pool.query('SELECT * FROM companies WHERE id=$1 AND firm_id=$2', [input.company_id, firmId]);
+        company = rows[0];
+      } else if (input.company_name) {
+        company = await resolveCompany(input.company_name, firmId);
+      }
+      if (!company) throw new Error(`Company not found`);
+      await pool.query('DELETE FROM person_company_access WHERE company_id=$1', [company.id]).catch(() => {});
+      await pool.query('DELETE FROM companies WHERE id=$1 AND firm_id=$2', [company.id, firmId]);
+      return { ok: true, deleted: company.company_name, id: company.id };
+    }
+
     // ── update_notes ───────────────────────────────────────────────────────────
     case 'update_notes': {
       const entityType = input.entity_type;
@@ -1385,7 +1444,11 @@ function formatToolResult(toolName, input, result) {
     case 'move_person':
       return `✅ Moved **${result.person_name}** to relationship **${result.moved_to}**.`;
     case 'delete_relationship':
-      return `✅ Deleted relationship **${result.deleted}**.`;
+      return `✅ Deleted relationship **${result.deleted}** (${result.deleted_count} removed).`;
+    case 'delete_person':
+      return `✅ Deleted person **${result.deleted}** (ID ${result.id}).`;
+    case 'delete_company':
+      return `✅ Deleted company **${result.deleted}** (ID ${result.id}).`;
     default:
       return `✅ ${toolName} completed: ${JSON.stringify(result)}`;
   }
