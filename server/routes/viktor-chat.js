@@ -58,8 +58,8 @@ router.get('/session', async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
 
-    // Purge sessions older than 3 days (non-blocking)
-    pool.query('DELETE FROM viktor_sessions WHERE created_at < NOW() - INTERVAL \'3 days\'').catch(() => {});
+    // Purge yesterday's sessions — keep only today (non-blocking)
+    pool.query('DELETE FROM viktor_sessions WHERE session_date < CURRENT_DATE').catch(() => {});
 
     let { rows } = await pool.query(
       `INSERT INTO viktor_sessions (firm_id, user_id, session_date)

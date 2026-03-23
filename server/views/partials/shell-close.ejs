@@ -1,6 +1,175 @@
+<!-- ── Agent AI Floating Chat ── -->
+<style>
+  #agent-float-btn { position:fixed; bottom:1.5rem; right:1.5rem; z-index:900; width:52px; height:52px; border-radius:50%; border:none; cursor:pointer; background:linear-gradient(135deg,#462161,#2e1540); box-shadow:0 4px 18px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; transition:transform 0.2s, box-shadow 0.2s; }
+  #agent-float-btn:hover { transform:scale(1.08); box-shadow:0 6px 24px rgba(0,0,0,0.5); }
+  #agent-float-btn img { width:28px; height:28px; object-fit:contain; border-radius:6px; }
+  #agent-float-badge { position:absolute; top:-2px; right:-2px; width:14px; height:14px; background:#3ecf8e; border-radius:50%; border:2px solid #0f1923; display:none; }
+  #agent-float-panel { position:fixed; bottom:5rem; right:1.5rem; z-index:901; width:380px; height:520px; background:#0f1923; border:1px solid rgba(201,168,76,0.25); border-radius:16px; box-shadow:0 8px 40px rgba(0,0,0,0.55); display:flex; flex-direction:column; overflow:hidden; transform:translateY(20px) scale(0.95); opacity:0; pointer-events:none; transition:transform 0.2s ease, opacity 0.2s ease; }
+  #agent-float-panel.open { transform:translateY(0) scale(1); opacity:1; pointer-events:all; }
+  .afp-header { background:linear-gradient(135deg,#462161,#2e1540); padding:0.85rem 1rem; display:flex; align-items:center; gap:0.6rem; flex-shrink:0; }
+  .afp-header img { width:22px; height:22px; object-fit:contain; border-radius:5px; }
+  .afp-title { font-weight:700; font-size:0.88rem; color:#fff; flex:1; }
+  .afp-status { font-size:0.68rem; color:rgba(255,255,255,0.6); }
+  .afp-close { background:none; border:none; color:rgba(255,255,255,0.5); font-size:1.1rem; cursor:pointer; line-height:1; padding:0 0.25rem; }
+  .afp-messages { flex:1; overflow-y:auto; padding:0.85rem 1rem; display:flex; flex-direction:column; gap:0.65rem; }
+  .afp-bubble { max-width:92%; border-radius:10px; padding:0.55rem 0.8rem; font-size:0.82rem; line-height:1.5; }
+  .afp-bubble.agent { background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.2); color:#e8edf2; align-self:flex-start; border-bottom-left-radius:3px; }
+  .afp-bubble.user { background:#c9a84c; color:#0f1923; align-self:flex-end; margin-left:1.5rem; border-bottom-right-radius:3px; font-weight:600; }
+  .afp-input-row { padding:0.65rem 0.85rem; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:0.4rem; align-items:flex-end; flex-shrink:0; }
+  .afp-input { flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:0.5rem 0.65rem; color:#e8edf2; font-size:0.83rem; font-family:inherit; resize:none; min-height:54px; max-height:140px; outline:none; }
+  .afp-input:focus { border-color:rgba(201,168,76,0.5); }
+  .afp-send { background:#c9a84c; color:#0f1923; border:none; border-radius:8px; width:34px; height:34px; cursor:pointer; font-size:0.95rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:700; transition:opacity 0.15s; }
+  .afp-send:disabled { opacity:0.4; cursor:not-allowed; }
+  @keyframes afp-pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+</style>
 
+<button id="agent-float-btn" onclick="toggleAgentFloat()" title="Agent AI">
+  <img src="/viktor-icon.png" alt="Agent AI">
+  <div id="agent-float-badge"></div>
+</button>
 
+<div id="agent-float-panel">
+  <div class="afp-header">
+    <img src="/viktor-icon.png" alt="">
+    <div class="afp-title">Agent AI</div>
+    <span class="afp-status" id="afp-status">Connecting…</span>
+    <button class="afp-close" onclick="toggleAgentFloat()">✕</button>
+  </div>
+  <div class="afp-messages" id="afp-messages">
+    <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem;color:#8fa3b8;font-size:0.8rem;">
+      <div style="width:16px;height:16px;border:2px solid #c9a84c;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>
+      Loading…
+    </div>
+  </div>
+  <div class="afp-input-row">
+    <textarea class="afp-input" id="afp-input" placeholder="Ask anything…" rows="2" disabled></textarea>
+    <button class="afp-send" id="afp-send" disabled onclick="afpSend()">↑</button>
+  </div>
+</div>
 
-  </main>
+<script>
+(function() {
+  let _afpOpen = false;
+  let _afpLoaded = false;
+  let _afpHistory = [];
+
+  window.toggleAgentFloat = function() {
+    _afpOpen = !_afpOpen;
+    const panel = document.getElementById('agent-float-panel');
+    if (_afpOpen) {
+      panel.classList.add('open');
+      if (!_afpLoaded) initAgentFloat();
+      else { const inp = document.getElementById('afp-input'); if (inp) inp.focus(); }
+    } else {
+      panel.classList.remove('open');
+    }
+  };
+
+  function afpApiFetch(url, opts) {
+    const token = localStorage.getItem('dl_token');
+    return fetch(url, Object.assign({ headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { 'Authorization': 'Bearer ' + token } : {}) }, opts || {}));
+  }
+
+  async function initAgentFloat() {
+    _afpLoaded = true;
+    const statusEl = document.getElementById('afp-status');
+    const inputEl = document.getElementById('afp-input');
+    const sendBtn = document.getElementById('afp-send');
+
+    try {
+      const r = await afpApiFetch('/api/viktor-chat/session');
+      if (!r.ok) { if (statusEl) statusEl.textContent = 'Unavailable'; return; }
+      const s = await r.json();
+      _afpHistory = s.messages || [];
+      afpRenderMessages(_afpHistory);
+      if (statusEl) { statusEl.textContent = 'Online'; statusEl.style.color = '#3ecf8e'; }
+      if (inputEl) { inputEl.disabled = false; inputEl.focus(); }
+      if (sendBtn) sendBtn.disabled = false;
+    } catch(e) {
+      if (statusEl) statusEl.textContent = 'Offline';
+    }
+  }
+
+  function afpEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function afpRenderMessages(msgs) {
+    const el = document.getElementById('afp-messages');
+    if (!el) return;
+    if (!msgs.length) {
+      el.innerHTML = '<div class="afp-bubble agent">Hi! I\'m your Agent AI assistant. Ask me anything about your firm.</div>';
+      return;
+    }
+    el.innerHTML = msgs.map(function(m) {
+      var text = afpEsc(m.content||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+      return '<div class="afp-bubble ' + (m.role==='user'?'user':'agent') + '">' + text + '</div>';
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function afpAppend(role, content) {
+    var el = document.getElementById('afp-messages');
+    if (!el) return;
+    var text = afpEsc(content||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+    var div = document.createElement('div');
+    div.className = 'afp-bubble ' + (role==='user'?'user':'agent');
+    div.innerHTML = text;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  window.afpSend = async function() {
+    var inputEl = document.getElementById('afp-input');
+    var sendBtn = document.getElementById('afp-send');
+    var text = inputEl ? inputEl.value.trim() : '';
+    if (!text) return;
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    inputEl.disabled = true;
+    sendBtn.disabled = true;
+    afpAppend('user', text);
+
+    // Thinking indicator
+    var el = document.getElementById('afp-messages');
+    var thinking = document.createElement('div');
+    thinking.className = 'afp-bubble agent';
+    thinking.id = 'afp-thinking';
+    thinking.style.opacity = '0.6';
+    thinking.innerHTML = '<span style="display:flex;gap:3px;align-items:center"><span style="width:5px;height:5px;border-radius:50%;background:#c9a84c;animation:afp-pulse 1.2s ease-in-out infinite"></span><span style="width:5px;height:5px;border-radius:50%;background:#c9a84c;animation:afp-pulse 1.2s ease-in-out 0.4s infinite"></span><span style="width:5px;height:5px;border-radius:50%;background:#c9a84c;animation:afp-pulse 1.2s ease-in-out 0.8s infinite"></span></span>';
+    if (el) { el.appendChild(thinking); el.scrollTop = el.scrollHeight; }
+
+    try {
+      var r = await afpApiFetch('/api/viktor-chat/message', { method: 'POST', body: JSON.stringify({ message: text }) });
+      var t = document.getElementById('afp-thinking'); if (t) t.remove();
+      var data = await r.json();
+      if (data.reply) afpAppend('assistant', data.reply);
+      else afpAppend('assistant', 'No response received.');
+    } catch(e) {
+      var t = document.getElementById('afp-thinking'); if (t) t.remove();
+      afpAppend('assistant', 'Connection error. Please try again.');
+    }
+    inputEl.disabled = false;
+    sendBtn.disabled = false;
+    inputEl.focus();
+  };
+
+  // Enter to send
+  document.addEventListener('keydown', function(e) {
+    if (e.target.id === 'afp-input' && e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      window.afpSend();
+    }
+  });
+
+  // Auto-resize
+  document.addEventListener('input', function(e) {
+    if (e.target.id === 'afp-input') {
+      e.target.style.height = 'auto';
+      e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px';
+    }
+  });
+})();
+</script>
+
+</main>
 </body>
 </html>
