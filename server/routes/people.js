@@ -241,6 +241,18 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    // ── Bidirectional Stanford Tax URL sync ──
+    // If the URL was explicitly set (including cleared), sync it to the spouse too
+    if (stanford_tax_url !== undefined) {
+      const spouseId = updated.spouse_id;
+      if (spouseId) {
+        await pool.query(
+          'UPDATE people SET stanford_tax_url = $1, updated_at = NOW() WHERE id = $2 AND firm_id = $3',
+          [stanford_tax_url || null, spouseId, firmId]
+        );
+      }
+    }
+
     res.json(sanitizePerson(updated));
   } catch (err) {
     console.error('PUT /people/:id error:', err);
