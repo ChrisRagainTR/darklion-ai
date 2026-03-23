@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DarkLion Drive — Setup Instructions</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f1923; --card: #1a2535; --charcoal: #1c2b3a;
+      --border: rgba(255,255,255,0.08); --text: #e8edf2; --muted: #8fa3b8;
+      --gold: #c9a84c; --green: #3ecf8e;
+    }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--navy); color: var(--text); min-height: 100vh; }
+    .page-header { background: var(--card); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; display: flex; align-items: center; gap: 0.75rem; }
+    .page-header img { height: 32px; }
+    .page-header h1 { font-size: 1rem; font-weight: 700; }
+    .page-header span { color: var(--muted); font-size: 0.82rem; }
+    .wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .hero { margin-bottom: 2rem; }
+    .hero h2 { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.4rem; }
+    .hero p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .card-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
+    .folder-tree { font-family: 'Courier New', monospace; font-size: 0.82rem; color: var(--muted); background: var(--charcoal); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; line-height: 1.8; }
+    .folder-tree .gold { color: var(--gold); }
+    .folder-tree .green { color: var(--green); }
+    .os-section { margin-bottom: 2rem; }
+    .os-section h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem; }
+    .steps { list-style: none; padding: 0; }
+    .steps li { display: flex; gap: 0.85rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .steps li:last-child { border-bottom: none; }
+    .step-num { width: 24px; height: 24px; border-radius: 50%; background: rgba(201,168,76,0.15); color: var(--gold); font-size: 0.72rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .step-body { flex: 1; font-size: 0.88rem; line-height: 1.6; color: var(--text); }
+    .step-body strong { color: var(--gold); }
+    .copy-block { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem; background: var(--charcoal); border: 1px solid var(--border); border-radius: 7px; padding: 0.45rem 0.75rem; }
+    .copy-block code { font-family: 'Courier New', monospace; font-size: 0.82rem; color: var(--text); flex: 1; word-break: break-all; }
+    .copy-btn { background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.25); color: var(--gold); border-radius: 5px; padding: 0.2rem 0.65rem; font-size: 0.72rem; cursor: pointer; white-space: nowrap; transition: background 0.15s; flex-shrink: 0; }
+    .copy-btn:hover { background: rgba(201,168,76,0.2); }
+    .info-box { border: 1px solid rgba(62,207,142,0.18); background: rgba(62,207,142,0.06); border-radius: 8px; padding: 0.85rem 1rem; font-size: 0.83rem; color: var(--muted); line-height: 1.6; margin-top: 1rem; }
+    .info-box strong { color: var(--green); }
+    .warn-box { border: 1px solid rgba(201,168,76,0.3); background: rgba(201,168,76,0.05); border-radius: 8px; padding: 0.85rem 1rem; font-size: 0.83rem; color: var(--muted); line-height: 1.6; margin-bottom: 1rem; }
+    .warn-box strong { color: var(--gold); }
+    .divider { height: 1px; background: var(--border); margin: 2rem 0; }
+    code { font-family: 'Courier New', monospace; font-size: 0.85em; color: var(--gold); }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <img src="https://darklion.ai/sentinel-logo.png" alt="Sentinel" onerror="this.style.display='none'">
+  <h1>DarkLion Drive</h1>
+  <span>— Setup Instructions</span>
+</div>
+
+<div class="wrap">
+  <div class="hero">
+    <h2>🗂️ Connect Your Client Document Drive</h2>
+    <p>Mount DarkLion as a network drive on your PC. Drag files in to upload, drag files out to download — your entire client document vault accessible directly from File Explorer.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">How folders are organized</div>
+    <div class="folder-tree">
+      <span class="gold">Z:\</span><br>
+      &nbsp;&nbsp;<span class="gold">Ragain Family\</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="gold">Chris Ragain\</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="green">2024 - Tax\</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1040_Return_2024.pdf<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="green">2023 - Bookkeeping\</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="gold">TeeRival\</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="green">2024 - Bookkeeping\</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Windows Local PC -->
+  <div class="os-section">
+    <h3>🪟 Connect on Windows — Local PC</h3>
+
+    <div class="warn-box">
+      <strong>Step 0 — One-time fix required on every PC</strong><br><br>
+      Windows blocks WebDAV over HTTPS to external servers by default. Run this <strong>once</strong> in an elevated Command Prompt (<em>right-click → Run as administrator</em>):
+      <div class="copy-block" style="margin-top:0.6rem;">
+        <code id="win-reg">reg add "HKLM\SYSTEM\CurrentControlSet\Services\WebClient\Parameters" /v BasicAuthLevel /t REG_DWORD /d 2 /f && net stop WebClient && net start WebClient</code>
+        <button class="copy-btn" onclick="copyText('win-reg', this)">Copy</button>
+      </div>
+      You only need to do this once. Then proceed with the steps below.
+    </div>
+
+    <ol class="steps">
+      <li>
+        <div class="step-num">1</div>
+        <div class="step-body">Open <strong>File Explorer</strong>. Right-click <strong>This PC</strong> in the left panel → <strong>Map network drive…</strong></div>
+      </li>
+      <li>
+        <div class="step-num">2</div>
+        <div class="step-body">Choose a drive letter (e.g. <strong>Z:</strong>). In the Folder field, enter:
+          <div class="copy-block">
+            <code id="win-url">https://darklion.ai/webdav</code>
+            <button class="copy-btn" onclick="copyText('win-url', this)">Copy</button>
+          </div>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">3</div>
+        <div class="step-body">Check <strong>Reconnect at sign-in</strong> and <strong>Connect using different credentials</strong>. Click <strong>Finish</strong>.</div>
+      </li>
+      <li>
+        <div class="step-num">4</div>
+        <div class="step-body">Enter your DarkLion <strong>email</strong> as username and your DarkLion <strong>password</strong>. Check <strong>Remember my credentials</strong>. Click <strong>OK</strong>.</div>
+      </li>
+      <li>
+        <div class="step-num">5</div>
+        <div class="step-body"><strong>Done.</strong> Drive Z: appears in File Explorer. It reconnects automatically every time you log in.</div>
+      </li>
+    </ol>
+
+    <div class="info-box">
+      <strong>Prefer Command Prompt?</strong> Run this instead of the GUI steps (after doing Step 0):<br><br>
+      <div class="copy-block" style="margin-top:0.4rem;">
+        <code id="win-net">net use Z: https://darklion.ai/webdav /user:your@email.com yourpassword /persistent:yes</code>
+        <button class="copy-btn" onclick="copyText('win-net', this)">Copy</button>
+      </div>
+      Replace <code>your@email.com</code> and <code>yourpassword</code> with your actual credentials.
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="os-section">
+    <h3>❓ Troubleshooting</h3>
+    <ol class="steps">
+      <li>
+        <div class="step-num">→</div>
+        <div class="step-body"><strong>Error 0x800700DF (file too large)</strong> — Windows limits WebDAV file size to 50MB by default. Fix: set <code>FileSizeLimitInBytes</code> to <code>0xffffffff</code> in the same registry key as Step 0.</div>
+      </li>
+      <li>
+        <div class="step-num">→</div>
+        <div class="step-body"><strong>Drive maps but folders are empty</strong> — Make sure documents are tagged with a year in DarkLion. Files without a year won't appear in the drive.</div>
+      </li>
+      <li>
+        <div class="step-num">→</div>
+        <div class="step-body"><strong>Credentials keep prompting</strong> — Open <strong>Credential Manager</strong> in Windows Settings, find the darklion.ai entry, and update the saved password.</div>
+      </li>
+      <li>
+        <div class="step-num">→</div>
+        <div class="step-body"><strong>Still not working?</strong> Try <a href="https://cyberduck.io" target="_blank" style="color:var(--gold)">Cyberduck</a> (free) — choose WebDAV (HTTPS), server <code>darklion.ai</code>, path <code>/webdav</code>, port 443.</div>
+      </li>
+    </ol>
+  </div>
+</div>
+
+<script>
+function copyText(id, btn) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied';
+    setTimeout(() => btn.textContent = orig, 1500);
+  }).catch(() => {
+    const el = document.getElementById(id);
+    el.focus(); const r = document.createRange(); r.selectNode(el);
+    window.getSelection().removeAllRanges(); window.getSelection().addRange(r);
+  });
+}
+</script>
+</body>
+</html>
