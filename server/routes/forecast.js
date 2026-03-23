@@ -138,10 +138,12 @@ router.get('/', async (req, res) => {
         const monthStart = Math.floor(new Date(year, i, 1).getTime() / 1000);
         const monthEnd = Math.floor(new Date(year, i + 1, 1).getTime() / 1000);
 
-        // Find invoice for this month — try period_start first, fall back to created date
+        // Find invoice for this month — skip $0 invoices (prorations/credits/glitches)
         const inv = (cust.invoices || []).find(inv =>
-          (inv.period_start >= monthStart && inv.period_start < monthEnd) ||
-          ((!inv.period_start) && inv.created >= monthStart && inv.created < monthEnd)
+          inv.amount > 0 && (
+            (inv.period_start >= monthStart && inv.period_start < monthEnd) ||
+            ((!inv.period_start) && inv.created >= monthStart && inv.created < monthEnd)
+          )
         );
 
         let status, amount;
