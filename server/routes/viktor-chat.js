@@ -158,65 +158,36 @@ router.post('/message', async (req, res) => {
     const session = sessions[0];
     const history = session ? (session.messages || []) : [];
 
-    const userMsg = { role: 'user', content: message.trim(), timestamp: new Date().toISOString(), pending_reply: true };
-    const newMessages = [...history, userMsg];
+    // Check if user is explicitly routing to Viktor (polling flow)
+    const askingViktor = /^(hey viktor|viktor:|@viktor)\b/i.test(message.trim());
 
-    // Check if user is explicitly asking for Claude
-    const askingClaude = /^(hey claude|claude:|@claude)\b/i.test(message.trim());
-
-    if (askingClaude) {
-      // Direct Claude response — strip the "Hey Claude" prefix for the actual query
-      const cleanMsg = message.trim().replace(/^(hey claude|claude:|@claude)\s*/i, '');
-      const context = await getFirmContext(firmId).catch(() => ({}));
-      const contextSummary = buildContextSummary(context);
-      const apiKey = process.env.ANTHROPIC_API_KEY;
-      if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
-      const client = new Anthropic({ apiKey });
-      const recentHistory = history.slice(-20).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
-      recentHistory.push({ role: 'user', content: `[Current firm context]\n${contextSummary}\n\n---\n\n${cleanMsg}` });
-      const response = await client.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 1000, system: await buildSystemPrompt(firmId), messages: recentHistory });
-      const replyText = (response.content[0]?.text || 'I encountered an error.') + '\n\n*— Claude (fallback)*';
-      const claudeMsg = { role: 'assistant', content: replyText, timestamp: new Date().toISOString(), from: 'claude' };
-      userMsg.pending_reply = false;
-      const finalMessages = [...history, userMsg, claudeMsg];
-      await pool.query(`INSERT INTO viktor_sessions (firm_id, user_id, session_date, messages) VALUES ($1,$2,$3,$4) ON CONFLICT (firm_id, user_id, session_date) DO UPDATE SET messages=$4, updated_at=NOW()`, [firmId, userId, today, JSON.stringify(finalMessages)]);
-      return res.json({ reply: replyText, messages: finalMessages, source: 'claude' });
+    if (askingViktor) {
+      // Viktor polling flow — store and wait for Viktor to reply via reply-for
+      const userMsg = { role: 'user', content: message.trim(), timestamp: new Date().toISOString(), pending_reply: true };
+      const newMessages = [...history, userMsg];
+      await pool.query(`INSERT INTO viktor_sessions (firm_id, user_id, session_date, messages) VALUES ($1,$2,$3,$4) ON CONFLICT (firm_id, user_id, session_date) DO UPDATE SET messages=$4, updated_at=NOW()`, [firmId, userId, today, JSON.stringify(newMessages)]);
+      return res.json({ stored: true, pending_reply: true, messages: newMessages });
     }
 
-    // Normal flow: store user message, Viktor polls and replies via reply-for
-    // Set a 120s Claude fallback timer (non-blocking)
-    await pool.query(`INSERT INTO viktor_sessions (firm_id, user_id, session_date, messages) VALUES ($1,$2,$3,$4) ON CONFLICT (firm_id, user_id, session_date) DO UPDATE SET messages=$4, updated_at=NOW()`, [firmId, userId, today, JSON.stringify(newMessages)]);
-
-    // Schedule Claude fallback after 120 seconds if Viktor hasn't replied
-    setImmediate(async () => {
-      const FALLBACK_MS = 120000;
-      await new Promise(r => setTimeout(r, FALLBACK_MS));
-      try {
-        const { rows: cur } = await pool.query('SELECT messages FROM viktor_sessions WHERE firm_id=$1 AND user_id=$2 AND session_date=$3', [firmId, userId, today]);
-        if (!cur[0]) return;
-        const msgs = cur[0].messages || [];
-        const lastMsg = msgs[msgs.length - 1];
-        // Only fallback if the last message is still the user's (Viktor hasn't replied)
-        if (!lastMsg || lastMsg.role !== 'user' || !lastMsg.pending_reply) return;
-        const context = await getFirmContext(firmId).catch(() => ({}));
-        const contextSummary = buildContextSummary(context);
-        const apiKey = process.env.ANTHROPIC_API_KEY;
-        if (!apiKey) return;
-        const client = new Anthropic({ apiKey });
-        const recentHistory = msgs.slice(-20).filter(m => !m.pending_reply).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
-        recentHistory.push({ role: 'user', content: `[Current firm context]\n${contextSummary}\n\n---\n\n${message.trim()}` });
-        const response = await client.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 1000, system: await buildSystemPrompt(firmId), messages: recentHistory });
-        const replyText = "*(Viktor is busy — Claude stepping in)*\n\n" + (response.content[0]?.text || 'I encountered an error.');
-        const claudeMsg = { role: 'assistant', content: replyText, timestamp: new Date().toISOString(), from: 'claude_fallback' };
-        const { rows: fresh } = await pool.query('SELECT messages FROM viktor_sessions WHERE firm_id=$1 AND user_id=$2 AND session_date=$3', [firmId, userId, today]);
-        if (!fresh[0]) return;
-        const freshMsgs = (fresh[0].messages || []).map(m => m.pending_reply ? { ...m, pending_reply: false } : m);
-        const withFallback = [...freshMsgs, claudeMsg];
-        await pool.query('UPDATE viktor_sessions SET messages=$1, updated_at=NOW() WHERE firm_id=$2 AND user_id=$3 AND session_date=$4', [JSON.stringify(withFallback), firmId, userId, today]);
-      } catch(e) { console.error('[viktor-chat] Claude fallback error:', e.message); }
+    // DEFAULT: Claude answers immediately using Viktor's stored context prompt
+    const cleanMsg = message.trim();
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+    const client = new Anthropic({ apiKey });
+    const recentHistory = history.slice(-20).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
+    recentHistory.push({ role: 'user', content: cleanMsg });
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1000,
+      system: await buildSystemPrompt(firmId),
+      messages: recentHistory
     });
-
-    res.json({ stored: true, pending_reply: true, messages: newMessages });
+    const replyText = response.content[0]?.text || 'I encountered an error. Please try again.';
+    const userMsg = { role: 'user', content: cleanMsg, timestamp: new Date().toISOString() };
+    const assistantMsg = { role: 'assistant', content: replyText, timestamp: new Date().toISOString(), from: 'claude' };
+    const finalMessages = [...history, userMsg, assistantMsg];
+    await pool.query(`INSERT INTO viktor_sessions (firm_id, user_id, session_date, messages) VALUES ($1,$2,$3,$4) ON CONFLICT (firm_id, user_id, session_date) DO UPDATE SET messages=$4, updated_at=NOW()`, [firmId, userId, today, JSON.stringify(finalMessages)]);
+    return res.json({ reply: replyText, messages: finalMessages });
   } catch (err) {
     console.error('[viktor-chat] POST /message error:', err);
     res.status(500).json({ error: err.message || 'Failed to send message' });

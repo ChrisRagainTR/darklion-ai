@@ -626,7 +626,7 @@
         </div>
 
         <div class="dash-ai-input-row">
-          <textarea class="dash-ai-input" id="dash-ai-input" placeholder="Ask Viktor… or start with 'Hey Claude' for instant reply" rows="1" disabled></textarea>
+          <textarea class="dash-ai-input" id="dash-ai-input" placeholder="Ask anything… or start with 'Hey Viktor' to route to Viktor directly" rows="1" disabled></textarea>
           <button class="dash-ai-send" id="dash-ai-send-btn" disabled title="Send">↑</button>
         </div>
       </div>
@@ -3106,19 +3106,18 @@
         return;
       }
 
+      // Claude always answers directly — render the reply
+      const t = document.getElementById(thinkingId); if (t) t.remove();
       if (data.reply) {
-        // Claude answered directly (Hey Claude mode)
-        const t = document.getElementById(thinkingId); if (t) t.remove();
         appendViktorMessage('assistant', data.reply);
-        if (inputEl) inputEl.disabled = false;
-        if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
-        if (inputEl) inputEl.focus();
-        return;
+      } else if (data.stored) {
+        // Hey Viktor mode — Viktor will reply via reply-for (rare path)
+        appendViktorMessage('assistant', '*(Message sent to Viktor — he\'ll reply shortly)*');
+      } else {
+        appendViktorMessage('assistant', 'No response received.');
       }
-
-      // Viktor mode: stored, now poll for reply
-      _pendingReplyCount = (data.messages || []).length;
-      pollForViktorReply(thinkingId, inputEl, sendBtn);
+      if (inputEl) { inputEl.disabled = false; inputEl.focus(); }
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
 
     } catch(e) {
       const t = document.getElementById(thinkingId); if (t) t.remove();
@@ -3126,44 +3125,6 @@
       if (inputEl) inputEl.disabled = false;
       if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
     }
-  }
-
-  function pollForViktorReply(thinkingId, inputEl, sendBtn) {
-    if (_viktorReplyPoll) clearInterval(_viktorReplyPoll);
-    const startTime = Date.now();
-    const MAX_WAIT = 130000; // 130s — slightly past the 120s server fallback
-
-    _viktorReplyPoll = setInterval(async function() {
-      try {
-        const sessionRes = await apiFetch('/api/viktor-chat/session');
-        if (!sessionRes.ok) return;
-        const session = await sessionRes.json();
-        const msgs = session.messages || [];
-
-        // Check if a new assistant message arrived
-        if (msgs.length > _pendingReplyCount) {
-          const lastMsg = msgs[msgs.length - 1];
-          if (lastMsg && lastMsg.role === 'assistant') {
-            clearInterval(_viktorReplyPoll);
-            const t = document.getElementById(thinkingId); if (t) t.remove();
-            appendViktorMessage('assistant', lastMsg.content);
-            if (inputEl) { inputEl.disabled = false; inputEl.focus(); }
-            if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
-            _pendingReplyCount = msgs.length;
-            return;
-          }
-        }
-
-        // Timeout check
-        if (Date.now() - startTime > MAX_WAIT) {
-          clearInterval(_viktorReplyPoll);
-          const t = document.getElementById(thinkingId); if (t) t.remove();
-          appendViktorMessage('assistant', 'Viktor is unavailable right now. Try "Hey Claude" for an immediate response.');
-          if (inputEl) { inputEl.disabled = false; inputEl.focus(); }
-          if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
-        }
-      } catch(e) { /* keep polling */ }
-    }, 5000); // poll every 5 seconds
   }
 
   // Wire up send button and Enter key
