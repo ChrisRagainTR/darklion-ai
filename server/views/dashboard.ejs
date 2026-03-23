@@ -779,7 +779,7 @@
       if (!modal) return;
       const body = document.getElementById('unsigned-all-body');
       body.innerHTML = _allUnsignedReturns.map(function(r) { return buildUnsignedRow(r, true); }).join('');
-      modal.classList.remove('hidden');
+      modal.classList.add('open');
     }
 
     function renderStalled(items) {
@@ -2977,18 +2977,18 @@
   </script>
 
 <!-- Unsigned Returns — Show All Modal -->
-<div class="modal-overlay hidden" id="unsigned-all-modal" onclick="if(event.target===this)this.classList.add('hidden')">
+<div class="modal-overlay" id="unsigned-all-modal" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:600px;padding:0;overflow:hidden;">
     <div style="background:linear-gradient(135deg,rgba(245,101,101,0.15),rgba(245,101,101,0.05));padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
       <div>
         <div style="font-weight:800;font-size:1rem;">📄 Unsigned Tax Returns</div>
         <div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem;">All returns sent but not yet signed</div>
       </div>
-      <button onclick="document.getElementById('unsigned-all-modal').classList.add('hidden')" style="background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;line-height:1;">✕</button>
+      <button onclick="document.getElementById('unsigned-all-modal').classList.remove('open')" style="background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;line-height:1;">✕</button>
     </div>
     <div id="unsigned-all-body" style="max-height:65vh;overflow-y:auto;padding:0.25rem 0;"></div>
     <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('unsigned-all-modal').classList.add('hidden')">Close</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('unsigned-all-modal').classList.remove('open')">Close</button>
     </div>
   </div>
 </div>
