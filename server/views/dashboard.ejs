@@ -752,20 +752,27 @@
       const el = document.getElementById('list-unsigned');
       if (!items.length) { el.innerHTML = '<div class="dash-intel-empty">✅ All returns signed</div>'; return; }
       const show = items.slice(0, 6);
-      let html = show.map(r => {
+      let html = show.map(function(r) {
         const name = r.company_name || r.person_name || 'Unknown';
-        const url = r.company_id ? '/crm/company/' + r.company_id : (r.relationship_id ? '/crm/relationship/' + r.relationship_id : '#');
-        return '<div class="dash-intel-row" onclick="window.location=\'' + url + '\'" style="cursor:pointer;">' +
+        const navId = r.company_id || r.relationship_id;
+        const navType = r.company_id ? 'company' : 'relationship';
+        return '<div class="dash-intel-row" data-nav-id="' + navId + '" data-nav-type="' + navType + '" style="cursor:pointer;">' +
           '<div><div class="dash-intel-name">' + esc(name) + '</div><div class="dash-intel-sub">' + esc(r.tax_year||'') + ' · ' + r.days_waiting + 'd waiting</div></div>' +
           '<span class="dash-intel-tag" style="background:rgba(245,101,101,0.12);color:var(--red);">Unsigned</span>' +
           '</div>';
       }).join('');
-      if (items.length > 6) {
-        html += '<div class="dash-intel-row" onclick="showAllUnsigned()" style="cursor:pointer;justify-content:center;">' +
-          '<span style="font-size:0.78rem;color:var(--gold);font-weight:600;">Show all ' + items.length + ' unsigned returns →</span>' +
-          '</div>';
-      }
+      html += '<div class="dash-intel-row" onclick="showAllUnsigned()" style="cursor:pointer;justify-content:center;border-bottom:none;">' +
+        '<span style="font-size:0.78rem;color:var(--gold);font-weight:600;">' + (items.length > 6 ? 'Show all ' + items.length + ' unsigned returns →' : 'View all →') + '</span>' +
+        '</div>';
       el.innerHTML = html;
+      // Attach click handlers via data attrs to avoid quote escaping issues
+      el.querySelectorAll('[data-nav-id]').forEach(function(row) {
+        row.addEventListener('click', function() {
+          const id = row.getAttribute('data-nav-id');
+          const type = row.getAttribute('data-nav-type');
+          window.location = '/crm/' + type + '/' + id;
+        });
+      });
     }
 
     function showAllUnsigned() {
@@ -774,12 +781,20 @@
       const body = document.getElementById('unsigned-all-body');
       body.innerHTML = _allUnsignedReturns.map(function(r) {
         const name = r.company_name || r.person_name || 'Unknown';
-        const url = r.company_id ? '/crm/company/' + r.company_id : (r.relationship_id ? '/crm/relationship/' + r.relationship_id : '#');
-        return '<div class="dash-intel-row" onclick="window.location=\'' + url + '\'" style="cursor:pointer;">' +
+        const navId = r.company_id || r.relationship_id;
+        const navType = r.company_id ? 'company' : 'relationship';
+        return '<div class="dash-intel-row" data-nav-id="' + navId + '" data-nav-type="' + navType + '" style="cursor:pointer;">' +
           '<div><div class="dash-intel-name">' + esc(name) + '</div><div class="dash-intel-sub">' + esc(r.tax_year||'') + ' · ' + r.days_waiting + 'd waiting · ' + esc(r.relationship_name||'') + '</div></div>' +
           '<span class="dash-intel-tag" style="background:rgba(245,101,101,0.12);color:var(--red);">Unsigned</span>' +
           '</div>';
       }).join('');
+      body.querySelectorAll('[data-nav-id]').forEach(function(row) {
+        row.addEventListener('click', function() {
+          const id = row.getAttribute('data-nav-id');
+          const type = row.getAttribute('data-nav-type');
+          window.location = '/crm/' + type + '/' + id;
+        });
+      });
       modal.classList.remove('hidden');
     }
 
