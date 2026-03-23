@@ -488,7 +488,7 @@
       .dash-ai-bubble.agent { background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.2); color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; }
       .dash-ai-bubble.user { background: var(--gold, #c9a84c); color: var(--navy, #0f1923); align-self: flex-end; margin-left: 2rem; border-bottom-right-radius: 4px; }
       .dash-ai-input-row { padding: 0.85rem 1.25rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; align-items: flex-end; }
-      .dash-ai-input { flex: 1; background: var(--input-bg, rgba(255,255,255,0.04)); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.75rem; color: var(--text); font-size: 0.85rem; font-family: inherit; resize: none; min-height: 38px; max-height: 100px; }
+      .dash-ai-input { flex: 1; background: var(--input-bg, rgba(255,255,255,0.04)); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.75rem; color: var(--text); font-size: 0.85rem; font-family: inherit; resize: none; min-height: 58px; max-height: 160px; }
       .dash-ai-input::placeholder { color: var(--muted); }
       .dash-ai-input:focus { outline: none; border-color: rgba(201,168,76,0.5); }
       .dash-ai-send { background: var(--gold); color: var(--navy); border: none; border-radius: 8px; width: 36px; height: 36px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.5; }
@@ -626,7 +626,7 @@
         </div>
 
         <div class="dash-ai-input-row">
-          <textarea class="dash-ai-input" id="dash-ai-input" placeholder="Ask anything… or start with 'Hey Viktor' to route to Viktor directly" rows="1" disabled></textarea>
+          <textarea class="dash-ai-input" id="dash-ai-input" placeholder="Ask anything…" rows="2" disabled></textarea>
           <button class="dash-ai-send" id="dash-ai-send-btn" disabled title="Send">↑</button>
         </div>
       </div>
