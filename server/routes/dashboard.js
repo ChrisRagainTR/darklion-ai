@@ -92,55 +92,43 @@ router.get('/intel', async (req, res) => {
         LIMIT 10
       `, [firmId]).catch(() => ({ rows: [] })),
 
-      // 4. MRR from Stripe (via firm billing accounts)
+      // 4. MRR from Stripe — sum all active subscriptions across all configured accounts
       (async () => {
         try {
-          const billingRouter = require('./billing');
-          // Call the firm-mrr logic directly (inline to avoid HTTP round-trip)
-          const { pool: _pool } = require('../db');
-          const { rows: rels } = await _pool.query(
-            `SELECT billing_accounts, billing_emails FROM relationships
-             WHERE firm_id=$1 AND billing_accounts IS NOT NULL AND billing_emails IS NOT NULL
-               AND array_length(billing_accounts, 1) > 0 AND array_length(billing_emails, 1) > 0`,
-            [firmId]
-          );
-          if (!rels.length) return { rows: [{ mrr: 0, past_due: false }] };
-
           const Stripe = require('stripe');
-          const STRIPE_KEYS = {
-            sentinel_tax: process.env.STRIPE_KEY_SENTINEL_TAX,
-            sentinel_pcs: process.env.STRIPE_KEY_SENTINEL_PCS,
-          };
+          const STRIPE_KEYS = [
+            process.env.STRIPE_KEY_SENTINEL_TAX,
+            process.env.STRIPE_KEY_SENTINEL_PCS,
+          ].filter(Boolean);
 
-          const pairs = new Map();
-          for (const rel of rels) {
-            for (const account of (rel.billing_accounts || [])) {
-              if (!pairs.has(account)) pairs.set(account, new Set());
-              for (const email of (rel.billing_emails || [])) pairs.get(account).add(email);
-            }
-          }
+          if (!STRIPE_KEYS.length) return { rows: [{ mrr: 0, past_due: false }] };
 
           let totalMrr = 0, hasPastDue = false;
-          for (const [account, emails] of pairs) {
-            const key = STRIPE_KEYS[account];
-            if (!key) continue;
+
+          for (const key of STRIPE_KEYS) {
             const stripe = Stripe(key, { apiVersion: '2024-12-18.acacia' });
-            for (const email of emails) {
-              try {
-                const custList = await stripe.customers.list({ email, limit: 5 });
-                for (const cust of custList.data) {
-                  const subList = await stripe.subscriptions.list({ customer: cust.id, status: 'active', limit: 20, expand: ['data.items.data.price'] });
-                  for (const sub of subList.data) {
-                    if (sub.status === 'past_due') hasPastDue = true;
-                    for (const item of sub.items.data) {
-                      const amt = (item.price?.unit_amount || 0) / 100 * (item.quantity || 1);
-                      totalMrr += item.price?.recurring?.interval === 'year' ? amt / 12 : amt;
-                    }
+            try {
+              // Page through all active subscriptions
+              let starting_after = undefined;
+              while (true) {
+                const params = { status: 'active', limit: 100, expand: ['data.items.data.price'] };
+                if (starting_after) params.starting_after = starting_after;
+                const page = await stripe.subscriptions.list(params);
+                for (const sub of page.data) {
+                  if (sub.status === 'past_due') hasPastDue = true;
+                  for (const item of sub.items.data) {
+                    const amt = (item.price?.unit_amount || 0) / 100 * (item.quantity || 1);
+                    totalMrr += item.price?.recurring?.interval === 'year' ? amt / 12 : amt;
                   }
                 }
-              } catch(e) { /* skip individual errors */ }
+                if (!page.has_more) break;
+                starting_after = page.data[page.data.length - 1].id;
+              }
+            } catch(e) {
+              console.error('[dashboard] Stripe MRR error for account:', e.message);
             }
           }
+
           return { rows: [{ mrr: Math.round(totalMrr * 100) / 100, past_due: hasPastDue }] };
         } catch(e) {
           console.error('[dashboard] Stripe MRR error:', e.message);
