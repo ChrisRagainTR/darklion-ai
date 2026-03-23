@@ -630,7 +630,7 @@ router.post('/message', async (req, res) => {
     let loopResponse = response;
     const toolResultsLog = []; // accumulate formatted results for final reply
     let loopCount = 0;
-    const MAX_LOOPS = 10; // safety limit
+    const MAX_LOOPS = 25; // safety limit
 
     while (loopCount < MAX_LOOPS) {
       loopCount++;
