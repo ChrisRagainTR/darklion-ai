@@ -71,9 +71,14 @@
     border-bottom: 1px solid var(--border);
     padding-bottom: 0.4rem; margin-bottom: 0.75rem;
   }
+  .thread-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.65rem;
+  }
   .thread-summary-card {
     background: var(--card); border: 1px solid var(--border);
-    border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 0.65rem;
+    border-radius: 8px; padding: 0.85rem 1rem;
   }
   .thread-client-name { font-weight: 700; font-size: 0.88rem; margin-bottom: 0.4rem; }
   .thread-bullets {
@@ -395,7 +400,8 @@
     } else {
       for (const staff of byStaff) {
         html += `<div class="staff-section">
-          <div class="staff-section-header">${escHtml(staff.staff_name)}</div>`;
+          <div class="staff-section-header">${escHtml(staff.staff_name)}</div>
+          <div class="thread-cards-grid">`;
         for (const thread of (staff.threads || [])) {
           html += `<div class="thread-summary-card">
             <div class="thread-client-name">${escHtml(thread.client_name)}${thread.subject ? ' <span style="font-weight:400;color:var(--muted);">— ' + escHtml(thread.subject) + '</span>' : ''}</div>
@@ -403,7 +409,7 @@
             <span class="thread-view-link" onclick="openThreadModal(${thread.thread_id}, '${escHtml(thread.client_name)}', '${escHtml(staff.staff_name)}', '${escHtml(thread.subject || '')}')">View Thread →</span>
           </div>`;
         }
-        html += `</div>`;
+        html += `</div></div>`;
       }
     }
 
