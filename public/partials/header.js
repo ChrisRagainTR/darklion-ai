@@ -44,7 +44,7 @@
   }
 
   // ── Load header HTML then wire everything ─────────────────────────────────
-  fetch('/partials/header.html?v=2')
+  fetch('/partials/header.html?v=3')
     .then(function (r) { return r.text(); })
     .then(function (html) {
       var mount = document.getElementById('header-mount');
@@ -54,6 +54,7 @@
       wireUserMenu();
       wireSearch();
       populateUser();
+      applyFirmBranding();
     })
     .catch(function (e) {
       console.error('[header] failed to load:', e);
@@ -90,6 +91,20 @@
         trigger && trigger.classList.remove('open');
       }
     });
+  }
+
+  // ── Apply firm branding based on domain ──────────────────────────────────
+  function applyFirmBranding() {
+    fetch('/portal-auth/firm-info')
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) {
+        if (!d || !d.firmName) return;
+        var logo = qs('#header-brand-logo');
+        var name = qs('#header-brand-name');
+        if (logo) { logo.src = '/sentinel-favicon.png'; logo.alt = d.firmName; }
+        if (name) { name.innerHTML = d.firmName; }
+      })
+      .catch(function() {});
   }
 
   // ── Populate name / firm / avatar from JWT ────────────────────────────────
