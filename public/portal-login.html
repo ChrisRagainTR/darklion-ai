@@ -210,8 +210,13 @@
   <div class="login-card">
     <div class="logo-wrap">
       <img src="/sentinel-favicon.png" alt="Sentinel Wealth &amp; Tax" style="width:56px;height:56px;object-fit:contain;" />
-      <div class="logo-text">Sentinel Wealth &amp; Tax</div>
+      <div class="logo-text" id="firm-name-display">Sentinel Wealth &amp; Tax</div>
       <div class="firm-name" id="firmName" style="display:none;"></div>
+      <script>
+        if (window.__FIRM__) {
+          document.getElementById('firm-name-display').textContent = window.__FIRM__.name;
+        }
+      </script>
     </div>
 
     <!-- MSG BOX (shared) -->

@@ -173,10 +173,17 @@
 
   <!-- TOP HEADER -->
   <header class="top-header">
+    <% if (locals.firmBranding) { %>
+    <a class="header-logo" id="header-logo-link" href="/dashboard">
+      <img src="/sentinel-favicon.png" alt="<%= firmBranding.name %>" style="width:30px;height:30px;object-fit:contain;border-radius:6px;flex-shrink:0;">
+      <div class="logo-name"><%= firmBranding.name %></div>
+    </a>
+    <% } else { %>
     <a class="header-logo" id="header-logo-link" href="/dashboard">
       <img src="/lion-logo.png" alt="DL">
       <div class="logo-name">Dark<span>Lion</span></div>
     </a>
+    <% } %>
     <div class="header-divider"></div>
     <div class="header-search-wrap">
       <span class="header-search-icon">🔍</span>

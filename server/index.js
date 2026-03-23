@@ -81,6 +81,12 @@ app.use(express.urlencoded({ extended: false })); // needed for Pusher auth endp
 const { domainFirmMiddleware } = require('./middleware/domainFirm');
 app.use(domainFirmMiddleware);
 
+// Make domain firm available to all EJS views
+app.use((req, res, next) => {
+  res.locals.firmBranding = req.domainFirm || null;
+  next();
+});
+
 // --- Force HTTPS in production ---
 if (IS_PROD) {
   app.use((req, res, next) => {
@@ -148,6 +154,15 @@ app.use(express.static(publicDir, {
 }));
 
 // --- Public page routes ---
+
+// Custom domain root — redirect to portal login
+app.get('/', (req, res, next) => {
+  if (req.domainFirm) {
+    return res.redirect('/portal-login');
+  }
+  next();
+});
+
 app.get('/', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
 app.get('/connect', (req, res) => res.sendFile(path.join(publicDir, 'connect.html')));
 app.get('/callback', (req, res) => res.sendFile(path.join(publicDir, 'callback.html')));
@@ -156,6 +171,20 @@ app.get('/privacy', (req, res) => res.sendFile(path.join(publicDir, 'privacy.htm
 app.get('/terms', (req, res) => res.sendFile(path.join(publicDir, 'terms.html')));
 
 // --- Auth pages (public) ---
+
+// Branded login for custom domains — must come BEFORE the default /login route
+app.get('/login', (req, res, next) => {
+  if (req.domainFirm) {
+    return res.render('login-branded', {
+      title: `${req.domainFirm.name} — Sign In`,
+      firmName: req.domainFirm.name,
+      firmDomain: req.domainFirm.domain,
+      firmId: req.domainFirm.id,
+    });
+  }
+  next();
+});
+
 app.get('/login', (req, res) => res.sendFile(path.join(publicDir, 'login.html')));
 app.get('/register', (req, res) => res.sendFile(path.join(publicDir, 'register.html')));
 
@@ -289,7 +318,15 @@ app.use('/portal-auth', portalAuthRouter);
 
 // Portal HTML pages (public — must come BEFORE the requirePortal middleware)
 app.get('/portal', (req, res) => res.sendFile(path.join(publicDir, 'portal.html')));
-app.get('/portal-login', (req, res) => res.sendFile(path.join(publicDir, 'portal-login.html')));
+app.get('/portal-login', (req, res) => {
+  // Serve portal-login — inject firm context if on custom domain
+  const html = require('fs').readFileSync(require('path').join(__dirname, '../public/portal-login.html'), 'utf8');
+  if (req.domainFirm) {
+    const firmScript = `<script>window.__FIRM__ = ${JSON.stringify({ name: req.domainFirm.name, id: req.domainFirm.id })};</script>`;
+    return res.send(firmScript + html);
+  }
+  res.send(html);
+});
 
 // Protected portal API routes (sub-paths like /portal/me, /portal/documents, etc.)
 app.use('/portal', requirePortal, apiLimiter, portalRouter);
