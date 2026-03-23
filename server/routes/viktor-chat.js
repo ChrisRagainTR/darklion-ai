@@ -500,6 +500,7 @@ router.post('/message', async (req, res) => {
           const execResult = await executeViktorTool(t.name, t.input, firmId, req.headers.authorization);
           replyText = formatToolResult(t.name, t.input, execResult);
         } catch(e) {
+          console.error(`[viktor tool error] ${t.name}:`, e.message, e.stack);
           replyText = `❌ Error executing ${t.name}: ${e.message}`;
         }
       } else {
