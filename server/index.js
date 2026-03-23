@@ -196,6 +196,8 @@ app.get('/api/config', (req, res) => {
 
 // --- Firms routes (register/login/invite-lookup are public; protected routes use requireFirm internally) ---
 app.use('/firms', firmsRouter);
+// Staff list also accessible under /api/staff for Viktor
+app.use('/api/staff', requireFirm, apiLimiter, (req, res, next) => { req.url = '/staff'; firmsRouter(req, res, next); });
 
 // --- Auth (QBO/Gusto OAuth callbacks — public) ---
 app.use('/auth', authRouter);

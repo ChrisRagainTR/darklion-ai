@@ -715,5 +715,24 @@ router.delete('/api-tokens/:id', requireFirm, async (req, res) => {
   }
 });
 
+// ===================== STAFF LIST (for Viktor) =====================
+
+// GET /firms/staff — list all staff users for the firm
+router.get('/staff', requireFirm, async (req, res) => {
+  const firmId = req.firm.id;
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, name, display_name, email, role, last_login_at, created_at
+       FROM firm_users
+       WHERE firm_id = $1 AND accepted_at IS NOT NULL
+       ORDER BY name ASC`,
+      [firmId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch staff' });
+  }
+});
+
 module.exports = router;
 module.exports.auditLog = auditLog;
