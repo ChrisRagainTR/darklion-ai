@@ -347,6 +347,36 @@ router.delete('/team/:userId', requireFirm, async (req, res) => {
   }
 });
 
+// --- POST /firms/team/:userId/set-password ---
+router.post('/team/:userId/set-password', requireFirm, async (req, res) => {
+  try {
+    if (req.firm.role !== 'owner') return res.status(403).json({ error: 'Only owners can set passwords' });
+    const targetUserId = parseInt(req.params.userId);
+    const { password } = req.body;
+    if (!password || password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+    // Verify user belongs to this firm
+    const { rows } = await pool.query(
+      'SELECT id, email FROM firm_users WHERE id=$1 AND firm_id=$2',
+      [targetUserId, req.firm.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'User not found' });
+
+    const hash = await bcrypt.hash(password, 12);
+    await pool.query(
+      `UPDATE firm_users SET password_hash=$1, accepted_at=COALESCE(accepted_at, NOW()),
+       archived_at=NULL, invite_token=NULL, invite_expires_at=NULL
+       WHERE id=$2 AND firm_id=$3`,
+      [hash, targetUserId, req.firm.id]
+    );
+
+    await auditLog(req.firm.id, 'team_set_password', `Set password for user ${targetUserId} (${rows[0].email})`, req.ip);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- PUT /firms/team/:userId/role ---
 router.put('/team/:userId/role', requireFirm, async (req, res) => {
   try {

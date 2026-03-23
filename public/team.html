@@ -201,6 +201,26 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="set-password-modal">
+    <div class="modal" style="max-width:380px;">
+      <h2>Set Password</h2>
+      <p style="font-size:0.83rem;color:var(--muted);margin-bottom:1rem;">Set a password directly for this team member. They can change it after logging in.</p>
+      <input type="hidden" id="sp-user-id" />
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" id="sp-password" placeholder="Minimum 8 characters" autocomplete="new-password" />
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" id="sp-confirm" placeholder="Repeat password" autocomplete="new-password" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeSetPasswordModal()">Cancel</button>
+        <button class="btn btn-gold" id="sp-submit-btn" onclick="submitSetPassword()">Set Password</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ===== AUTH =====
     const token = localStorage.getItem('dl_token');
@@ -345,6 +365,7 @@
         const actions = !isSelf
           ? `<div style="display:flex;gap:0.35rem;align-items:center;flex-wrap:wrap;">
                ${isOwner ? `<button class="btn btn-outline btn-sm" onclick="openEditModal(${u.id},'${esc(u.name||'')}','${esc(u.email)}')">Edit</button>` : ''}
+               ${isOwner ? `<button class="btn btn-outline btn-sm" onclick="openSetPasswordModal(${u.id},'${esc(u.email)}')" title="Set password for this user">🔑 Password</button>` : ''}
                <button class="btn btn-outline btn-sm" onclick="toggleCompanyAccess(${u.id})">Companies</button>
                ${isOwner && u.pending ? `<button class="btn btn-outline btn-sm" style="color:var(--gold);border-color:var(--gold);" onclick="copyInviteLink(${u.id})">📋 Invite Link</button>` : ''}
                ${isOwner ? `<button style="background:transparent;border:1px solid var(--red);color:var(--red);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.68rem;cursor:pointer;font-weight:600;" onclick="archiveTeamMember(${u.id},'${esc(u.email)}')">Archive</button>` : ''}
@@ -551,6 +572,34 @@
         if (res.ok) { closeEditModal(); toast('Updated'); await loadTeam(); }
         else toast(d.error || 'Failed', 'err');
       } catch(e) { toast(e.message, 'err'); }
+    }
+
+    // ===== SET PASSWORD =====
+    function openSetPasswordModal(userId, email) {
+      qs('#sp-user-id').value = userId;
+      qs('#sp-password').value = '';
+      qs('#sp-confirm').value = '';
+      qs('#set-password-modal').classList.add('open');
+      qs('#sp-submit-btn').disabled = false;
+      qs('#sp-submit-btn').textContent = 'Set Password';
+      qs('#set-password-modal .modal h2').textContent = `Set Password — ${email}`;
+    }
+    function closeSetPasswordModal() { qs('#set-password-modal').classList.remove('open'); }
+
+    async function submitSetPassword() {
+      const userId = qs('#sp-user-id').value;
+      const password = qs('#sp-password').value;
+      const confirm = qs('#sp-confirm').value;
+      if (password.length < 8) return toast('Password must be at least 8 characters', 'err');
+      if (password !== confirm) return toast('Passwords do not match', 'err');
+      const btn = qs('#sp-submit-btn');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      try {
+        const res = await apiFetch(`/firms/team/${userId}/set-password`, { method: 'POST', body: JSON.stringify({ password }) });
+        const d = await res.json();
+        if (res.ok) { closeSetPasswordModal(); toast('Password set — they can log in now'); }
+        else { toast(d.error || 'Failed', 'err'); btn.disabled = false; btn.textContent = 'Set Password'; }
+      } catch(e) { toast(e.message, 'err'); btn.disabled = false; btn.textContent = 'Set Password'; }
     }
 
     // ===== INIT =====
