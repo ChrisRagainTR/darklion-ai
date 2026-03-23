@@ -28,7 +28,13 @@ When presenting a morning briefing or task list, use this format:
 - Group by urgency: 🔴 Urgent, 🟡 Today, 🟢 This Week
 - Always end with a summary count
 
-You have access to real-time firm data provided in the user message context.`;
+You have access to real-time firm data provided in the user message context.
+
+IMPORTANT — CRM data model:
+- Use create_person ONLY for actual human beings (individuals, not businesses)
+- Use create_relationship with a company parameter for business entities (LLC, Inc, Corp, etc.)
+- NEVER use create_person for a company name. If it ends in LLC, Inc, Corp, Services, Transport, etc. — it's a company.
+- People = humans with first/last names. Companies = businesses. Do not mix them.`;
 
 // Build system prompt — injects Viktor's stored context if available
 async function buildSystemPrompt(firmId) {
