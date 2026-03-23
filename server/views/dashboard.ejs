@@ -425,14 +425,14 @@
       /* ── Dashboard overview ─────────────────────────── */
       .dash-overview-wrap {
         display: grid;
-        grid-template-columns: 1fr 380px;
+        grid-template-columns: 1fr 440px;
         gap: 0;
         height: calc(100vh - var(--header-h) - 58px);
         overflow: hidden;
       }
       @media (max-width: 960px) {
         .dash-overview-wrap { grid-template-columns: 1fr; height: auto; overflow: visible; }
-        .dash-right-col { border-left: none !important; border-top: 1px solid var(--border); max-height: 500px; }
+        .dash-right-col { border-left: none !important; border-top: 1px solid var(--border); max-height: 700px; }
       }
 
       /* Left column */
@@ -488,7 +488,7 @@
       .dash-ai-bubble.agent { background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.2); color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; }
       .dash-ai-bubble.user { background: var(--gold, #c9a84c); color: var(--navy, #0f1923); align-self: flex-end; margin-left: 2rem; border-bottom-right-radius: 4px; }
       .dash-ai-input-row { padding: 0.85rem 1.25rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; align-items: flex-end; }
-      .dash-ai-input { flex: 1; background: var(--input-bg, rgba(255,255,255,0.04)); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.75rem; color: var(--text); font-size: 0.85rem; font-family: inherit; resize: none; min-height: 58px; max-height: 160px; }
+      .dash-ai-input { flex: 1; background: var(--input-bg, rgba(255,255,255,0.04)); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.75rem; color: var(--text); font-size: 0.85rem; font-family: inherit; resize: none; min-height: 64px; max-height: 220px; }
       .dash-ai-input::placeholder { color: var(--muted); }
       .dash-ai-input:focus { outline: none; border-color: rgba(201,168,76,0.5); }
       .dash-ai-send { background: var(--gold); color: var(--navy); border: none; border-radius: 8px; width: 36px; height: 36px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.5; }
