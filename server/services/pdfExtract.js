@@ -2,9 +2,9 @@
 const pdfParse = require('pdf-parse');
 
 // Max pages to extract — covers 1040 main form + schedules + comparison page
-// without pulling in every workpaper attachment
-const MAX_PAGES = 35;
-const MAX_CHARS = 120000; // ~30k tokens — enough for Claude to extract all data
+// without pulling in every workpaper attachment. 50 pages handles most full returns.
+const MAX_PAGES = 50;
+const MAX_CHARS = 140000; // ~35k tokens — enough for Claude to extract all data
 
 async function extractPdfText(buffer) {
   // First pass: get total page count
