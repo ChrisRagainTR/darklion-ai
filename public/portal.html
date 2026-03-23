@@ -1859,24 +1859,28 @@
     }
 
     async function loadContacts() {
+      // Use already-loaded contacts from init() if available — avoid extra round trip
+      if (_contacts.length > 0) {
+        renderContacts();
+        if (_selectedStaffId === null) selectContact(_contacts[0]);
+        return;
+      }
       const token = localStorage.getItem('portalToken');
       try {
-        const res = await fetch('/portal/messages/staff-contacts', { headers: { 'Authorization': 'Bearer ' + token } });
-        if (!res.ok) return;
-        _contacts = await res.json();
-        if (!Array.isArray(_contacts)) _contacts = [];
-        // Refresh avatar map from /portal/team (staff who've messaged this client)
-        try {
-          const tr = await fetch('/portal/team', { headers: { 'Authorization': 'Bearer ' + token } });
-          if (tr.ok) {
-            const team = await tr.json();
-            if (Array.isArray(team)) team.forEach(m => { if (m.avatar_url) _avatarMap[m.id] = m.avatar_url; });
-          }
-        } catch(e) { /* non-fatal */ }
-        renderContacts();
-        if (_contacts.length > 0 && _selectedStaffId === null) {
-          selectContact(_contacts[0]);
+        const [contactsRes, teamRes] = await Promise.all([
+          fetch('/portal/messages/staff-contacts', { headers: { 'Authorization': 'Bearer ' + token } }),
+          fetch('/portal/team', { headers: { 'Authorization': 'Bearer ' + token } }),
+        ]);
+        if (contactsRes.ok) {
+          _contacts = await contactsRes.json();
+          if (!Array.isArray(_contacts)) _contacts = [];
         }
+        if (teamRes.ok) {
+          const team = await teamRes.json();
+          if (Array.isArray(team)) team.forEach(m => { if (m.avatar_url) _avatarMap[m.id] = m.avatar_url; });
+        }
+        renderContacts();
+        if (_contacts.length > 0 && _selectedStaffId === null) selectContact(_contacts[0]);
       } catch(e) { console.error('[portal] loadContacts error:', e); }
     }
 
@@ -1966,15 +1970,14 @@
           return;
         }
 
-        // Load all thread messages into a fresh buffer — don't clear UI until ready
-        const freshMessages = [];
-        for (const thread of threads) {
-          const res = await fetch(`/portal/messages/${thread.id}`, { headers: { 'Authorization': 'Bearer ' + token } });
-          const data = await res.json();
-          if (data.messages) {
-            freshMessages.push(...data.messages.map(m => ({ ...m, threadSubject: thread.subject })));
-          }
-        }
+        // Load all thread messages in parallel
+        const threadResults = await Promise.all(threads.map(thread =>
+          fetch(`/portal/messages/${thread.id}`, { headers: { 'Authorization': 'Bearer ' + token } })
+            .then(r => r.json())
+            .then(data => (data.messages || []).map(m => ({ ...m, threadSubject: thread.subject })))
+            .catch(() => [])
+        ));
+        const freshMessages = threadResults.flat();
 
         // Sort by date
         freshMessages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
