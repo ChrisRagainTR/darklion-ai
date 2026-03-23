@@ -743,6 +743,15 @@ async function initDB() {
       UNIQUE(firm_id, user_id, session_date)
     );
     CREATE INDEX IF NOT EXISTS viktor_sessions_by_firm_user ON viktor_sessions(firm_id, user_id, session_date);
+
+    CREATE TABLE IF NOT EXISTS message_mentions (
+      id SERIAL PRIMARY KEY,
+      message_id INTEGER NOT NULL,
+      firm_user_id INTEGER NOT NULL,
+      firm_id INTEGER NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(message_id, firm_user_id)
+    );
   `);
 }
 

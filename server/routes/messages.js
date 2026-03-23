@@ -142,7 +142,12 @@ router.get('/', async (req, res) => {
          p.first_name, p.last_name, p.email,
          (SELECT body FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) AS last_body,
          (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) AS unread_count,
-         EXISTS(SELECT 1 FROM messages m JOIN message_attachments ma ON ma.message_id = m.id WHERE m.thread_id = mt.id LIMIT 1) AS has_attachments
+         EXISTS(SELECT 1 FROM messages m JOIN message_attachments ma ON ma.message_id = m.id WHERE m.thread_id = mt.id LIMIT 1) AS has_attachments,
+         EXISTS(
+           SELECT 1 FROM message_mentions mm
+           JOIN messages m2 ON m2.id = mm.message_id
+           WHERE m2.thread_id = mt.id AND mm.firm_user_id = $2
+         ) AS has_mention
        FROM message_threads mt
        JOIN people p ON p.id = mt.person_id
        WHERE mt.firm_id = $1 AND mt.${statusFilter}
@@ -189,6 +194,7 @@ router.get('/', async (req, res) => {
       unreadCount: parseInt(t.unread_count, 10) || 0,
       assignedTo: t.assigned_to,
       hasAttachments: t.has_attachments || false,
+      hasMention: t.has_mention || false,
     }));
 
     res.json(result);
@@ -536,6 +542,25 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
       [threadId, userId, body || '', is_internal]
     );
     const messageId = msgRows[0].id;
+
+    // Extract @mentions and store
+    if (body) {
+      const mentionPattern = /@([A-Za-z]+(?: [A-Za-z]+)?)/g;
+      let mentionMatch;
+      while ((mentionMatch = mentionPattern.exec(body)) !== null) {
+        const mentionedName = mentionMatch[1];
+        const { rows: mentioned } = await pool.query(
+          `SELECT id FROM firm_users WHERE firm_id=$1 AND (name ILIKE $2 OR display_name ILIKE $2) LIMIT 1`,
+          [firmId, mentionedName]
+        );
+        if (mentioned.length) {
+          await pool.query(
+            `INSERT INTO message_mentions (message_id, firm_user_id, firm_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+            [messageId, mentioned[0].id, firmId]
+          ).catch(() => {});
+        }
+      }
+    }
 
     // Upload files and create document + attachment records
     if (files.length > 0) {
