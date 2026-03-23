@@ -770,6 +770,44 @@
       animation: none;
       background: rgba(201,168,76,0.2);
     }
+  /* ── Tax Summary (tsm) classes — identical to staff modal ── */
+  .tsm-stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:0.75rem; }
+  .tsm-stat { background:rgba(255,255,255,0.04); border:1px solid var(--border,#2a2d3a); border-radius:10px; padding:0.85rem 1rem; }
+  .tsm-stat-val { font-size:1.35rem; font-weight:800; color:#c9a84c; }
+  .tsm-stat-label { font-size:0.68rem; font-weight:700; color:#8fa3b8; text-transform:uppercase; letter-spacing:0.06em; margin-top:0.2rem; }
+  .tsm-section-title { font-size:0.72rem; font-weight:700; color:#8fa3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.6rem; }
+  .tsm-table { width:100%; border-collapse:collapse; font-size:0.83rem; }
+  .tsm-table th { text-align:left; color:#8fa3b8; font-weight:700; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em; padding:0.3rem 0.5rem; border-bottom:1px solid var(--border,#2a2d3a); }
+  .tsm-table td { padding:0.35rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.04); color:var(--text,#e8edf2); }
+  .tsm-table td:last-child { text-align:right; font-variant-numeric:tabular-nums; }
+  .tsm-table tr:last-child td { border-bottom:none; font-weight:700; color:#c9a84c; }
+  .tsm-rate-row { display:flex; gap:0.75rem; flex-wrap:wrap; }
+  .tsm-rate-pill { background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.25); border-radius:8px; padding:0.5rem 0.85rem; font-size:0.82rem; color:var(--text,#e8edf2); }
+  .tsm-rate-pill strong { color:#c9a84c; }
+  .tsm-savings-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:0.75rem; }
+  .tsm-savings-card { background:rgba(201,168,76,0.07); border:1px solid rgba(201,168,76,0.2); border-radius:10px; padding:0.85rem 1rem; }
+  .tsm-savings-amount { font-size:1.1rem; font-weight:800; color:#c9a84c; }
+  .tsm-savings-title { font-size:0.82rem; font-weight:700; color:var(--text,#e8edf2); margin:0.2rem 0; }
+  .tsm-savings-desc { font-size:0.76rem; color:#8fa3b8; line-height:1.45; }
+  .tsm-strategies-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:0.75rem; }
+  .tsm-strategy-card { background:rgba(255,255,255,0.03); border:1px solid var(--border,#2a2d3a); border-radius:10px; padding:0.85rem 1rem; display:flex; flex-direction:column; gap:0.3rem; }
+  .tsm-strategy-title { font-size:0.85rem; font-weight:700; color:var(--text,#e8edf2); display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
+  .tsm-strategy-badge { font-size:0.62rem; font-weight:700; border-radius:6px; padding:0.1rem 0.4rem; text-transform:uppercase; }
+  .tsm-strategy-badge.personal { background:rgba(74,144,217,0.15); color:#4a90d9; }
+  .tsm-strategy-badge.business { background:rgba(62,207,142,0.15); color:#3ecf8e; }
+  .tsm-strategy-savings { font-size:0.75rem; color:#c9a84c; font-weight:600; }
+  .tsm-strategy-desc { font-size:0.78rem; color:#8fa3b8; line-height:1.45; }
+  .tsm-yoy-table { width:100%; border-collapse:collapse; font-size:0.78rem; }
+  .tsm-yoy-table th { text-align:right; color:#8fa3b8; font-weight:700; font-size:0.68rem; text-transform:uppercase; padding:0.3rem 0.5rem; border-bottom:1px solid var(--border,#2a2d3a); }
+  .tsm-yoy-table th:first-child { text-align:left; }
+  .tsm-yoy-table td { padding:0.3rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.03); text-align:right; color:var(--text,#e8edf2); }
+  .tsm-yoy-table td:first-child { text-align:left; }
+  .tsm-yoy-table tr.total-row td { font-weight:700; color:#c9a84c; border-top:1px solid var(--border,#2a2d3a); }
+  .tsm-highlight-pill { display:inline-flex; align-items:center; gap:0.4rem; background:rgba(255,255,255,0.04); border-radius:8px; padding:0.4rem 0.75rem; font-size:0.78rem; margin:0.25rem; color:var(--text,#e8edf2); }
+  .tsm-est-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+  .tsm-est-table th { text-align:left; color:#8fa3b8; font-weight:700; font-size:0.7rem; text-transform:uppercase; padding:0.3rem 0.5rem; border-bottom:1px solid var(--border,#2a2d3a); }
+  .tsm-est-table td { padding:0.35rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.04); color:var(--text,#e8edf2); }
+  @media(max-width:600px) { .tsm-stat-row { grid-template-columns:repeat(2,1fr); } .tsm-strategies-grid,.tsm-savings-grid { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
@@ -2351,51 +2389,139 @@
           <button class="btn-submit" id="portal-summary-next-btn" onclick="renderTDStep3()" style="font-size:1rem;padding:0.75rem 2rem;">Review the Return →</button>
         </div>`;
 
-      // Load stored summary from delivery
+      // Load stored summary and render with exact same layout as staff modal
       try {
         const res = await fetch(`/portal/tax-deliveries/${d.id}/summary`, { headers: authHeader() });
         const body = document.getElementById('portal-summary-body');
         if (!body) return;
-        if (!res.ok) { body.innerHTML = '<p style="color:var(--muted);font-size:0.88rem;">Summary not available.</p>'; return; }
+        if (!res.ok) { body.innerHTML = '<p style="color:#8fa3b8;font-size:0.88rem;">Summary not available.</p>'; return; }
         const s = await res.json();
-        if (!s.data) { body.innerHTML = '<p style="color:var(--muted);font-size:0.88rem;">Summary not available for this return.</p>'; return; }
-        const rd = s.data;
-        const fmt = (n) => { if (n == null) return '—'; const a = Math.abs(n); return (n < 0 ? '($' : '$') + Math.round(a).toLocaleString() + (n < 0 ? ')' : ''); };
-        const refColor = rd.is_refund ? '#3ecf8e' : '#f56565';
-        let html = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem;margin-bottom:1.25rem;">
-          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.85rem 1rem;"><div style="font-size:1.25rem;font-weight:800;color:#c9a84c;">${fmt(rd.total_income)}</div><div style="font-size:0.68rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:0.2rem;">Total Income</div></div>
-          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.85rem 1rem;"><div style="font-size:1.25rem;font-weight:800;color:#c9a84c;">${fmt(rd.total_tax)}</div><div style="font-size:0.68rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:0.2rem;">Federal Tax</div></div>
-          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.85rem 1rem;"><div style="font-size:1.25rem;font-weight:800;color:#c9a84c;">${rd.effective_rate || 0}%</div><div style="font-size:0.68rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:0.2rem;">Effective Rate</div></div>
-          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.85rem 1rem;"><div style="font-size:1.25rem;font-weight:800;color:${refColor};">${fmt(rd.refund_or_owed_amount)}</div><div style="font-size:0.68rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:0.2rem;">${rd.is_refund ? 'Your Refund' : 'Balance Due'}</div></div>
-        </div>`;
-        if (rd.savings_highlights && rd.savings_highlights.length) {
-          html += `<div style="margin-bottom:1.25rem;"><div style="font-size:0.72rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">💰 How We Saved You Money</div>`;
-          rd.savings_highlights.forEach(s => {
-            html += `<div style="background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.2);border-radius:10px;padding:0.75rem 1rem;margin-bottom:0.5rem;"><div style="font-size:1rem;font-weight:800;color:#c9a84c;">${s.amount}</div><div style="font-size:0.82rem;font-weight:700;margin:0.15rem 0;">${s.title}</div><div style="font-size:0.76rem;color:#8fa3b8;line-height:1.45;">${s.description}</div></div>`;
-          });
-          html += '</div>';
-        }
-        if (rd.strategies && rd.strategies.length) {
-          html += `<div style="margin-bottom:1.25rem;"><div style="font-size:0.72rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">🔭 Strategies for Next Year</div>`;
-          rd.strategies.forEach(s => {
-            html += `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.75rem 1rem;margin-bottom:0.5rem;"><div style="font-size:0.85rem;font-weight:700;">${s.title}${s.potential_savings ? ` <span style="color:#c9a84c;font-size:0.78rem;font-weight:600;">· ${s.potential_savings}</span>` : ''}</div><div style="font-size:0.78rem;color:#8fa3b8;margin-top:0.25rem;line-height:1.45;">${s.description}</div></div>`;
-          });
-          html += '</div>';
-        }
-        if (rd.estimated_payments_required && rd.federal_estimated_payments && rd.federal_estimated_payments.length) {
-          html += `<div style="margin-bottom:1.25rem;"><div style="font-size:0.72rem;font-weight:700;color:#8fa3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">📅 Estimated Tax Payments</div>`;
-          rd.federal_estimated_payments.forEach(p => {
-            html += `<div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.85rem;"><span>${p.quarter} Quarter — ${p.due_date}</span><span style="font-weight:700;color:#c9a84c;">${p.amount}</span></div>`;
-          });
-          html += '</div>';
-        }
-        body.innerHTML = html;
+        if (!s.data) { body.innerHTML = '<p style="color:#8fa3b8;font-size:0.88rem;">Summary not available for this return.</p>'; return; }
+        body.innerHTML = portalRenderTaxSummary(s.data);
       } catch(e) {
         const body = document.getElementById('portal-summary-body');
-        if (body) body.innerHTML = '<p style="color:var(--muted);font-size:0.88rem;">Summary not available.</p>';
+        if (body) body.innerHTML = '<p style="color:#8fa3b8;font-size:0.88rem;">Summary not available.</p>';
       }
     }
     window.renderTDStep2 = renderTDStep2;
+
+    // Exact replica of staff modal renderTaxSummary — same classes, same sections, same order
+    function portalRenderTaxSummary(d) {
+      function fmt(n) { if (n === null || n === undefined) return '—'; var abs = Math.abs(n); var f = '$' + Math.round(abs).toLocaleString(); return n < 0 ? '(' + f + ')' : f; }
+      function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+      var refundColor = d.is_refund ? '#3ecf8e' : '#f56565';
+      var refundLabel = d.is_refund ? 'Refund' : 'Balance Due';
+
+      var html = '<div style="font-size:0.82rem;color:#8fa3b8;margin-bottom:1rem;">' + esc((d.client&&d.client.names)||'') + (d.client&&d.client.filing_status ? ' · ' + esc(d.client.filing_status) : '') + '</div>';
+
+      // Stat cards
+      html += '<div class="tsm-stat-row">';
+      html += '<div class="tsm-stat"><div class="tsm-stat-val">' + fmt(d.total_income) + '</div><div class="tsm-stat-label">Total Income</div></div>';
+      html += '<div class="tsm-stat"><div class="tsm-stat-val">' + fmt(d.taxable_income) + '</div><div class="tsm-stat-label">Taxable Income</div></div>';
+      html += '<div class="tsm-stat"><div class="tsm-stat-val">' + fmt(d.total_tax) + '</div><div class="tsm-stat-label">Total Federal Tax</div></div>';
+      html += '<div class="tsm-stat"><div class="tsm-stat-val" style="color:' + refundColor + '">' + fmt(d.refund_or_owed_amount) + '</div><div class="tsm-stat-label">' + refundLabel + '</div></div>';
+      html += '</div>';
+
+      // Rate pills
+      html += '<div style="margin-top:1rem;"><div class="tsm-section-title">Tax Rates</div><div class="tsm-rate-row">';
+      html += '<div class="tsm-rate-pill">Effective Rate: <strong>' + (d.effective_rate||0) + '%</strong></div>';
+      html += '<div class="tsm-rate-pill">Marginal Bracket: <strong>' + (d.marginal_bracket||0) + '%</strong></div>';
+      if (d.key_stats&&d.key_stats.capital_loss_carryover) html += '<div class="tsm-rate-pill">Cap Loss C/O: <strong>' + fmt(d.key_stats.capital_loss_carryover) + '</strong></div>';
+      if (d.social_security&&d.social_security.percent_taxable) html += '<div class="tsm-rate-pill">SS Taxable: <strong>' + d.social_security.percent_taxable + '%</strong></div>';
+      html += '</div></div>';
+
+      // Income breakdown
+      if (d.income_sources&&d.income_sources.length) {
+        html += '<div style="margin-top:1rem;"><div class="tsm-section-title">📊 Income Breakdown</div><table class="tsm-table"><thead><tr><th>Source</th><th style="text-align:right">Amount</th></tr></thead><tbody>';
+        d.income_sources.forEach(function(s) { html += '<tr><td>' + esc(s.source) + (s.note?'<span style="color:#8fa3b8;font-size:0.75em"> (' + esc(s.note) + ')</span>':'') + '</td><td>' + fmt(s.amount) + '</td></tr>'; });
+        html += '<tr><td><strong>Total Income (AGI)</strong></td><td><strong>' + fmt(d.adjusted_gross_income||d.total_income) + '</strong></td></tr></tbody></table></div>';
+      }
+
+      // Tax computation — 2 col
+      html += '<div style="margin-top:1rem;"><div class="tsm-section-title">🧾 Tax Computation</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">';
+      html += '<table class="tsm-table"><tbody>';
+      html += '<tr><td>Adjusted Gross Income</td><td>' + fmt(d.adjusted_gross_income||d.total_income) + '</td></tr>';
+      (d.deductions||[]).forEach(function(ded) { html += '<tr><td style="color:#3ecf8e">' + esc(ded.name) + '</td><td style="color:#3ecf8e">(' + fmt(ded.amount) + ')</td></tr>'; });
+      html += '<tr style="border-top:1px solid rgba(255,255,255,0.08)"><td><strong>Taxable Income</strong></td><td><strong>' + fmt(d.taxable_income) + '</strong></td></tr>';
+      html += '</tbody></table>';
+      html += '<table class="tsm-table"><tbody>';
+      html += '<tr><td>Federal Income Tax</td><td>' + fmt(d.tax_before_credits) + '</td></tr>';
+      if (d.credits>0) html += '<tr><td style="color:#3ecf8e">Less: Credits</td><td style="color:#3ecf8e">(' + fmt(d.credits) + ')</td></tr>';
+      html += '<tr><td><strong>Total Tax</strong></td><td><strong>' + fmt(d.total_tax) + '</strong></td></tr>';
+      html += '<tr><td style="color:#8fa3b8">Less: Payments &amp; Withholding</td><td style="color:#8fa3b8">(' + fmt(d.total_payments) + ')</td></tr>';
+      html += '<tr style="border-top:1px solid rgba(255,255,255,0.08)"><td style="color:' + refundColor + '"><strong>' + refundLabel + '</strong></td><td style="color:' + refundColor + '"><strong>' + fmt(d.refund_or_owed_amount) + '</strong></td></tr>';
+      html += '</tbody></table></div></div>';
+
+      // Savings highlights
+      if (d.savings_highlights&&d.savings_highlights.length) {
+        html += '<div style="margin-top:1rem;"><div class="tsm-section-title">💰 How We Saved You Money</div><div class="tsm-savings-grid">';
+        d.savings_highlights.forEach(function(s) { html += '<div class="tsm-savings-card"><div class="tsm-savings-amount">' + esc(s.amount) + '</div><div class="tsm-savings-title">' + esc(s.title) + '</div><div class="tsm-savings-desc">' + esc(s.description) + '</div></div>'; });
+        html += '</div></div>';
+      }
+
+      // Strategies
+      if (d.strategies&&d.strategies.length) {
+        html += '<div style="margin-top:1rem;"><div class="tsm-section-title">🔭 Forward-Looking Strategies</div><div class="tsm-strategies-grid">';
+        d.strategies.forEach(function(s) {
+          html += '<div class="tsm-strategy-card"><div class="tsm-strategy-title">' + esc(s.title) + (s.category?'<span class="tsm-strategy-badge ' + s.category + '">' + s.category + '</span>':'') + '</div>';
+          if (s.potential_savings) html += '<div class="tsm-strategy-savings">Potential savings: ' + esc(s.potential_savings) + '</div>';
+          html += '<div class="tsm-strategy-desc">' + esc(s.description) + '</div></div>';
+        });
+        html += '</div></div>';
+      }
+
+      // Estimated payments
+      if (d.estimated_payments_required&&(d.federal_estimated_payments&&d.federal_estimated_payments.length||d.state_estimated_payments&&d.state_estimated_payments.length)) {
+        html += '<div style="margin-top:1rem;"><div class="tsm-section-title">📅 Estimated Tax Payments</div>';
+        if (d.federal_estimated_payments&&d.federal_estimated_payments.length) {
+          html += '<div style="font-size:0.78rem;font-weight:700;margin-bottom:0.4rem;">Federal</div><table class="tsm-est-table"><thead><tr><th>Quarter</th><th>Due Date</th><th>Amount</th><th>Method</th></tr></thead><tbody>';
+          d.federal_estimated_payments.forEach(function(p) { html += '<tr><td>' + esc(p.quarter) + '</td><td>' + esc(p.due_date) + '</td><td style="font-weight:600;color:#c9a84c">' + esc(p.amount) + '</td><td style="color:#8fa3b8">' + esc(p.method||'') + '</td></tr>'; });
+          html += '</tbody></table>';
+        }
+        if (d.state_estimated_payments&&d.state_estimated_payments.length) {
+          html += '<div style="font-size:0.78rem;font-weight:700;margin:0.75rem 0 0.4rem;">State</div><table class="tsm-est-table"><thead><tr><th>State</th><th>Quarter</th><th>Due Date</th><th>Amount</th></tr></thead><tbody>';
+          d.state_estimated_payments.forEach(function(p) { html += '<tr><td>' + esc(p.state) + '</td><td>' + esc(p.quarter) + '</td><td>' + esc(p.due_date) + '</td><td style="font-weight:600;color:#c9a84c">' + esc(p.amount) + '</td></tr>'; });
+          html += '</tbody></table>';
+        }
+        html += '</div>';
+      }
+
+      // YOY comparison
+      if (d.prior_year_comparison) {
+        var yoy = d.prior_year_comparison;
+        var nonZero = (yoy.items||[]).filter(function(item) { return item.prior_year!==0||item.current_year!==0; });
+        var totalRows = ['Total Income','Total Adjusted Gross Income','Taxable Income','Total Tax','Effective tax rate (%)'];
+        html += '<div style="margin-top:1rem;"><div class="tsm-section-title">📊 Year-Over-Year (' + esc(yoy.prior_tax_year) + ' → ' + esc(yoy.current_tax_year) + ')</div>';
+        if (yoy.highlights&&yoy.highlights.length) {
+          html += '<div style="margin-bottom:0.75rem;">';
+          yoy.highlights.forEach(function(h) {
+            var arrow=h.direction==='increase'?'▲':h.direction==='decrease'?'▼':h.direction==='new'?'✦':'✕';
+            var color=h.direction==='increase'?'#f56565':h.direction==='decrease'?'#3ecf8e':'#c9a84c';
+            html += '<span class="tsm-highlight-pill"><span style="color:' + color + ';font-weight:700">' + arrow + '</span> <span style="font-weight:600">' + esc(h.title) + '</span></span>';
+          });
+          html += '</div>';
+        }
+        html += '<table class="tsm-yoy-table"><thead><tr><th>Line Item</th><th>' + esc(yoy.prior_tax_year) + '</th><th>' + esc(yoy.current_tax_year) + '</th><th>Change</th></tr></thead><tbody>';
+        nonZero.forEach(function(item) {
+          var isTotal=totalRows.indexOf(item.label)>=0;
+          var isRate=item.label.indexOf('rate')>=0||item.label.indexOf('Rate')>=0;
+          var fmtV=function(v){if(v===null||v===undefined)return'—';return isRate?v+'%':fmt(v);};
+          var diffColor=item.difference>0?'#f56565':item.difference<0?'#3ecf8e':'#8fa3b8';
+          var diffStr=item.difference!==null?(item.difference>0?'+':'')+(isRate?parseFloat(item.difference).toFixed(2)+'%':fmt(item.difference)):'—';
+          html += '<tr'+(isTotal?' class="total-row"':'')+'><td>'+esc(item.label)+'</td><td>'+fmtV(item.prior_year)+'</td><td>'+fmtV(item.current_year)+'</td><td style="color:'+diffColor+'">'+diffStr+'</td></tr>';
+        });
+        html += '</tbody></table></div>';
+      }
+
+      // Carryovers
+      if (d.carryovers&&d.carryovers.length) {
+        html += '<div style="margin-top:1rem;"><div class="tsm-section-title">Carryovers</div><div class="tsm-rate-row">';
+        d.carryovers.forEach(function(c) { html += '<div class="tsm-rate-pill">' + esc(c.item) + ': <strong>' + esc(c.amount) + '</strong></div>'; });
+        html += '</div></div>';
+      }
+
+      return html;
+    }
 
     // ── Step 3: Review the Return ────────────────────────────────────────────
     async function renderTDStep3() {
