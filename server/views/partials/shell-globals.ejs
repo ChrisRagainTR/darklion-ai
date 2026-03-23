@@ -172,7 +172,7 @@
     });
 
     // ── Toast ──
-    window.toast = function(msg, type) {
+    window._shellToast = window.toast = function(msg, type) {
       try {
         var t = document.getElementById('toast');
         if (!t) return;
