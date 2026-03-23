@@ -204,6 +204,10 @@ app.use('/auth', authRouter);
 const proposalsPublicRouter = require('./routes/proposals-public');
 app.use('/api/proposals/public', apiLimiter, proposalsPublicRouter);
 
+// --- Token auth middleware — runs before requireFirm, sets req.firm for API token holders ---
+const { requireToken } = require('./middleware/requireToken');
+app.use('/api', requireToken);
+
 // --- API routes (JWT required) ---
 app.use('/api', requireFirm, apiLimiter, apiRouter);
 
@@ -226,6 +230,7 @@ const dashboardRouter = require('./routes/dashboard');
 app.use('/api/dashboard', requireFirm, apiLimiter, dashboardRouter);
 app.get('/templates', (req, res) => res.render('templates', { title: 'Message Templates', activeNav: 'templates' }));
 app.get('/settings', (req, res) => res.render('settings', { title: 'Settings', activeNav: 'settings' }));
+app.get('/api-docs', (req, res) => res.render('api-docs', { title: 'DarkLion API Documentation' }));
 
 const pipelinesRouter = require('./routes/pipelines');
 app.use('/api/pipelines', requireFirm, apiLimiter, pipelinesRouter);
@@ -243,6 +248,10 @@ app.use('/api/tax-deliveries', requireFirm, apiLimiter, taxDeliveryRouter);
 // Proposals — staff (auth required)
 const proposalsRouter = require('./routes/proposals');
 app.use('/api/proposals', requireFirm, apiLimiter, proposalsRouter);
+
+// Viktor context endpoint
+const viktorRouter = require('./routes/viktor');
+app.use('/api/viktor', requireFirm, apiLimiter, viktorRouter);
 
 // Proposal pages (staff)
 app.get('/proposals', (req, res) => res.render('proposals', { title: 'Proposals', activeNav: 'proposals' }));

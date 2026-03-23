@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DarkLion API Reference</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1923; color: #e8edf2; line-height: 1.6; }
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar { width: 260px; flex-shrink: 0; background: #0b1219; border-right: 1px solid #1e2738; padding: 1.5rem 1rem; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+    .sidebar h1 { font-size: 1rem; font-weight: 800; color: #c9a84c; margin-bottom: 0.25rem; }
+    .sidebar .version { font-size: 0.72rem; color: #8fa3b8; margin-bottom: 1.5rem; }
+    .sidebar-section { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #8fa3b8; margin: 1rem 0 0.4rem; }
+    .sidebar a { display: block; font-size: 0.83rem; color: #c5d4e0; text-decoration: none; padding: 0.25rem 0.5rem; border-radius: 4px; margin-bottom: 0.1rem; }
+    .sidebar a:hover { background: rgba(201,168,76,0.1); color: #c9a84c; }
+    .content { flex: 1; padding: 2rem 3rem; max-width: 900px; }
+    h2 { font-size: 1.5rem; font-weight: 800; color: #fff; margin: 2.5rem 0 1rem; padding-top: 1rem; border-top: 1px solid #1e2738; }
+    h2:first-child { border-top: none; margin-top: 0; }
+    h3 { font-size: 1rem; font-weight: 700; color: #e8edf2; margin: 1.5rem 0 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    p { color: #c5d4e0; font-size: 0.9rem; margin-bottom: 0.75rem; }
+    .method { display: inline-block; font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.5rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; }
+    .method-get { background: rgba(62,207,142,0.15); color: #3ecf8e; }
+    .method-post { background: rgba(74,144,217,0.15); color: #4a90d9; }
+    .method-put { background: rgba(237,137,54,0.15); color: #ed8936; }
+    .method-delete { background: rgba(245,101,101,0.15); color: #f56565; }
+    .endpoint-path { font-family: 'SF Mono', monospace; font-size: 0.88rem; color: #c9a84c; }
+    .endpoint-desc { font-size: 0.83rem; color: #8fa3b8; margin: 0.25rem 0 0.75rem; }
+    .params-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-bottom: 1rem; }
+    .params-table th { text-align: left; color: #8fa3b8; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.4rem 0.75rem; border-bottom: 1px solid #1e2738; }
+    .params-table td { padding: 0.4rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.04); color: #c5d4e0; vertical-align: top; }
+    .params-table td:first-child { font-family: 'SF Mono', monospace; color: #c9a84c; white-space: nowrap; }
+    .params-table td:nth-child(2) { color: #4a90d9; font-size: 0.78rem; }
+    code { font-family: 'SF Mono', monospace; background: rgba(255,255,255,0.06); padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.85em; color: #c9a84c; }
+    pre { background: #0b1219; border: 1px solid #1e2738; border-radius: 8px; padding: 1rem; font-family: 'SF Mono', monospace; font-size: 0.8rem; overflow-x: auto; margin-bottom: 1rem; color: #c5d4e0; line-height: 1.5; }
+    .auth-box { background: rgba(201,168,76,0.07); border: 1px solid rgba(201,168,76,0.25); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; font-size: 0.88rem; color: #c5d4e0; }
+    .badge { display: inline-block; font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 4px; text-transform: uppercase; margin-left: 0.4rem; vertical-align: middle; }
+    .badge-required { background: rgba(245,101,101,0.15); color: #f56565; }
+    .badge-optional { background: rgba(255,255,255,0.08); color: #8fa3b8; }
+    .section-intro { color: #8fa3b8; font-size: 0.88rem; margin-bottom: 1.25rem; line-height: 1.6; }
+    hr { border: none; border-top: 1px solid #1e2738; margin: 0.5rem 0; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <nav class="sidebar">
+    <h1>DarkLion API</h1>
+    <div class="version">v1.0 · darklion.ai</div>
+    <div class="sidebar-section">Getting Started</div>
+    <a href="#authentication">Authentication</a>
+    <a href="#base-url">Base URL</a>
+    <a href="#errors">Errors</a>
+    <div class="sidebar-section">Viktor Context</div>
+    <a href="#viktor-context">GET /api/viktor/context</a>
+    <div class="sidebar-section">Relationships</div>
+    <a href="#relationships-list">List relationships</a>
+    <a href="#relationships-get">Get relationship</a>
+    <a href="#relationships-snapshot">Get snapshot</a>
+    <div class="sidebar-section">People</div>
+    <a href="#people-list">List people</a>
+    <a href="#people-get">Get person</a>
+    <a href="#people-update">Update person</a>
+    <div class="sidebar-section">Companies</div>
+    <a href="#companies-list">List companies</a>
+    <a href="#companies-get">Get company</a>
+    <div class="sidebar-section">Messages</div>
+    <a href="#messages-list">List threads</a>
+    <a href="#messages-reply">Reply to thread</a>
+    <a href="#messages-create">Create thread</a>
+    <div class="sidebar-section">Documents</div>
+    <a href="#docs-list">List documents</a>
+    <a href="#docs-move">Move document</a>
+    <a href="#docs-delete">Delete document</a>
+    <div class="sidebar-section">Pipelines</div>
+    <a href="#pipeline-jobs">List pipeline jobs</a>
+    <a href="#pipeline-move">Move job stage</a>
+    <div class="sidebar-section">Tax Deliveries</div>
+    <a href="#tax-list">List deliveries</a>
+    <a href="#tax-send">Send delivery</a>
+    <a href="#tax-summary">Get AI summary</a>
+    <div class="sidebar-section">Proposals</div>
+    <a href="#proposals-list">List proposals</a>
+    <a href="#proposals-stats">Get stats</a>
+  </nav>
+
+  <main class="content">
+    <h2 id="authentication">Authentication</h2>
+    <p class="section-intro">DarkLion APIs support two authentication methods: JWT tokens (for the web app) and API keys (for Viktor and external integrations). For Viktor, always use an API key.</p>
+
+    <div class="auth-box">
+      <strong style="color:#c9a84c;">API Key Authentication</strong><br>
+      Include your API key in the <code>Authorization</code> header as a Bearer token.<br><br>
+      <code>Authorization: Bearer dlk_your_api_key_here</code>
+    </div>
+
+    <p>API keys are generated in <strong>Settings → API Keys</strong>. Each key has full admin access to the firm's data. Keys start with <code>dlk_</code> and are shown only once at creation — store them securely.</p>
+
+    <h2 id="base-url">Base URL</h2>
+    <p>All API endpoints are relative to:</p>
+    <pre>https://darklion.ai</pre>
+    <p>Or your firm's custom subdomain if configured (e.g., <code>https://my.sentineltax.co</code>).</p>
+
+    <h2 id="errors">Errors</h2>
+    <p>The API uses standard HTTP status codes. Error responses return JSON:</p>
+    <pre>{ "error": "Human-readable error message" }</pre>
+    <table class="params-table">
+      <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>400</td><td>Bad request — missing or invalid parameters</td></tr>
+        <tr><td>401</td><td>Unauthorized — invalid or missing API key</td></tr>
+        <tr><td>403</td><td>Forbidden — you don't have access to this resource</td></tr>
+        <tr><td>404</td><td>Not found — resource doesn't exist</td></tr>
+        <tr><td>500</td><td>Server error — something went wrong on our end</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="viktor-context">Viktor Context</h2>
+    <p class="section-intro">The Viktor context endpoint is the primary tool for Viktor's morning briefings. It returns a complete snapshot of the firm's current state in a single request — pipeline status, urgent items, and everything that needs attention.</p>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/viktor/context</span></h3>
+    <p class="endpoint-desc">Returns a comprehensive snapshot of the firm for Viktor's daily briefing. No parameters required.</p>
+    <p><strong>Response fields:</strong></p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>firm_summary</td><td>object</td><td>Total counts: relationships, people, companies, open threads, MRR</td></tr>
+        <tr><td>pipeline.by_stage</td><td>object</td><td>Pipeline jobs grouped by stage name, each with entity/relationship info</td></tr>
+        <tr><td>pipeline.total_active</td><td>number</td><td>Total active pipeline jobs</td></tr>
+        <tr><td>urgent.unsigned_tax_returns</td><td>array</td><td>Tax returns sent but not yet signed, with days waiting</td></tr>
+        <tr><td>urgent.stalled_messages</td><td>array</td><td>Message threads with no staff reply for 48+ hours</td></tr>
+        <tr><td>urgent.open_proposals</td><td>array</td><td>Proposals in sent/viewed status</td></tr>
+        <tr><td>needs_attention.new_clients_no_pipeline</td><td>array</td><td>New relationships (last 30 days) with no pipeline job</td></tr>
+        <tr><td>needs_attention.expiring_engagements</td><td>array</td><td>Engagement letters expiring within 60 days</td></tr>
+        <tr><td>needs_attention.birthdays_this_month</td><td>array</td><td>Clients with birthdays this month</td></tr>
+        <tr><td>recent_activity</td><td>array</td><td>Tax delivery activity in the last 7 days</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="relationships-list">Relationships</h2>
+    <p class="section-intro">Relationships are the top-level client groupings. Each relationship can have multiple people and companies attached to it.</p>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/relationships</span></h3>
+    <p class="endpoint-desc">List all relationships for the firm. Supports search and filtering.</p>
+    <table class="params-table">
+      <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>search</td><td>string <span class="badge badge-optional">optional</span></td><td>Filter by relationship name</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="relationships-get"><span class="method method-get">GET</span> <span class="endpoint-path">/api/relationships/:id</span></h3>
+    <p class="endpoint-desc">Get a single relationship with all associated people and companies.</p>
+
+    <h3 id="relationships-snapshot"><span class="method method-get">GET</span> <span class="endpoint-path">/api/relationships/:id/snapshot</span></h3>
+    <p class="endpoint-desc">Get a rich snapshot of a relationship including recent tax deliveries, message threads, activity feed, and active engagement letters.</p>
+
+    <h2 id="people-list">People</h2>
+    <p class="section-intro">Individual people attached to relationships. People can be portal users, signers on tax returns, and message recipients.</p>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/people</span></h3>
+    <p class="endpoint-desc">List all people for the firm.</p>
+
+    <h3 id="people-get"><span class="method method-get">GET</span> <span class="endpoint-path">/api/people/:id</span></h3>
+    <p class="endpoint-desc">Get a single person with full details.</p>
+
+    <h3 id="people-update"><span class="method method-put">PUT</span> <span class="endpoint-path">/api/people/:id</span></h3>
+    <p class="endpoint-desc">Update a person's details. Send only the fields you want to update.</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>first_name</td><td>string</td><td>First name</td></tr>
+        <tr><td>last_name</td><td>string</td><td>Last name</td></tr>
+        <tr><td>email</td><td>string</td><td>Email address</td></tr>
+        <tr><td>phone</td><td>string</td><td>Phone number</td></tr>
+        <tr><td>notes</td><td>string</td><td>Internal staff notes</td></tr>
+        <tr><td>portal_enabled</td><td>boolean</td><td>Enable/disable portal access</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="companies-list">Companies</h2>
+    <p class="section-intro">Companies are business entities attached to relationships. Tax deliveries and documents are often associated with companies.</p>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/companies</span></h3>
+    <p class="endpoint-desc">List all companies for the firm.</p>
+
+    <h3 id="companies-get"><span class="method method-get">GET</span> <span class="endpoint-path">/api/companies/:id</span></h3>
+    <p class="endpoint-desc">Get a single company with full details including linked people.</p>
+
+    <h2 id="messages-list">Messages</h2>
+    <p class="section-intro">The messaging system uses threads. Each thread belongs to a person and contains a history of messages between staff and client.</p>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/messages</span></h3>
+    <p class="endpoint-desc">List message threads.</p>
+    <table class="params-table">
+      <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>person_id</td><td>number <span class="badge badge-optional">optional</span></td><td>Filter by person</td></tr>
+        <tr><td>status</td><td>string <span class="badge badge-optional">optional</span></td><td>open | closed</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="messages-reply"><span class="method method-post">POST</span> <span class="endpoint-path">/api/messages/:threadId/reply</span></h3>
+    <p class="endpoint-desc">Send a reply to an existing message thread.</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>body</td><td>string <span class="badge badge-required">required</span></td><td>Message body text</td></tr>
+        <tr><td>internal</td><td>boolean <span class="badge badge-optional">optional</span></td><td>If true, message is internal note only (not sent to client)</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="messages-create"><span class="method method-post">POST</span> <span class="endpoint-path">/api/messages</span></h3>
+    <p class="endpoint-desc">Create a new message thread.</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>person_id</td><td>number <span class="badge badge-required">required</span></td><td>Person to message</td></tr>
+        <tr><td>subject</td><td>string <span class="badge badge-required">required</span></td><td>Thread subject</td></tr>
+        <tr><td>body</td><td>string <span class="badge badge-required">required</span></td><td>Initial message body</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="docs-list">Documents</h2>
+    <p class="section-intro">Documents are stored in S3 and organized by owner (person or company), year, category (tax/other), and section (firm_uploaded or client_uploaded).</p>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/documents</span></h3>
+    <p class="endpoint-desc">List documents.</p>
+    <table class="params-table">
+      <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>owner_type</td><td>string <span class="badge badge-required">required</span></td><td>person | company</td></tr>
+        <tr><td>owner_id</td><td>number <span class="badge badge-required">required</span></td><td>ID of the person or company</td></tr>
+        <tr><td>year</td><td>string <span class="badge badge-optional">optional</span></td><td>Filter by tax year e.g. "2025"</td></tr>
+        <tr><td>folder_category</td><td>string <span class="badge badge-optional">optional</span></td><td>tax | other</td></tr>
+        <tr><td>folder_section</td><td>string <span class="badge badge-optional">optional</span></td><td>firm_uploaded | client_uploaded</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="docs-move"><span class="method method-put">PUT</span> <span class="endpoint-path">/api/documents/:id</span></h3>
+    <p class="endpoint-desc">Update document metadata including moving between folders.</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>display_name</td><td>string <span class="badge badge-optional">optional</span></td><td>Rename the document</td></tr>
+        <tr><td>year</td><td>string <span class="badge badge-optional">optional</span></td><td>Move to a different tax year folder</td></tr>
+        <tr><td>folder_section</td><td>string <span class="badge badge-optional">optional</span></td><td>firm_uploaded | client_uploaded</td></tr>
+        <tr><td>folder_category</td><td>string <span class="badge badge-optional">optional</span></td><td>tax | other</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="docs-delete"><span class="method method-delete">DELETE</span> <span class="endpoint-path">/api/documents/:id</span></h3>
+    <p class="endpoint-desc">Permanently delete a document from S3 and the database.</p>
+
+    <h2 id="pipeline-jobs">Pipelines</h2>
+    <p class="section-intro">Pipelines track workflow progress for clients. Each client entity (person or company) can have one or more pipeline jobs moving through stages.</p>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/pipelines/jobs</span></h3>
+    <p class="endpoint-desc">List active pipeline jobs. Returns jobs with their current stage, entity, and relationship info.</p>
+
+    <h3 id="pipeline-move"><span class="method method-put">PUT</span> <span class="endpoint-path">/api/pipelines/jobs/:id</span></h3>
+    <p class="endpoint-desc">Update a pipeline job — most commonly used to advance to the next stage.</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>current_stage_id</td><td>number <span class="badge badge-optional">optional</span></td><td>ID of the new stage to move the job to</td></tr>
+        <tr><td>status</td><td>string <span class="badge badge-optional">optional</span></td><td>active | complete | archived</td></tr>
+        <tr><td>title</td><td>string <span class="badge badge-optional">optional</span></td><td>Update job title</td></tr>
+      </tbody>
+    </table>
+    <p>To advance a job to the next stage, you need the stage ID. Get stages for a pipeline template with <code>GET /api/pipelines/templates/:id/stages</code>.</p>
+
+    <h2 id="tax-list">Tax Deliveries</h2>
+    <p class="section-intro">Tax deliveries are the end-to-end workflow for delivering a completed tax return to a client for review and e-signature.</p>
+
+    <p><strong>Delivery statuses:</strong> <code>draft</code> → <code>sent</code> → <code>approved</code> → <code>signed</code> → <code>complete</code>. If changes requested: <code>needs_changes</code>.</p>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/tax-deliveries</span></h3>
+    <p class="endpoint-desc">List tax deliveries for a company or person.</p>
+    <table class="params-table">
+      <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>company_id</td><td>number</td><td>Filter by company (use one of these)</td></tr>
+        <tr><td>person_id</td><td>number</td><td>Filter by person</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="tax-send"><span class="method method-post">POST</span> <span class="endpoint-path">/api/tax-deliveries/:id/send</span></h3>
+    <p class="endpoint-desc">Send a draft tax delivery to the client. This notifies signers via email and creates a portal message thread. Delivery must be in <code>draft</code> status.</p>
+
+    <h3 id="tax-summary"><span class="method method-get">GET</span> <span class="endpoint-path">/api/tax-deliveries/:id/summary</span></h3>
+    <p class="endpoint-desc">Get the AI-generated tax summary for a delivery (if generated).</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>status</td><td>string</td><td>none | processing | completed | error</td></tr>
+        <tr><td>data</td><td>object | null</td><td>Full ReportData object when completed (see Tax Summary Schema below)</td></tr>
+      </tbody>
+    </table>
+
+    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/api/tax-deliveries/:id/generate-summary</span></h3>
+    <p class="endpoint-desc">Trigger AI analysis of the attached PDF. Runs asynchronously — poll <code>/summary</code> for status. Requires a review document to be attached.</p>
+
+    <h2 id="proposals-list">Proposals</h2>
+    <p class="section-intro">Proposals are the engagement letter / service agreement workflow. Clients select a tier, provide their info, and e-sign the LOE.</p>
+
+    <p><strong>Proposal statuses:</strong> <code>draft</code> → <code>sent</code> → <code>viewed</code> → <code>accepted</code> → <code>signed</code></p>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/proposals</span></h3>
+    <p class="endpoint-desc">List all proposals for the firm. Supports filtering by status.</p>
+
+    <h3 id="proposals-stats"><span class="method method-get">GET</span> <span class="endpoint-path">/api/proposals/stats</span></h3>
+    <p class="endpoint-desc">Get proposal statistics: total, sent, accepted/signed, and signed MRR.</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>total</td><td>number</td><td>Total proposals</td></tr>
+        <tr><td>sent</td><td>number</td><td>Proposals in sent status</td></tr>
+        <tr><td>accepted_signed</td><td>number</td><td>Proposals accepted or signed</td></tr>
+        <tr><td>mrr</td><td>number</td><td>Monthly recurring revenue from signed engagements</td></tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid #1e2738;color:#8fa3b8;font-size:0.82rem;">
+      DarkLion API v1.0 · Sentinel Wealth &amp; Tax · <a href="mailto:support@sentineladvisors.co" style="color:#c9a84c;">support@sentineladvisors.co</a>
+    </div>
+  </main>
+</div>
+</body>
+</html>

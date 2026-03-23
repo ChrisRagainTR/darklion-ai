@@ -16,12 +16,32 @@
   .instructions ol { padding-left: 1.25rem; }
   .instructions li { margin-bottom: 0.35rem; }
   .instructions code { background: rgba(255,255,255,0.07); padding: 0.1em 0.35em; border-radius: 3px; font-size: 0.85em; color: var(--text); }
+  /* Settings tabs */
+  .settings-tabs { display: flex; gap: 0.25rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border); }
+  .settings-tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 0.6rem 1rem; font-size: 0.88rem; font-weight: 600; color: var(--muted); cursor: pointer; margin-bottom: -1px; transition: color 0.15s, border-color 0.15s; }
+  .settings-tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+  .settings-tab-btn:hover:not(.active) { color: var(--text); }
+  .settings-tab-panel { display: none; }
+  .settings-tab-panel.active { display: block; }
+  /* API token table */
+  .token-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; margin-top: 1rem; }
+  .token-table th { text-align: left; padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .token-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--text); vertical-align: middle; }
+  .token-table td:first-child { font-weight: 600; }
+  .token-copy-box { background: var(--charcoal); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.85rem; font-family: monospace; font-size: 0.78rem; color: var(--gold); word-break: break-all; margin: 0.75rem 0; }
+  .token-warning { background: rgba(245,101,101,0.08); border: 1px solid rgba(245,101,101,0.25); border-radius: 6px; padding: 0.5rem 0.85rem; font-size: 0.8rem; color: #f56565; margin-bottom: 0.75rem; }
 </style>
 
 <div class="settings-wrap">
-  <h1 style="font-size:1.35rem;font-weight:800;margin-bottom:2rem;">⚙️ Settings</h1>
+  <h1 style="font-size:1.35rem;font-weight:800;margin-bottom:1.5rem;">⚙️ Settings</h1>
+
+  <div class="settings-tabs">
+    <button class="settings-tab-btn active" onclick="switchTab('domains')">🌐 Custom Domains</button>
+    <button class="settings-tab-btn" onclick="switchTab('api-keys')">🔑 API Keys</button>
+  </div>
 
   <!-- ============ CUSTOM DOMAINS ============ -->
+  <div class="settings-tab-panel active" id="tab-domains">
   <div class="settings-section">
     <h2>🌐 Custom Domains</h2>
     <p>Let clients access proposals and the portal via your own domain (e.g. <code>my.sentineltax.co</code>) instead of darklion.ai.</p>
@@ -45,6 +65,48 @@
           <li><strong>Click "Check Verification"</strong> once your DNS records have propagated. Usually under 30 minutes.</li>
           <li>Once verified, all proposal links for your firm will automatically use your custom domain. ✅</li>
         </ol>
+      </div>
+    </div>
+  </div>
+  </div><!-- end tab-domains -->
+
+  <!-- ============ API KEYS ============ -->
+  <div class="settings-tab-panel" id="tab-api-keys">
+    <div class="settings-section">
+      <h2>🔑 API Keys</h2>
+      <p>API keys allow external services (like Viktor) to access all DarkLion APIs with full admin access. Store keys securely — they are shown only once.</p>
+
+      <button class="btn btn-gold" onclick="openNewTokenModal()" style="margin-bottom:1rem;">+ Generate New Key</button>
+
+      <div id="api-tokens-list">
+        <div class="loading-state"><div class="loading-spinner"></div></div>
+      </div>
+    </div>
+  </div><!-- end tab-api-keys -->
+
+</div>
+
+<!-- New Token Modal -->
+<div class="modal-overlay" id="new-token-modal" style="display:none;" onclick="if(event.target===this)closeNewTokenModal()">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title">Generate API Key</div>
+      <button class="modal-close" onclick="closeNewTokenModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="new-token-form-area">
+        <label class="form-label">Key Name <span style="color:var(--muted);font-weight:400;">(e.g. Viktor, Zapier)</span></label>
+        <input type="text" class="form-control" id="new-token-name" placeholder="Viktor" maxlength="60" autocomplete="off">
+        <div style="margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+          <button class="btn btn-outline" onclick="closeNewTokenModal()">Cancel</button>
+          <button class="btn btn-gold" onclick="submitNewToken()">Generate</button>
+        </div>
+      </div>
+      <div id="new-token-reveal-area" style="display:none;">
+        <div class="token-warning">⚠️ This token will not be shown again. Copy it now and store it somewhere safe.</div>
+        <div class="token-copy-box" id="new-token-value"></div>
+        <button class="btn btn-outline" style="width:100%;margin-bottom:0.75rem;" onclick="copyNewToken()">📋 Copy Token</button>
+        <button class="btn btn-gold" style="width:100%;" onclick="closeNewTokenModal()">Done</button>
       </div>
     </div>
   </div>
@@ -203,6 +265,95 @@ async function deleteDomain(id, domain) {
   if (!res) return;
   if (res.ok) { toast('Domain removed'); loadDomains(); }
   else { const err = await res.json(); toast(err.error || 'Failed to remove domain', true); }
+}
+
+// Settings tab switching
+function switchTab(tab) {
+  document.querySelectorAll('.settings-tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', btn.getAttribute('onclick').includes(`'${tab}'`));
+  });
+  document.querySelectorAll('.settings-tab-panel').forEach(panel => {
+    panel.classList.toggle('active', panel.id === `tab-${tab}`);
+  });
+  if (tab === 'api-keys') loadApiTokens();
+}
+
+// ==================== API TOKENS ====================
+async function loadApiTokens() {
+  const res = await apiFetch('/api-tokens');
+  if (!res) return;
+  const tokens = await res.json();
+  const el = document.getElementById('api-tokens-list');
+  if (!tokens.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0;">No API keys yet. Generate one above.</div>';
+    return;
+  }
+  el.innerHTML = `
+    <table class="token-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Key Prefix</th>
+          <th>Last Used</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tokens.map(t => `
+          <tr id="token-row-${t.id}">
+            <td>${escHtml(t.name)}</td>
+            <td><code style="font-family:monospace;font-size:0.82rem;">${escHtml(t.token_prefix)}</code></td>
+            <td style="color:var(--muted);">${t.last_used_at ? new Date(t.last_used_at).toLocaleDateString() : 'Never'}</td>
+            <td style="color:var(--muted);">${new Date(t.created_at).toLocaleDateString()}</td>
+            <td><button class="btn btn-danger btn-xs" onclick="revokeToken(${t.id})">Revoke</button></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function openNewTokenModal() {
+  document.getElementById('new-token-name').value = '';
+  document.getElementById('new-token-form-area').style.display = '';
+  document.getElementById('new-token-reveal-area').style.display = 'none';
+  document.getElementById('new-token-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('new-token-name').focus(), 50);
+}
+
+function closeNewTokenModal() {
+  document.getElementById('new-token-modal').style.display = 'none';
+  loadApiTokens();
+}
+
+async function submitNewToken() {
+  const name = document.getElementById('new-token-name').value.trim();
+  if (!name) return toast('Enter a name for this key', true);
+  const res = await apiFetch('/api-tokens', { method: 'POST', body: JSON.stringify({ name }) });
+  if (!res) return;
+  if (!res.ok) { const err = await res.json(); return toast(err.error || 'Failed to create token', true); }
+  const data = await res.json();
+  document.getElementById('new-token-value').textContent = data.token;
+  document.getElementById('new-token-form-area').style.display = 'none';
+  document.getElementById('new-token-reveal-area').style.display = '';
+}
+
+function copyNewToken() {
+  const val = document.getElementById('new-token-value').textContent;
+  navigator.clipboard.writeText(val).then(() => toast('Token copied!')).catch(() => toast('Copy failed', true));
+}
+
+async function revokeToken(id) {
+  if (!confirm('Revoke this API key? Any integrations using it will stop working immediately.')) return;
+  const res = await apiFetch(`/api-tokens/${id}`, { method: 'DELETE' });
+  if (!res) return;
+  if (res.ok) { toast('API key revoked'); loadApiTokens(); }
+  else { const err = await res.json(); toast(err.error || 'Failed to revoke key', true); }
 }
 
 // Init

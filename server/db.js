@@ -706,6 +706,19 @@ async function initDB() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_firm_domains_domain ON firm_domains(domain);
+
+    -- ===================== API TOKENS =====================
+    CREATE TABLE IF NOT EXISTS api_tokens (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+      name TEXT NOT NULL DEFAULT 'API Token',
+      token_hash TEXT NOT NULL UNIQUE,
+      token_prefix TEXT NOT NULL,
+      last_used_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS api_tokens_by_firm ON api_tokens(firm_id);
+    CREATE INDEX IF NOT EXISTS api_tokens_by_hash ON api_tokens(token_hash);
   `);
 }
 

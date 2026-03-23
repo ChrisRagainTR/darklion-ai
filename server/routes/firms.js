@@ -660,5 +660,60 @@ router.delete('/domains/:id', requireFirm, async (req, res) => {
   }
 });
 
+// ===================== API TOKENS =====================
+
+// GET /firms/api-tokens — list tokens for current firm
+router.get('/api-tokens', requireFirm, async (req, res) => {
+  const firmId = req.firm.id;
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, name, token_prefix, last_used_at, created_at FROM api_tokens WHERE firm_id = $1 ORDER BY created_at DESC',
+      [firmId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch tokens' });
+  }
+});
+
+// POST /firms/api-tokens — generate a new token
+router.post('/api-tokens', requireFirm, async (req, res) => {
+  const firmId = req.firm.id;
+  const { name } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Token name is required' });
+
+  // Generate token: dlk_<32 random bytes hex>
+  const rawToken = 'dlk_' + crypto.randomBytes(32).toString('hex');
+  const hash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const prefix = rawToken.substring(0, 12) + '...';
+
+  try {
+    const { rows } = await pool.query(
+      'INSERT INTO api_tokens (firm_id, name, token_hash, token_prefix) VALUES ($1, $2, $3, $4) RETURNING id, name, token_prefix, created_at',
+      [firmId, name.trim(), hash, prefix]
+    );
+    // Return the raw token ONCE — it is never stored again
+    res.status(201).json({ ...rows[0], token: rawToken });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create token' });
+  }
+});
+
+// DELETE /firms/api-tokens/:id — revoke a token
+router.delete('/api-tokens/:id', requireFirm, async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query(
+      'DELETE FROM api_tokens WHERE id = $1 AND firm_id = $2 RETURNING id',
+      [parseInt(id), firmId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Token not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to revoke token' });
+  }
+});
+
 module.exports = router;
 module.exports.auditLog = auditLog;
