@@ -155,28 +155,9 @@ app.use(express.static(publicDir, {
 
 // --- Public page routes ---
 
-// Custom domain root — show branded landing with staff + client options
+// Custom domain root — redirect straight to advisor login
 app.get('/', (req, res, next) => {
-  if (req.domainFirm) {
-    const firm = req.domainFirm;
-    return res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${firm.name}</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1923;color:#e8edf2;min-height:100vh;display:flex;align-items:center;justify-content:center;}
-.wrap{text-align:center;padding:2rem;max-width:400px;width:100%;}
-.logo{width:64px;height:64px;object-fit:contain;margin-bottom:1.5rem;}
-h1{font-size:1.4rem;font-weight:800;margin-bottom:0.4rem;}
-.sub{color:#8fa3b8;font-size:0.88rem;margin-bottom:2.5rem;}
-.btn{display:block;width:100%;padding:0.9rem;border-radius:10px;font-size:0.95rem;font-weight:700;text-decoration:none;margin-bottom:0.85rem;transition:opacity 0.15s;}
-.btn-gold{background:#c9a84c;color:#0f1923;}
-.btn-outline{border:1px solid rgba(255,255,255,0.15);color:#e8edf2;background:transparent;}
-.btn:hover{opacity:0.85;}
-</style></head><body><div class="wrap">
-<img src="/sentinel-favicon.png" class="logo" alt="${firm.name}">
-<h1>${firm.name}</h1>
-<p class="sub">Welcome. Please sign in to continue.</p>
-<a href="/client-login" class="btn btn-gold">Client Portal →</a>
-<a href="/login" class="btn btn-outline">Staff Sign In</a>
-</div></body></html>`);
-  }
+  if (req.domainFirm) return res.redirect('/login');
   next();
 });
 
