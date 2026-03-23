@@ -211,6 +211,15 @@
   .year-folder.open .yr-chevron { transform: rotate(180deg); }
   .year-body { display: none; border-top: 1px solid var(--border); }
   .year-folder.open .year-body { display: block; }
+  .cat-folder { margin-bottom: 0.35rem; border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; }
+  .cat-folder-header { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.7rem; cursor: pointer; user-select: none; background: rgba(201,168,76,0.04); border-left: 3px solid var(--gold); }
+  .cat-folder-header:hover { background: rgba(201,168,76,0.08); }
+  .cat-folder-label { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+  .cat-folder-meta { font-size: 0.72rem; color: var(--muted); }
+  .cat-chevron { color: var(--muted); font-size: 0.75rem; transition: transform 0.15s; }
+  .cat-folder.open .cat-chevron { transform: rotate(180deg); }
+  .cat-folder-body { display: none; padding: 0.4rem 0.5rem; }
+  .cat-folder.open .cat-folder-body { display: block; }
   .cat-section-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 0.6rem 1.1rem 0.3rem; font-weight: 700; border-left: 3px solid var(--gold); background: rgba(201,168,76,0.04); }
   .doc-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.1rem; border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
   .doc-row:hover { background: rgba(255,255,255,0.03); }
@@ -1228,9 +1237,12 @@
             const statusBadge = isClientSection
               ? `<span class="doc-badge doc-badge-client">✓ Uploaded</span>`
               : `<span class="doc-badge doc-badge-viewed">✓ Delivered</span>`;
-            return `<div style="margin-bottom:0.5rem;">
-              <div style="font-size:0.82rem;font-weight:700;color:var(--text);padding:0.4rem 0.5rem;margin-bottom:0.25rem;border-left:3px solid var(--gold);background:rgba(201,168,76,0.06);">${cat.icon} ${cat.label} <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${files.length})</span></div>
-              <div style="padding-left:0.5rem;">
+            return `<div class="cat-folder${files.length > 0 ? ' open' : ''}">
+              <div class="cat-folder-header" onclick="this.closest('.cat-folder').classList.toggle('open')">
+                <span class="cat-folder-label">${cat.icon} ${cat.label}</span>
+                <span style="display:flex;align-items:center;gap:0.5rem;"><span class="cat-folder-meta">${files.length} file${files.length !== 1 ? 's' : ''}</span><span class="cat-chevron">▼</span></span>
+              </div>
+              <div class="cat-folder-body">
                 ${files.length === 0
                   ? `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`
                   : files.map(f => `<div class="doc-row" data-docid="${f.id}">
@@ -1250,8 +1262,7 @@
                       </div>
                     </div>`).join('')}
               </div>
-            </div>`;
-          }).join('')}
+            </div>`;  // close cat-folder
         </div>
       </div>`;
     }
