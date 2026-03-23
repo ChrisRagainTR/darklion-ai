@@ -365,6 +365,16 @@
       </tbody>
     </table>
 
+    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/api/viktor-chat/briefing-for/:userId</span></h3>
+    <p class="endpoint-desc">Viktor uses this to push a personalized morning briefing into a specific staff member's chat session. Accepts API token auth — Viktor can call this with his <code>dlk_</code> token. Get user IDs from <code>GET /api/staff</code>. Only generates once per day per user; subsequent calls return the cached briefing.</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>userId (path)</td><td>number <span class="badge badge-required">required</span></td><td>firm_users.id of the staff member to brief</td></tr>
+      </tbody>
+    </table>
+    <p>Response: <code>{ ok, user, messages, already_generated }</code></p>
+
     <h3 id="viktor-message"><span class="method method-post">POST</span> <span class="endpoint-path">/api/viktor-chat/message</span></h3>
     <p class="endpoint-desc">Send a message to Viktor. Viktor receives the full current firm context plus the last 20 messages of conversation history on every call, then responds via Claude Haiku. Response is stored in the session.</p>
     <table class="params-table">

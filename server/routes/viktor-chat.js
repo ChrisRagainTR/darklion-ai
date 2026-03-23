@@ -250,4 +250,76 @@ function buildContextSummary(ctx) {
   return summary;
 }
 
+// POST /api/viktor-chat/briefing-for/:userId — Viktor pushes a briefing into a specific staff member's session
+// Accepts API token auth (Viktor can call this with his dlk_ token)
+// userId is the firm_users.id of the staff member to brief
+router.post('/briefing-for/:userId', async (req, res) => {
+  const firmId = req.firm.id;
+  const targetUserId = parseInt(req.params.userId);
+  if (!targetUserId) return res.status(400).json({ error: 'userId is required' });
+
+  try {
+    // Verify the target user belongs to this firm
+    const { rows: userRows } = await pool.query(
+      'SELECT id, name FROM firm_users WHERE id = $1 AND firm_id = $2 AND accepted_at IS NOT NULL',
+      [targetUserId, firmId]
+    );
+    if (!userRows[0]) return res.status(404).json({ error: 'Staff user not found' });
+    const targetUser = userRows[0];
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // Check if already generated today for this user
+    const { rows: existing } = await pool.query(
+      'SELECT * FROM viktor_sessions WHERE firm_id = $1 AND user_id = $2 AND session_date = $3',
+      [firmId, targetUserId, today]
+    );
+    if (existing[0]?.briefing_generated) {
+      return res.json({ already_generated: true, messages: existing[0].messages, user: targetUser.name });
+    }
+
+    // Fetch firm context
+    const contextRes = await fetch(`http://localhost:${process.env.PORT || 3000}/api/viktor/context`, {
+      headers: { 'Authorization': req.headers.authorization }
+    });
+    const context = contextRes.ok ? await contextRes.json() : {};
+    const contextSummary = buildContextSummary(context);
+
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+
+    const client = new Anthropic({ apiKey });
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1500,
+      system: VIKTOR_SYSTEM_PROMPT,
+      messages: [{
+        role: 'user',
+        content: `${greeting}, ${targetUser.name}. Generate a personalized daily briefing for today (${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}).\n\nYou are briefing: ${targetUser.name}\n\nCurrent firm data:\n${contextSummary}\n\nProvide a concise, actionable morning briefing with prioritized tasks for ${targetUser.name}. Be specific — use real client names and numbers from the data above.`
+      }]
+    });
+
+    const briefingText = response.content[0]?.text || 'Unable to generate briefing.';
+    const messages = [
+      { role: 'assistant', content: briefingText, timestamp: new Date().toISOString() }
+    ];
+
+    await pool.query(
+      `INSERT INTO viktor_sessions (firm_id, user_id, session_date, messages, briefing_generated)
+       VALUES ($1, $2, $3, $4, TRUE)
+       ON CONFLICT (firm_id, user_id, session_date)
+       DO UPDATE SET messages = $4, briefing_generated = TRUE, updated_at = NOW()`,
+      [firmId, targetUserId, today, JSON.stringify(messages)]
+    );
+
+    res.json({ ok: true, user: targetUser.name, messages });
+  } catch (err) {
+    console.error('[viktor-chat] POST /briefing-for error:', err);
+    res.status(500).json({ error: err.message || 'Failed to generate briefing' });
+  }
+});
+
 module.exports = router;
