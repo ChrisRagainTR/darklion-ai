@@ -173,7 +173,7 @@ h1{font-size:1.4rem;font-weight:800;margin-bottom:0.4rem;}
 <img src="/sentinel-favicon.png" class="logo" alt="${firm.name}">
 <h1>${firm.name}</h1>
 <p class="sub">Welcome. Please sign in to continue.</p>
-<a href="/portal-login" class="btn btn-gold">Client Portal →</a>
+<a href="/client-login" class="btn btn-gold">Client Portal →</a>
 <a href="/login" class="btn btn-outline">Staff Sign In</a>
 </div></body></html>`);
   }
@@ -335,15 +335,17 @@ app.use('/portal-auth', portalAuthRouter);
 
 // Portal HTML pages (public — must come BEFORE the requirePortal middleware)
 app.get('/portal', (req, res) => res.sendFile(path.join(publicDir, 'portal.html')));
-app.get('/portal-login', (req, res) => {
-  // Serve portal-login — inject firm context if on custom domain
+// /client-login is canonical; /portal-login kept as alias for backwards compatibility
+function serveClientLogin(req, res) {
   const html = require('fs').readFileSync(require('path').join(__dirname, '../public/portal-login.html'), 'utf8');
   if (req.domainFirm) {
     const firmScript = `<script>window.__FIRM__ = ${JSON.stringify({ name: req.domainFirm.name, id: req.domainFirm.id })};</script>`;
     return res.send(firmScript + html);
   }
   res.send(html);
-});
+}
+app.get('/client-login', serveClientLogin);
+app.get('/portal-login', serveClientLogin); // alias — don't break existing links
 
 // Protected portal API routes (sub-paths like /portal/me, /portal/documents, etc.)
 app.use('/portal', requirePortal, apiLimiter, portalRouter);
