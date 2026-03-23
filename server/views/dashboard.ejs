@@ -11,6 +11,8 @@
   </script>
 
 <style>
+  /* Hide floating chat button on dashboard — full chat panel is already here */
+  #agent-float-btn, #agent-float-panel { display: none !important; }
     .overview-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; cursor: pointer; transition: all 0.15s; }
     .overview-card:hover { border-color: var(--gold); transform: translateY(-1px); }
     .overview-card h3 { font-size: 0.82rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text); }
