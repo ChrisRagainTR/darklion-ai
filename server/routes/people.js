@@ -243,6 +243,7 @@ router.put('/:id', async (req, res) => {
 
     // ── Bidirectional Stanford Tax URL sync ──
     // If the URL was explicitly set (including cleared), sync it to the spouse too
+    // Check both directions: this person's spouse_id AND anyone who has this person as their spouse
     if (stanford_tax_url !== undefined) {
       const spouseId = updated.spouse_id;
       if (spouseId) {
@@ -251,6 +252,11 @@ router.put('/:id', async (req, res) => {
           [stanford_tax_url || null, spouseId, firmId]
         );
       }
+      // Also sync to anyone who lists this person as their spouse (reverse link)
+      await pool.query(
+        'UPDATE people SET stanford_tax_url = $1, updated_at = NOW() WHERE spouse_id = $2 AND firm_id = $3',
+        [stanford_tax_url || null, id, firmId]
+      );
     }
 
     res.json(sanitizePerson(updated));
