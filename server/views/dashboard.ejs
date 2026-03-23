@@ -551,8 +551,8 @@
           <!-- Unsigned tax returns -->
           <div class="dash-intel-card">
             <div class="dash-intel-header">
-              <span class="dash-intel-title">📄 Unsigned Returns</span>
-              <span class="dash-intel-badge red" id="badge-unsigned">0</span>
+              <span class="dash-intel-title" style="cursor:pointer;" onclick="showAllUnsigned()">📄 Unsigned Returns</span>
+              <span class="dash-intel-badge red" id="badge-unsigned" style="cursor:pointer;" onclick="showAllUnsigned()">0</span>
             </div>
             <div id="list-unsigned"><div class="dash-intel-empty">Loading…</div></div>
           </div>
@@ -744,18 +744,43 @@
       }
     }
 
+    let _allUnsignedReturns = [];
+
     function renderUnsigned(items) {
+      _allUnsignedReturns = items;
       setBadge('badge-unsigned', items.length);
       const el = document.getElementById('list-unsigned');
       if (!items.length) { el.innerHTML = '<div class="dash-intel-empty">✅ All returns signed</div>'; return; }
-      el.innerHTML = items.slice(0,5).map(r => {
+      const show = items.slice(0, 6);
+      let html = show.map(r => {
         const name = r.company_name || r.person_name || 'Unknown';
-        const url = r.company_id ? `/crm/company/${r.company_id}` : (r.relationship_id ? `/crm/relationships/${r.relationship_id}` : '#');
-        return `<div class="dash-intel-row" onclick="window.location='${url}'">
-          <div><div class="dash-intel-name">${esc(name)}</div><div class="dash-intel-sub">${esc(r.tax_year||'')} · ${r.days_waiting}d waiting</div></div>
-          <span class="dash-intel-tag" style="background:rgba(245,101,101,0.12);color:var(--red);">Unsigned</span>
-        </div>`;
+        const url = r.company_id ? '/crm/company/' + r.company_id : (r.relationship_id ? '/crm/relationship/' + r.relationship_id : '#');
+        return '<div class="dash-intel-row" onclick="window.location=\'' + url + '\'" style="cursor:pointer;">' +
+          '<div><div class="dash-intel-name">' + esc(name) + '</div><div class="dash-intel-sub">' + esc(r.tax_year||'') + ' · ' + r.days_waiting + 'd waiting</div></div>' +
+          '<span class="dash-intel-tag" style="background:rgba(245,101,101,0.12);color:var(--red);">Unsigned</span>' +
+          '</div>';
       }).join('');
+      if (items.length > 6) {
+        html += '<div class="dash-intel-row" onclick="showAllUnsigned()" style="cursor:pointer;justify-content:center;">' +
+          '<span style="font-size:0.78rem;color:var(--gold);font-weight:600;">Show all ' + items.length + ' unsigned returns →</span>' +
+          '</div>';
+      }
+      el.innerHTML = html;
+    }
+
+    function showAllUnsigned() {
+      const modal = document.getElementById('unsigned-all-modal');
+      if (!modal) return;
+      const body = document.getElementById('unsigned-all-body');
+      body.innerHTML = _allUnsignedReturns.map(function(r) {
+        const name = r.company_name || r.person_name || 'Unknown';
+        const url = r.company_id ? '/crm/company/' + r.company_id : (r.relationship_id ? '/crm/relationship/' + r.relationship_id : '#');
+        return '<div class="dash-intel-row" onclick="window.location=\'' + url + '\'" style="cursor:pointer;">' +
+          '<div><div class="dash-intel-name">' + esc(name) + '</div><div class="dash-intel-sub">' + esc(r.tax_year||'') + ' · ' + r.days_waiting + 'd waiting · ' + esc(r.relationship_name||'') + '</div></div>' +
+          '<span class="dash-intel-tag" style="background:rgba(245,101,101,0.12);color:var(--red);">Unsigned</span>' +
+          '</div>';
+      }).join('');
+      modal.classList.remove('hidden');
     }
 
     function renderStalled(items) {
@@ -2951,5 +2976,22 @@
       if (_deepSection) showSection(_deepSection, null);
     });
   </script>
+
+<!-- Unsigned Returns — Show All Modal -->
+<div class="modal-overlay hidden" id="unsigned-all-modal" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:600px;padding:0;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,rgba(245,101,101,0.15),rgba(245,101,101,0.05));padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-weight:800;font-size:1rem;">📄 Unsigned Tax Returns</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem;">All returns sent but not yet signed</div>
+      </div>
+      <button onclick="document.getElementById('unsigned-all-modal').classList.add('hidden')" style="background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div id="unsigned-all-body" style="max-height:65vh;overflow-y:auto;padding:0.25rem 0;"></div>
+    <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('unsigned-all-modal').classList.add('hidden')">Close</button>
+    </div>
+  </div>
+</div>
 
 <%- include('partials/shell-close') %>

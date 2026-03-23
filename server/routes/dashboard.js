@@ -53,7 +53,7 @@ router.get('/intel', async (req, res) => {
             WHERE tds.delivery_id = td.id AND tds.signed_at IS NOT NULL
           )
         ORDER BY td.updated_at ASC
-        LIMIT 10
+        LIMIT 50
       `, [firmId]).catch(() => ({ rows: [] })),
 
       // 2. Stalled messages (open, last message from client, no staff reply 48h+)
