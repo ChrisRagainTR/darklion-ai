@@ -196,8 +196,18 @@ app.get('/api/config', (req, res) => {
 
 // --- Firms routes (register/login/invite-lookup are public; protected routes use requireFirm internally) ---
 app.use('/firms', firmsRouter);
-// Staff list also accessible under /api/staff for Viktor
-app.use('/api/staff', requireFirm, apiLimiter, (req, res, next) => { req.url = '/staff'; firmsRouter(req, res, next); });
+// Staff list — standalone route for Viktor (no double requireFirm)
+const { pool: _pool } = require('./db');
+app.get('/api/staff', requireFirm, apiLimiter, async (req, res) => {
+  try {
+    const { rows } = await _pool.query(
+      `SELECT id, name, display_name, email, role, last_login_at, created_at
+       FROM firm_users WHERE firm_id = $1 AND accepted_at IS NOT NULL ORDER BY name ASC`,
+      [req.firm.id]
+    );
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch staff' }); }
+});
 
 // --- Auth (QBO/Gusto OAuth callbacks — public) ---
 app.use('/auth', authRouter);

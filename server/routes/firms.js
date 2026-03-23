@@ -718,7 +718,7 @@ router.delete('/api-tokens/:id', requireFirm, async (req, res) => {
 // ===================== STAFF LIST (for Viktor) =====================
 
 // GET /firms/staff — list all staff users for the firm
-router.get('/staff', requireFirm, async (req, res) => {
+router.get('/staff', async (req, res) => {
   const firmId = req.firm.id;
   try {
     const { rows } = await pool.query(
