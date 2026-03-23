@@ -396,13 +396,14 @@
         <div class="reply-box" id="comm-reply-box" style="display:none;">
           <div class="reply-box-controls">
             <label><input type="checkbox" id="comm-internal-toggle"> 🔒 Internal note</label>
+            <label id="comm-sms-toggle-wrap" style="display:none;"><input type="checkbox" id="comm-sms-toggle"> 📱 Send as Text</label>
             <div style="flex:1;"></div>
           </div>
           <textarea id="comm-reply-body" placeholder="Write a reply…" rows="3"></textarea>
           <div class="attach-chips" id="comm-attach-chips"></div>
           <input type="file" id="comm-attach-input" multiple style="display:none;" onchange="handleCommAttach(this.files)">
           <div class="reply-box-actions">
-            <button class="btn btn-gold btn-sm" onclick="commSendReply()">Send Reply</button>
+            <button class="btn btn-gold btn-sm" id="comm-send-reply-btn" onclick="commSendReply()">Send Reply</button>
             <button class="btn-attach" onclick="document.getElementById('comm-attach-input').click()">📎 Attach</button>
             <button class="btn btn-outline btn-sm" onclick="commResolve()">✅ Resolve</button>
           </div>
@@ -1746,6 +1747,11 @@
     document.getElementById('comm-no-thread').style.display = 'none';
     document.getElementById('comm-compose-view').style.display = 'none';
     document.getElementById('comm-reply-box').style.display = '';
+    // Show SMS toggle if person has a phone number on file
+    apiFetch(`/api/people/${personId}`).then(r=>r.json()).then(p => {
+      const wrap = document.getElementById('comm-sms-toggle-wrap');
+      if (wrap) wrap.style.display = p.phone ? '' : 'none';
+    }).catch(()=>{});
   }
   function commShowCompose() {
     document.getElementById('comm-no-thread').style.display = 'none';
@@ -1977,11 +1983,45 @@
     } catch(e) { alert('Failed to download attachment'); }
   }
 
+  // Wire SMS toggle to update button label
+  document.addEventListener('change', function(e) {
+    if (e.target.id === 'comm-sms-toggle') {
+      const btn = document.getElementById('comm-send-reply-btn');
+      if (btn) btn.textContent = e.target.checked ? '📱 Send Text' : 'Send Reply';
+    }
+    if (e.target.id === 'comm-internal-toggle' && e.target.checked) {
+      // Internal note can't be SMS
+      const smsToggle = document.getElementById('comm-sms-toggle');
+      if (smsToggle) smsToggle.checked = false;
+      const btn = document.getElementById('comm-send-reply-btn');
+      if (btn) btn.textContent = 'Send Reply';
+    }
+  });
+
   async function commSendReply() {
     const body = document.getElementById('comm-reply-body').value.trim();
     if (!commActiveThreadId) { toast('No thread selected', 'error'); return; }
     if (!body && commAttachFiles.length === 0) return;
     const isInternal = document.getElementById('comm-internal-toggle').checked;
+    const isSms = document.getElementById('comm-sms-toggle')?.checked && !isInternal;
+
+    if (isSms) {
+      // Send as SMS via Twilio
+      try {
+        const res = await apiFetch('/api/messages/sms', {
+          method: 'POST',
+          body: JSON.stringify({ person_id: personId, body, thread_id: commActiveThreadId })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to send SMS');
+        document.getElementById('comm-reply-body').value = '';
+        await loadThread(commActiveThreadId, true);
+        await loadThreads();
+        toast('Text message sent ✓');
+      } catch(e) { toast(e.message, 'error'); }
+      return;
+    }
+
     try {
       const fd = new FormData();
       fd.append('body', body);
@@ -1996,7 +2036,7 @@
       document.getElementById('comm-internal-toggle').checked = false;
       commAttachFiles = [];
       renderCommAttachChips();
-      await loadThread(commActiveThreadId, true); // silent — no spinner, append-only
+      await loadThread(commActiveThreadId, true);
       await loadThreads();
     } catch(e) { console.error('[comm] sendReply error:', e); toast('Failed to send reply: ' + e.message, 'error'); }
   }
