@@ -314,13 +314,10 @@ router.get('/stats', async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT
-        COUNT(*) AS total,
-        COUNT(*) FILTER (WHERE status = 'sent') AS sent,
-        COUNT(*) FILTER (WHERE status IN ('accepted','signed')) AS accepted_signed,
-        SUM(pe.monthly_price) FILTER (WHERE pe.status = 'signed') AS mrr
-       FROM proposals p
-       LEFT JOIN proposal_engagements pe ON pe.proposal_id = p.id
-       WHERE p.firm_id = $1`,
+        (SELECT COUNT(*) FROM proposals WHERE firm_id = $1) AS total,
+        (SELECT COUNT(*) FROM proposals WHERE firm_id = $1 AND status = 'sent') AS sent,
+        (SELECT COUNT(*) FROM proposals WHERE firm_id = $1 AND status IN ('accepted','signed')) AS accepted_signed,
+        (SELECT COALESCE(SUM(monthly_price), 0) FROM proposal_engagements WHERE firm_id = $1 AND status = 'signed') AS mrr`,
       [firmId]
     );
     res.json(rows[0]);
