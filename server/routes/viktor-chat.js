@@ -2,6 +2,7 @@
 const { Router } = require('express');
 const { pool } = require('../db');
 const Anthropic = require('@anthropic-ai/sdk');
+const { getFirmContext } = require('./viktor');
 
 const router = Router();
 
@@ -71,11 +72,8 @@ router.post('/briefing', async (req, res) => {
       return res.json({ already_generated: true, messages: existing[0].messages });
     }
 
-    // Fetch firm context
-    const contextRes = await fetch(`http://localhost:${process.env.PORT || 3000}/api/viktor/context`, {
-      headers: { 'Authorization': req.headers.authorization }
-    });
-    const context = contextRes.ok ? await contextRes.json() : {};
+    // Fetch firm context directly (no HTTP round-trip)
+    const context = await getFirmContext(firmId).catch(() => ({}));
 
     // Build briefing prompt
     const contextSummary = buildContextSummary(context);
@@ -140,10 +138,7 @@ router.post('/message', async (req, res) => {
     const history = session ? (session.messages || []) : [];
 
     // Fetch fresh context for every message (Viktor always has current data)
-    const contextRes = await fetch(`http://localhost:${process.env.PORT || 3000}/api/viktor/context`, {
-      headers: { 'Authorization': req.headers.authorization }
-    });
-    const context = contextRes.ok ? await contextRes.json() : {};
+    const context = await getFirmContext(firmId).catch(() => ({}));
     const contextSummary = buildContextSummary(context);
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -278,11 +273,8 @@ router.post('/briefing-for/:userId', async (req, res) => {
       return res.json({ already_generated: true, messages: existing[0].messages, user: targetUser.name });
     }
 
-    // Fetch firm context
-    const contextRes = await fetch(`http://localhost:${process.env.PORT || 3000}/api/viktor/context`, {
-      headers: { 'Authorization': req.headers.authorization }
-    });
-    const context = contextRes.ok ? await contextRes.json() : {};
+    // Fetch firm context directly (no HTTP round-trip)
+    const context = await getFirmContext(firmId).catch(() => ({}));
     const contextSummary = buildContextSummary(context);
 
     const hour = new Date().getHours();
