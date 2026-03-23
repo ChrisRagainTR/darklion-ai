@@ -508,6 +508,19 @@ router.post('/message', async (req, res) => {
         }
       },
       {
+        name: 'create_company',
+        description: 'Add a company to an existing relationship. Use this to add individual companies one at a time.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            relationship_id_or_name: { type: 'string', description: 'Relationship to add the company to' },
+            name: { type: 'string', description: 'Company name (e.g. Acme LLC)' },
+            entity_type: { type: 'string', description: 'Entity type: s_corp, c_corp, llc, partnership, sole_prop, trust, nonprofit, other' }
+          },
+          required: ['relationship_id_or_name', 'name']
+        }
+      },
+      {
         name: 'delete_company',
         description: 'Permanently delete a company record. Use to remove duplicates or incorrectly created records. WARNING: irreversible.',
         input_schema: {
@@ -552,7 +565,7 @@ router.post('/message', async (req, res) => {
       'create_tax_delivery', 'send_tax_delivery', 'create_proposal',
       'create_pipeline_job', 'close_pipeline_job', 'look_up_client',
       'draft_message', 'update_notes', 'send_portal_invite',
-      'move_company', 'move_person', 'delete_relationship', 'delete_person', 'delete_company'
+      'move_company', 'move_person', 'delete_relationship', 'delete_person', 'delete_company', 'create_company'
     ]);
 
     // ── Agentic loop — keep executing tools until Claude returns plain text ──
@@ -852,7 +865,7 @@ async function executeViktorTool(toolName, input, firmId, authHeader) {
       }
 
       let companyCreated = null;
-      if (input.company) {
+      if (input.company && input.company.name) {
         const realmId = `viktor-${firmId}-${Date.now()}`;
         const { rows: cRows } = await pool.query(
           `INSERT INTO companies (realm_id, firm_id, relationship_id, company_name, entity_type, access_token, refresh_token, token_expires_at)
@@ -1325,6 +1338,20 @@ async function executeViktorTool(toolName, input, firmId, authHeader) {
       return { ok: true, deleted: input.relationship_name, deleted_count: deletedCount, skipped: skipped.length > 0 ? skipped : undefined };
     }
 
+    // ── create_company ─────────────────────────────────────────────────────────
+    case 'create_company': {
+      if (!input.name || !input.name.trim()) throw new Error('Company name is required');
+      const rel = await resolveRelationship(input.relationship_id_or_name, firmId);
+      if (!rel) throw new Error(`Relationship "${input.relationship_id_or_name}" not found`);
+      const realmId = `viktor-${firmId}-${Date.now()}`;
+      const { rows } = await pool.query(
+        `INSERT INTO companies (realm_id, firm_id, relationship_id, company_name, entity_type, access_token, refresh_token, token_expires_at)
+         VALUES ($1, $2, $3, $4, $5, '', '', 0) RETURNING id, company_name`,
+        [realmId, firmId, rel.id, input.name.trim(), input.entity_type || 'other']
+      );
+      return { company_id: rows[0].id, company_name: rows[0].company_name, relationship_name: rel.name };
+    }
+
     // ── delete_person ──────────────────────────────────────────────────────────
     case 'delete_person': {
       let person;
@@ -1445,6 +1472,8 @@ function formatToolResult(toolName, input, result) {
       return `✅ Moved **${result.person_name}** to relationship **${result.moved_to}**.`;
     case 'delete_relationship':
       return `✅ Deleted relationship **${result.deleted}** (${result.deleted_count} removed).`;
+    case 'create_company':
+      return `✅ Created company **${result.company_name}** in **${result.relationship_name}**.`;
     case 'delete_person':
       return `✅ Deleted person **${result.deleted}** (ID ${result.id}).`;
     case 'delete_company':
