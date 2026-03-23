@@ -260,11 +260,11 @@ router.get('/messages', async (req, res) => {
   const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
 
   try {
-    // Get all active staff for the firm
+    // Get all active staff for the firm (include pending invites — show all team members)
     const { rows: staffRows } = await pool.query(
       `SELECT id, COALESCE(display_name, name, email) as name, email, avatar_url
        FROM firm_users
-       WHERE firm_id = $1 AND archived_at IS NULL AND accepted_at IS NOT NULL
+       WHERE firm_id = $1 AND archived_at IS NULL
        ORDER BY name`,
       [firmId]
     );

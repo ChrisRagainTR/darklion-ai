@@ -790,7 +790,9 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
 }
 
-loadInbox(true);
+// Show empty state immediately — no spinner on initial load
+document.getElementById('inboxList').innerHTML = '<div style="color:var(--muted);padding:1.5rem 1rem;font-size:0.85rem;">No threads. Use "+ New" to start a conversation.</div>';
+loadInbox(false);
 </script>
 
 <%- include('partials/shell-close') %>

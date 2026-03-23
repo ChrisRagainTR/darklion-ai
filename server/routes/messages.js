@@ -122,7 +122,7 @@ router.get('/staff-list', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT id, COALESCE(display_name, name, email) as name, email, avatar_url
        FROM firm_users
-       WHERE firm_id = $1 AND archived_at IS NULL AND accepted_at IS NOT NULL
+       WHERE firm_id = $1 AND archived_at IS NULL
        ORDER BY name`,
       [firmId]
     );

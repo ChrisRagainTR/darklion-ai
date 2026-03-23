@@ -912,7 +912,7 @@
       <div class="chat-layout">
         <!-- Left: staff list -->
         <div class="chat-contacts" id="chatContacts">
-          <div class="chat-empty-contacts" id="chatContactsEmpty" style="display:none;">Loading team…</div>
+          <div class="chat-empty-contacts" id="chatContactsEmpty" style="display:none;">No team members found.</div>
         </div>
         <!-- Right: conversation with selected staff member -->
         <div class="chat-main">
@@ -1931,7 +1931,7 @@
       _chatAllMessages = [];
       _renderedMsgIds = new Set();
       const container = document.getElementById('chatMessages');
-      if (container) container.innerHTML = '<div class="chat-empty" id="chatEmpty">Loading…</div>';
+      if (container) container.innerHTML = '<div class="chat-empty" id="chatEmpty">No messages yet. Send a message below to get started.</div>';
 
       loadMessages();
     }
