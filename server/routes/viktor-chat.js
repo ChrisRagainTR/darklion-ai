@@ -516,42 +516,90 @@ router.post('/message', async (req, res) => {
     let replyText = '';
     let pendingTool = null;
 
-    // Check if Claude wants to use a tool
-    const toolUse = response.content.find(c => c.type === 'tool_use');
-    const textBlock = response.content.find(c => c.type === 'text');
+    const autoExecTools = new Set([
+      'create_relationship', 'create_person', 'update_person', 'update_relationship',
+      'create_tax_delivery', 'send_tax_delivery', 'create_proposal',
+      'create_pipeline_job', 'close_pipeline_job', 'look_up_client',
+      'draft_message', 'update_notes', 'send_portal_invite',
+      'move_company', 'move_person', 'delete_relationship'
+    ]);
 
-    if (toolUse) {
-      const t = toolUse;
-      const autoExecTools = new Set([
-        'create_relationship', 'create_person', 'update_person', 'update_relationship',
-        'create_tax_delivery', 'send_tax_delivery', 'create_proposal',
-        'create_pipeline_job', 'close_pipeline_job', 'look_up_client',
-        'draft_message', 'update_notes', 'send_portal_invite',
-        'move_company', 'move_person', 'delete_relationship'
-      ]);
+    // ── Agentic loop — keep executing tools until Claude returns plain text ──
+    // Build Anthropic-format message history for multi-turn tool use
+    const anthropicMessages = recentHistory.map(m => ({
+      role: m.role === 'user' ? 'user' : 'assistant',
+      content: m.content || ''
+    }));
 
-      if (autoExecTools.has(t.name)) {
-        // Execute immediately — no confirmation needed for non-destructive/non-comms tools
+    let loopResponse = response;
+    const toolResultsLog = []; // accumulate formatted results for final reply
+    let loopCount = 0;
+    const MAX_LOOPS = 10; // safety limit
+
+    while (loopCount < MAX_LOOPS) {
+      loopCount++;
+      const toolUses = loopResponse.content.filter(c => c.type === 'tool_use');
+      const textBlock = loopResponse.content.find(c => c.type === 'text');
+
+      if (!toolUses.length) {
+        // No tools — final text response
+        replyText = textBlock?.text || loopResponse.content[0]?.text || 'Done.';
+        // Prepend any tool results we accumulated
+        if (toolResultsLog.length) {
+          replyText = toolResultsLog.join('\n') + (replyText ? '\n\n' + replyText : '');
+        }
+        break;
+      }
+
+      // Check if any tool requires confirmation
+      const confirmTool = toolUses.find(t => !autoExecTools.has(t.name));
+      if (confirmTool) {
+        // Stop loop, ask for confirmation
+        pendingTool = { name: confirmTool.name, input: confirmTool.input };
+        if (confirmTool.name === 'send_message') {
+          replyText = (toolResultsLog.length ? toolResultsLog.join('\n') + '\n\n' : '') +
+            `I'll send this message to **${confirmTool.input.person_name_or_id || 'the client'}**:\n\n> ${confirmTool.input.message || confirmTool.input.body}\n\nReply **yes** to confirm, or tell me to change it.`;
+        } else if (confirmTool.name === 'send_sms') {
+          replyText = (toolResultsLog.length ? toolResultsLog.join('\n') + '\n\n' : '') +
+            `I'll text ${confirmTool.input.person_name || 'the client'}:\n\n> ${confirmTool.input.body}\n\nReply **yes** to send.`;
+        } else if (confirmTool.name === 'move_pipeline_stage') {
+          replyText = (toolResultsLog.length ? toolResultsLog.join('\n') + '\n\n' : '') +
+            `I'll move ${confirmTool.input.client_name || 'this client'} to **${confirmTool.input.stage_name}**. Reply **yes** to confirm.`;
+        }
+        break;
+      }
+
+      // Execute ALL auto tools in this response (Claude may request multiple)
+      const toolResults = [];
+      for (const t of toolUses) {
         try {
           const execResult = await executeViktorTool(t.name, t.input, firmId, req.headers.authorization);
-          replyText = formatToolResult(t.name, t.input, execResult);
+          const formatted = formatToolResult(t.name, t.input, execResult);
+          toolResultsLog.push(formatted);
+          toolResults.push({ type: 'tool_result', tool_use_id: t.id, content: JSON.stringify(execResult) });
         } catch(e) {
           console.error(`[viktor tool error] ${t.name}:`, e.message, e.stack);
-          replyText = `❌ Error executing ${t.name}: ${e.message}`;
-        }
-      } else {
-        // Confirm-first tools (send_message, send_sms, move_pipeline_stage)
-        pendingTool = { name: t.name, input: t.input };
-        if (t.name === 'send_message') {
-          replyText = `I'll send this message to **${t.input.person_name_or_id || 'the client'}**:\n\n> ${t.input.message || t.input.body}\n\nReply **yes** to confirm, or tell me to change it.`;
-        } else if (t.name === 'send_sms') {
-          replyText = `I'll text ${t.input.person_name || 'the client'} (person #${t.input.person_id}):\n\n> ${t.input.body}\n\nReply **yes** to send, or tell me to change it.`;
-        } else if (t.name === 'move_pipeline_stage') {
-          replyText = `I'll move ${t.input.client_name || 'this client'} to **${t.input.stage_name}**. Reply **yes** to confirm.`;
+          const errMsg = `❌ Error executing ${t.name}: ${e.message}`;
+          toolResultsLog.push(errMsg);
+          toolResults.push({ type: 'tool_result', tool_use_id: t.id, content: errMsg, is_error: true });
         }
       }
-    } else {
-      replyText = textBlock?.text || response.content[0]?.text || 'I encountered an error. Please try again.';
+
+      // Feed results back to Claude and continue loop
+      anthropicMessages.push({ role: 'assistant', content: loopResponse.content });
+      anthropicMessages.push({ role: 'user', content: toolResults });
+
+      loopResponse = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1000,
+        system: await buildSystemPrompt(firmId),
+        tools: TOOLS,
+        messages: anthropicMessages
+      });
+    }
+
+    if (loopCount >= MAX_LOOPS && !replyText) {
+      replyText = toolResultsLog.join('\n') + '\n\n_(Reached maximum tool call limit)_';
     }
 
     const assistantMsg = { role: 'assistant', content: replyText, timestamp: new Date().toISOString(), from: 'claude', pending_tool: pendingTool };
