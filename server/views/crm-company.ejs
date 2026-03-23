@@ -60,6 +60,9 @@
   .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; }
   .table-wrap table { width: 100%; border-collapse: collapse; }
   .table-wrap th { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); background: var(--card); }
+  .table-wrap th:first-child, .table-wrap td:first-child { position: sticky; left: 0; background: var(--card); z-index: 2; box-shadow: 2px 0 6px rgba(0,0,0,0.25); }
+  .table-wrap tr:hover td:first-child { background: color-mix(in srgb, var(--card) 95%, var(--gold) 5%); }
+  .report-row-header td:first-child { background: rgba(201,168,76,0.06) !important; }
   .table-wrap td { padding: 0.7rem 1rem; font-size: 0.85rem; border-bottom: 1px solid rgba(201,168,76,0.07); vertical-align: middle; }
   .table-wrap tr:last-child td { border-bottom: none; }
   .table-wrap tr:hover td { background: rgba(201,168,76,0.03); }
