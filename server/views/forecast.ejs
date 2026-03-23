@@ -9,6 +9,7 @@
   .fc-current-month { background: rgba(201,168,76,0.06) !important; }
 
   .fc-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  #fc-table-wrap { scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.4) transparent; }
   .fc-table th {
     position: sticky; top: 0; background: var(--card); z-index: 10;
     padding: 0.6rem 0.4rem; font-size: 0.65rem; text-transform: uppercase;
@@ -84,7 +85,7 @@
     </div>
 
     <!-- Table -->
-    <div style="overflow-x:auto;">
+    <div id="fc-table-wrap" style="overflow:auto;max-height:calc(100vh - 320px);border:1px solid var(--border);border-radius:10px;">
       <table class="fc-table">
         <thead>
           <tr>
