@@ -477,6 +477,19 @@ app.post('/pusher/auth/portal', (req, res) => {
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── 404 handler ──────────────────────────────────────────────────────────────
+app.get('/404', (req, res) => res.status(404).render('404'));
+
+// Catch-all: unknown routes → 404 page (only for non-API, non-asset requests)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/portal/')) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  // Let static files 404 normally
+  if (req.path.match(/\.(js|css|png|jpg|ico|svg|woff|woff2|ttf|map)$/)) return next();
+  res.status(404).render('404');
+});
+
 async function start() {
   await initDB();
   console.log('Database initialized');

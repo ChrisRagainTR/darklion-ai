@@ -955,7 +955,8 @@
   async function loadCompany() {
     try {
       const res = await apiFetch(`/api/companies/${companyId}`);
-      if (!res.ok) { document.getElementById('entity-name').textContent = 'Not Found'; return; }
+      if (res.status === 404 || res.status === 403) { window.location.href = '/404'; return; }
+      if (!res.ok) { document.getElementById('entity-name').textContent = 'Error loading'; return; }
       companyData = await res.json();
       bookkeepingRealm = companyData.realm_id || null;
       renderHeader(companyData);

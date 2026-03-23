@@ -623,7 +623,8 @@
   async function loadPerson() {
     try {
       const res = await apiFetch(`/api/people/${personId}`);
-      if (!res.ok) { document.getElementById('entity-name').textContent = 'Not Found'; return; }
+      if (res.status === 404 || res.status === 403) { window.location.href = '/404'; return; }
+      if (!res.ok) { document.getElementById('entity-name').textContent = 'Error loading'; return; }
       personData = await res.json();
       renderHeader(personData);
       renderOverview(personData);
