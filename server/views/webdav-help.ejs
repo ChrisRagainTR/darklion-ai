@@ -92,15 +92,25 @@
 
   <!-- Windows Instructions -->
   <div class="os-section">
-    <h2>🪟 Connect on Windows (File Explorer)</h2>
+    <h2>🪟 Connect on Windows — Local PC</h2>
+
+    <div class="info-box" style="margin-bottom:1rem;border-color:rgba(201,168,76,0.3);background:rgba(201,168,76,0.05);">
+      <strong style="color:var(--gold);">Step 0 — One-time fix (required on every PC)</strong><br><br>
+      Windows blocks WebDAV over HTTPS to external servers by default. Run this in an <strong>elevated Command Prompt</strong> (right-click → Run as administrator) once per machine:
+      <div class="copy-block" style="margin-top:0.6rem;">
+        <code id="win-reg">reg add "HKLM\SYSTEM\CurrentControlSet\Services\WebClient\Parameters" /v BasicAuthLevel /t REG_DWORD /d 2 /f && net stop WebClient && net start WebClient</code>
+        <button class="copy-btn" onclick="copyText('win-reg', this)">Copy</button>
+      </div>
+    </div>
+
     <ol class="steps">
       <li>
         <div class="step-num">1</div>
-        <div class="step-body">Open <strong>File Explorer</strong>, right-click <strong>This PC</strong>, and select <strong>Map network drive…</strong></div>
+        <div class="step-body">Open <strong>File Explorer</strong>, right-click <strong>This PC</strong> in the left panel, and select <strong>Map network drive…</strong></div>
       </li>
       <li>
         <div class="step-num">2</div>
-        <div class="step-body">Choose a drive letter, then enter the folder:
+        <div class="step-body">Pick a drive letter (e.g. <strong>Z:</strong>). In the Folder field, enter:
           <div class="copy-block">
             <code id="win-url">https://darklion.ai/webdav</code>
             <button class="copy-btn" onclick="copyText('win-url', this)">Copy</button>
@@ -109,29 +119,25 @@
       </li>
       <li>
         <div class="step-num">3</div>
-        <div class="step-body">Check <strong>Connect using different credentials</strong>, then click <strong>Finish</strong>.</div>
+        <div class="step-body">Check <strong>Reconnect at sign-in</strong> and <strong>Connect using different credentials</strong>. Click <strong>Finish</strong>.</div>
       </li>
       <li>
         <div class="step-num">4</div>
-        <div class="step-body">Enter your DarkLion <strong>email</strong> and <strong>password</strong>. Click <strong>OK</strong>.</div>
+        <div class="step-body">Enter your DarkLion <strong>email</strong> as username and your DarkLion <strong>password</strong>. Check <strong>Remember my credentials</strong>. Click <strong>OK</strong>.</div>
       </li>
       <li>
         <div class="step-num">5</div>
-        <div class="step-body">The drive will appear in File Explorer as the letter you chose. Client folders are immediately accessible.</div>
+        <div class="step-body">Done — drive <strong>Z:</strong> appears in File Explorer. Client folders load immediately. It will reconnect automatically on every login.</div>
       </li>
     </ol>
-    <div class="info-box">
-      <strong>Windows 10/11 / RDS Server fix (do this first if connection fails):</strong><br><br>
-      Windows blocks WebDAV over HTTPS to external servers by default. Run this one-time registry fix in an elevated Command Prompt or PowerShell on each machine (or once on the RDS server for all users):<br><br>
-      <div class="copy-block" style="margin-top:0.5rem;">
-        <code id="win-reg">reg add "HKLM\SYSTEM\CurrentControlSet\Services\WebClient\Parameters" /v BasicAuthLevel /t REG_DWORD /d 2 /f && net stop WebClient && net start WebClient</code>
-        <button class="copy-btn" onclick="copyText('win-reg', this)">Copy</button>
-      </div>
-      <br>Then map the drive using <strong>net use</strong> from Command Prompt:<br><br>
-      <div class="copy-block" style="margin-top:0.5rem;">
+
+    <div class="info-box" style="margin-top:1rem;">
+      <strong>Prefer a command-line setup?</strong> Run this instead of the GUI steps above:<br><br>
+      <div class="copy-block" style="margin-top:0.4rem;">
         <code id="win-net">net use Z: https://darklion.ai/webdav /user:your@email.com yourpassword /persistent:yes</code>
         <button class="copy-btn" onclick="copyText('win-net', this)">Copy</button>
       </div>
+      Replace <code>your@email.com</code> and <code>yourpassword</code> with your actual credentials.
     </div>
   </div>
 
