@@ -740,8 +740,8 @@ async function executeViktorTool(toolName, input, firmId, authHeader) {
       if (input.company) {
         const realmId = `viktor-${firmId}-${Date.now()}`;
         const { rows: cRows } = await pool.query(
-          `INSERT INTO companies (realm_id, firm_id, relationship_id, company_name, entity_type, access_token, refresh_token, token_expires_at, created_at)
-           VALUES ($1, $2, $3, $4, $5, '', '', 0, NOW()) RETURNING id, company_name`,
+          `INSERT INTO companies (realm_id, firm_id, relationship_id, company_name, entity_type, access_token, refresh_token, token_expires_at)
+           VALUES ($1, $2, $3, $4, $5, '', '', 0) RETURNING id, company_name`,
           [realmId, firmId, rel.id, input.company.name, input.company.entity_type || 'other']
         );
         companyCreated = { id: cRows[0].id, name: cRows[0].company_name };
