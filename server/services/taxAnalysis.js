@@ -170,8 +170,8 @@ async function analyzeTaxReturn(pdfText) {
     : pdfText;
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-5',
-    max_tokens: 8192,
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 4096,
     messages: [{
       role: 'user',
       content: `${EXTRACTION_PROMPT}\n\n--- BEGIN TAX RETURN TEXT ---\n\n${inputText}\n\n--- END TAX RETURN TEXT ---`,
