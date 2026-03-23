@@ -376,6 +376,14 @@ router.get('/:threadId', async (req, res) => {
       [threadId]
     );
 
+    // Clear @mentions for this user in this thread — they've seen it
+    await pool.query(
+      `DELETE FROM message_mentions mm
+       USING messages m
+       WHERE mm.message_id = m.id AND m.thread_id = $1 AND mm.firm_user_id = $2`,
+      [threadId, req.firm.userId]
+    ).catch(() => {}); // non-fatal if table doesn't exist yet
+
     // Fetch firm users for sender name lookup
     const { rows: firmUsers } = await pool.query(
       'SELECT id, name, display_name FROM firm_users WHERE firm_id = $1',
