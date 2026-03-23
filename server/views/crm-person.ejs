@@ -850,7 +850,7 @@
             const statusBadge = sectionKey === 'firm_uploaded'
               ? `<span class="doc-badge doc-badge-viewed">✓ Delivered</span>`
               : `<span class="doc-badge doc-badge-client">✓ Uploaded</span>`;
-            y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(doc.display_name || 'Document')}</div><div class="doc-badges">${statusBadge}${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}${doc.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(doc.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>` : ''}</div></div><div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;"><button class="btn-dl" data-docid="${doc.id}">⬇</button><button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${doc.id},${JSON.stringify(doc.folder_section||'firm_uploaded')},${JSON.stringify(doc.folder_category||'tax')},event)" title="Move">↕</button><button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${doc.id},event)" title="Delete">🗑</button></div></div>`;
+            y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(doc.display_name || 'Document')}</div><div class="doc-badges">${statusBadge}${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}${doc.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(doc.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>` : ''}</div></div><div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;"><button class="btn-dl" data-docid="${doc.id}">⬇</button><button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${doc.id},${JSON.stringify(doc.folder_section||'firm_uploaded')},${JSON.stringify(doc.folder_category||'tax')},event,${JSON.stringify(doc.year||'')})" title="Move">↕</button><button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${doc.id},event)" title="Delete">🗑</button></div></div>`;
           });
         }
         y += `</div></div>`;
@@ -935,11 +935,12 @@
   }
 
   let _moveDocId = null;
-  function openMoveDocModal(id, currentSection, currentCategory, e) {
+  function openMoveDocModal(id, currentSection, currentCategory, e, currentYear) {
     if (e) e.stopPropagation();
     _moveDocId = id;
     const modal = document.getElementById('move-doc-modal');
     if (!modal) return;
+    document.getElementById('move-doc-year').value = currentYear || String(new Date().getFullYear() - 1);
     document.getElementById('move-doc-section').value = currentSection || 'firm_uploaded';
     document.getElementById('move-doc-category').value = currentCategory || 'tax';
     modal.classList.add('open');
@@ -951,10 +952,11 @@
   }
   async function submitMoveDoc() {
     if (!_moveDocId) return;
+    const year = document.getElementById('move-doc-year').value;
     const section = document.getElementById('move-doc-section').value;
     const category = document.getElementById('move-doc-category').value;
     try {
-      const res = await apiFetch(`/api/documents/${_moveDocId}`, { method: 'PUT', body: JSON.stringify({ folder_section: section, folder_category: category }) });
+      const res = await apiFetch(`/api/documents/${_moveDocId}`, { method: 'PUT', body: JSON.stringify({ year, folder_section: section, folder_category: category }) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Document moved');
       closeMoveDocModal();
@@ -2087,6 +2089,14 @@
 <div class="modal-overlay" id="move-doc-modal" onclick="closeMoveDocModal()">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:380px;">
     <h2>Move Document</h2>
+    <div class="form-group">
+      <label>Tax Year</label>
+      <select id="move-doc-year" class="form-control">
+        <% for (let y = new Date().getFullYear(); y >= new Date().getFullYear() - 8; y--) { %>
+          <option value="<%= y %>"><%= y %></option>
+        <% } %>
+      </select>
+    </div>
     <div class="form-group">
       <label>Section</label>
       <select id="move-doc-section" class="form-control">

@@ -1236,7 +1236,7 @@
                       </div>
                       <div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;">
                         <button class="btn-dl" data-docid="${f.id}">⬇</button>
-                        <button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${f.id},${JSON.stringify(f.folder_section||'firm_uploaded')},${JSON.stringify(f.folder_category||'tax')},event)" title="Move">↕</button>
+                        <button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${f.id},${JSON.stringify(f.folder_section||'firm_uploaded')},${JSON.stringify(f.folder_category||'tax')},event,${JSON.stringify(f.year||'')})" title="Move">↕</button>
                         <button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${f.id},event)" title="Delete">🗑</button>
                       </div>
                     </div>`).join('')
@@ -1405,11 +1405,12 @@
   }
 
   let _moveDocId = null;
-  function openMoveDocModal(id, currentSection, currentCategory, e) {
+  function openMoveDocModal(id, currentSection, currentCategory, e, currentYear) {
     if (e) e.stopPropagation();
     _moveDocId = id;
     const modal = document.getElementById('move-doc-modal');
     if (!modal) return;
+    document.getElementById('move-doc-year').value = currentYear || String(new Date().getFullYear() - 1);
     document.getElementById('move-doc-section').value = currentSection || 'firm_uploaded';
     document.getElementById('move-doc-category').value = currentCategory || 'tax';
     modal.classList.add('open');
@@ -1421,10 +1422,11 @@
   }
   async function submitMoveDoc() {
     if (!_moveDocId) return;
+    const year = document.getElementById('move-doc-year').value;
     const section = document.getElementById('move-doc-section').value;
     const category = document.getElementById('move-doc-category').value;
     try {
-      const res = await apiFetch(`/api/documents/${_moveDocId}`, { method: 'PUT', body: JSON.stringify({ folder_section: section, folder_category: category }) });
+      const res = await apiFetch(`/api/documents/${_moveDocId}`, { method: 'PUT', body: JSON.stringify({ year, folder_section: section, folder_category: category }) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Document moved');
       closeMoveDocModal();
@@ -3725,6 +3727,14 @@
 <div class="modal-overlay" id="move-doc-modal" onclick="closeMoveDocModal()">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:380px;">
     <h2>Move Document</h2>
+    <div class="form-group">
+      <label>Tax Year</label>
+      <select id="move-doc-year" class="form-control">
+        <% for (let y = new Date().getFullYear(); y >= new Date().getFullYear() - 8; y--) { %>
+          <option value="<%= y %>"><%= y %></option>
+        <% } %>
+      </select>
+    </div>
     <div class="form-group">
       <label>Section</label>
       <select id="move-doc-section" class="form-control">
