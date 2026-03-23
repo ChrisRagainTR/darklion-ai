@@ -25,6 +25,8 @@
   .fc-table tr:hover td { background: rgba(255,255,255,0.02); }
   .fc-expand-row { display: none; background: var(--charcoal); }
   .fc-expand-row.open { display: table-row; }
+  .fc-totals-row td { background: var(--charcoal); border-top: 2px solid var(--border); border-bottom: 2px solid var(--border); font-weight: 700; font-size: 0.75rem; padding: 0.55rem 0.4rem; text-align: center; position: sticky; top: 38px; z-index: 9; }
+  .fc-totals-row td.fc-left { text-align: left; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
 
   .account-badge {
     font-size: 0.62rem; padding: 0.1rem 0.4rem; border-radius: 4px;
@@ -94,6 +96,7 @@
             <th style="text-align:right;color:var(--gold);">Annual</th>
           </tr>
         </thead>
+        <tbody id="fc-totals-row"></tbody>
         <tbody id="fc-tbody"></tbody>
       </table>
     </div>
@@ -156,6 +159,24 @@
 
     const now = new Date();
     const currentMonth = _data.year === now.getFullYear() ? now.getMonth() : -1;
+
+    // Build totals row — sum each month across all (unfiltered) customers
+    const monthTotals = Array.from({length:12}, (_, i) => {
+      return _data.customers.reduce((sum, c) => sum + (c.months[i]?.amount || 0), 0);
+    });
+    const totalsRow = document.getElementById('fc-totals-row');
+    const monthTotalCells = monthTotals.map((amt, i) => {
+      const isCurrent = i === currentMonth;
+      const style = isCurrent ? ' style="background:rgba(201,168,76,0.1);"' : '';
+      return `<td${style}>${amt > 0 ? '<span style="color:var(--text);">$'+Math.round(amt).toLocaleString()+'</span>' : '<span style="color:rgba(255,255,255,0.15);">—</span>'}</td>`;
+    }).join('');
+    totalsRow.innerHTML = `<tr class="fc-totals-row">
+      <td class="fc-left">Monthly Totals</td>
+      ${monthTotalCells}
+      <td style="text-align:right;color:#3ecf8e;">$${Math.round(_data.totals.collected).toLocaleString()}</td>
+      <td style="text-align:right;color:#8fa3b8;">$${Math.round(_data.totals.upcoming).toLocaleString()}</td>
+      <td style="text-align:right;color:var(--gold);">$${Math.round(_data.totals.annual).toLocaleString()}</td>
+    </tr>`;
 
     const tbody = document.getElementById('fc-tbody');
     tbody.innerHTML = filtered.map((c, idx) => {
