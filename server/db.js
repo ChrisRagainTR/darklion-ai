@@ -783,6 +783,34 @@ async function initDB() {
       ALTER TABLE message_threads ADD CONSTRAINT message_threads_status_check CHECK (status IN ('open', 'resolved', 'archived'));
     EXCEPTION WHEN duplicate_object THEN NULL;
     END $$;
+
+    -- ===================== CONVERSATION SUMMARIES =====================
+
+    -- is_system_message flag (exclude from summaries)
+    DO $$ BEGIN
+      ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_system_message BOOLEAN DEFAULT FALSE;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    -- Conversation summaries table
+    CREATE TABLE IF NOT EXISTS conversation_summaries (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER NOT NULL,
+      summary_date DATE NOT NULL,
+      summary_json JSONB,
+      generated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(firm_id, summary_date)
+    );
+
+    -- Track which staff have viewed which day's summary
+    CREATE TABLE IF NOT EXISTS summary_views (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER NOT NULL,
+      summary_date DATE NOT NULL,
+      firm_user_id INTEGER NOT NULL,
+      viewed_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(firm_id, summary_date, firm_user_id)
+    );
   `);
 }
 

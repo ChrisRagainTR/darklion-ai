@@ -267,6 +267,9 @@ app.use('/api/documents', requireFirm, apiLimiter, documentsRouter);
 const messagesRouter = require('./routes/messages');
 app.use('/api/messages', requireFirm, apiLimiter, messagesRouter);
 app.get('/messages', (req, res) => res.render('messages', { title: 'Messages', activeNav: 'messages' }));
+
+const summariesRouter = require('./routes/summaries');
+app.use('/api/summaries', requireFirm, apiLimiter, summariesRouter);
 app.get('/conversation-summaries', (req, res) => res.render('conversation-summaries', { title: 'Conversation Summaries', activeNav: 'conversation-summaries' }));
 
 const templatesRouter = require('./routes/templates');
@@ -482,6 +485,9 @@ async function start() {
   console.log('Database initialized');
 
   startNightlyCron();
+
+  const { scheduleAt10PM } = require('./scheduler');
+  scheduleAt10PM();
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`DarkLion server running on port ${PORT}`);

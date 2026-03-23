@@ -144,6 +144,47 @@ async function runFullPipeline(realmId) {
   return results;
 }
 
+// ── Daily Conversation Summaries at 10 PM Eastern ────────────────────────────
+function scheduleAt10PM() {
+  const now = new Date();
+  const eastern = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+
+  // Next 10 PM Eastern
+  const next = new Date(eastern);
+  next.setHours(22, 0, 0, 0);
+  if (eastern >= next) next.setDate(next.getDate() + 1); // already past 10pm, schedule tomorrow
+
+  const msUntil = next.getTime() - eastern.getTime();
+
+  setTimeout(async () => {
+    // Get all firm IDs
+    try {
+      const { generateDailySummary } = require('./services/summaryGenerator');
+      const { rows: firms } = await pool.query('SELECT id FROM firms');
+      const today = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }).split(',')[0];
+      // Parse to YYYY-MM-DD
+      const [m, d, y] = today.split('/');
+      const dateStr = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+
+      for (const firm of firms) {
+        try {
+          await generateDailySummary(firm.id, dateStr);
+        } catch(e) {
+          console.error(`[scheduler] Summary failed for firm ${firm.id}:`, e.message);
+        }
+      }
+      console.log(`[scheduler] Daily summaries complete for ${dateStr}`);
+    } catch(e) {
+      console.error('[scheduler] Daily summary job error:', e.message);
+    }
+
+    // Schedule next run (tomorrow at 10 PM)
+    scheduleAt10PM();
+  }, msUntil);
+
+  console.log(`[scheduler] Daily summary scheduled in ${Math.round(msUntil/1000/60)} minutes (10 PM Eastern)`);
+}
+
 function startScheduler() {
   // Run every 6 hours: full automated pipeline
   cron.schedule('0 */6 * * *', async () => {
@@ -168,4 +209,4 @@ function startScheduler() {
   console.log('Scheduler started — runs every 6 hours (sync → research → categorize → auto-post → email)');
 }
 
-module.exports = { startScheduler, runFullPipeline };
+module.exports = { startScheduler, runFullPipeline, scheduleAt10PM };
