@@ -34,16 +34,17 @@ router.get('/intel', async (req, res) => {
       // 1. Unsigned tax returns
       pool.query(`
         SELECT td.id, td.tax_year, td.title, td.created_at, td.status,
-               p.first_name, p.last_name, p.id AS person_id,
                c.company_name, c.id AS company_id,
                r.name AS relationship_name, r.id AS relationship_id,
-               EXTRACT(DAY FROM NOW() - td.updated_at)::INT AS days_waiting
+               EXTRACT(DAY FROM NOW() - td.updated_at)::INT AS days_waiting,
+               (SELECT p2.first_name || ' ' || p2.last_name
+                FROM tax_delivery_signers tds2
+                JOIN people p2 ON p2.id = tds2.person_id
+                WHERE tds2.delivery_id = td.id LIMIT 1) AS person_name
         FROM tax_deliveries td
-        LEFT JOIN people p ON p.id = td.person_id
         LEFT JOIN companies c ON c.id = td.company_id
-        LEFT JOIN relationships r ON r.id = COALESCE(
-          (SELECT relationship_id FROM companies WHERE id = td.company_id LIMIT 1),
-          (SELECT relationship_id FROM people WHERE id = td.person_id LIMIT 1)
+        LEFT JOIN relationships r ON r.id = (
+          SELECT relationship_id FROM companies WHERE id = td.company_id LIMIT 1
         )
         WHERE td.firm_id = $1
           AND td.status IN ('sent','approved')
