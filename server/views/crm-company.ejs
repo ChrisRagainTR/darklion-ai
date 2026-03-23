@@ -57,10 +57,9 @@
   .stat-value.orange { color: var(--orange); }
   .stat-value.red { color: var(--red); }
   .stat-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
-  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
-  .table-wrap .table-scroll { overflow-x: auto; }
+  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; }
   .table-wrap table { width: 100%; border-collapse: collapse; }
-  .table-wrap th { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); background: var(--card); position: sticky; top: var(--bk-table-top, 0); z-index: 10; }
+  .table-wrap th { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); background: var(--card); }
   .table-wrap td { padding: 0.7rem 1rem; font-size: 0.85rem; border-bottom: 1px solid rgba(201,168,76,0.07); vertical-align: middle; }
   .table-wrap tr:last-child td { border-bottom: none; }
   .table-wrap tr:hover td { background: rgba(201,168,76,0.03); }
@@ -907,14 +906,7 @@
     if (name === 'bookkeeping') {
       if (bookkeepingRealm) bk_initBookkeeping();
       else { /* wait for company to load, then init */ window._bkPendingInit = true; }
-      // Compute sticky offset for table headers (entity-header + tab-bar + subtab-bar)
-      requestAnimationFrame(function() {
-        const eh = document.querySelector('.entity-header');
-        const tb = document.querySelector('.tab-bar');
-        const sb = document.getElementById('subtab-bar');
-        const offset = (eh ? eh.offsetHeight : 0) + (tb ? tb.offsetHeight : 0) + (sb ? sb.offsetHeight : 0);
-        document.documentElement.style.setProperty('--bk-table-top', offset + 'px');
-      });
+
     }
     if (name === 'communication') initCoComm();
     const mainEl = document.querySelector('.main');
@@ -2218,7 +2210,7 @@
     });
     const firstColPct = dataCols <= 1 ? 60 : dataCols <= 3 ? 40 : dataCols <= 7 ? 30 : 25;
     const restPct = (100 - firstColPct) / dataCols;
-    let html = '<div class="table-wrap"><div class="table-scroll"><table style="table-layout:fixed;width:100%;">';
+    let html = '<div class="table-wrap"><table style="table-layout:fixed;width:100%;">';
     html += '<colgroup>';
     html += `<col style="width:${firstColPct}%">`;
     for (let i = 0; i < dataCols; i++) html += `<col style="width:${restPct.toFixed(2)}%">`;
@@ -2233,7 +2225,7 @@
     html += '</tr></thead>';
     html += '<tbody>';
     html += bk_renderReportRows(report.Rows.Row, 0, colCount, colDates);
-    html += '</tbody></table></div></div>';
+    html += '</tbody></table></div>';
     return html;
   }
 
