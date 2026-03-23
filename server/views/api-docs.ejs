@@ -396,6 +396,19 @@
       </tbody>
     </table>
 
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/viktor-chat/session-for/:userId</span></h3>
+    <p class="endpoint-desc">Viktor reads a staff member's current session — all messages sent to and from them today. Use this to monitor what staff are asking and whether Viktor's briefings were received. Accepts API token auth.</p>
+    <p>Response: <code>{ user, user_id, session_date, messages, briefing_generated }</code></p>
+
+    <h3><span class="method method-post">POST</span> <span class="endpoint-path">/api/viktor-chat/reply-for/:userId</span></h3>
+    <p class="endpoint-desc">Viktor injects a message directly into a staff member's chat as if he typed it. The message appears as an assistant bubble in the dashboard. Use this to proactively push updates, answer questions Viktor detected via monitoring, or send follow-ups.</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>message</td><td>string <span class="badge badge-required">required</span></td><td>The message text Viktor wants to inject</td></tr>
+      </tbody>
+    </table>
+
     <h3><span class="method method-post">POST</span> <span class="endpoint-path">/api/viktor-chat/briefing-for/:userId</span></h3>
     <p class="endpoint-desc">Viktor uses this to push a personalized morning briefing into a specific staff member's chat session. Accepts API token auth — Viktor can call this with his <code>dlk_</code> token. Get user IDs from <code>GET /api/staff</code>. Only generates once per day per user; subsequent calls return the cached briefing.</p>
     <table class="params-table">

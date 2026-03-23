@@ -247,6 +247,81 @@ function buildContextSummary(ctx) {
   return summary;
 }
 
+// GET /api/viktor-chat/session-for/:userId — Viktor reads a staff member's current session and messages
+router.get('/session-for/:userId', async (req, res) => {
+  const firmId = req.firm.id;
+  const targetUserId = parseInt(req.params.userId);
+  if (!targetUserId) return res.status(400).json({ error: 'userId is required' });
+
+  try {
+    const { rows: userRows } = await pool.query(
+      'SELECT id, name FROM firm_users WHERE id = $1 AND firm_id = $2 AND accepted_at IS NOT NULL',
+      [targetUserId, firmId]
+    );
+    if (!userRows[0]) return res.status(404).json({ error: 'Staff user not found' });
+
+    const today = new Date().toISOString().split('T')[0];
+    const { rows } = await pool.query(
+      'SELECT * FROM viktor_sessions WHERE firm_id = $1 AND user_id = $2 AND session_date = $3',
+      [firmId, targetUserId, today]
+    );
+
+    res.json({
+      user: userRows[0].name,
+      user_id: targetUserId,
+      session_date: today,
+      messages: rows[0]?.messages || [],
+      briefing_generated: rows[0]?.briefing_generated || false,
+    });
+  } catch (err) {
+    console.error('[viktor-chat] GET /session-for error:', err);
+    res.status(500).json({ error: 'Failed to get session' });
+  }
+});
+
+// POST /api/viktor-chat/reply-for/:userId — Viktor injects a reply into a staff member's chat
+router.post('/reply-for/:userId', async (req, res) => {
+  const firmId = req.firm.id;
+  const targetUserId = parseInt(req.params.userId);
+  if (!targetUserId) return res.status(400).json({ error: 'userId is required' });
+
+  const { message } = req.body;
+  if (!message || !message.trim()) return res.status(400).json({ error: 'message is required' });
+
+  try {
+    const { rows: userRows } = await pool.query(
+      'SELECT id, name FROM firm_users WHERE id = $1 AND firm_id = $2 AND accepted_at IS NOT NULL',
+      [targetUserId, firmId]
+    );
+    if (!userRows[0]) return res.status(404).json({ error: 'Staff user not found' });
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get existing session messages
+    const { rows: sessions } = await pool.query(
+      'SELECT * FROM viktor_sessions WHERE firm_id = $1 AND user_id = $2 AND session_date = $3',
+      [firmId, targetUserId, today]
+    );
+    const history = sessions[0]?.messages || [];
+
+    const newMsg = { role: 'assistant', content: message.trim(), timestamp: new Date().toISOString(), from: 'viktor' };
+    const newMessages = [...history, newMsg];
+
+    await pool.query(
+      `INSERT INTO viktor_sessions (firm_id, user_id, session_date, messages)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (firm_id, user_id, session_date)
+       DO UPDATE SET messages = $4, updated_at = NOW()`,
+      [firmId, targetUserId, today, JSON.stringify(newMessages)]
+    );
+
+    res.json({ ok: true, user: userRows[0].name, message_count: newMessages.length });
+  } catch (err) {
+    console.error('[viktor-chat] POST /reply-for error:', err);
+    res.status(500).json({ error: 'Failed to inject reply' });
+  }
+});
+
 // POST /api/viktor-chat/briefing-for/:userId — Viktor pushes a briefing into a specific staff member's session
 // Accepts API token auth (Viktor can call this with his dlk_ token)
 // userId is the firm_users.id of the staff member to brief
