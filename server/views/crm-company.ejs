@@ -59,7 +59,7 @@
   .stat-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
   .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: auto; max-height: 70vh; scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.4) transparent; }
   .table-wrap table { width: 100%; border-collapse: collapse; }
-  .table-wrap th { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); background: var(--card); }
+  .table-wrap th { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); background: var(--card); position: sticky; top: 0; z-index: 10; }
   .table-wrap th:first-child, .table-wrap td:first-child { position: sticky; left: 0; background: var(--card); z-index: 2; box-shadow: 2px 0 6px rgba(0,0,0,0.25); }
   .table-wrap tr:hover td:first-child { background: color-mix(in srgb, var(--card) 95%, var(--gold) 5%); }
   .report-row-header td:first-child { background: rgba(201,168,76,0.06) !important; }
