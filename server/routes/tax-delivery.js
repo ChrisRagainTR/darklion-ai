@@ -498,7 +498,7 @@ router.post('/:id/generate-summary', async (req, res) => {
     if (!delivery.s3_key) return res.status(400).json({ error: 'No review document attached' });
 
     await pool.query(
-      "UPDATE tax_deliveries SET tax_report_status = 'processing', updated_at = NOW() WHERE id = $1",
+      "UPDATE tax_deliveries SET tax_report_status = 'processing', tax_report_error = NULL, updated_at = NOW() WHERE id = $1",
       [id]
     );
 
@@ -534,8 +534,8 @@ router.post('/:id/generate-summary', async (req, res) => {
       } catch (err) {
         console.error('[tax-delivery] generate-summary async error:', err);
         await pool.query(
-          "UPDATE tax_deliveries SET tax_report_status = 'error', updated_at = NOW() WHERE id = $1",
-          [id]
+          "UPDATE tax_deliveries SET tax_report_status = 'error', tax_report_error = $1, updated_at = NOW() WHERE id = $2",
+          [err.message || 'Unknown error', id]
         ).catch(() => {});
       }
     });
@@ -552,13 +552,14 @@ router.get('/:id/summary', async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     const { rows } = await pool.query(
-      'SELECT tax_report_data, tax_report_status FROM tax_deliveries WHERE id = $1 AND firm_id = $2',
+      'SELECT tax_report_data, tax_report_status, tax_report_error FROM tax_deliveries WHERE id = $1 AND firm_id = $2',
       [id, firmId]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Delivery not found' });
     res.json({
       status: rows[0].tax_report_status || 'none',
       data: rows[0].tax_report_data || null,
+      error: rows[0].tax_report_error || null,
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch summary' });

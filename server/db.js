@@ -579,6 +579,7 @@ async function initDB() {
 
     ALTER TABLE tax_deliveries ADD COLUMN IF NOT EXISTS tax_report_data JSONB;
     ALTER TABLE tax_deliveries ADD COLUMN IF NOT EXISTS tax_report_status TEXT DEFAULT 'none';
+    ALTER TABLE tax_deliveries ADD COLUMN IF NOT EXISTS tax_report_error TEXT;
 
     CREATE TABLE IF NOT EXISTS pipeline_job_updates (
       id SERIAL PRIMARY KEY,

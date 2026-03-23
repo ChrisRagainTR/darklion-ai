@@ -1589,9 +1589,17 @@
     document.getElementById('tsm-footer').style.display = 'none';
   }
 
-  function showSummaryError(msg) {
-    document.getElementById('tsm-body').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--red,#f56565);"><div style="font-size:1.5rem;margin-bottom:0.5rem;">⚠️</div><div style="font-weight:700;">Failed to generate summary</div><div style="font-size:0.8rem;margin-top:0.4rem;color:var(--muted);">' + esc(msg || 'Unknown error') + '</div></div>';
+  function showSummaryError(msg, deliveryId) {
+    var retryBtn = deliveryId ? '<button class="btn btn-gold btn-sm" style="margin-top:1rem;" onclick="retrySummary(' + deliveryId + ')">↺ Retry</button>' : '';
+    document.getElementById('tsm-body').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--red,#f56565);"><div style="font-size:1.5rem;margin-bottom:0.5rem;">⚠️</div><div style="font-weight:700;">Failed to generate summary</div><div style="font-size:0.8rem;margin-top:0.4rem;color:var(--muted);">' + esc(msg || 'Unknown error') + '</div>' + retryBtn + '</div>';
     document.getElementById('tsm-footer').style.display = '';
+  }
+
+  function retrySummary(deliveryId) {
+    var sendAfter = document.getElementById('tsm-send-btn') && document.getElementById('tsm-send-btn').style.display !== 'none';
+    apiFetch('/api/tax-deliveries/' + deliveryId + '/generate-summary', { method: 'POST' })
+      .then(function() { showSummaryProcessing(); pollSummary(deliveryId); })
+      .catch(function(e) { showSummaryError(e.message, deliveryId); });
   }
 
   function pollSummary(deliveryId) {
@@ -1604,7 +1612,7 @@
           document.getElementById('tsm-footer').style.display = '';
         } else if (s.status === 'error') {
           clearInterval(_tsmPollTimer);
-          showSummaryError('Claude analysis failed. Check that the PDF is readable.');
+          showSummaryError(s.error || 'Claude analysis failed — check Railway logs for details.', deliveryId);
           document.getElementById('tsm-footer').style.display = '';
         }
       }).catch(function() {});
