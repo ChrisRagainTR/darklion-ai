@@ -173,7 +173,7 @@ router.get('/intel', async (req, res) => {
           (SELECT COUNT(*) FROM people WHERE firm_id = $1) AS people,
           (SELECT COUNT(*) FROM companies WHERE firm_id = $1) AS companies,
           (SELECT COUNT(*) FROM message_threads WHERE firm_id = $1 AND status = 'open') AS open_messages,
-          (SELECT COUNT(*) FROM pipeline_jobs pj JOIN pipeline_instances pi ON pi.id = pj.instance_id WHERE pi.firm_id = $1 AND pj.status NOT IN ('complete','archived','done')) AS active_jobs
+          (SELECT COUNT(*) FROM pipeline_jobs pj JOIN pipeline_instances pi ON pi.id = pj.instance_id WHERE pi.firm_id = $1 AND pj.job_status NOT IN ('complete','archived','done')) AS active_jobs
       `, [firmId]).catch(async () => {
         // Pipeline query may fail — retry without it so core counts still show
         const r = await pool.query(`

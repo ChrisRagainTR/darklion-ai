@@ -514,10 +514,11 @@ router.get('/jobs', async (req, res) => {
   const firmId = req.firm.id;
   try {
     const { rows } = await pool.query(`
-      SELECT pj.id, pj.title, pj.status, pj.entity_type, pj.entity_id,
+      SELECT pj.id, pj.job_status AS status, pj.entity_type, pj.entity_id,
              pj.current_stage_id, ps.name AS stage_name, ps.position AS stage_position,
              pt.id AS template_id, pt.name AS template_name,
              pi.id AS instance_id,
+             pj.assigned_to, pj.priority, pj.due_date, pj.notes,
              c.company_name,
              p.first_name || ' ' || p.last_name AS person_name,
              r.name AS relationship_name, r.id AS relationship_id,
@@ -529,7 +530,7 @@ router.get('/jobs', async (req, res) => {
       LEFT JOIN companies c ON c.id = pj.entity_id AND pj.entity_type = 'company'
       LEFT JOIN people p ON p.id = pj.entity_id AND pj.entity_type = 'person'
       LEFT JOIN relationships r ON r.id = COALESCE(c.relationship_id, p.relationship_id)
-      WHERE pi.firm_id = $1 AND pj.status NOT IN ('complete', 'archived')
+      WHERE pi.firm_id = $1 AND pj.job_status NOT IN ('complete', 'archived')
       ORDER BY ps.position ASC NULLS LAST, pj.updated_at DESC
       LIMIT 200
     `, [firmId]);
@@ -537,6 +538,28 @@ router.get('/jobs', async (req, res) => {
   } catch (err) {
     console.error('GET /pipelines/jobs error:', err);
     res.status(500).json({ error: 'Failed to fetch pipeline jobs' });
+  }
+});
+
+// GET /templates/:id/stages — list stages for a pipeline template
+router.get('/templates/:id/stages', async (req, res) => {
+  const firmId = req.firm.id;
+  const templateId = parseInt(req.params.id);
+  try {
+    // Verify template belongs to firm
+    const { rows: tmpl } = await pool.query(
+      'SELECT id FROM pipeline_templates WHERE id = $1 AND firm_id = $2',
+      [templateId, firmId]
+    );
+    if (!tmpl[0]) return res.status(404).json({ error: 'Template not found' });
+    const { rows } = await pool.query(
+      'SELECT id, name, position, color FROM pipeline_stages WHERE template_id = $1 ORDER BY position ASC',
+      [templateId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /pipelines/templates/:id/stages error:', err);
+    res.status(500).json({ error: 'Failed to fetch stages' });
   }
 });
 

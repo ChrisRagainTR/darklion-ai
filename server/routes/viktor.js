@@ -30,7 +30,7 @@ router.get('/context', async (req, res) => {
       birthdaysRaw,
     ] = await Promise.all([
       pool.query(`
-        SELECT pj.id, pj.title, pj.status, pj.entity_type, pj.entity_id,
+        SELECT pj.id, pj.job_status AS status, pj.entity_type, pj.entity_id,
                pj.current_stage_id, ps.name as stage_name, ps.position as stage_position,
                pt.name as template_name,
                c.company_name, p.first_name || ' ' || p.last_name as person_name,
@@ -43,7 +43,7 @@ router.get('/context', async (req, res) => {
         LEFT JOIN companies c ON c.id = pj.entity_id AND pj.entity_type = 'company'
         LEFT JOIN people p ON p.id = pj.entity_id AND pj.entity_type = 'person'
         LEFT JOIN relationships r ON r.id = COALESCE(c.relationship_id, p.relationship_id)
-        WHERE pi.firm_id = $1 AND pj.status NOT IN ('complete', 'archived')
+        WHERE pi.firm_id = $1 AND pj.job_status NOT IN ('complete', 'archived')
         ORDER BY ps.position ASC, pj.updated_at DESC
         LIMIT 100
       `, [firmId]).catch(() => ({ rows: [] })),
