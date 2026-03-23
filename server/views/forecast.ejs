@@ -1,0 +1,233 @@
+<%- include('partials/shell-top', { title: title, activeNav: activeNav }) %>
+<% const cy = new Date().getFullYear(); %>
+
+<style>
+  .fc-paid    { color: #3ecf8e; font-weight: 600; font-size: 0.72rem; }
+  .fc-pastdue { color: #e74c3c; font-weight: 700; font-size: 0.72rem; }
+  .fc-upcoming { color: #8fa3b8; font-size: 0.72rem; }
+  .fc-none    { color: rgba(255,255,255,0.15); font-size: 0.72rem; }
+  .fc-current-month { background: rgba(201,168,76,0.06) !important; }
+
+  .fc-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .fc-table th {
+    position: sticky; top: 0; background: var(--card); z-index: 10;
+    padding: 0.6rem 0.4rem; font-size: 0.65rem; text-transform: uppercase;
+    color: var(--muted); text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .fc-table th.fc-left { text-align: left; min-width: 220px; }
+  .fc-table td {
+    padding: 0.5rem 0.4rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    text-align: center; vertical-align: middle;
+  }
+  .fc-table td.fc-left { text-align: left; }
+  .fc-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .fc-expand-row { display: none; background: var(--charcoal); }
+  .fc-expand-row.open { display: table-row; }
+
+  .account-badge {
+    font-size: 0.62rem; padding: 0.1rem 0.4rem; border-radius: 4px;
+    font-weight: 700; background: rgba(201,168,76,0.15); color: var(--gold);
+  }
+
+  .year-tab {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); padding: 0.35rem 1rem; border-radius: 6px;
+    cursor: pointer; font-size: 0.85rem; transition: all 0.15s;
+  }
+  .year-tab.active {
+    background: var(--gold); color: var(--navy);
+    border-color: var(--gold); font-weight: 700;
+  }
+</style>
+
+<div style="padding:1.5rem;">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+    <h1 style="font-size:1.4rem;font-weight:800;">📈 Revenue Forecast</h1>
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      <div class="year-tabs" style="display:flex;gap:0.5rem;">
+        <button class="year-tab active" data-year="<%= cy %>"><%= cy %></button>
+        <button class="year-tab" data-year="<%= cy+1 %>"><%= cy+1 %></button>
+      </div>
+      <input type="text" id="forecast-search" placeholder="Search email, name, amount…"
+        style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.75rem;border-radius:6px;font-size:0.85rem;width:220px;">
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="fc-loading" style="text-align:center;padding:3rem;color:var(--muted);">Loading Stripe data…</div>
+
+  <!-- Content -->
+  <div id="fc-content" style="display:none;">
+    <!-- Summary cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;">
+      <div class="card">
+        <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">Annual Run Rate</div>
+        <div id="fc-total" style="font-size:1.5rem;font-weight:800;color:var(--gold);">—</div>
+      </div>
+      <div class="card">
+        <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">✅ Collected YTD</div>
+        <div id="fc-collected" style="font-size:1.5rem;font-weight:800;color:#3ecf8e;">—</div>
+      </div>
+      <div class="card">
+        <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">⚠️ Past Due</div>
+        <div id="fc-pastdue" style="font-size:1.5rem;font-weight:800;color:#e74c3c;">—</div>
+      </div>
+      <div class="card">
+        <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">🔵 Upcoming</div>
+        <div id="fc-upcoming" style="font-size:1.5rem;font-weight:800;color:#8fa3b8;">—</div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto;">
+      <table class="fc-table">
+        <thead>
+          <tr>
+            <th class="fc-left">Client</th>
+            <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th>
+            <th>Jul</th><th>Aug</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th>
+            <th style="text-align:right;color:#3ecf8e;">Collected</th>
+            <th style="text-align:right;color:#8fa3b8;">Upcoming</th>
+            <th style="text-align:right;color:var(--gold);">Annual</th>
+          </tr>
+        </thead>
+        <tbody id="fc-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/shell-globals') %>
+
+<script>
+(function() {
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let _data = null;
+  let _year = new Date().getFullYear();
+  let _searchQ = '';
+
+  function esc(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  async function loadForecast(year) {
+    const loading = document.getElementById('fc-loading');
+    const content = document.getElementById('fc-content');
+    loading.textContent = 'Loading Stripe data…';
+    loading.style.display = '';
+    content.style.display = 'none';
+    try {
+      const res = await apiFetch('/api/forecast?year=' + year);
+      _data = await res.json();
+      if (_data.error) throw new Error(_data.error);
+      renderForecast();
+    } catch(e) {
+      loading.textContent = 'Failed to load: ' + e.message;
+    }
+  }
+
+  function renderForecast() {
+    if (!_data) return;
+    document.getElementById('fc-loading').style.display = 'none';
+    document.getElementById('fc-content').style.display = '';
+
+    const fmt = n => '$' + Math.round(n).toLocaleString();
+    document.getElementById('fc-total').textContent = fmt(_data.totals.annual);
+    document.getElementById('fc-collected').textContent = fmt(_data.totals.collected);
+    document.getElementById('fc-pastdue').textContent = fmt(_data.totals.pastDue);
+    document.getElementById('fc-upcoming').textContent = fmt(_data.totals.upcoming);
+
+    const q = _searchQ.toLowerCase();
+    const filtered = q
+      ? _data.customers.filter(c =>
+          c.email.toLowerCase().includes(q) ||
+          (c.name || '').toLowerCase().includes(q) ||
+          String(Math.round(c.monthlyAmount)).includes(q)
+        )
+      : _data.customers;
+
+    const now = new Date();
+    const currentMonth = _data.year === now.getFullYear() ? now.getMonth() : -1;
+
+    const tbody = document.getElementById('fc-tbody');
+    tbody.innerHTML = filtered.map((c, idx) => {
+      const monthCells = c.months.map((m, i) => {
+        const isCurrent = i === currentMonth;
+        const cls = isCurrent ? ' class="fc-current-month"' : '';
+        let inner;
+        if (m.status === 'paid')
+          inner = '<span class="fc-paid">✓ ' + (m.amount > 0 ? '$' + Math.round(m.amount).toLocaleString() : '') + '</span>';
+        else if (m.status === 'past_due')
+          inner = '<span class="fc-pastdue">⚠ $' + Math.round(m.amount).toLocaleString() + '</span>';
+        else if (m.status === 'upcoming')
+          inner = '<span class="fc-upcoming">$' + Math.round(m.amount).toLocaleString() + '</span>';
+        else
+          inner = '<span class="fc-none">—</span>';
+        return '<td' + cls + '>' + inner + '</td>';
+      }).join('');
+
+      const lineItemsHtml = c.subscriptions.flatMap(s =>
+        s.items.map(item =>
+          '<tr>' +
+          '<td colspan="2" style="padding:0.25rem 1rem;color:var(--muted);font-size:0.78rem;">↳ ' + esc(item.description) + '</td>' +
+          '<td colspan="12" style="text-align:left;color:var(--muted);font-size:0.78rem;">$' + item.amount.toFixed(2) + '/' + item.interval + ' → ~$' + item.monthly_equiv.toFixed(2) + '/mo</td>' +
+          '<td colspan="3"></td>' +
+          '</tr>'
+        )
+      ).join('');
+
+      return (
+        '<tr data-idx="' + idx + '" onclick="fcToggleExpand(' + idx + ')" style="cursor:pointer;">' +
+        '<td class="fc-left">' +
+          '<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">' +
+            '<span style="font-weight:600;">' + esc(c.name || c.email) + '</span>' +
+            '<span class="account-badge">' + esc(c.account) + '</span>' +
+            '<span style="font-size:0.65rem;color:var(--muted);">›</span>' +
+          '</div>' +
+          (c.name && c.name !== c.email ? '<div style="font-size:0.72rem;color:var(--muted);">' + esc(c.email) + '</div>' : '') +
+          '<div style="font-size:0.78rem;color:var(--gold);font-weight:600;">$' + Math.round(c.monthlyAmount).toLocaleString() + '/mo</div>' +
+        '</td>' +
+        monthCells +
+        '<td style="text-align:right;color:#3ecf8e;font-weight:600;">$' + Math.round(c.collected).toLocaleString() + '</td>' +
+        '<td style="text-align:right;color:#8fa3b8;">$' + Math.round(c.upcoming).toLocaleString() + '</td>' +
+        '<td style="text-align:right;color:var(--gold);font-weight:700;">$' + Math.round(c.annual).toLocaleString() + '</td>' +
+        '</tr>' +
+        '<tr class="fc-expand-row" id="fc-expand-' + idx + '">' +
+        '<td colspan="16" style="padding:0;"><table style="width:100%;">' + lineItemsHtml + '</table></td>' +
+        '</tr>'
+      );
+    }).join('');
+  }
+
+  window.fcToggleExpand = function(idx) {
+    const row = document.getElementById('fc-expand-' + idx);
+    if (row) row.classList.toggle('open');
+  };
+
+  document.getElementById('forecast-search').addEventListener('input', function() {
+    _searchQ = this.value;
+    renderForecast();
+  });
+
+  document.querySelectorAll('.year-tab').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.year-tab').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      _year = parseInt(this.dataset.year);
+      loadForecast(_year);
+    });
+  });
+
+  loadForecast(_year);
+})();
+</script>
+
+<%- include('partials/shell-close') %>

@@ -292,6 +292,10 @@ app.use('/api/engagement', requireFirm, apiLimiter, engagementRouter);
 const billingRouter = require('./routes/billing');
 app.use('/api/billing', requireFirm, apiLimiter, billingRouter);
 
+const forecastRouter = require('./routes/forecast');
+app.use('/api/forecast', requireFirm, apiLimiter, forecastRouter);
+app.get('/forecast', (req, res) => res.render('forecast', { title: 'Revenue Forecast', activeNav: 'forecast' }));
+
 const taxDeliveryRouter = require('./routes/tax-delivery');
 app.use('/api/tax-deliveries', requireFirm, apiLimiter, taxDeliveryRouter);
 
