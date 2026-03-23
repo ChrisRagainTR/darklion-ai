@@ -101,6 +101,9 @@
         <div id="overview-portal-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
           <div class="loading-state"><div class="loading-spinner"></div></div>
         </div>
+        <div id="overview-messages-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
       </div>
       <!-- CENTER col -->
       <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">
@@ -120,9 +123,6 @@
           <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Internal Notes</div>
           <textarea class="form-control" id="notes-ta" rows="5" placeholder="Internal staff notes…" style="width:100%;box-sizing:border-box;" onblur="autoSaveNotes(this.value)"></textarea>
           <div class="save-indicator" id="notes-saved"></div>
-        </div>
-        <div id="overview-messages-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
-          <div class="loading-state"><div class="loading-spinner"></div></div>
         </div>
       </div>
     </div>
@@ -298,6 +298,22 @@
     #tab-communication .spinner { display:inline-block; width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin 0.7s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
     @media(max-width:700px) { #tab-communication .crm-thread-list { width:240px; } }
+
+    /* ── Thread rows for overview messages panel (matches relationship CRM) ── */
+    .ov-panel-title { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.6rem; }
+    .ov-panel-title span { font-size:0.72rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+    .thread-row { display:flex; align-items:flex-start; gap:0.7rem; padding:0.5rem 0; border-bottom:1px solid rgba(255,255,255,0.04); text-decoration:none; transition:background 0.12s; border-radius:6px; }
+    .thread-row:last-child { border-bottom:none; }
+    .thread-row:hover { background:rgba(255,255,255,0.025); }
+    .thread-row.has-unread { border-left:2px solid var(--gold); padding-left:0.5rem; }
+    .thread-row-avatar { width:28px; height:28px; border-radius:50%; background:rgba(201,168,76,0.15); display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:700; color:var(--gold); flex-shrink:0; margin-top:0.1rem; }
+    .thread-row-body { flex:1; min-width:0; }
+    .thread-row-top { display:flex; align-items:baseline; justify-content:space-between; gap:0.5rem; margin-bottom:0.15rem; }
+    .thread-row-name { font-size:0.75rem; font-weight:700; color:var(--gold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .thread-row-time { font-size:0.67rem; color:var(--muted); flex-shrink:0; }
+    .thread-row-subject { font-size:0.8rem; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:0.15rem; }
+    .thread-row-preview { font-size:0.73rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .thread-unread-badge { display:inline-block; background:var(--gold); color:var(--navy); font-size:0.6rem; font-weight:800; border-radius:8px; padding:0.05rem 0.35rem; margin-left:0.3rem; vertical-align:middle; }
   </style>
 
 <div id="tab-communication" class="tab-content" style="padding:0;overflow:hidden;">
@@ -700,29 +716,34 @@
     }
     companiesEl.innerHTML = compHtml;
 
-    // ── RIGHT COL: Recent Messages ──
+    // ── LEFT COL: Recent Messages (thread-row style matching relationship CRM) ──
     const msgsEl = document.getElementById('overview-messages-panel');
-    msgsEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;">
-      <span>Recent Messages</span>
-      <a href="#" onclick="switchTab('communication',document.querySelector('.tab-item:nth-child(4)'));return false;" style="font-size:0.72rem;color:var(--gold);">View all →</a>
-    </div><div id="ov-person-msgs-inner" style="color:var(--muted);font-size:0.82rem;">Loading…</div>`;
+    msgsEl.innerHTML = `<div class="ov-panel-title"><span>💬 Recent Messages</span><a href="#" onclick="switchTab('communication',document.querySelector('.tab-item:nth-child(4)'));return false;" class="btn btn-ghost btn-xs">View all →</a></div><div id="ov-person-msgs-inner"></div>`;
     apiFetch(`/api/messages/person/${personId}`).then(r=>r.json()).then(threads=>{
       const el = document.getElementById('ov-person-msgs-inner');
       if (!el) return;
       const arr = Array.isArray(threads) ? threads : (threads.threads || threads.data || []);
-      if (!arr.length) { el.innerHTML=`<div style="color:var(--muted);font-size:0.82rem;font-style:italic;">No messages yet.</div>`; return; }
-      function relTime(ts) { if(!ts) return ''; const d=new Date(ts); const diff=Date.now()-d; if(diff<60000) return 'just now'; if(diff<3600000) return Math.floor(diff/60000)+'m ago'; if(diff<86400000) return Math.floor(diff/3600000)+'h ago'; return d.toLocaleDateString(); }
-      el.innerHTML = arr.slice(0,3).map(t => {
+      if (!arr.length) { el.innerHTML=`<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No message threads yet.</div>`; return; }
+      function timeAgo(ts) { if(!ts) return ''; const d=new Date(ts); const diff=Date.now()-d; if(diff<60000) return 'just now'; if(diff<3600000) return Math.floor(diff/60000)+'m ago'; if(diff<86400000) return Math.floor(diff/3600000)+'h ago'; return d.toLocaleDateString(); }
+      el.innerHTML = arr.slice(0,5).map(t => {
         const subject = t.subject || '(no subject)';
-        const preview = t.lastPreview || '';
-        const unread = t.unreadCount > 0 ? `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;background:var(--gold);color:#0f1923;border-radius:9px;font-size:0.65rem;font-weight:800;padding:0 4px;flex-shrink:0;">${t.unreadCount}</span>` : '';
-        return `<div style="padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;" onclick="switchTab('communication',document.querySelector('.tab-item:nth-child(4)'));setTimeout(()=>loadThread(${t.id}),200);">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
-            <span style="font-size:0.82rem;font-weight:${t.unreadCount>0?'700':'600'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${t.unreadCount>0?'var(--text)':'inherit'};">${esc(subject)}</span>
-            <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">${unread}<span style="font-size:0.72rem;color:var(--muted);">${relTime(t.lastMessageAt||t.createdAt)}</span></div>
+        const preview = t.lastPreview || t.last_body || '';
+        const unread = (t.unreadCount || t.unread_count || 0) > 0;
+        const unreadCount = t.unreadCount || t.unread_count || 0;
+        const personName = ((t.firstName||t.first_name||'') + ' ' + (t.lastName||t.last_name||'')).trim() || 'Client';
+        const ini = personName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+        const when = timeAgo(t.lastMessageAt || t.last_message_at || t.createdAt || t.created_at);
+        return `<a href="#" class="thread-row${unread?' has-unread':''}" onclick="switchTab('communication',document.querySelector('.tab-item:nth-child(4)'));setTimeout(()=>loadThread(${t.id}),200);return false;">
+          <div class="thread-row-avatar">${ini}</div>
+          <div class="thread-row-body">
+            <div class="thread-row-top">
+              <span class="thread-row-name">${esc(personName)}${unread?`<span class="thread-unread-badge">${unreadCount}</span>`:''}</span>
+              <span class="thread-row-time">${when}</span>
+            </div>
+            <div class="thread-row-subject">${esc(subject)}</div>
+            <div class="thread-row-preview">${esc(preview)}</div>
           </div>
-          <div style="font-size:0.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(preview)}</div>
-        </div>`;
+        </a>`;
       }).join('');
     }).catch(()=>{ const el=document.getElementById('ov-person-msgs-inner'); if(el) el.innerHTML='<span style="color:var(--muted);">—</span>'; });
   }
