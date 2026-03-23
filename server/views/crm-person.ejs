@@ -371,7 +371,10 @@
     <div class="crm-thread-list">
       <div class="crm-thread-list-header">
         <h3>Messages</h3>
-        <button class="btn btn-gold btn-sm" onclick="commOpenNew()">+ New</button>
+        <div style="display:flex;gap:0.4rem;align-items:center;">
+          <button class="btn btn-gold btn-sm" onclick="commOpenNew()">+ New</button>
+          <button class="btn btn-outline btn-sm" onclick="openSmsModal()" title="Send SMS text message">📱 Text</button>
+        </div>
       </div>
       <div class="crm-thread-list-inner" id="comm-threads">
         <div class="loading-state"><div class="loading-spinner"></div></div>
@@ -2058,6 +2061,69 @@
       switchTab(openTab, tabEl);
     }
   });
+
+  // ── SMS ──────────────────────────────────────────────────────────────────
+  let _smsThreadId = null;
+
+  async function openSmsModal(threadId) {
+    _smsThreadId = threadId || null;
+    const phoneDisplay = document.getElementById('sms-phone-display');
+    if (phoneDisplay) {
+      try {
+        const r = await apiFetch(`/api/people/${personId}`);
+        const p = await r.json();
+        phoneDisplay.textContent = p.phone ? `To: ${p.phone}` : '⚠️ No phone number on file for this person';
+        phoneDisplay.style.color = p.phone ? 'var(--muted)' : 'var(--red)';
+      } catch(e) { phoneDisplay.textContent = 'Loading phone…'; }
+    }
+    document.getElementById('sms-body').value = '';
+    document.getElementById('sms-char-count').textContent = '0 / 160';
+    document.getElementById('sms-error').style.display = 'none';
+    document.getElementById('sms-modal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('sms-body').focus(), 100);
+  }
+
+  function closeSmsModal() {
+    document.getElementById('sms-modal').classList.add('hidden');
+    _smsThreadId = null;
+  }
+
+  async function submitSms() {
+    const body = document.getElementById('sms-body').value.trim();
+    const btn = document.getElementById('sms-submit-btn');
+    const errEl = document.getElementById('sms-error');
+    if (!body) { errEl.textContent = 'Please enter a message.'; errEl.style.display = ''; return; }
+    btn.disabled = true; btn.textContent = 'Sending…';
+    errEl.style.display = 'none';
+    try {
+      const res = await apiFetch('/api/messages/sms', {
+        method: 'POST',
+        body: JSON.stringify({ person_id: personId, body, thread_id: _smsThreadId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send');
+      closeSmsModal();
+      toast('Text message sent ✓');
+      if (typeof loadThreads === 'function') loadThreads();
+    } catch(e) {
+      errEl.textContent = e.message;
+      errEl.style.display = '';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Send Text';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const smsBody = document.getElementById('sms-body');
+    const smsCount = document.getElementById('sms-char-count');
+    if (smsBody && smsCount) {
+      smsBody.addEventListener('input', function() {
+        const len = this.value.length;
+        smsCount.textContent = `${len} / 160`;
+        smsCount.style.color = len > 160 ? 'var(--red)' : 'var(--muted)';
+      });
+    }
+  });
 </script>
 
 <!-- Tax Summary Modal -->
@@ -2114,6 +2180,24 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeMoveDocModal()">Cancel</button>
       <button class="btn-submit" onclick="submitMoveDoc()">Move</button>
+    </div>
+  </div>
+</div>
+
+<!-- SMS Modal -->
+<div class="modal-overlay hidden" id="sms-modal" onclick="closeSmsModal()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:440px;">
+    <h2>📱 Send Text Message</h2>
+    <div id="sms-phone-display" style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;"></div>
+    <div class="form-group">
+      <label>Message</label>
+      <textarea class="form-control" id="sms-body" rows="4" placeholder="Type your SMS message… (160 chars recommended)" maxlength="1600" style="width:100%;box-sizing:border-box;"></textarea>
+      <div id="sms-char-count" style="font-size:0.72rem;color:var(--muted);text-align:right;margin-top:0.25rem;">0 / 160</div>
+    </div>
+    <div id="sms-error" style="color:var(--red);font-size:0.82rem;display:none;margin-bottom:0.5rem;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeSmsModal()">Cancel</button>
+      <button class="btn-submit" id="sms-submit-btn" onclick="submitSms()">Send Text</button>
     </div>
   </div>
 </div>

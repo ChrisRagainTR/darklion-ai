@@ -744,5 +744,77 @@ router.delete('/:threadId/dismiss', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// POST /api/messages/sms — send an SMS to a person and log it as a message
+router.post('/sms', async (req, res) => {
+  const firmId = req.firm.id;
+  const { person_id, body, thread_id } = req.body;
+
+  if (!person_id || !body || !body.trim()) {
+    return res.status(400).json({ error: 'person_id and body are required' });
+  }
+
+  try {
+    // Get the person's phone number
+    const { rows: people } = await pool.query(
+      'SELECT id, first_name, last_name, phone FROM people WHERE id = $1 AND firm_id = $2',
+      [parseInt(person_id), firmId]
+    );
+    if (!people[0]) return res.status(404).json({ error: 'Person not found' });
+    const person = people[0];
+
+    if (!person.phone) {
+      return res.status(400).json({ error: 'This person has no phone number on file' });
+    }
+
+    // Clean phone number — strip non-digits, add +1 if needed
+    let phone = person.phone.replace(/\D/g, '');
+    if (phone.length === 10) phone = '1' + phone;
+    if (!phone.startsWith('+')) phone = '+' + phone;
+
+    // Send via Twilio
+    const { sendSMS } = require('../services/twilio');
+    const result = await sendSMS(phone, body.trim());
+
+    // Log the SMS as a message in the thread (or create a thread if none)
+    let useThreadId = thread_id ? parseInt(thread_id) : null;
+
+    if (!useThreadId) {
+      // Find existing open thread for this person, or create one
+      const { rows: threads } = await pool.query(
+        `SELECT id FROM message_threads WHERE firm_id = $1 AND person_id = $2 AND status = 'open' ORDER BY last_message_at DESC LIMIT 1`,
+        [firmId, person_id]
+      );
+      if (threads[0]) {
+        useThreadId = threads[0].id;
+      } else {
+        const { rows: newThread } = await pool.query(
+          `INSERT INTO message_threads (firm_id, person_id, subject, status, category, last_message_at)
+           VALUES ($1, $2, $3, 'open', 'general', NOW()) RETURNING id`,
+          [firmId, person_id, `Messages with ${person.first_name} ${person.last_name}`]
+        );
+        useThreadId = newThread[0].id;
+      }
+    }
+
+    // Insert message record with sms marker
+    await pool.query(
+      `INSERT INTO messages (thread_id, sender_type, sender_id, body, created_at)
+       VALUES ($1, 'staff', $2, $3, NOW())`,
+      [useThreadId, req.firm.userId || null, `📱 SMS sent: ${body.trim()}`]
+    );
+
+    // Update thread last_message_at
+    await pool.query(
+      'UPDATE message_threads SET last_message_at = NOW() WHERE id = $1',
+      [useThreadId]
+    );
+
+    res.json({ ok: true, sid: result.sid, status: result.status, thread_id: useThreadId });
+  } catch (err) {
+    console.error('[POST /api/messages/sms] error:', err);
+    res.status(500).json({ error: err.message || 'Failed to send SMS' });
+  }
+});
+
 module.exports = router;
 module.exports.cancelPendingNotification = cancelPendingNotification;
