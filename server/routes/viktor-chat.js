@@ -169,25 +169,132 @@ router.post('/message', async (req, res) => {
       return res.json({ stored: true, pending_reply: true, messages: newMessages });
     }
 
-    // DEFAULT: Claude answers immediately using Viktor's stored context prompt
+    // Check for confirmed tool execution ("yes", "confirm", "do it", "send it")
+    const isConfirm = /^(yes|confirm|do it|send it|go ahead|approved?|ok|okay)\b/i.test(message.trim());
+    const lastMsg = history[history.length - 1];
+    if (isConfirm && lastMsg?.role === 'assistant' && lastMsg?.pending_tool) {
+      const tool = lastMsg.pending_tool;
+      let execResult = '';
+      try {
+        if (tool.name === 'send_message') {
+          const fd = new FormData();
+          fd.append('body', tool.input.body);
+          fd.append('is_internal', 'false');
+          const r = await fetch(`http://localhost:${process.env.PORT||3000}/api/messages/${tool.input.thread_id}/reply`, {
+            method: 'POST', headers: { 'Authorization': req.headers.authorization }, body: fd
+          });
+          execResult = r.ok ? `✅ Message sent to thread #${tool.input.thread_id}.` : `❌ Failed to send message.`;
+        } else if (tool.name === 'send_sms') {
+          const r = await fetch(`http://localhost:${process.env.PORT||3000}/api/messages/sms`, {
+            method: 'POST', headers: { 'Authorization': req.headers.authorization, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ person_id: tool.input.person_id, body: tool.input.body })
+          });
+          const d = await r.json();
+          execResult = r.ok ? `✅ SMS sent to ${tool.input.person_name || 'client'} (SID: ${d.sid}).` : `❌ SMS failed: ${d.error}`;
+        } else if (tool.name === 'move_pipeline_stage') {
+          const r = await fetch(`http://localhost:${process.env.PORT||3000}/api/pipelines/jobs/${tool.input.job_id}`, {
+            method: 'PUT', headers: { 'Authorization': req.headers.authorization, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ current_stage_id: tool.input.stage_id })
+          });
+          execResult = r.ok ? `✅ Pipeline job moved to "${tool.input.stage_name}".` : `❌ Failed to move pipeline job.`;
+        } else {
+          execResult = `❌ Unknown tool: ${tool.name}`;
+        }
+      } catch(e) { execResult = `❌ Error executing action: ${e.message}`; }
+
+      const userMsg = { role: 'user', content: message.trim(), timestamp: new Date().toISOString() };
+      const assistantMsg = { role: 'assistant', content: execResult, timestamp: new Date().toISOString(), from: 'tool_exec' };
+      const finalMessages = [...history, userMsg, assistantMsg];
+      await pool.query(`INSERT INTO viktor_sessions (firm_id, user_id, session_date, messages) VALUES ($1,$2,$3,$4) ON CONFLICT (firm_id, user_id, session_date) DO UPDATE SET messages=$4, updated_at=NOW()`, [firmId, userId, today, JSON.stringify(finalMessages)]);
+      return res.json({ reply: execResult, messages: finalMessages });
+    }
+
+    // DEFAULT: Claude answers immediately using Viktor's stored context prompt + tools
     const cleanMsg = message.trim();
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
     const client = new Anthropic({ apiKey });
     const recentHistory = history.slice(-20).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
     recentHistory.push({ role: 'user', content: cleanMsg });
+
+    const TOOLS = [
+      {
+        name: 'send_message',
+        description: 'Send a reply message to an existing client message thread. Use this when asked to reply to or send a message to a client.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            thread_id: { type: 'number', description: 'The message thread ID to reply to' },
+            body: { type: 'string', description: 'The message text to send' },
+            client_name: { type: 'string', description: 'The client name (for confirmation display)' }
+          },
+          required: ['thread_id', 'body']
+        }
+      },
+      {
+        name: 'send_sms',
+        description: 'Send an SMS text message to a client via Twilio. Use when asked to text a client.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            person_id: { type: 'number', description: 'The person ID to text' },
+            person_name: { type: 'string', description: 'The person name (for confirmation display)' },
+            body: { type: 'string', description: 'The SMS message text (keep under 160 chars ideally)' }
+          },
+          required: ['person_id', 'body']
+        }
+      },
+      {
+        name: 'move_pipeline_stage',
+        description: 'Move a pipeline job to a different stage. Use when asked to advance or move a client in the pipeline.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            job_id: { type: 'number', description: 'The pipeline job ID' },
+            stage_id: { type: 'number', description: 'The target stage ID' },
+            stage_name: { type: 'string', description: 'The target stage name (for confirmation display)' },
+            client_name: { type: 'string', description: 'Client name (for confirmation display)' }
+          },
+          required: ['job_id', 'stage_id', 'stage_name']
+        }
+      }
+    ];
+
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1000,
       system: await buildSystemPrompt(firmId),
+      tools: TOOLS,
       messages: recentHistory
     });
-    const replyText = response.content[0]?.text || 'I encountered an error. Please try again.';
+
     const userMsg = { role: 'user', content: cleanMsg, timestamp: new Date().toISOString() };
-    const assistantMsg = { role: 'assistant', content: replyText, timestamp: new Date().toISOString(), from: 'claude' };
+    let replyText = '';
+    let pendingTool = null;
+
+    // Check if Claude wants to use a tool
+    const toolUse = response.content.find(c => c.type === 'tool_use');
+    const textBlock = response.content.find(c => c.type === 'text');
+
+    if (toolUse) {
+      const t = toolUse;
+      pendingTool = { name: t.name, input: t.input };
+      // Build a confirmation message
+      if (t.name === 'send_message') {
+        replyText = `I'll send this message to ${t.input.client_name || 'the client'}:\n\n> ${t.input.body}\n\nReply **yes** to confirm, or tell me to change it.`;
+      } else if (t.name === 'send_sms') {
+        replyText = `I'll text ${t.input.person_name || 'the client'} (person #${t.input.person_id}):\n\n> ${t.input.body}\n\nReply **yes** to send, or tell me to change it.`;
+      } else if (t.name === 'move_pipeline_stage') {
+        replyText = `I'll move ${t.input.client_name || 'this client'} to **${t.input.stage_name}**. Reply **yes** to confirm.`;
+      }
+    } else {
+      replyText = textBlock?.text || response.content[0]?.text || 'I encountered an error. Please try again.';
+    }
+
+    const assistantMsg = { role: 'assistant', content: replyText, timestamp: new Date().toISOString(), from: 'claude', pending_tool: pendingTool };
     const finalMessages = [...history, userMsg, assistantMsg];
     await pool.query(`INSERT INTO viktor_sessions (firm_id, user_id, session_date, messages) VALUES ($1,$2,$3,$4) ON CONFLICT (firm_id, user_id, session_date) DO UPDATE SET messages=$4, updated_at=NOW()`, [firmId, userId, today, JSON.stringify(finalMessages)]);
-    return res.json({ reply: replyText, messages: finalMessages });
+    return res.json({ reply: replyText, messages: finalMessages, has_tool: !!pendingTool });
   } catch (err) {
     console.error('[viktor-chat] POST /message error:', err);
     res.status(500).json({ error: err.message || 'Failed to send message' });
