@@ -267,6 +267,7 @@ app.use('/api/documents', requireFirm, apiLimiter, documentsRouter);
 const messagesRouter = require('./routes/messages');
 app.use('/api/messages', requireFirm, apiLimiter, messagesRouter);
 app.get('/messages', (req, res) => res.render('messages', { title: 'Messages', activeNav: 'messages' }));
+app.get('/conversation-summaries', (req, res) => res.render('conversation-summaries', { title: 'Conversation Summaries', activeNav: 'conversation-summaries' }));
 
 const templatesRouter = require('./routes/templates');
 app.use('/api/templates', requireFirm, apiLimiter, templatesRouter);

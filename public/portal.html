@@ -910,25 +910,25 @@
     <!-- ── MESSAGES TAB ───────────────────────────────────── -->
     <div class="tab-panel" id="tab-messages">
       <div class="chat-layout">
-        <!-- Left: staff contacts -->
+        <!-- Left: staff list -->
         <div class="chat-contacts" id="chatContacts">
-          <div class="chat-empty-contacts">No messages yet.<br>Your advisor will reach out here.</div>
+          <div class="chat-empty-contacts" id="chatContactsEmpty" style="display:none;">Loading team…</div>
         </div>
-        <!-- Right: conversation -->
+        <!-- Right: conversation with selected staff member -->
         <div class="chat-main">
           <div class="chat-main-header" id="chatMainHeader" style="display:none;">
             <div class="hdr-avatar" id="chatHdrAvatar">?</div>
             <div class="hdr-name" id="chatHdrName">Messages</div>
           </div>
           <div class="chat-messages" id="chatMessages">
-            <div class="chat-empty" id="chatEmpty">Select a contact to view messages.</div>
+            <div class="chat-empty" id="chatEmpty">Select a team member to view messages.</div>
           </div>
           <div class="chat-attach-chips" id="chatAttachChips"></div>
           <input type="file" id="chatAttachInput" multiple style="display:none;" onchange="handleChatAttach(this.files)">
           <div id="advisorTyping" style="display:none;padding:0.2rem 0.5rem;font-size:0.75rem;color:var(--muted);font-style:italic;"></div>
-          <div class="chat-input-bar">
+          <div class="chat-input-bar" id="chatInputBar" style="display:none;">
             <button class="chat-attach-btn" onclick="document.getElementById('chatAttachInput').click()" title="Attach files">📎</button>
-            <textarea id="chatInput" placeholder="Write a message to your advisor…" rows="1"></textarea>
+            <textarea id="chatInput" placeholder="Write a message…" rows="1"></textarea>
             <button class="chat-send-btn" id="chatSendBtn">Send</button>
           </div>
         </div>
@@ -1118,22 +1118,15 @@
           api('/portal/documents').catch(() => []),
         ]);
         window._portalMe = _me; // expose for second script block
-        // Load message contacts and firm team in parallel
-        await Promise.all([
-          (async () => {
-            try {
-              const mc = await fetch('/portal/messages/staff-contacts', { headers: { 'Authorization': `Bearer ${localStorage.getItem('portalToken')}` } });
-              if (mc.ok) { _contacts = await mc.json(); if (!Array.isArray(_contacts)) _contacts = []; }
-            } catch(e) { _contacts = []; }
-          })(),
-          (async () => {
-            try {
-              const ft = await fetch('/portal/firm-team', { headers: { 'Authorization': `Bearer ${localStorage.getItem('portalToken')}` } });
-              if (ft.ok) { _firmTeam = await ft.json(); if (!Array.isArray(_firmTeam)) _firmTeam = []; }
-              _firmTeam.forEach(m => { if (m.avatar_url) _avatarMap[m.id] = m.avatar_url; });
-            } catch(e) { _firmTeam = []; }
-          })(),
-        ]);
+        // Pre-load staff list for messages tab and overview unread count
+        try {
+          const mc = await fetch('/portal/messages', { headers: { 'Authorization': `Bearer ${localStorage.getItem('portalToken')}` } });
+          if (mc.ok) {
+            _staffList = await mc.json();
+            if (!Array.isArray(_staffList)) _staffList = [];
+            _staffList.forEach(s => { if (s.avatar_url) _avatarMap[s.id] = s.avatar_url; });
+          }
+        } catch(e) { _staffList = []; }
 
         const fullName = `${_me.firstName || ''} ${_me.lastName || ''}`.trim();
         document.title = `${fullName} — Client Portal`;
@@ -1351,7 +1344,7 @@
       if (newDocs > 0) {
         badges.innerHTML += `<span class="badge badge-gold">🆕 ${newDocs} new document${newDocs > 1 ? 's' : ''}</span>`;
       }
-      const totalUnread = _contacts.reduce((n, c) => n + parseInt(c.unread_count || 0), 0);
+      const totalUnread = _staffList.reduce((n, s) => n + parseInt(s.unreadCount || 0), 0);
       if (totalUnread > 0) {
         badges.innerHTML += `<span class="badge badge-gold">💬 ${totalUnread} unread message${totalUnread > 1 ? 's' : ''}</span>`;
       }
@@ -1376,7 +1369,7 @@
           ${totalUnread > 0 ? `<div style="position:absolute;top:0.5rem;right:0.5rem;background:var(--gold);color:#0f1117;border-radius:10px;padding:0.1rem 0.4rem;font-size:0.7rem;font-weight:700;">${totalUnread}</div>` : ''}
           <div class="ql-icon">💬</div>
           <div class="ql-label">Messages</div>
-          <div class="ql-desc">${totalUnread > 0 ? `${totalUnread} unread — ${_contacts.filter(c => parseInt(c.unread_count||0) > 0).map(c => escHtml(c.name)).join(', ')}` : _contacts.length > 0 ? 'View conversation' : 'No messages yet'}</div>
+          <div class="ql-desc">${totalUnread > 0 ? `${totalUnread} unread` : _staffList.length > 0 ? 'Message your team' : 'No messages yet'}</div>
         </a>
       `;
 
@@ -1831,152 +1824,134 @@
       }
     });
 
-    // ── Chat / Messages ───────────────────────────────────
+    // ── Chat / Messages (per-staff DMs) ──────────────────
     let _chatLoaded = false;
     let _chatAllMessages = [];
     let _chatAttachFiles = [];
-    let _contacts = [];
+    let _staffList = [];      // all firm staff
     let _selectedStaffId = null;
+    let _selectedStaffThreadId = null;
 
     async function initChat() {
-      if (_chatLoaded) return;
-      _chatLoaded = true;
-      window._portalReloadMessages = loadAllMessages;
-      // Contacts already loaded in init() — render immediately, no network round-trip needed
-      if (_contacts.length > 0) {
-        renderContacts();
-        selectContact(_contacts[0]);
-      } else {
-        // Fallback: fetch if init didn't load them for some reason
-        await loadContacts();
-      }
+      window._portalReloadMessages = loadMessages;
+      await loadStaffList();
     }
 
-    async function loadContacts() {
-      // Use already-loaded contacts from init() if available — avoid extra round trip
-      if (_contacts.length > 0) {
-        renderContacts();
-        if (_selectedStaffId === null) selectContact(_contacts[0]);
-        return;
-      }
+    async function loadStaffList() {
       const token = localStorage.getItem('portalToken');
       try {
-        const [contactsRes, teamRes] = await Promise.all([
-          fetch('/portal/messages/staff-contacts', { headers: { 'Authorization': 'Bearer ' + token } }),
-          fetch('/portal/team', { headers: { 'Authorization': 'Bearer ' + token } }),
-        ]);
-        if (contactsRes.ok) {
-          _contacts = await contactsRes.json();
-          if (!Array.isArray(_contacts)) _contacts = [];
+        // GET /portal/messages returns all staff with thread info
+        const res = await fetch('/portal/messages', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error(`Staff list error ${res.status}`);
+        _staffList = await res.json();
+        if (!Array.isArray(_staffList)) _staffList = [];
+        renderStaffList();
+        // Auto-select first staff member
+        if (_staffList.length > 0 && _selectedStaffId === null) {
+          selectStaffMember(_staffList[0]);
         }
-        if (teamRes.ok) {
-          const team = await teamRes.json();
-          if (Array.isArray(team)) team.forEach(m => { if (m.avatar_url) _avatarMap[m.id] = m.avatar_url; });
-        }
-        renderContacts();
-        if (_contacts.length > 0 && _selectedStaffId === null) selectContact(_contacts[0]);
-      } catch(e) { console.error('[portal] loadContacts error:', e); }
+        // Update tab badge
+        const totalUnread = _staffList.reduce((acc, s) => acc + (s.unreadCount || 0), 0);
+        updateChatBadge(totalUnread);
+      } catch(e) {
+        console.error('[portal] loadStaffList error:', e);
+        const el = document.getElementById('chatContactsEmpty');
+        if (el) { el.textContent = 'Could not load team.'; el.style.display = ''; }
+      }
     }
 
-    function renderContacts() {
+    function renderStaffList() {
       const el = document.getElementById('chatContacts');
       if (!el) return;
-      if (!_contacts.length) {
-        el.innerHTML = '<div class="chat-empty-contacts">No messages yet.<br>Your advisor will reach out here.</div>';
+      const empty = document.getElementById('chatContactsEmpty');
+      if (!_staffList.length) {
+        if (empty) { empty.textContent = 'No team members found.'; empty.style.display = ''; }
         return;
       }
-      el.innerHTML = _contacts.map(c => {
-        const initials = (c.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-        const time = c.last_message_at ? new Date(c.last_message_at).toLocaleDateString() : '';
-        const preview = c.last_body ? chatEsc(c.last_body).slice(0, 50) : 'No messages yet';
-        const unread = parseInt(c.unread_count || 0);
-        const isActive = _selectedStaffId === c.id;
-        const avatarUrl = _avatarMap[c.id];
-        const avatarHtml = avatarUrl
-          ? `<img src="${avatarUrl}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt="${chatEsc(initials)}" onerror="this.outerHTML='<div class=\\'chat-contact-avatar\\'>${initials}</div>';">`
+      if (empty) empty.style.display = 'none';
+
+      el.innerHTML = _staffList.map(s => {
+        const initials = (s.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        const unread = parseInt(s.unreadCount || 0);
+        const isActive = _selectedStaffId === s.id;
+        const preview = s.lastPreview || '';
+        const avatarHtml = s.avatar_url
+          ? `<img src="${s.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt="${chatEsc(initials)}" onerror="this.outerHTML='<div class=\\'chat-contact-avatar\\'>${initials}</div>';">`
           : `<div class="chat-contact-avatar">${initials}</div>`;
-        return `<div class="chat-contact-row${isActive ? ' active' : ''}" data-staff-id="${c.id}">
+        return `<div class="chat-contact-row${isActive ? ' active' : ''}" data-staff-id="${s.id}">
           ${avatarHtml}
           <div class="chat-contact-info">
-            <div class="chat-contact-name">${chatEsc(c.name)}</div>
-            <div class="chat-contact-preview">${preview}</div>
+            <div class="chat-contact-name">${chatEsc(s.name)}</div>
+            <div class="chat-contact-preview">${chatEsc(preview) || 'No messages yet'}</div>
           </div>
           <div class="chat-contact-meta">
-            <div class="chat-contact-time">${time}</div>
+            ${s.lastMessageAt ? `<div class="chat-contact-time">${new Date(s.lastMessageAt).toLocaleDateString()}</div>` : ''}
             ${unread > 0 ? `<div class="chat-unread-badge">${unread}</div>` : ''}
           </div>
         </div>`;
       }).join('');
+
       el.querySelectorAll('.chat-contact-row').forEach(row => {
         row.addEventListener('click', function() {
           const staffId = parseInt(row.dataset.staffId);
-          const contact = _contacts.find(c => c.id === staffId);
-          if (contact) selectContact(contact);
+          const staff = _staffList.find(s => s.id === staffId);
+          if (staff) selectStaffMember(staff);
         });
       });
     }
 
-    function selectContact(contact) {
-      _selectedStaffId = contact.id;
+    function selectStaffMember(staff) {
+      _selectedStaffId = staff.id;
+      _selectedStaffThreadId = staff.threadId || null;
+
       document.querySelectorAll('.chat-contact-row').forEach(r => {
-        r.classList.toggle('active', parseInt(r.dataset.staffId) === contact.id);
+        r.classList.toggle('active', parseInt(r.dataset.staffId) === staff.id);
       });
+
       const hdr = document.getElementById('chatMainHeader');
       if (hdr) hdr.style.display = '';
+
       const hdrAvatar = document.getElementById('chatHdrAvatar');
       if (hdrAvatar) {
-        const initials = (contact.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-        const avatarUrl = _avatarMap[contact.id];
-        if (avatarUrl) {
-          hdrAvatar.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentElement.textContent='${initials}';">`;
+        const initials = (staff.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        if (staff.avatar_url) {
+          hdrAvatar.innerHTML = `<img src="${staff.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentElement.textContent='${initials}';">`;
         } else {
           hdrAvatar.textContent = initials;
         }
       }
+
       const hdrName = document.getElementById('chatHdrName');
-      // Show first name + credentials in header (e.g. "Christopher" or "Christopher, CPA/PFS")
-      const firstName = (contact.name || 'Advisor').split(' ')[0];
-      const creds = contact.credentials ? `, ${contact.credentials}` : '';
-      if (hdrName) hdrName.textContent = firstName + creds;
-      _chatLoaded = false;
+      if (hdrName) hdrName.textContent = staff.name || 'Advisor';
+
+      // Show input bar
+      const inputBar = document.getElementById('chatInputBar');
+      if (inputBar) inputBar.style.display = '';
+
       _chatAllMessages = [];
       _renderedMsgIds = new Set();
       const container = document.getElementById('chatMessages');
-      if (container) container.innerHTML = '';
-      loadAllMessages();
+      if (container) container.innerHTML = '<div class="chat-empty" id="chatEmpty">Loading…</div>';
+
+      loadMessages();
     }
 
     let _loadingMessages = false;
-    async function loadAllMessages() {
-      if (_loadingMessages) return; // prevent concurrent calls clearing the UI
+    async function loadMessages() {
+      if (!_selectedStaffId) return;
+      if (_loadingMessages) return;
       _loadingMessages = true;
       const token = localStorage.getItem('portalToken');
       if (!token) { _loadingMessages = false; return; }
       try {
-        // Load all threads
-        const threadsRes = await fetch('/portal/messages', { headers: { 'Authorization': 'Bearer ' + token } });
-        if (!threadsRes.ok) throw new Error(`Messages API error ${threadsRes.status}`);
-        const threads = await threadsRes.json();
-        if (!Array.isArray(threads) || !threads.length) {
-          const el = document.getElementById('chatEmpty');
-          if (el) { el.style.display = 'block'; el.textContent = 'No messages yet. Send a message below to get started!'; }
-          _loadingMessages = false;
-          return;
-        }
+        const res = await fetch(`/portal/messages/thread/${_selectedStaffId}`, {
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        if (!res.ok) throw new Error(`Messages API error ${res.status}`);
+        const data = await res.json();
+        _selectedStaffThreadId = data.threadId || null;
+        const freshMessages = (data.messages || []);
 
-        // Load all thread messages in parallel
-        const threadResults = await Promise.all(threads.map(thread =>
-          fetch(`/portal/messages/${thread.id}`, { headers: { 'Authorization': 'Bearer ' + token } })
-            .then(r => r.json())
-            .then(data => (data.messages || []).map(m => ({ ...m, threadSubject: thread.subject })))
-            .catch(() => [])
-        ));
-        const freshMessages = threadResults.flat();
-
-        // Sort by date
-        freshMessages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
-        // Only re-render if messages actually changed (compare last message id + count)
         const freshKey = `${freshMessages.length}:${freshMessages[freshMessages.length-1]?.id}`;
         const currentKey = `${_chatAllMessages.length}:${_chatAllMessages[_chatAllMessages.length-1]?.id}`;
         if (freshKey !== currentKey) {
@@ -1984,11 +1959,12 @@
           renderChatMessages();
         }
 
-        // Update tab unread badge
-        const unread = threads.reduce((acc, t) => acc + (t.unreadCount || 0), 0);
-        updateChatBadge(unread);
+        // Also refresh staff list for unread counts
+        loadStaffList();
       } catch (e) {
         console.error('[portal messages] load error:', e);
+        const el = document.getElementById('chatEmpty');
+        if (el) { el.style.display = 'block'; el.textContent = 'No messages yet. Send a message to start the conversation!'; }
       } finally {
         _loadingMessages = false;
       }
@@ -2009,13 +1985,13 @@
       document.getElementById('chatAttachInput').value = '';
       renderChatAttachChips();
     }
-    window.handleChatAttach = handleChatAttach; // expose for onchange attribute
+    window.handleChatAttach = handleChatAttach;
 
     function removeChatAttachFile(idx) {
       _chatAttachFiles.splice(idx, 1);
       renderChatAttachChips();
     }
-    window.removeChatAttachFile = removeChatAttachFile; // expose for onclick attribute
+    window.removeChatAttachFile = removeChatAttachFile;
 
     async function downloadPortalAttachment(documentId) {
       const token = localStorage.getItem('portalToken');
@@ -2044,6 +2020,7 @@
       const isClient = m.sender_type === 'client';
       const side = isClient ? 'client' : 'staff';
       const time = new Date(m.created_at).toLocaleString();
+      const senderLabel = !isClient && m.sender_name ? `<span style="font-size:0.65rem;color:var(--muted);display:block;margin-bottom:0.15rem;">${chatEsc(m.sender_name)}</span>` : '';
       const attachmentsHtml = (m.attachments || []).length > 0
         ? `<div class="msg-attachments">${(m.attachments).map(a => {
             const size = a.sizeBytes ? ' <span class="att-size">(' + chatFormatBytes(a.sizeBytes) + ')</span>' : '';
@@ -2051,6 +2028,7 @@
           }).join('')}</div>`
         : '';
       return `<div class="chat-bubble-wrap ${side}" data-msg-id="${m.id}">
+        ${senderLabel}
         <div class="chat-bubble ${side}">${m.body ? chatEsc(m.body) : ''}${attachmentsHtml}</div>
         <div class="chat-bubble-meta">${time}</div>
       </div>`;
@@ -2058,18 +2036,17 @@
 
     function renderChatMessages() {
       const container = document.getElementById('chatMessages');
+      const empty = container.querySelector('.chat-empty');
+
       if (!_chatAllMessages.length) {
         if (!_renderedMsgIds.size) {
-          container.innerHTML = '<div class="chat-empty">No messages yet. Send a message below!</div>';
+          container.innerHTML = '<div class="chat-empty">No messages yet. Send a message to start the conversation!</div>';
         }
         return;
       }
 
-      // Remove "no messages" placeholder if present
-      const empty = container.querySelector('.chat-empty');
       if (empty) empty.remove();
 
-      // Only append new messages — never replace existing DOM
       let appended = false;
       for (const m of _chatAllMessages) {
         if (!_renderedMsgIds.has(m.id)) {
@@ -2083,6 +2060,7 @@
     }
 
     async function sendChatMessage() {
+      if (!_selectedStaffId) return;
       const input = document.getElementById('chatInput');
       const body = input.value.trim();
       if (!body && _chatAttachFiles.length === 0) return;
@@ -2091,6 +2069,7 @@
         input.disabled = true;
         const fd = new FormData();
         fd.append('body', body);
+        fd.append('staff_user_id', String(_selectedStaffId));
         _chatAttachFiles.forEach(f => fd.append('files', f));
         const res = await fetch('/portal/messages/send', {
           method: 'POST',
@@ -2101,11 +2080,12 @@
           const d = await res.json().catch(() => ({}));
           throw new Error(d.error || `Server error ${res.status}`);
         }
+        const result = await res.json();
+        _selectedStaffThreadId = result.threadId || _selectedStaffThreadId;
         input.value = '';
         _chatAttachFiles = [];
         renderChatAttachChips();
-        _chatLoaded = false;
-        await loadAllMessages();
+        await loadMessages();
       } catch (e) {
         alert('Failed to send message: ' + e.message);
       } finally {
@@ -2122,17 +2102,6 @@
       if (count > 0) {
         btn.insertAdjacentHTML('beforeend', `<span class="unread-badge-tab">${count}</span>`);
       }
-      // Update unread count in contact panel without re-rendering (avoids photo blink)
-      const contactRows = document.querySelectorAll('.chat-contact-row');
-      contactRows.forEach(row => {
-        const badge = row.querySelector('.chat-unread-badge');
-        if (count > 0) {
-          if (badge) badge.textContent = count;
-          else row.querySelector('.chat-contact-meta')?.insertAdjacentHTML('beforeend', `<div class="chat-unread-badge">${count}</div>`);
-        } else if (badge) {
-          badge.remove();
-        }
-      });
     }
 
     function chatEsc(s) {

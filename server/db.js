@@ -752,6 +752,37 @@ async function initDB() {
       created_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(message_id, firm_user_id)
     );
+
+    -- ===================== MESSAGING REBUILD (per-staff threads) =====================
+
+    -- One-time wipe of old test data (only runs if staff_user_id column doesn't exist yet)
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='message_threads' AND column_name='staff_user_id') THEN
+        DELETE FROM message_mentions;
+        DELETE FROM thread_dismissals;
+        DELETE FROM thread_companies;
+        DELETE FROM messages;
+        DELETE FROM message_threads;
+      END IF;
+    END $$;
+
+    -- Add staff_user_id to message_threads
+    ALTER TABLE message_threads ADD COLUMN IF NOT EXISTS staff_user_id INTEGER REFERENCES firm_users(id);
+
+    -- Indexes for fast inbox queries
+    CREATE INDEX IF NOT EXISTS idx_msg_threads_staff ON message_threads(staff_user_id, firm_id);
+    CREATE INDEX IF NOT EXISTS idx_msg_threads_person ON message_threads(person_id, firm_id);
+
+    -- Update status constraint to include 'archived'
+    DO $$ BEGIN
+      ALTER TABLE message_threads DROP CONSTRAINT IF EXISTS message_threads_status_check;
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END $$;
+
+    DO $$ BEGIN
+      ALTER TABLE message_threads ADD CONSTRAINT message_threads_status_check CHECK (status IN ('open', 'resolved', 'archived'));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
   `);
 }
 

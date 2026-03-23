@@ -29,7 +29,6 @@ const _pendingNotifications = new Map();
 function scheduleClientNotification({ threadId, personId, toEmail, toName, firmName }) {
   if (!toEmail) return;
 
-  // Clear any existing pending timer for this person (staff sent multiple messages quickly)
   if (_pendingNotifications.has(personId)) {
     clearTimeout(_pendingNotifications.get(personId));
   }
@@ -45,13 +44,11 @@ function scheduleClientNotification({ threadId, personId, toEmail, toName, firmN
       const { portal_last_login_at, last_notification_sent_at } = rows[0];
       const now = Date.now();
 
-      // Cancel: client was active in portal in last 30 minutes
       if (portal_last_login_at && (now - new Date(portal_last_login_at).getTime()) < 30 * 60 * 1000) {
         console.log(`[notify] skipped — client ${personId} was active recently`);
         return;
       }
 
-      // Cancel: client sent a message since we queued this notification (check thread activity)
       const { rows: recentMsgs } = await pool.query(
         `SELECT 1 FROM messages m
          JOIN message_threads mt ON mt.id = m.thread_id
@@ -65,13 +62,11 @@ function scheduleClientNotification({ threadId, personId, toEmail, toName, firmN
         return;
       }
 
-      // Cancel: notified within last 2 hours
       if (last_notification_sent_at && (now - new Date(last_notification_sent_at).getTime()) < 2 * 60 * 60 * 1000) {
         console.log(`[notify] skipped — already notified ${personId} within 2 hours`);
         return;
       }
 
-      // Send notification
       await sendPortalNotification({
         to: toEmail,
         name: toName,
@@ -80,7 +75,6 @@ function scheduleClientNotification({ threadId, personId, toEmail, toName, firmN
         portalUrl: APP_URL + '/portal',
       });
 
-      // Update cooldown timestamp
       await pool.query(
         `UPDATE people SET last_notification_sent_at = NOW() WHERE id = $1`,
         [personId]
@@ -89,12 +83,11 @@ function scheduleClientNotification({ threadId, personId, toEmail, toName, firmN
     } catch (e) {
       console.error('[notify] error (non-fatal):', e.message);
     }
-  }, 5 * 60 * 1000); // 5 minute delay
+  }, 5 * 60 * 1000);
 
   _pendingNotifications.set(personId, timer);
 }
 
-// Helper: cancel pending notification when client sends (they're engaged)
 function cancelPendingNotification(personId) {
   if (_pendingNotifications.has(personId)) {
     clearTimeout(_pendingNotifications.get(personId));
@@ -103,17 +96,12 @@ function cancelPendingNotification(personId) {
   }
 }
 
-// Helper: apply classification results to a thread
 async function applyClassification(threadId, firmId, personId, body) {
   try {
     const result = await classifyMessage({ body, personId, firmId });
-
-    // Update category
     if (result.category) {
       await pool.query('UPDATE message_threads SET category = $1 WHERE id = $2', [result.category, threadId]);
     }
-
-    // Insert company tags
     for (const c of (result.companies || [])) {
       await pool.query(
         `INSERT INTO thread_companies (thread_id, company_id, ai_confidence, added_by)
@@ -127,77 +115,114 @@ async function applyClassification(threadId, firmId, personId, body) {
   }
 }
 
-// ── GET /messages — firm inbox ────────────────────────────────────────────────
-router.get('/', async (req, res) => {
+// ── GET /messages/staff-list — active staff for the firm (used by portal) ────
+router.get('/staff-list', async (req, res) => {
   const firmId = req.firm.id;
-  const all = req.query.all === 'true';
-
   try {
-    const statusFilter = all ? "status IN ('open','waiting','resolved')" : "status IN ('open','waiting')";
+    const { rows } = await pool.query(
+      `SELECT id, COALESCE(display_name, name, email) as name, email, avatar_url
+       FROM firm_users
+       WHERE firm_id = $1 AND archived_at IS NULL AND accepted_at IS NOT NULL
+       ORDER BY name`,
+      [firmId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('[GET /messages/staff-list] error:', err);
+    res.status(500).json({ error: 'Failed to fetch staff list' });
+  }
+});
 
+// ── GET /messages/all — all firm threads (for conversation summaries, any staff) ──
+router.get('/all', async (req, res) => {
+  const firmId = req.firm.id;
+  try {
     const { rows: threads } = await pool.query(
-      `SELECT
-         mt.id, mt.subject, mt.status, mt.category, mt.last_message_at, mt.created_at,
-         mt.person_id, mt.assigned_to,
-         p.first_name, p.last_name, p.email,
-         (SELECT body FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) AS last_body,
-         (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) AS unread_count,
-         EXISTS(SELECT 1 FROM messages m JOIN message_attachments ma ON ma.message_id = m.id WHERE m.thread_id = mt.id LIMIT 1) AS has_attachments,
-         EXISTS(
-           SELECT 1 FROM message_mentions mm
-           JOIN messages m2 ON m2.id = mm.message_id
-           WHERE m2.thread_id = mt.id AND mm.firm_user_id = $2
-         ) AS has_mention
+      `SELECT mt.*,
+         p.first_name, p.last_name, p.email as person_email,
+         fu.name as staff_name,
+         (SELECT body FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) as last_body,
+         (SELECT created_at FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) as last_message_at_sub,
+         (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) as unread_count
        FROM message_threads mt
        JOIN people p ON p.id = mt.person_id
-       WHERE mt.firm_id = $1 AND mt.${statusFilter}
-         AND NOT EXISTS (
-           SELECT 1 FROM thread_dismissals td
-           WHERE td.thread_id = mt.id AND td.firm_user_id = $2
-         )
-       ORDER BY mt.last_message_at DESC`,
-      [firmId, req.firm.userId || 0]
+       LEFT JOIN firm_users fu ON fu.id = mt.staff_user_id
+       WHERE mt.firm_id = $1 AND mt.status != 'archived'
+       ORDER BY mt.last_message_at DESC NULLS LAST`,
+      [firmId]
     );
 
-    // Fetch company tags for each thread
-    const threadIds = threads.map(t => t.id);
-    let companyMap = {};
-    if (threadIds.length > 0) {
-      const { rows: tcRows } = await pool.query(
-        `SELECT tc.thread_id, c.id AS company_id, c.company_name
-         FROM thread_companies tc
-         JOIN companies c ON c.id = tc.company_id
-         WHERE tc.thread_id = ANY($1)`,
-        [threadIds]
-      );
-      for (const row of tcRows) {
-        if (!companyMap[row.thread_id]) companyMap[row.thread_id] = [];
-        companyMap[row.thread_id].push({ id: row.company_id, name: row.company_name });
-      }
-    }
-
-    const result = threads.map(t => ({
+    res.json(threads.map(t => ({
       id: t.id,
       subject: t.subject,
       status: t.status,
       category: t.category,
       lastMessageAt: t.last_message_at,
       createdAt: t.created_at,
+      staffUserId: t.staff_user_id,
+      staffName: t.staff_name || null,
       person: {
         id: t.person_id,
         firstName: t.first_name,
         lastName: t.last_name,
-        email: t.email,
+        email: t.person_email,
       },
-      companies: companyMap[t.id] || [],
       lastPreview: t.last_body ? t.last_body.slice(0, 80) : '',
       unreadCount: parseInt(t.unread_count, 10) || 0,
-      assignedTo: t.assigned_to,
-      hasAttachments: t.has_attachments || false,
-      hasMention: t.has_mention || false,
-    }));
+    })));
+  } catch (err) {
+    console.error('[GET /messages/all] error:', err);
+    res.status(500).json({ error: 'Failed to fetch all threads' });
+  }
+});
 
-    res.json(result);
+// ── GET /messages — My Inbox (threads assigned to current staff user) ─────────
+router.get('/', async (req, res) => {
+  const firmId = req.firm.id;
+  let userId = req.firm.userId;
+  if (!userId) {
+    try {
+      const { rows } = await pool.query('SELECT id FROM firm_users WHERE firm_id = $1 AND email = $2 LIMIT 1', [firmId, req.firm.email]);
+      if (rows[0]) userId = rows[0].id;
+    } catch(e) { /* silent */ }
+  }
+
+  try {
+    const { rows: threads } = await pool.query(
+      `SELECT mt.*,
+         p.first_name, p.last_name, p.email as person_email,
+         fu.name as staff_name,
+         (SELECT body FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) as last_body,
+         (SELECT created_at FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) as last_message_at_sub,
+         (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) as unread_count,
+         EXISTS(SELECT 1 FROM message_mentions mm JOIN messages m2 ON m2.id = mm.message_id WHERE m2.thread_id = mt.id AND mm.firm_user_id = $2) as has_mention
+       FROM message_threads mt
+       JOIN people p ON p.id = mt.person_id
+       JOIN firm_users fu ON fu.id = mt.staff_user_id
+       WHERE mt.firm_id = $1 AND mt.staff_user_id = $2 AND mt.status != 'archived'
+       ORDER BY mt.last_message_at DESC NULLS LAST`,
+      [firmId, userId]
+    );
+
+    res.json(threads.map(t => ({
+      id: t.id,
+      subject: t.subject,
+      status: t.status,
+      category: t.category,
+      lastMessageAt: t.last_message_at,
+      createdAt: t.created_at,
+      staffUserId: t.staff_user_id,
+      staffName: t.staff_name,
+      person: {
+        id: t.person_id,
+        firstName: t.first_name,
+        lastName: t.last_name,
+        email: t.person_email,
+      },
+      lastPreview: t.last_body ? t.last_body.slice(0, 80) : '',
+      unreadCount: parseInt(t.unread_count, 10) || 0,
+      hasMention: t.has_mention || false,
+    })));
   } catch (err) {
     console.error('[GET /messages] error:', err);
     res.status(500).json({ error: 'Failed to fetch inbox' });
@@ -212,30 +237,17 @@ router.get('/person/:personId', async (req, res) => {
   try {
     const { rows: threads } = await pool.query(
       `SELECT
-         mt.id, mt.subject, mt.status, mt.category, mt.last_message_at, mt.created_at, mt.assigned_to,
+         mt.id, mt.subject, mt.status, mt.category, mt.last_message_at, mt.created_at,
+         mt.staff_user_id,
+         fu.name as staff_name,
          (SELECT body FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) AS last_body,
          (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) AS unread_count
        FROM message_threads mt
+       LEFT JOIN firm_users fu ON fu.id = mt.staff_user_id
        WHERE mt.firm_id = $1 AND mt.person_id = $2
        ORDER BY mt.last_message_at DESC`,
       [firmId, personId]
     );
-
-    const threadIds = threads.map(t => t.id);
-    let companyMap = {};
-    if (threadIds.length > 0) {
-      const { rows: tcRows } = await pool.query(
-        `SELECT tc.thread_id, c.id AS company_id, c.company_name
-         FROM thread_companies tc
-         JOIN companies c ON c.id = tc.company_id
-         WHERE tc.thread_id = ANY($1)`,
-        [threadIds]
-      );
-      for (const row of tcRows) {
-        if (!companyMap[row.thread_id]) companyMap[row.thread_id] = [];
-        companyMap[row.thread_id].push({ id: row.company_id, name: row.company_name });
-      }
-    }
 
     res.json(threads.map(t => ({
       id: t.id,
@@ -244,10 +256,10 @@ router.get('/person/:personId', async (req, res) => {
       category: t.category,
       lastMessageAt: t.last_message_at,
       createdAt: t.created_at,
-      companies: companyMap[t.id] || [],
+      staffUserId: t.staff_user_id,
+      staffName: t.staff_name || null,
       lastPreview: t.last_body ? t.last_body.slice(0, 80) : '',
       unreadCount: parseInt(t.unread_count, 10) || 0,
-      assignedTo: t.assigned_to,
     })));
   } catch (err) {
     console.error('[GET /messages/person/:personId] error:', err);
@@ -264,7 +276,7 @@ router.get('/company/:companyId', async (req, res) => {
     const { rows: threads } = await pool.query(
       `SELECT
          mt.id, mt.subject, mt.status, mt.category, mt.last_message_at, mt.created_at,
-         mt.person_id, mt.assigned_to,
+         mt.person_id, mt.staff_user_id,
          p.first_name, p.last_name, p.email,
          (SELECT body FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) AS last_body,
          (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) AS unread_count
@@ -276,22 +288,6 @@ router.get('/company/:companyId', async (req, res) => {
       [firmId, companyId]
     );
 
-    const threadIds = threads.map(t => t.id);
-    let companyMap = {};
-    if (threadIds.length > 0) {
-      const { rows: tcRows } = await pool.query(
-        `SELECT tc.thread_id, c.id AS company_id, c.company_name
-         FROM thread_companies tc
-         JOIN companies c ON c.id = tc.company_id
-         WHERE tc.thread_id = ANY($1)`,
-        [threadIds]
-      );
-      for (const row of tcRows) {
-        if (!companyMap[row.thread_id]) companyMap[row.thread_id] = [];
-        companyMap[row.thread_id].push({ id: row.company_id, name: row.company_name });
-      }
-    }
-
     res.json(threads.map(t => ({
       id: t.id,
       subject: t.subject,
@@ -300,10 +296,9 @@ router.get('/company/:companyId', async (req, res) => {
       lastMessageAt: t.last_message_at,
       createdAt: t.created_at,
       person: { id: t.person_id, firstName: t.first_name, lastName: t.last_name, email: t.email },
-      companies: companyMap[t.id] || [],
+      staffUserId: t.staff_user_id,
       lastPreview: t.last_body ? t.last_body.slice(0, 80) : '',
       unreadCount: parseInt(t.unread_count, 10) || 0,
-      assignedTo: t.assigned_to,
     })));
   } catch (err) {
     console.error('[GET /messages/company/:companyId] error:', err);
@@ -312,7 +307,6 @@ router.get('/company/:companyId', async (req, res) => {
 });
 
 // ── GET /messages/attachments/:documentId/download ────────────────────────────
-// NOTE: Must be registered BEFORE /:threadId to avoid being caught by the wildcard route
 router.get('/attachments/:documentId/download', async (req, res) => {
   const firmId = req.firm.id;
   const documentId = parseInt(req.params.documentId);
@@ -338,11 +332,12 @@ router.get('/:threadId', async (req, res) => {
   const threadId = parseInt(req.params.threadId);
 
   try {
-    // Fetch thread
     const { rows: threadRows } = await pool.query(
-      `SELECT mt.*, p.first_name, p.last_name, p.email
+      `SELECT mt.*, p.first_name, p.last_name, p.email,
+              fu.name as staff_name, fu.display_name as staff_display_name
        FROM message_threads mt
        JOIN people p ON p.id = mt.person_id
+       LEFT JOIN firm_users fu ON fu.id = mt.staff_user_id
        WHERE mt.id = $1 AND mt.firm_id = $2`,
       [threadId, firmId]
     );
@@ -350,16 +345,6 @@ router.get('/:threadId', async (req, res) => {
 
     const thread = threadRows[0];
 
-    // Fetch companies
-    const { rows: companies } = await pool.query(
-      `SELECT tc.company_id, tc.ai_confidence, tc.added_by, c.company_name
-       FROM thread_companies tc
-       JOIN companies c ON c.id = tc.company_id
-       WHERE tc.thread_id = $1`,
-      [threadId]
-    );
-
-    // Fetch messages with sender info
     const { rows: msgs } = await pool.query(
       `SELECT m.id, m.thread_id, m.sender_type, m.sender_id, m.body,
               m.is_internal, m.created_at, m.read_at
@@ -369,22 +354,19 @@ router.get('/:threadId', async (req, res) => {
       [threadId]
     );
 
-    // Mark client messages as read (staff is reading now)
     await pool.query(
       `UPDATE messages SET read_at = NOW()
        WHERE thread_id = $1 AND sender_type = 'client' AND read_at IS NULL`,
       [threadId]
     );
 
-    // Clear @mentions for this user in this thread — they've seen it
     await pool.query(
       `DELETE FROM message_mentions mm
        USING messages m
        WHERE mm.message_id = m.id AND m.thread_id = $1 AND mm.firm_user_id = $2`,
       [threadId, req.firm.userId]
-    ).catch(() => {}); // non-fatal if table doesn't exist yet
+    ).catch(() => {});
 
-    // Fetch firm users for sender name lookup
     const { rows: firmUsers } = await pool.query(
       'SELECT id, name, display_name FROM firm_users WHERE firm_id = $1',
       [firmId]
@@ -394,7 +376,6 @@ router.get('/:threadId', async (req, res) => {
       userMap[u.id] = u.display_name || u.name || 'Staff';
     }
 
-    // Fetch attachments for each message
     const msgIds = msgs.map(m => m.id);
     const attachmentMap = {};
     if (msgIds.length > 0) {
@@ -435,7 +416,8 @@ router.get('/:threadId', async (req, res) => {
       subject: thread.subject,
       status: thread.status,
       category: thread.category,
-      assignedTo: thread.assigned_to,
+      staffUserId: thread.staff_user_id,
+      staffName: thread.staff_display_name || thread.staff_name || null,
       lastMessageAt: thread.last_message_at,
       createdAt: thread.created_at,
       person: {
@@ -444,7 +426,6 @@ router.get('/:threadId', async (req, res) => {
         lastName: thread.last_name,
         email: thread.email,
       },
-      companies,
       messages,
     });
   } catch (err) {
@@ -456,7 +437,6 @@ router.get('/:threadId', async (req, res) => {
 // ── POST /messages — create thread + first message ───────────────────────────
 router.post('/', async (req, res) => {
   const firmId = req.firm.id;
-  // Fallback: for old JWTs (owner), userId may be null — look up by email
   let userId = req.firm.userId;
   if (!userId) {
     try {
@@ -464,10 +444,16 @@ router.post('/', async (req, res) => {
       if (rows[0]) userId = rows[0].id;
     } catch(e) { /* silent */ }
   }
-  const { person_id, subject, body, is_internal } = req.body;
+  const { person_id, staff_user_id, subject, body, is_internal } = req.body;
 
   if (!person_id || !body || !body.trim()) {
     return res.status(400).json({ error: 'person_id and body are required' });
+  }
+
+  // staff_user_id required
+  const staffId = parseInt(staff_user_id) || userId;
+  if (!staffId) {
+    return res.status(400).json({ error: 'staff_user_id is required' });
   }
 
   try {
@@ -478,26 +464,49 @@ router.post('/', async (req, res) => {
     );
     if (!personRows[0]) return res.status(404).json({ error: 'Person not found' });
 
-    // Create thread
-    const { rows: threadRows } = await pool.query(
-      `INSERT INTO message_threads (firm_id, person_id, subject, status, last_message_at)
-       VALUES ($1, $2, $3, 'waiting', NOW())
-       RETURNING id`,
-      [firmId, person_id, subject || '']
+    // Validate staff_user_id belongs to this firm
+    const { rows: staffRows } = await pool.query(
+      'SELECT id FROM firm_users WHERE id = $1 AND firm_id = $2',
+      [staffId, firmId]
     );
-    const threadId = threadRows[0].id;
+    if (!staffRows[0]) return res.status(404).json({ error: 'Staff user not found' });
 
-    // Create first message
+    // Check if a non-archived thread already exists for this person + staff pair
+    const { rows: existingRows } = await pool.query(
+      `SELECT id FROM message_threads
+       WHERE person_id = $1 AND staff_user_id = $2 AND firm_id = $3 AND status != 'archived'
+       LIMIT 1`,
+      [person_id, staffId, firmId]
+    );
+
+    let threadId;
+    if (existingRows.length > 0) {
+      threadId = existingRows[0].id;
+    } else {
+      const { rows: threadRows } = await pool.query(
+        `INSERT INTO message_threads (firm_id, person_id, staff_user_id, subject, status, last_message_at)
+         VALUES ($1, $2, $3, $4, 'open', NOW())
+         RETURNING id`,
+        [firmId, person_id, staffId, subject || '']
+      );
+      threadId = threadRows[0].id;
+    }
+
+    // Create message
     await pool.query(
       `INSERT INTO messages (thread_id, sender_type, sender_id, body, is_internal)
        VALUES ($1, 'staff', $2, $3, $4)`,
       [threadId, userId, body.trim(), is_internal ? true : false]
     );
 
-    // Classify asynchronously (non-blocking)
+    // Update last_message_at
+    await pool.query(
+      `UPDATE message_threads SET last_message_at = NOW() WHERE id = $1`,
+      [threadId]
+    );
+
     setImmediate(() => applyClassification(threadId, firmId, person_id, body.trim()));
 
-    // Pusher: notify staff of new thread
     const pusher = req.app.get('pusher');
     if (pusher) {
       pusher.trigger(`private-firm-${firmId}`, 'thread-new', { threadId, personId: person_id });
@@ -530,7 +539,6 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
   }
 
   try {
-    // Verify thread belongs to this firm
     const { rows: threadRows } = await pool.query(
       `SELECT mt.*, p.first_name, p.last_name, p.email, f.name AS firm_name
        FROM message_threads mt
@@ -542,7 +550,12 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
     if (!threadRows[0]) return res.status(404).json({ error: 'Thread not found' });
     const thread = threadRows[0];
 
-    // Insert message
+    // Authorization: internal notes can be posted by anyone in the firm;
+    // external replies only by the thread's assigned staff_user_id
+    if (!is_internal && thread.staff_user_id && thread.staff_user_id !== userId) {
+      return res.status(403).json({ error: 'Only the assigned staff member can send external replies on this thread' });
+    }
+
     const { rows: msgRows } = await pool.query(
       `INSERT INTO messages (thread_id, sender_type, sender_id, body, is_internal)
        VALUES ($1, 'staff', $2, $3, $4)
@@ -551,7 +564,6 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
     );
     const messageId = msgRows[0].id;
 
-    // Extract @mentions and store
     if (body) {
       const mentionPattern = /@([A-Za-z]+(?: [A-Za-z]+)?)/g;
       let mentionMatch;
@@ -570,7 +582,6 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
       }
     }
 
-    // Upload files and create document + attachment records
     if (files.length > 0) {
       const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
       const year = String(new Date().getFullYear());
@@ -599,14 +610,12 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
       }
     }
 
-    // Update thread status + last_message_at (only for non-internal)
     if (!is_internal) {
       await pool.query(
-        `UPDATE message_threads SET status = 'waiting', last_message_at = NOW() WHERE id = $1`,
+        `UPDATE message_threads SET status = 'open', last_message_at = NOW() WHERE id = $1`,
         [threadId]
       );
 
-      // Smart notification: delay 5 min, cancel if client responds or is online, 2hr cooldown
       scheduleClientNotification({
         threadId,
         personId: thread.person_id,
@@ -616,7 +625,6 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
       });
     }
 
-    // Pusher: notify staff inbox and client portal
     const pusher = req.app.get('pusher');
     if (pusher && !is_internal) {
       pusher.trigger([`private-firm-${firmId}`, `private-portal-${firmId}-${thread.person_id}`], 'message-new', { threadId, senderType: 'staff' });
@@ -631,15 +639,32 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
   }
 });
 
+// ── PUT /messages/:threadId/archive — archive a thread ───────────────────────
+router.put('/:threadId/archive', async (req, res) => {
+  const firmId = req.firm.id;
+  const threadId = parseInt(req.params.threadId);
+
+  try {
+    const { rowCount } = await pool.query(
+      `UPDATE message_threads SET status = 'archived' WHERE id = $1 AND firm_id = $2`,
+      [threadId, firmId]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Thread not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[PUT /messages/:threadId/archive] error:', err);
+    res.status(500).json({ error: 'Failed to archive thread' });
+  }
+});
+
 // ── PUT /messages/:threadId/status ───────────────────────────────────────────
 router.put('/:threadId/status', async (req, res) => {
   const firmId = req.firm.id;
   const threadId = parseInt(req.params.threadId);
   const { status } = req.body;
 
-  // Accept 'active' as alias for 'open' (UI simplified to Active/Resolved only)
   const normalizedStatus = status === 'active' ? 'open' : status;
-  if (!['open', 'waiting', 'resolved'].includes(normalizedStatus)) {
+  if (!['open', 'resolved', 'archived'].includes(normalizedStatus)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
 
@@ -656,25 +681,6 @@ router.put('/:threadId/status', async (req, res) => {
   }
 });
 
-// ── PUT /messages/:threadId/assign ───────────────────────────────────────────
-router.put('/:threadId/assign', async (req, res) => {
-  const firmId = req.firm.id;
-  const threadId = parseInt(req.params.threadId);
-  const { assigned_to } = req.body;
-
-  try {
-    const { rowCount } = await pool.query(
-      'UPDATE message_threads SET assigned_to = $1 WHERE id = $2 AND firm_id = $3',
-      [assigned_to || null, threadId, firmId]
-    );
-    if (!rowCount) return res.status(404).json({ error: 'Thread not found' });
-    res.json({ ok: true });
-  } catch (err) {
-    console.error('[PUT /messages/:threadId/assign] error:', err);
-    res.status(500).json({ error: 'Failed to assign thread' });
-  }
-});
-
 // ── POST /messages/:threadId/companies ───────────────────────────────────────
 router.post('/:threadId/companies', async (req, res) => {
   const firmId = req.firm.id;
@@ -684,7 +690,6 @@ router.post('/:threadId/companies', async (req, res) => {
   if (!company_id) return res.status(400).json({ error: 'company_id is required' });
 
   try {
-    // Verify thread belongs to firm
     const { rows } = await pool.query(
       'SELECT id FROM message_threads WHERE id = $1 AND firm_id = $2',
       [threadId, firmId]
@@ -752,32 +757,7 @@ router.put('/:threadId/read', async (req, res) => {
   }
 });
 
-// POST /:threadId/dismiss — personal dismiss (Resolve Me)
-router.post('/:threadId/dismiss', async (req, res) => {
-  try {
-    const firmUserId = req.firm.userId;
-    if (!firmUserId) return res.status(400).json({ error: 'No user ID' });
-    await pool.query(
-      `INSERT INTO thread_dismissals (thread_id, firm_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-      [req.params.threadId, firmUserId]
-    );
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// DELETE /:threadId/dismiss — undo personal dismiss
-router.delete('/:threadId/dismiss', async (req, res) => {
-  try {
-    const firmUserId = req.firm.userId;
-    await pool.query(
-      `DELETE FROM thread_dismissals WHERE thread_id = $1 AND firm_user_id = $2`,
-      [req.params.threadId, firmUserId]
-    );
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// POST /api/messages/sms — send an SMS to a person and log it as a message
+// ── POST /messages/sms ───────────────────────────────────────────────────────
 router.post('/sms', async (req, res) => {
   const firmId = req.firm.id;
   const { person_id, body, thread_id } = req.body;
@@ -787,7 +767,6 @@ router.post('/sms', async (req, res) => {
   }
 
   try {
-    // Get the person's phone number
     const { rows: people } = await pool.query(
       'SELECT id, first_name, last_name, phone FROM people WHERE id = $1 AND firm_id = $2',
       [parseInt(person_id), firmId]
@@ -799,20 +778,16 @@ router.post('/sms', async (req, res) => {
       return res.status(400).json({ error: 'This person has no phone number on file' });
     }
 
-    // Clean phone number — strip non-digits, add +1 if needed
     let phone = person.phone.replace(/\D/g, '');
     if (phone.length === 10) phone = '1' + phone;
     if (!phone.startsWith('+')) phone = '+' + phone;
 
-    // Send via Twilio
     const { sendSMS } = require('../services/twilio');
     const result = await sendSMS(phone, body.trim());
 
-    // Log the SMS as a message in the thread (or create a thread if none)
     let useThreadId = thread_id ? parseInt(thread_id) : null;
 
     if (!useThreadId) {
-      // Find existing open thread for this person, or create one
       const { rows: threads } = await pool.query(
         `SELECT id FROM message_threads WHERE firm_id = $1 AND person_id = $2 AND status = 'open' ORDER BY last_message_at DESC LIMIT 1`,
         [firmId, person_id]
@@ -829,14 +804,12 @@ router.post('/sms', async (req, res) => {
       }
     }
 
-    // Insert message record with sms marker
     await pool.query(
       `INSERT INTO messages (thread_id, sender_type, sender_id, body, created_at)
        VALUES ($1, 'staff', $2, $3, NOW())`,
       [useThreadId, req.firm.userId || null, `📱 SMS sent: ${body.trim()}`]
     );
 
-    // Update thread last_message_at
     await pool.query(
       'UPDATE message_threads SET last_message_at = NOW() WHERE id = $1',
       [useThreadId]
