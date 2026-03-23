@@ -2015,8 +2015,16 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to send SMS');
         document.getElementById('comm-reply-body').value = '';
-        await loadThread(commActiveThreadId, true);
-        await loadThreads();
+        // Use returned thread_id in case a new thread was created
+        const useThreadId = data.thread_id || commActiveThreadId;
+        if (useThreadId !== commActiveThreadId) {
+          commActiveThreadId = useThreadId;
+          await loadThreads();
+          await loadThread(useThreadId, false);
+        } else {
+          await loadThread(useThreadId, true);
+          await loadThreads();
+        }
         toast('Text message sent ✓');
       } catch(e) { toast(e.message, 'error'); }
       return;
@@ -2036,7 +2044,7 @@
       document.getElementById('comm-internal-toggle').checked = false;
       commAttachFiles = [];
       renderCommAttachChips();
-      await loadThread(commActiveThreadId, true);
+      await loadThread(commActiveThreadId, false); // full reload so new message is guaranteed visible
       await loadThreads();
     } catch(e) { console.error('[comm] sendReply error:', e); toast('Failed to send reply: ' + e.message, 'error'); }
   }
