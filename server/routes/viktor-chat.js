@@ -547,6 +547,20 @@ router.post('/message', async (req, res) => {
         }
       },
       {
+        name: 'link_person_to_company',
+        description: 'Grant a person access to a company (links them as owner/employee/signer). Use after creating people and companies to establish who is associated with which business.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            person_name: { type: 'string', description: 'Name of the person' },
+            company_name: { type: 'string', description: 'Name of the company' },
+            access_level: { type: 'string', enum: ['full', 'view', 'sign'], description: 'Access level — full (default), view, or sign' },
+            ownership_pct: { type: 'number', description: 'Optional ownership percentage (e.g. 50 for 50%)' }
+          },
+          required: ['person_name', 'company_name']
+        }
+      },
+      {
         name: 'delete_company',
         description: 'Permanently delete a company record. Use to remove duplicates or incorrectly created records. WARNING: irreversible.',
         input_schema: {
@@ -602,7 +616,7 @@ router.post('/message', async (req, res) => {
       'create_tax_delivery', 'send_tax_delivery', 'create_proposal',
       'create_pipeline_job', 'close_pipeline_job', 'look_up_client',
       'draft_message', 'update_notes', 'send_portal_invite',
-      'move_company', 'move_person', 'delete_relationship', 'delete_person', 'delete_company', 'create_company',
+      'move_company', 'move_person', 'delete_relationship', 'delete_person', 'delete_company', 'create_company', 'link_person_to_company',
       'list_crm'
     ]);
 
@@ -1390,6 +1404,26 @@ async function executeViktorTool(toolName, input, firmId, authHeader) {
       return { company_id: rows[0].id, company_name: rows[0].company_name, relationship_name: rel.name };
     }
 
+    // ── link_person_to_company ─────────────────────────────────────────────────
+    case 'link_person_to_company': {
+      const person = await resolvePerson(input.person_name, firmId);
+      if (!person) throw new Error(`Person "${input.person_name}" not found`);
+      const company = await resolveCompany(input.company_name, firmId);
+      if (!company) throw new Error(`Company "${input.company_name}" not found`);
+      await pool.query(
+        `INSERT INTO person_company_access (person_id, company_id, access_level, ownership_pct)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (person_id, company_id) DO UPDATE SET access_level=$3, ownership_pct=$4`,
+        [person.id, company.id, input.access_level || 'full', input.ownership_pct || null]
+      );
+      return {
+        ok: true,
+        person: `${person.first_name} ${person.last_name}`.trim(),
+        company: company.company_name,
+        access_level: input.access_level || 'full'
+      };
+    }
+
     // ── delete_person ──────────────────────────────────────────────────────────
     case 'delete_person': {
       let person;
@@ -1551,6 +1585,8 @@ function formatToolResult(toolName, input, result) {
       return `✅ Deleted relationship **${result.deleted}** (${result.deleted_count} removed).`;
     case 'create_company':
       return `✅ Created company **${result.company_name}** in **${result.relationship_name}**.`;
+    case 'link_person_to_company':
+      return `✅ Linked **${result.person}** to **${result.company}** (${result.access_level} access).`;
     case 'delete_person':
       return `✅ Deleted person **${result.deleted}** (ID ${result.id}).`;
     case 'delete_company':
