@@ -283,7 +283,7 @@
     #tab-communication .reply-box { padding:1rem 1.5rem; border-top:1px solid var(--border); background:var(--card); flex-shrink:0; }
     #tab-communication .reply-box-controls { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem; }
     #tab-communication .reply-box-controls label { font-size:0.78rem; color:var(--muted); display:flex; align-items:center; gap:0.3rem; cursor:pointer; }
-    #tab-communication .reply-box textarea { width:100%; background:var(--input-bg); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:0.6rem 0.75rem; font-size:0.88rem; font-family:inherit; resize:none; min-height:80px; margin-bottom:0.5rem; }
+    #tab-communication .reply-box textarea { width:100%; background:var(--input-bg); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:0.6rem 0.75rem; font-size:0.88rem; font-family:inherit; resize:vertical; min-height:120px; max-height:320px; margin-bottom:0.5rem; }
     #tab-communication .reply-box textarea:focus { outline:none; border-color:var(--gold); }
     #tab-communication .reply-box-actions { display:flex; gap:0.5rem; }
     #tab-communication .attach-chips { display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:0.4rem; }
@@ -399,7 +399,7 @@
             <label id="comm-sms-toggle-wrap" style="display:none;"><input type="checkbox" id="comm-sms-toggle"> 📱 Send as Text</label>
             <div style="flex:1;"></div>
           </div>
-          <textarea id="comm-reply-body" placeholder="Write a reply…" rows="3"></textarea>
+          <textarea id="comm-reply-body" placeholder="Write a reply…" rows="5"></textarea>
           <div class="attach-chips" id="comm-attach-chips"></div>
           <input type="file" id="comm-attach-input" multiple style="display:none;" onchange="handleCommAttach(this.files)">
           <div class="reply-box-actions">
