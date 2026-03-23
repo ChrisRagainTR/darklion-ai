@@ -816,16 +816,26 @@
 
     function setBadge(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
 
+    function chartEmptyState(ctx, message) {
+      const parent = ctx.parentElement;
+      ctx.style.display = 'none';
+      const empty = document.createElement('div');
+      empty.style.cssText = 'display:flex;align-items:center;justify-content:center;height:130px;color:var(--muted);font-size:0.8rem;font-style:italic;';
+      empty.textContent = message || 'No data yet';
+      parent.appendChild(empty);
+    }
+
     function renderProposalChart(data) {
       const ctx = document.getElementById('chart-proposals');
       if (!ctx || !window.Chart) return;
+      if (!data || !data.length) { chartEmptyState(ctx, 'No proposals in last 6 months'); return; }
       const labels = data.map(d => d.month);
       const sent = data.map(d => parseInt(d.sent||0));
       const accepted = data.map(d => parseInt(d.accepted||0));
       new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: labels.length ? labels : ['No data'],
+          labels,
           datasets: [
             { label: 'Sent', data: sent, backgroundColor: 'rgba(74,144,217,0.35)', borderColor: '#4a90d9', borderWidth: 1, borderRadius: 4 },
             { label: 'Accepted', data: accepted, backgroundColor: 'rgba(62,207,142,0.35)', borderColor: '#3ecf8e', borderWidth: 1, borderRadius: 4 },
@@ -848,6 +858,7 @@
       const rels = parseInt(counts.relationships||0);
       const people = parseInt(counts.people||0);
       const cos = parseInt(counts.companies||0);
+      if (!rels && !people && !cos) { chartEmptyState(ctx, 'No clients yet'); return; }
       new Chart(ctx, {
         type: 'doughnut',
         data: {
