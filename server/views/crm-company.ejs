@@ -888,7 +888,8 @@
     return res;
   }
   function esc(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function toast(msg, type='success') { window.toast(msg, type === 'error' ? 'error' : undefined); }
+  const _shellToast = window.toast;
+  function toast(msg, type='success') { _shellToast(msg, type === 'error' ? 'error' : undefined); }
 
   function switchTab(name, el) {
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
