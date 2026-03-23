@@ -2104,7 +2104,8 @@
       if (!res.ok) throw new Error(data.error || 'Failed to send');
       closeSmsModal();
       toast('Text message sent ✓');
-      if (typeof loadThreads === 'function') loadThreads();
+      if (typeof loadThreads === 'function') await loadThreads();
+      if (data.thread_id && typeof loadThread === 'function') loadThread(data.thread_id);
     } catch(e) {
       errEl.textContent = e.message;
       errEl.style.display = '';
