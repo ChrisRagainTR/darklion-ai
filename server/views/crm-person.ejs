@@ -1272,7 +1272,7 @@
           </div>
           <div style="display:flex;gap:0.5rem;flex-shrink:0;flex-wrap:wrap;">
             ${d.status === 'draft' ? `<button class="btn btn-gold btn-sm" onclick="personSendDelivery(${d.id})">Send →</button>` : ''}
-            ${d.status === 'draft' ? `<button class="btn btn-outline btn-sm" onclick="openEditDeliveryModal(${d.id},${d.review_doc_id||'null'},${d.sig_doc_id||d.signature_doc_id||'null'})">✏️ Edit Docs</button>` : ''}
+            ${d.status === 'draft' ? `<button class="btn btn-outline btn-sm" onclick="openEditDeliveryModal(${d.id},${d.review_doc_id||'null'},${d.sig_doc_id||d.signature_doc_id||'null'},${JSON.stringify(d.tax_year||'')})">✏️ Edit Docs</button>` : ''}
             ${d.status === 'draft' ? `<button class="btn btn-outline btn-sm" onclick="personDeleteDelivery(${d.id})">Delete</button>` : ''}
             ${['sent','approved','needs_changes'].includes(d.status) ? `<button class="btn btn-outline btn-sm" onclick="personCancelDelivery(${d.id})" style="color:var(--orange);border-color:var(--orange);">↩ Cancel & Revise</button>` : ''}
             ${d.review_doc_id ? `<button class="btn btn-outline btn-sm" onclick="openTaxSummary(${d.id})">📊 Tax Summary</button>` : ''}
@@ -1648,22 +1648,24 @@
     } catch(e) { toast(e.message, 'error'); }
   }
 
-  async function openEditDeliveryModal(deliveryId, currentReviewDocId, currentSigDocId) {
+  async function openEditDeliveryModal(deliveryId, currentReviewDocId, currentSigDocId, taxYear) {
     document.getElementById('ed-id').value = deliveryId;
     document.getElementById('ed-error').style.display = 'none';
-    // Load all person docs for selection
     try {
       const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${personId}`);
       const docs = await res.json();
-      const pdfDocs = docs.filter(d => (d.mime_type||'').includes('pdf') || (d.display_name||'').toLowerCase().endsWith('.pdf'));
-      const opts = '<option value="">— No change —</option>' + pdfDocs.map(d =>
-        `<option value="${d.id}" ${d.id == currentReviewDocId ? 'selected' : ''}>${esc(d.display_name||'Document')} (${d.year||'?'})</option>`
+      // Filter to tax PDFs matching the delivery's tax year (strict) — fall back to all tax PDFs if none match
+      const taxPdfs = docs.filter(d =>
+        (d.folder_category === 'tax' || d.doc_type === 'tax') &&
+        ((d.mime_type||'').includes('pdf') || (d.display_name||'').toLowerCase().endsWith('.pdf'))
+      );
+      const yearFiltered = taxYear ? taxPdfs.filter(d => String(d.year||'') === String(taxYear)) : taxPdfs;
+      const pdfDocs = yearFiltered.length ? yearFiltered : taxPdfs; // fall back if no year match
+      const makeOpts = (selectedId) => '<option value="">— None —</option>' + pdfDocs.map(d =>
+        `<option value="${d.id}" ${d.id == selectedId ? 'selected' : ''}>${esc(d.display_name||'Document')}</option>`
       ).join('');
-      document.getElementById('ed-review-doc').innerHTML = opts;
-      const sigOpts = '<option value="">— No change —</option>' + pdfDocs.map(d =>
-        `<option value="${d.id}" ${d.id == currentSigDocId ? 'selected' : ''}>${esc(d.display_name||'Document')} (${d.year||'?'})</option>`
-      ).join('');
-      document.getElementById('ed-sig-doc').innerHTML = sigOpts;
+      document.getElementById('ed-review-doc').innerHTML = makeOpts(currentReviewDocId);
+      document.getElementById('ed-sig-doc').innerHTML = makeOpts(currentSigDocId);
     } catch(e) {}
     document.getElementById('edit-delivery-modal').classList.remove('hidden');
   }
