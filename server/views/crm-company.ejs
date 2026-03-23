@@ -1231,6 +1231,7 @@
                         <div class="doc-badges">
                           ${statusBadge}
                           ${f.size_bytes ? `<span class="doc-badge doc-badge-type">${formatBytes(f.size_bytes)}</span>` : ''}
+                          ${f.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(f.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>` : ''}
                         </div>
                       </div>
                       <button class="btn-dl" data-docid="${f.id}">⬇ Download</button>
