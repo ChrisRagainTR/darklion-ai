@@ -1846,10 +1846,15 @@
     async function initChat() {
       if (_chatLoaded) return;
       _chatLoaded = true;
-      // Register reload hook for socket/polling handler
       window._portalReloadMessages = loadAllMessages;
-      await loadContacts();
-      // loadContacts → selectContact → loadAllMessages, so no need to call it again
+      // Contacts already loaded in init() — render immediately, no network round-trip needed
+      if (_contacts.length > 0) {
+        renderContacts();
+        selectContact(_contacts[0]);
+      } else {
+        // Fallback: fetch if init didn't load them for some reason
+        await loadContacts();
+      }
     }
 
     async function loadContacts() {
