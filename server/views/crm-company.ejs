@@ -1216,8 +1216,7 @@
 
     function renderOneYear(yr, openByDefault) {
       const yrDocs = sectionDocs.filter(d => (d.year || String(CURRENT_YEAR)) === yr);
-      if (!yrDocs.length) return ''; // skip empty years
-      const openClass = ''; // always start collapsed
+      const openClass = openByDefault ? ' open' : '';
       return `<div class="year-folder${openClass}" style="margin-bottom:0.4rem;">
         <div class="year-header">
           <span class="yr-label">📅 ${yr} <span class="yr-count">${yrDocs.length}</span></span>
@@ -1229,11 +1228,12 @@
             const statusBadge = isClientSection
               ? `<span class="doc-badge doc-badge-client">✓ Uploaded</span>`
               : `<span class="doc-badge doc-badge-viewed">✓ Delivered</span>`;
-            if (!files.length) return ''; // skip empty categories
             return `<div style="margin-bottom:0.5rem;">
               <div style="font-size:0.82rem;font-weight:700;color:var(--text);padding:0.4rem 0.5rem;margin-bottom:0.25rem;border-left:3px solid var(--gold);background:rgba(201,168,76,0.06);">${cat.icon} ${cat.label} <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${files.length})</span></div>
               <div style="padding-left:0.5rem;">
-                ${files.map(f => `<div class="doc-row" data-docid="${f.id}">
+                ${files.length === 0
+                  ? `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`
+                  : files.map(f => `<div class="doc-row" data-docid="${f.id}">
                       ${docTypeBadge(f.mime_type, f.display_name)}
                       <div class="doc-info">
                         <div class="doc-name doc-name-link" data-docid="${f.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(f.display_name||'Untitled')}</div>
@@ -1256,14 +1256,21 @@
       </div>`;
     }
 
-    // Render all years that have docs, all collapsed by default
-    const yearsWithDocs = allYears.filter(y => sectionDocs.some(d => (d.year || String(CURRENT_YEAR)) === y));
+    // Show recent 2 years open, rest collapsed, all years always shown
+    const recentYears = allYears.slice(0, 2);
+    const priorYears = allYears.slice(2);
+    const priorCount = priorYears.reduce((n,y) => n + sectionDocs.filter(d => (d.year||String(CURRENT_YEAR)) === y).length, 0);
     let html = `<div class="docs-col-title">${icon} ${title} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
-    if (!yearsWithDocs.length) {
-      html += `<div style="color:var(--muted);font-size:0.82rem;padding:0.5rem 0;font-style:italic;">No documents yet.</div>`;
-    } else {
-      yearsWithDocs.forEach(y => { html += renderOneYear(y, false); });
-    }
+    recentYears.forEach(y => { html += renderOneYear(y, true); });
+    html += `<div class="year-folder" style="margin-bottom:0.4rem;">
+      <div class="year-header">
+        <span class="yr-label">📂 Prior Years <span class="yr-count">${priorCount}</span></span>
+        <span class="yr-chevron">▼</span>
+      </div>
+      <div class="year-body" style="padding-left:0.5rem;">
+        ${priorYears.map(y => renderOneYear(y, false)).join('')}
+      </div>
+    </div>`;
     return html;
   }
 
