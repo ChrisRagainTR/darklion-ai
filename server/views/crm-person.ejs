@@ -917,6 +917,12 @@
     if (btn) { btn.disabled = false; btn.textContent = '⬇'; }
   }
 
+  function reloadDocs() {
+    const el = document.getElementById('docs-content');
+    if (el) delete el.dataset.loaded;
+    loadDocs();
+  }
+
   async function deleteDoc(id, e) {
     if (e) e.stopPropagation();
     if (!await window.dlConfirm('Delete this document? This cannot be undone.', {title:'Delete Document', confirmLabel:'Delete', danger:true, icon:'🗑️'})) return;
@@ -924,7 +930,7 @@
       const res = await apiFetch(`/api/documents/${id}`, { method: 'DELETE' });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Document deleted');
-      loadDocs(true);
+      reloadDocs();
     } catch(e) { toast(e.message, 'error'); }
   }
 
@@ -952,7 +958,7 @@
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Document moved');
       closeMoveDocModal();
-      loadDocs(true);
+      reloadDocs();
     } catch(e) { toast(e.message, 'error'); }
   }
 
