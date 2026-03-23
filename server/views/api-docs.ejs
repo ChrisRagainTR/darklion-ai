@@ -74,6 +74,7 @@
     <div class="sidebar-section">Pipelines</div>
     <a href="#pipeline-jobs">List pipeline jobs</a>
     <a href="#pipeline-move">Move job stage</a>
+    <a href="#pipeline-stages">List stages</a>
     <div class="sidebar-section">Tax Deliveries</div>
     <a href="#tax-list">List deliveries</a>
     <a href="#tax-send">Send delivery</a>
@@ -81,6 +82,12 @@
     <div class="sidebar-section">Proposals</div>
     <a href="#proposals-list">List proposals</a>
     <a href="#proposals-stats">Get stats</a>
+    <div class="sidebar-section">Viktor Chat</div>
+    <a href="#viktor-session">Get/create session</a>
+    <a href="#viktor-briefing">Generate briefing</a>
+    <a href="#viktor-message">Send message</a>
+    <div class="sidebar-section">Staff</div>
+    <a href="#staff-list">List staff users</a>
   </nav>
 
   <main class="content">
@@ -267,7 +274,19 @@
         <tr><td>title</td><td>string <span class="badge badge-optional">optional</span></td><td>Update job title</td></tr>
       </tbody>
     </table>
-    <p>To advance a job to the next stage, you need the stage ID. Get stages for a pipeline template with <code>GET /api/pipelines/templates/:id/stages</code>.</p>
+    <p>To advance a job to the next stage, you need the stage ID. Get stages for a pipeline template with <code>GET /api/pipelines/templates/:id/stages</code> (see below).</p>
+
+    <h3 id="pipeline-stages"><span class="method method-get">GET</span> <span class="endpoint-path">/api/pipelines/templates/:id/stages</span></h3>
+    <p class="endpoint-desc">List all stages for a pipeline template, ordered by position. Use this to get stage IDs for moving jobs.</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>number</td><td>Stage ID — use this in PUT /jobs/:id to move a job</td></tr>
+        <tr><td>name</td><td>string</td><td>Stage name (e.g. "CPA Return Review")</td></tr>
+        <tr><td>position</td><td>number</td><td>Order in the pipeline (0 = first)</td></tr>
+        <tr><td>color</td><td>string</td><td>Stage color for UI display</td></tr>
+      </tbody>
+    </table>
 
     <h2 id="tax-list">Tax Deliveries</h2>
     <p class="section-intro">Tax deliveries are the end-to-end workflow for delivering a completed tax return to a client for review and e-signature.</p>
@@ -317,6 +336,66 @@
         <tr><td>sent</td><td>number</td><td>Proposals in sent status</td></tr>
         <tr><td>accepted_signed</td><td>number</td><td>Proposals accepted or signed</td></tr>
         <tr><td>mrr</td><td>number</td><td>Monthly recurring revenue from signed engagements</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="viktor-session">Viktor Chat</h2>
+    <p class="section-intro">The Viktor Chat API powers the live AI assistant in the DarkLion dashboard. Viktor has full access to firm context and can hold conversations with staff. Sessions are per-user per-day and auto-purge after 3 days. <strong>Note:</strong> These endpoints require JWT authentication (staff login) because Viktor needs a <code>userId</code> to store per-user sessions. API token auth is not supported here.</p>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/viktor-chat/session</span></h3>
+    <p class="endpoint-desc">Get or create today's session for the current user. Returns the session record including any existing messages. Also triggers 3-day cleanup of old sessions.</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>number</td><td>Session ID</td></tr>
+        <tr><td>session_date</td><td>string</td><td>Today's date (YYYY-MM-DD)</td></tr>
+        <tr><td>messages</td><td>array</td><td>Array of message objects with role, content, timestamp</td></tr>
+        <tr><td>briefing_generated</td><td>boolean</td><td>Whether morning briefing has been generated today</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="viktor-briefing"><span class="method method-post">POST</span> <span class="endpoint-path">/api/viktor-chat/briefing</span></h3>
+    <p class="endpoint-desc">Generate Viktor's morning briefing for today. Pulls full firm context (<code>/api/viktor/context</code>), sends to Claude Haiku, and stores the result. Only generates once per day — subsequent calls return the cached briefing.</p>
+    <p>No request body required. Response:</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>messages</td><td>array</td><td>Session messages including the new briefing</td></tr>
+        <tr><td>already_generated</td><td>boolean</td><td>True if briefing was cached from an earlier call today</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="viktor-message"><span class="method method-post">POST</span> <span class="endpoint-path">/api/viktor-chat/message</span></h3>
+    <p class="endpoint-desc">Send a message to Viktor. Viktor receives the full current firm context plus the last 20 messages of conversation history on every call, then responds via Claude Haiku. Response is stored in the session.</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>message</td><td>string <span class="badge badge-required">required</span></td><td>The user's message text</td></tr>
+      </tbody>
+    </table>
+    <p>Response:</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>reply</td><td>string</td><td>Viktor's response text</td></tr>
+        <tr><td>messages</td><td>array</td><td>Full updated conversation history for this session</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="staff-list">Staff</h2>
+    <p class="section-intro">The staff endpoint returns all accepted firm users. Viktor uses this to build per-staff task lists and assignments.</p>
+
+    <h3><span class="method method-get">GET</span> <span class="endpoint-path">/api/staff</span></h3>
+    <p class="endpoint-desc">List all accepted staff users for the firm.</p>
+    <table class="params-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>id</td><td>number</td><td>User ID</td></tr>
+        <tr><td>name</td><td>string</td><td>Full name</td></tr>
+        <tr><td>display_name</td><td>string</td><td>Display/preferred name</td></tr>
+        <tr><td>email</td><td>string</td><td>Email address</td></tr>
+        <tr><td>role</td><td>string</td><td>owner | admin | staff</td></tr>
+        <tr><td>last_login_at</td><td>string</td><td>Last login timestamp</td></tr>
       </tbody>
     </table>
 
