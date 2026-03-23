@@ -1,5 +1,14 @@
 <%- include('partials/shell-top', { title: title, activeNav: activeNav }) %>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Chart.js loader — resolves when Chart.js CDN is ready
+    window._chartJsReady = new Promise((resolve) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      s.onload = resolve;
+      s.onerror = resolve; // fail gracefully — charts will show empty state
+      document.head.appendChild(s);
+    });
+  </script>
 
 <style>
     .overview-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; cursor: pointer; transition: all 0.15s; }
@@ -705,7 +714,8 @@
         setStat('ds-mrr', d.mrr > 0 ? '$' + Math.round(d.mrr).toLocaleString() : '—');
         setStat('ds-proposals', d.open_proposals?.length ?? '—');
 
-        // Charts (Chart.js from CDN)
+        // Charts (wait for Chart.js CDN to finish loading before rendering)
+        await window._chartJsReady;
         renderProposalChart(d.proposal_chart || []);
         renderClientMixChart(d.counts || {});
 
