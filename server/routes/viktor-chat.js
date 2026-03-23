@@ -454,6 +454,41 @@ router.post('/message', async (req, res) => {
         }
       },
       {
+        name: 'move_company',
+        description: 'Move a company to a different relationship. Use when a company was created under the wrong relationship.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            company_name: { type: 'string', description: 'Name of the company to move' },
+            to_relationship: { type: 'string', description: 'Name or ID of the destination relationship' }
+          },
+          required: ['company_name', 'to_relationship']
+        }
+      },
+      {
+        name: 'move_person',
+        description: 'Move a person to a different relationship, or change their company access within a relationship.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            person_name: { type: 'string', description: 'Name of the person to move' },
+            to_relationship: { type: 'string', description: 'Name or ID of the destination relationship' }
+          },
+          required: ['person_name', 'to_relationship']
+        }
+      },
+      {
+        name: 'delete_relationship',
+        description: 'Delete an empty relationship (one with no companies or people). Use to clean up relationships created by mistake.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            relationship_name: { type: 'string', description: 'Name or ID of the relationship to delete' }
+          },
+          required: ['relationship_name']
+        }
+      },
+      {
         name: 'update_notes',
         description: 'Append or replace notes on a relationship, person, or company.',
         input_schema: {
@@ -491,7 +526,8 @@ router.post('/message', async (req, res) => {
         'create_relationship', 'create_person', 'update_person', 'update_relationship',
         'create_tax_delivery', 'send_tax_delivery', 'create_proposal',
         'create_pipeline_job', 'close_pipeline_job', 'look_up_client',
-        'draft_message', 'update_notes', 'send_portal_invite'
+        'draft_message', 'update_notes', 'send_portal_invite',
+        'move_company', 'move_person', 'delete_relationship'
       ]);
 
       if (autoExecTools.has(t.name)) {
@@ -1159,6 +1195,44 @@ async function executeViktorTool(toolName, input, firmId, authHeader) {
       return { draft, to: toName, person_id: person.id };
     }
 
+    // ── move_company ───────────────────────────────────────────────────────────
+    case 'move_company': {
+      const company = await resolveCompany(input.company_name, firmId);
+      if (!company) throw new Error(`Company "${input.company_name}" not found`);
+      const toRel = await resolveRelationship(input.to_relationship, firmId);
+      if (!toRel) throw new Error(`Relationship "${input.to_relationship}" not found`);
+      await pool.query(
+        `UPDATE companies SET relationship_id = $1 WHERE id = $2 AND firm_id = $3`,
+        [toRel.id, company.id, firmId]
+      );
+      return { ok: true, company_name: company.company_name, moved_to: toRel.name };
+    }
+
+    // ── move_person ────────────────────────────────────────────────────────────
+    case 'move_person': {
+      const person = await resolvePerson(input.person_name, firmId);
+      if (!person) throw new Error(`Person "${input.person_name}" not found`);
+      const toRel = await resolveRelationship(input.to_relationship, firmId);
+      if (!toRel) throw new Error(`Relationship "${input.to_relationship}" not found`);
+      await pool.query(
+        `UPDATE people SET relationship_id = $1, updated_at = NOW() WHERE id = $2 AND firm_id = $3`,
+        [toRel.id, person.id, firmId]
+      );
+      return { ok: true, person_name: `${person.first_name} ${person.last_name}`.trim(), moved_to: toRel.name };
+    }
+
+    // ── delete_relationship ────────────────────────────────────────────────────
+    case 'delete_relationship': {
+      const rel = await resolveRelationship(input.relationship_name, firmId);
+      if (!rel) throw new Error(`Relationship "${input.relationship_name}" not found`);
+      // Check it's empty
+      const { rows: people } = await pool.query(`SELECT id FROM people WHERE relationship_id=$1 LIMIT 1`, [rel.id]);
+      const { rows: companies } = await pool.query(`SELECT id FROM companies WHERE relationship_id=$1 LIMIT 1`, [rel.id]);
+      if (people.length || companies.length) throw new Error(`Relationship "${rel.name}" still has people or companies. Move them first.`);
+      await pool.query(`DELETE FROM relationships WHERE id=$1 AND firm_id=$2`, [rel.id, firmId]);
+      return { ok: true, deleted: rel.name };
+    }
+
     // ── update_notes ───────────────────────────────────────────────────────────
     case 'update_notes': {
       const entityType = input.entity_type;
@@ -1239,6 +1313,12 @@ function formatToolResult(toolName, input, result) {
       return `📝 Draft for **${result.to}**:\n\n${result.draft}\n\n_Reply "send it" to dispatch this message, or ask me to adjust it._`;
     case 'update_notes':
       return `✅ Notes updated for ${result.entity_type} #${result.entity_id}.`;
+    case 'move_company':
+      return `✅ Moved **${result.company_name}** to relationship **${result.moved_to}**.`;
+    case 'move_person':
+      return `✅ Moved **${result.person_name}** to relationship **${result.moved_to}**.`;
+    case 'delete_relationship':
+      return `✅ Deleted relationship **${result.deleted}**.`;
     default:
       return `✅ ${toolName} completed: ${JSON.stringify(result)}`;
   }
