@@ -3461,102 +3461,9 @@
     } catch(e) { toast('Download failed', 'error'); }
   }
   window.coCommDownloadAttachment = coCommDownloadAttachment;
-</script>
-
-<!-- ── Upload Modal ── -->
-<div class="modal-overlay" id="upload-modal">
-  <div class="modal" style="width:480px;">
-    <div class="modal-header">
-      <div class="modal-title">Upload Document</div>
-      <button class="modal-close" onclick="document.getElementById('upload-modal').classList.remove('open')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="upload-error" class="error-msg" style="display:none;"></div>
-      <div id="upload-dropzone" style="border:2px dashed var(--border);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;"
-           onclick="document.getElementById('upload-file-input').click()"
-           ondragover="event.preventDefault()"
-           ondrop="event.preventDefault();uploadFile=event.dataTransfer.files[0];showUploadFile(uploadFile);">
-        <div id="upload-dropzone-text" style="color:var(--muted);">
-          <div style="font-size:2rem;margin-bottom:0.5rem;">📂</div>
-          <div>Drag & drop or <span style="color:var(--gold);text-decoration:underline;">click to browse</span></div>
-        </div>
-        <div id="upload-file-name" style="display:none;font-weight:600;color:var(--text);"></div>
-      </div>
-      <input type="file" id="upload-file-input" style="display:none;" onchange="uploadFile=this.files[0];showUploadFile(uploadFile);">
-      <div class="form-group">
-        <label class="form-label">Display Name</label>
-        <input type="text" class="form-control" id="upload-display-name">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Year</label>
-          <input type="text" class="form-control" id="upload-year" maxlength="4">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Section</label>
-          <select class="form-control" id="upload-section">
-            <option value="firm_uploaded">Firm Uploaded</option>
-            <option value="client_uploaded">Client Uploaded</option>
-            <option value="private">Private</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Category</label>
-        <select class="form-control" id="upload-category">
-          <option value="other">Other</option>
-          <option value="tax">Tax</option>
-          <option value="bookkeeping">Bookkeeping</option>
-        </select>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="document.getElementById('upload-modal').classList.remove('open')">Cancel</button>
-      <button class="btn btn-gold" onclick="submitUpload()">Upload</button>
-    </div>
-  </div>
-</div>
-
-<script>
-  let uploadFile = null;
-  function showUploadFile(f) {
-    if (!f) return;
-    document.getElementById('upload-dropzone-text').style.display = 'none';
-    document.getElementById('upload-file-name').style.display = '';
-    document.getElementById('upload-file-name').textContent = f.name;
-    if (!document.getElementById('upload-display-name').value)
-      document.getElementById('upload-display-name').value = f.name.replace(/\.[^.]+$/, '');
-  }
-
-  async function submitUpload() {
-    if (!uploadFile) { document.getElementById('upload-error').textContent='Select a file.'; document.getElementById('upload-error').style.display=''; return; }
-    const fd = new FormData();
-    fd.append('file', uploadFile);
-    fd.append('owner_type', 'company');
-    fd.append('owner_id', companyId);
-    fd.append('display_name', document.getElementById('upload-display-name').value || uploadFile.name);
-    fd.append('year', document.getElementById('upload-year').value || String(CURRENT_YEAR));
-    fd.append('folder_section', document.getElementById('upload-section').value);
-    fd.append('folder_category', document.getElementById('upload-category').value);
-    try {
-      const res = await fetch('/api/documents/upload', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token },
-        body: fd,
-      });
-      if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Upload failed'); }
-      document.getElementById('upload-modal').classList.remove('open');
-      toast('Document uploaded');
-      docsLoaded = false;
-      if (document.getElementById('tab-docs').classList.contains('active')) { docsLoaded = false; loadDocs(true); }
-    } catch(e) { document.getElementById('upload-error').textContent=e.message; document.getElementById('upload-error').style.display=''; }
-  }
-
-  // (page-wide drag-and-drop is handled by the IIFE above — no duplicate needed)
 
   // ── Attach Person Modal ──
   async function openAttachPersonModal() {
-    // Fetch people in the same relationship
     if (!companyData) return;
     const relId = companyData.relationship_id;
     if (!relId) { toast('Company has no relationship assigned', 'error'); return; }
@@ -3566,7 +3473,6 @@
       const existing = (companyData.people || []).map(p => p.person_id);
       const available = people.filter(p => !existing.includes(p.id));
       if (!available.length) { toast('All people in this relationship are already attached', 'error'); return; }
-
       const opts = available.map(p => `<option value="${p.id}">${esc((p.first_name||'')+' '+(p.last_name||''))}</option>`).join('');
       const html = `<div class="modal-overlay open" id="attach-person-modal" onclick="if(event.target===this)this.remove()">
         <div class="modal" onclick="event.stopPropagation()" style="max-width:400px;">
@@ -3588,6 +3494,7 @@
       document.body.insertAdjacentHTML('beforeend', html);
     } catch(e) { toast('Failed to load people: ' + e.message, 'error'); }
   }
+  window.openAttachPersonModal = openAttachPersonModal;
 
   async function submitAttachPerson() {
     const personId = parseInt(document.getElementById('ap-person').value);
@@ -3604,6 +3511,7 @@
       await loadCompany();
     } catch(e) { toast('Failed: ' + e.message, 'error'); }
   }
+  window.submitAttachPerson = submitAttachPerson;
 
   loadCompany();
 </script>
