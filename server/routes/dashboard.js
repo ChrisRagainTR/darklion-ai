@@ -53,7 +53,7 @@ router.get('/intel', async (req, res) => {
           )
         ORDER BY td.updated_at ASC
         LIMIT 10
-      `, [firmId]),
+      `, [firmId]).catch(() => ({ rows: [] })),
 
       // 2. Stalled messages (open, last message from client, no staff reply 48h+)
       pool.query(`
@@ -71,11 +71,10 @@ router.get('/intel', async (req, res) => {
           AND EXISTS (
             SELECT 1 FROM messages m
             WHERE m.thread_id = mt.id AND m.sender_type = 'client'
-            ORDER BY m.created_at DESC LIMIT 1
           )
         ORDER BY mt.last_message_at ASC
         LIMIT 10
-      `, [firmId]),
+      `, [firmId]).catch(() => ({ rows: [] })),
 
       // 3. Open proposals (sent or viewed, not accepted)
       pool.query(`
@@ -114,7 +113,7 @@ router.get('/intel', async (req, res) => {
           )
         ORDER BY p.portal_last_login_at ASC NULLS LAST
         LIMIT 8
-      `, [firmId]),
+      `, [firmId]).catch(() => ({ rows: [] })),
 
       // 6. Engagement letters expiring in next 60 days (based on extracted term_end_date)
       pool.query(`
@@ -141,7 +140,7 @@ router.get('/intel', async (req, res) => {
           AND p.date_of_birth_encrypted IS NOT NULL
           AND p.date_of_birth_encrypted != ''
         LIMIT 500
-      `, [firmId]),
+      `, [firmId]).catch(() => ({ rows: [] })),
 
       // 8. New relationships with no pipeline job (created last 30 days)
       pool.query(`
@@ -159,7 +158,7 @@ router.get('/intel', async (req, res) => {
           )
         ORDER BY r.created_at DESC
         LIMIT 8
-      `, [firmId]),
+      `, [firmId]).catch(() => ({ rows: [] })),
 
       // 9. CRM counts
       pool.query(`
@@ -169,7 +168,7 @@ router.get('/intel', async (req, res) => {
           (SELECT COUNT(*) FROM companies WHERE firm_id = $1) AS companies,
           (SELECT COUNT(*) FROM message_threads WHERE firm_id = $1 AND status = 'open') AS open_messages,
           (SELECT COUNT(*) FROM pipeline_jobs pj JOIN pipeline_instances pi ON pi.id = pj.instance_id WHERE pi.firm_id = $1 AND pj.status NOT IN ('complete','archived')) AS active_jobs
-      `, [firmId]),
+      `, [firmId]).catch(() => ({ rows: [{ relationships: 0, people: 0, companies: 0, open_messages: 0, active_jobs: 0 }] })),
 
       // 10. Proposal counts by month (last 6 months) for chart
       pool.query(`

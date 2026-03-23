@@ -719,6 +719,17 @@
 
       } catch(e) {
         console.error('Dashboard intel error:', e);
+        // Show error state on all intel cards so they don't stay stuck on "Loading…"
+        ['list-unsigned','list-stalled','list-proposals','list-birthdays','list-portal','list-nopipeline'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el && el.innerHTML.includes('Loading')) {
+            el.innerHTML = '<div class="dash-intel-empty" style="color:var(--red)">Failed to load — refresh to retry</div>';
+          }
+        });
+        ['ds-relationships','ds-companies','ds-open-msgs','ds-mrr','ds-proposals'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el && el.textContent === '—') el.textContent = '?';
+        });
       }
     }
 
