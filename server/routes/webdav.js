@@ -121,10 +121,10 @@ async function getEntityByName(firmId, relationshipId, name) {
   );
   if (people.length) return people[0];
 
-  // Try company
+  // Try company (column is company_name, not name)
   const { rows: companies } = await pool.query(
-    `SELECT id, name, 'company' AS type
-     FROM companies WHERE firm_id=$1 AND relationship_id=$2 AND name=$3 LIMIT 1`,
+    `SELECT id, company_name AS name, 'company' AS type
+     FROM companies WHERE firm_id=$1 AND relationship_id=$2 AND company_name=$3 LIMIT 1`,
     [firmId, relationshipId, name]
   );
   return companies[0] || null;
@@ -223,7 +223,7 @@ async function handlePropfind(req, res) {
             [firmId, rel.id]
           );
           const { rows: companies } = await pool.query(
-            `SELECT id, name FROM companies WHERE firm_id=$1 AND relationship_id=$2 ORDER BY name`,
+            `SELECT id, company_name AS name FROM companies WHERE firm_id=$1 AND relationship_id=$2 ORDER BY company_name`,
             [firmId, rel.id]
           );
           for (const p of people) {
