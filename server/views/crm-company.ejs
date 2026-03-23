@@ -59,7 +59,7 @@
   .stat-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
   .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; }
   .table-wrap table { width: 100%; border-collapse: collapse; }
-  .table-wrap th { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); background: var(--card); position: sticky; top: 0; z-index: 10; }
+  .table-wrap th { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); background: var(--card); position: sticky; top: var(--bk-table-top, 0); z-index: 10; }
   .table-wrap td { padding: 0.7rem 1rem; font-size: 0.85rem; border-bottom: 1px solid rgba(201,168,76,0.07); vertical-align: middle; }
   .table-wrap tr:last-child td { border-bottom: none; }
   .table-wrap tr:hover td { background: rgba(201,168,76,0.03); }
@@ -98,7 +98,7 @@
   .period-actions .selected-label { flex: 1; font-size: 0.82rem; color: var(--muted); min-width: 0; }
   .period-actions .selected-label strong { color: var(--gold); }
   .report-section { margin-top: 1.5rem; }
-  .report-section h3 { font-size: 0.88rem; margin-bottom: 0.75rem; position: sticky; top: 0; background: var(--navy); padding: 0.5rem 0; z-index: 5; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .report-section h3 { font-size: 0.88rem; margin-bottom: 0.75rem; position: sticky; top: var(--bk-table-top, 0); background: var(--navy); padding: 0.5rem 0; z-index: 5; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .workflow-job-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; cursor: pointer; transition: border-color 0.15s; }
   .workflow-job-card:hover { border-color: var(--gold); }
   .report-section .table-wrap { margin-bottom: 1rem; }
@@ -906,6 +906,14 @@
     if (name === 'bookkeeping') {
       if (bookkeepingRealm) bk_initBookkeeping();
       else { /* wait for company to load, then init */ window._bkPendingInit = true; }
+      // Compute sticky offset for table headers (entity-header + tab-bar + subtab-bar)
+      requestAnimationFrame(function() {
+        const eh = document.querySelector('.entity-header');
+        const tb = document.querySelector('.tab-bar');
+        const sb = document.getElementById('subtab-bar');
+        const offset = (eh ? eh.offsetHeight : 0) + (tb ? tb.offsetHeight : 0) + (sb ? sb.offsetHeight : 0);
+        document.documentElement.style.setProperty('--bk-table-top', offset + 'px');
+      });
     }
     if (name === 'communication') initCoComm();
     const mainEl = document.querySelector('.main');
