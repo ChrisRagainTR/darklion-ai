@@ -1853,6 +1853,20 @@
         // Update tab badge
         const totalUnread = _staffList.reduce((acc, s) => acc + (s.unreadCount || 0), 0);
         updateChatBadge(totalUnread);
+        // Show/update unread banner above staff list
+        let banner = document.getElementById('msg-unread-banner');
+        if (totalUnread > 0) {
+          if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'msg-unread-banner';
+            banner.style.cssText = 'background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.35);border-radius:8px;padding:0.6rem 0.9rem;margin-bottom:0.75rem;font-size:0.84rem;font-weight:600;color:#e74c3c;display:flex;align-items:center;gap:0.5rem;';
+            const contacts = document.getElementById('chatContacts');
+            if (contacts && contacts.parentNode) contacts.parentNode.insertBefore(banner, contacts);
+          }
+          banner.innerHTML = `<span style="font-size:1rem;">🔴</span> You have <strong>${totalUnread}</strong> new message${totalUnread > 1 ? 's' : ''}`;
+        } else if (banner) {
+          banner.remove();
+        }
       } catch(e) {
         console.error('[portal] loadStaffList error:', e);
         const el = document.getElementById('chatContactsEmpty');
@@ -1870,23 +1884,35 @@
       }
       if (empty) empty.style.display = 'none';
 
-      el.innerHTML = _staffList.map(s => {
+      // Sort: unread first, then by most recent message, then alphabetical
+      const sorted = [..._staffList].sort((a, b) => {
+        const au = parseInt(a.unreadCount || 0), bu = parseInt(b.unreadCount || 0);
+        if (au !== bu) return bu - au; // unread first
+        const at = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+        const bt = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+        if (at !== bt) return bt - at; // most recent first
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
+      el.innerHTML = sorted.map(s => {
         const initials = (s.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
         const unread = parseInt(s.unreadCount || 0);
         const isActive = _selectedStaffId === s.id;
         const preview = s.lastPreview || '';
         const avatarHtml = s.avatar_url
           ? `<img src="${s.avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt="${chatEsc(initials)}" onerror="this.outerHTML='<div class=\\'chat-contact-avatar\\'>${initials}</div>';">`
-          : `<div class="chat-contact-avatar">${initials}</div>`;
-        return `<div class="chat-contact-row${isActive ? ' active' : ''}" data-staff-id="${s.id}">
-          ${avatarHtml}
+          : `<div class="chat-contact-avatar${unread > 0 ? ' has-unread' : ''}">${initials}</div>`;
+        return `<div class="chat-contact-row${isActive ? ' active' : ''}${unread > 0 ? ' has-unread' : ''}" data-staff-id="${s.id}">
+          <div style="position:relative;flex-shrink:0;">
+            ${avatarHtml}
+            ${unread > 0 ? `<div style="position:absolute;top:-4px;right:-4px;background:#e74c3c;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;border:2px solid var(--portal-bg,#0f1117);">${unread}</div>` : ''}
+          </div>
           <div class="chat-contact-info">
-            <div class="chat-contact-name">${chatEsc(s.name)}</div>
-            <div class="chat-contact-preview">${chatEsc(preview) || 'No messages yet'}</div>
+            <div class="chat-contact-name" style="${unread > 0 ? 'color:#fff;font-weight:700;' : ''}">${chatEsc(s.name)}</div>
+            <div class="chat-contact-preview" style="${unread > 0 ? 'color:rgba(255,255,255,0.8);' : ''}">${unread > 0 ? `<span style="color:#e74c3c;font-weight:700;">● </span>` : ''}${chatEsc(preview) || 'No messages yet'}</div>
           </div>
           <div class="chat-contact-meta">
             ${s.lastMessageAt ? `<div class="chat-contact-time">${new Date(s.lastMessageAt).toLocaleDateString()}</div>` : ''}
-            ${unread > 0 ? `<div class="chat-unread-badge">${unread}</div>` : ''}
           </div>
         </div>`;
       }).join('');
