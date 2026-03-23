@@ -2539,7 +2539,8 @@
             <button class="btn-submit" style="padding:0.4rem 0.85rem;font-size:0.82rem;" style="margin-left:0.5rem;" onclick="submitNeedsChanges()">Submit Changes Request</button>
           </div>
         </div>
-        <div id="tdo-approve-btns" style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+        <div id="tdo-approve-btns" style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+          <button class="btn-cancel" onclick="renderTDStep2()" style="opacity:0.7;">← Back to Summary</button>
           <button class="btn-cancel" onclick="document.getElementById('tdo-changes-area').style.display='';document.getElementById('tdo-approve-btns').style.display='none';">Request Changes</button>
           <button class="btn-submit" onclick="submitApprove()">Approve Return ✓</button>
         </div>
