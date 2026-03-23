@@ -577,6 +577,9 @@ async function initDB() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
 
+    ALTER TABLE tax_deliveries ADD COLUMN IF NOT EXISTS tax_report_data JSONB;
+    ALTER TABLE tax_deliveries ADD COLUMN IF NOT EXISTS tax_report_status TEXT DEFAULT 'none';
+
     CREATE TABLE IF NOT EXISTS pipeline_job_updates (
       id SERIAL PRIMARY KEY,
       job_id INTEGER NOT NULL REFERENCES pipeline_jobs(id) ON DELETE CASCADE,

@@ -480,5 +480,90 @@ router.get('/:id/download-signature', async (req, res) => {
   }
 });
 
+// ── POST /tax-deliveries/:id/generate-summary ────────────────────────────
+router.post('/:id/generate-summary', async (req, res) => {
+  const firmId = req.firm.id;
+  const id = parseInt(req.params.id);
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT td.*, d.s3_key, d.s3_bucket
+       FROM tax_deliveries td
+       LEFT JOIN documents d ON d.id = td.review_doc_id
+       WHERE td.id = $1 AND td.firm_id = $2`,
+      [id, firmId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Delivery not found' });
+    const delivery = rows[0];
+    if (!delivery.s3_key) return res.status(400).json({ error: 'No review document attached' });
+
+    await pool.query(
+      "UPDATE tax_deliveries SET tax_report_status = 'processing', updated_at = NOW() WHERE id = $1",
+      [id]
+    );
+
+    res.json({ ok: true, status: 'processing' });
+
+    setImmediate(async () => {
+      try {
+        const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+        const s3Client = new S3Client({
+          region: process.env.AWS_REGION || 'us-east-1',
+          credentials: {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+          },
+        });
+        const { extractPdfText } = require('../services/pdfExtract');
+        const { analyzeTaxReturn } = require('../services/taxAnalysis');
+
+        const cmd = new GetObjectCommand({ Bucket: delivery.s3_bucket, Key: delivery.s3_key });
+        const s3Res = await s3Client.send(cmd);
+
+        const chunks = [];
+        for await (const chunk of s3Res.Body) chunks.push(chunk);
+        const buffer = Buffer.concat(chunks);
+
+        const pdfText = await extractPdfText(buffer);
+        const reportData = await analyzeTaxReturn(pdfText);
+
+        await pool.query(
+          "UPDATE tax_deliveries SET tax_report_data = $1, tax_report_status = 'completed', updated_at = NOW() WHERE id = $2",
+          [JSON.stringify(reportData), id]
+        );
+      } catch (err) {
+        console.error('[tax-delivery] generate-summary async error:', err);
+        await pool.query(
+          "UPDATE tax_deliveries SET tax_report_status = 'error', updated_at = NOW() WHERE id = $1",
+          [id]
+        ).catch(() => {});
+      }
+    });
+
+  } catch (err) {
+    console.error('[tax-delivery] POST /:id/generate-summary error:', err);
+    res.status(500).json({ error: 'Failed to start summary generation' });
+  }
+});
+
+// ── GET /tax-deliveries/:id/summary ──────────────────────────────────────
+router.get('/:id/summary', async (req, res) => {
+  const firmId = req.firm.id;
+  const id = parseInt(req.params.id);
+  try {
+    const { rows } = await pool.query(
+      'SELECT tax_report_data, tax_report_status FROM tax_deliveries WHERE id = $1 AND firm_id = $2',
+      [id, firmId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Delivery not found' });
+    res.json({
+      status: rows[0].tax_report_status || 'none',
+      data: rows[0].tax_report_data || null,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch summary' });
+  }
+});
+
 module.exports = router;
 module.exports.advancePipelineJob = advancePipelineJob;
