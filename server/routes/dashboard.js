@@ -92,13 +92,61 @@ router.get('/intel', async (req, res) => {
         LIMIT 10
       `, [firmId]).catch(() => ({ rows: [] })),
 
-      // 4. MRR from signed proposal engagements
-      pool.query(`
-        SELECT COALESCE(SUM(monthly_price), 0) AS mrr,
-               COUNT(*) AS signed_count
-        FROM proposal_engagements
-        WHERE firm_id = $1 AND status = 'signed'
-      `, [firmId]).catch(() => ({ rows: [{ mrr: 0, signed_count: 0 }] })),
+      // 4. MRR from Stripe (via firm billing accounts)
+      (async () => {
+        try {
+          const billingRouter = require('./billing');
+          // Call the firm-mrr logic directly (inline to avoid HTTP round-trip)
+          const { pool: _pool } = require('../db');
+          const { rows: rels } = await _pool.query(
+            `SELECT billing_accounts, billing_emails FROM relationships
+             WHERE firm_id=$1 AND billing_accounts IS NOT NULL AND billing_emails IS NOT NULL
+               AND array_length(billing_accounts, 1) > 0 AND array_length(billing_emails, 1) > 0`,
+            [firmId]
+          );
+          if (!rels.length) return { rows: [{ mrr: 0, past_due: false }] };
+
+          const Stripe = require('stripe');
+          const STRIPE_KEYS = {
+            sentinel_tax: process.env.STRIPE_KEY_SENTINEL_TAX,
+            sentinel_pcs: process.env.STRIPE_KEY_SENTINEL_PCS,
+          };
+
+          const pairs = new Map();
+          for (const rel of rels) {
+            for (const account of (rel.billing_accounts || [])) {
+              if (!pairs.has(account)) pairs.set(account, new Set());
+              for (const email of (rel.billing_emails || [])) pairs.get(account).add(email);
+            }
+          }
+
+          let totalMrr = 0, hasPastDue = false;
+          for (const [account, emails] of pairs) {
+            const key = STRIPE_KEYS[account];
+            if (!key) continue;
+            const stripe = Stripe(key, { apiVersion: '2024-12-18.acacia' });
+            for (const email of emails) {
+              try {
+                const custList = await stripe.customers.list({ email, limit: 5 });
+                for (const cust of custList.data) {
+                  const subList = await stripe.subscriptions.list({ customer: cust.id, status: 'active', limit: 20, expand: ['data.items.data.price'] });
+                  for (const sub of subList.data) {
+                    if (sub.status === 'past_due') hasPastDue = true;
+                    for (const item of sub.items.data) {
+                      const amt = (item.price?.unit_amount || 0) / 100 * (item.quantity || 1);
+                      totalMrr += item.price?.recurring?.interval === 'year' ? amt / 12 : amt;
+                    }
+                  }
+                }
+              } catch(e) { /* skip individual errors */ }
+            }
+          }
+          return { rows: [{ mrr: Math.round(totalMrr * 100) / 100, past_due: hasPastDue }] };
+        } catch(e) {
+          console.error('[dashboard] Stripe MRR error:', e.message);
+          return { rows: [{ mrr: 0, past_due: false }] };
+        }
+      })(),
 
       // 5. Portal-inactive clients (portal enabled, last login > 60 days ago or never)
       pool.query(`
@@ -231,7 +279,7 @@ router.get('/intel', async (req, res) => {
     res.json({
       counts: counts.rows[0],
       mrr: parseFloat(mrrData.rows[0]?.mrr || 0),
-      mrr_signed_count: parseInt(mrrData.rows[0]?.signed_count || 0),
+      mrr_past_due: mrrData.rows[0]?.past_due || false,
       unsigned_returns: unsignedReturns.rows,
       stalled_messages: stalledMessages.rows,
       open_proposals: openProposals.rows,

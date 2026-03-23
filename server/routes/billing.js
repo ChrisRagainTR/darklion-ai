@@ -197,4 +197,71 @@ router.get('/:relId/summary', async (req, res) => {
   }
 });
 
+// GET /firm-mrr — aggregate MRR across all relationships for this firm
+router.get('/firm-mrr', async (req, res) => {
+  const firmId = req.firm.id;
+  try {
+    await ensureBillingCols();
+
+    // Get all relationships that have billing configured
+    const { rows: rels } = await pool.query(
+      `SELECT billing_accounts, billing_emails FROM relationships
+       WHERE firm_id=$1 AND billing_accounts IS NOT NULL AND billing_emails IS NOT NULL
+         AND array_length(billing_accounts, 1) > 0 AND array_length(billing_emails, 1) > 0`,
+      [firmId]
+    );
+
+    if (!rels.length) return res.json({ mrr: 0, past_due: false });
+
+    // Collect all unique account+email pairs
+    const pairs = new Map(); // account -> Set<email>
+    for (const rel of rels) {
+      for (const account of (rel.billing_accounts || [])) {
+        if (!pairs.has(account)) pairs.set(account, new Set());
+        for (const email of (rel.billing_emails || [])) {
+          pairs.get(account).add(email);
+        }
+      }
+    }
+
+    let totalMrr = 0;
+    let hasPastDue = false;
+
+    for (const [account, emails] of pairs) {
+      const stripe = getStripeClient(account);
+      if (!stripe) continue;
+
+      for (const email of emails) {
+        try {
+          const custList = await stripe.customers.list({ email, limit: 5 });
+          for (const cust of custList.data) {
+            const subList = await stripe.subscriptions.list({
+              customer: cust.id,
+              status: 'active',
+              limit: 20,
+              expand: ['data.items.data.price'],
+            });
+            for (const sub of subList.data) {
+              if (sub.status === 'past_due') hasPastDue = true;
+              for (const item of sub.items.data) {
+                const amt = (item.price?.unit_amount || 0) / 100 * (item.quantity || 1);
+                const interval = item.price?.recurring?.interval;
+                totalMrr += interval === 'year' ? amt / 12 : amt;
+              }
+            }
+          }
+        } catch (e) {
+          // Skip errors for individual customers — don't fail the whole request
+          console.error(`[firm-mrr] Stripe error ${account}/${email}:`, e.message);
+        }
+      }
+    }
+
+    res.json({ mrr: Math.round(totalMrr * 100) / 100, past_due: hasPastDue });
+  } catch (err) {
+    console.error('GET /billing/firm-mrr error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

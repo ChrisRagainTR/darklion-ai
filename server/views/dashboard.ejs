@@ -702,7 +702,7 @@
         setStat('ds-relationships', d.counts?.relationships ?? '—');
         setStat('ds-companies', d.counts?.companies ?? '—');
         setStat('ds-open-msgs', d.counts?.open_messages ?? '—');
-        setStat('ds-mrr', d.mrr > 0 ? '$' + Math.round(d.mrr).toLocaleString() : '—');
+        setStat('ds-mrr', d.mrr > 0 ? '$' + Math.round(d.mrr).toLocaleString() + (d.mrr_past_due ? ' ⚠️' : '') : '—');
         setStat('ds-proposals', d.open_proposals?.length ?? '—');
 
         // Charts (wait for Chart.js CDN to finish loading before rendering)
