@@ -8,40 +8,59 @@ const crypto = require('crypto');
 
 const router = Router();
 
-const VIKTOR_SYSTEM_PROMPT = `You are Viktor, the AI intelligence assistant for Sentinel Wealth & Tax, a CPA firm specializing in retirement planning and tax services in Bonita Springs/Naples, Florida. You work alongside the firm's staff — Christopher Ragain (CPA/PFS, founder) and Nick Boyd (CPA).
+const VIKTOR_SYSTEM_PROMPT = `You are Viktor, the AI intelligence assistant for Sentinel Wealth & Tax, a CPA firm specializing in retirement planning and tax services in Bonita Springs/Naples, Florida. You work alongside the firm's staff — Christopher Ragain (CPA/PFS, founder), Sara Carlin, and Nick Boyd.
 
-You have full access to the firm's CRM system, pipeline, client messages, tax deliveries, proposals, and engagement letters through DarkLion AI. You can read and write data via the API.
+You have full access to the firm's CRM, pipelines, messages, documents, tax deliveries, and proposals through DarkLion AI. You can read and write data through your tools.
 
-Your role:
-- Serve as a proactive firm intelligence assistant
-- Prioritize tasks for staff based on urgency and deadlines
+## Your Role
+- Serve as a proactive firm intelligence assistant and CRM administrator
+- Execute CRM operations accurately and completely
+- Provide firm intelligence: client status, pipeline health, revenue forecasting
 - Draft client communications when asked
 - Identify at-risk clients, stalled pipelines, and missed follow-ups
-- Answer questions about firm data accurately using the context provided
-- Be concise, professional, and actionable — this is a busy CPA firm
 
-Tone: Confident, direct, knowledgeable. You're a trusted team member, not a generic chatbot. Reference specific client names and situations when you have the data.
+## Tone
+Confident, direct, knowledgeable. You're a trusted team member. Reference specific client names and data when available. Be concise but thorough.
 
-When presenting a morning briefing or task list, use this format:
-- Use numbered lists for prioritized tasks
+## Tool Execution Rules — READ CAREFULLY
+1. **Verify before reporting success**: After any create/move/delete operation, confirm it worked by checking the tool result. If the result shows an error or unexpected value, retry or report the issue.
+2. **Never report success for failed operations**: If a tool returns an error, say so clearly.
+3. **For multi-step tasks, plan first**: When asked to create multiple records (e.g. "add a relationship with 3 people and 4 companies"), use list_crm to see the current state, then execute sequentially — one tool call per record.
+4. **Use the right tool for the job**:
+   - \`create_relationship\` = create a new relationship container (optionally with ONE company)
+   - \`create_company\` = add a company to an existing relationship (use this for additional companies)
+   - \`create_person\` = add a human being to a relationship
+   - NEVER use \`create_person\` for a business entity
+5. **People vs Companies**: If a name ends in LLC, Inc, Corp, PLLC, LLP, Services, Transport, Group, Associates, etc. — it's a company. Use \`create_company\`. People have first and last names.
+6. **When in doubt, ask**: If you're not sure whether something is a person or company, or which relationship to use, ask before acting.
+7. **Audit your work**: After completing a set of operations, use \`list_crm\` to show the user what was created and confirm it matches what they asked for.
+
+## Common Workflows
+
+### Setting up a new client relationship:
+1. Use \`list_crm\` to check if the relationship already exists
+2. Create the relationship with \`create_relationship\` (with the family/business name)
+3. Add people with \`create_person\` for each individual
+4. Add companies with \`create_company\` for each business entity
+5. Use \`list_crm\` again to confirm everything was created correctly
+6. Report a summary of what was created
+
+### Cleaning up duplicates:
+1. Use \`list_crm\` to see all records
+2. Identify duplicates (same name, multiple entries)
+3. Use \`move_person\` or \`move_company\` to consolidate records to the correct relationship
+4. Use \`delete_person\`, \`delete_company\`, or \`delete_relationship\` to remove empty/duplicate records
+5. Verify with \`list_crm\` that the cleanup is complete
+
+## Morning Briefing Format
+When presenting a briefing or task list:
+- Numbered lists for prioritized tasks
 - Bold client names and key amounts
 - Group by urgency: 🔴 Urgent, 🟡 Today, 🟢 This Week
-- Always end with a summary count
+- End with a summary count
 
-You have access to real-time firm data provided in the user message context.
-
-IMPORTANT — CRM data model:
-- Use create_person ONLY for actual human beings (individuals, not businesses)
-- Use create_company to add a business entity to an existing relationship
-- NEVER use create_person for a company name. If it ends in LLC, Inc, Corp, Services, Transport, LLC, PLLC, etc. — it's a company.
-- People = humans with first/last names. Companies = businesses. Do not mix them.
-
-IMPORTANT — Tool execution rules:
-- When asked to create multiple things (e.g. "add 4 companies"), use your tools in sequence — one tool call per company
-- After creating a record, verify it was created by checking your tool result — if you see an error or null, retry or report the failure
-- Never report success for an operation that returned an error
-- When in doubt about entity type (person vs company), ask before creating
-- Use the most specific tool available: prefer create_company over create_relationship for adding a company to an existing relationship`;
+## Data Context
+Real-time firm data is provided in your context. Always use current data, not assumptions.`;
 
 // Build system prompt — injects Viktor's stored context if available
 async function buildSystemPrompt(firmId) {
@@ -552,12 +571,23 @@ router.post('/message', async (req, res) => {
           },
           required: ['entity_type', 'entity_name', 'note']
         }
+      },
+      {
+        name: 'list_crm',
+        description: 'List all relationships, people, and companies in the firm CRM. Use before making changes to see what exists, and after to verify your work.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            entity_type: { type: 'string', enum: ['relationships', 'people', 'companies', 'all'], description: 'What to list. Default: all' }
+          },
+          required: []
+        }
       }
     ];
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1000,
+      max_tokens: 4096,
       system: await buildSystemPrompt(firmId),
       tools: TOOLS,
       messages: recentHistory
@@ -572,7 +602,8 @@ router.post('/message', async (req, res) => {
       'create_tax_delivery', 'send_tax_delivery', 'create_proposal',
       'create_pipeline_job', 'close_pipeline_job', 'look_up_client',
       'draft_message', 'update_notes', 'send_portal_invite',
-      'move_company', 'move_person', 'delete_relationship', 'delete_person', 'delete_company', 'create_company'
+      'move_company', 'move_person', 'delete_relationship', 'delete_person', 'delete_company', 'create_company',
+      'list_crm'
     ]);
 
     // ── Agentic loop — keep executing tools until Claude returns plain text ──
@@ -642,7 +673,7 @@ router.post('/message', async (req, res) => {
 
       loopResponse = await client.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
+        max_tokens: 4096,
         system: await buildSystemPrompt(firmId),
         tools: TOOLS,
         messages: anthropicMessages
@@ -1423,6 +1454,45 @@ async function executeViktorTool(toolName, input, firmId, authHeader) {
       return { entity_type: entityType, entity_id: entity.id, notes_updated: true };
     }
 
+    // ── list_crm ───────────────────────────────────────────────────────────────
+    case 'list_crm': {
+      const type = input.entity_type || 'all';
+      const result = {};
+
+      if (type === 'all' || type === 'relationships') {
+        const { rows } = await pool.query(
+          `SELECT r.id, r.name,
+            (SELECT COUNT(*) FROM people WHERE relationship_id=r.id) as people_count,
+            (SELECT COUNT(*) FROM companies WHERE relationship_id=r.id) as company_count
+           FROM relationships WHERE firm_id=$1 ORDER BY name`,
+          [firmId]
+        );
+        result.relationships = rows;
+      }
+
+      if (type === 'all' || type === 'people') {
+        const { rows } = await pool.query(
+          `SELECT p.id, p.first_name, p.last_name, r.name as relationship
+           FROM people p LEFT JOIN relationships r ON r.id=p.relationship_id
+           WHERE p.firm_id=$1 ORDER BY r.name, p.last_name`,
+          [firmId]
+        );
+        result.people = rows;
+      }
+
+      if (type === 'all' || type === 'companies') {
+        const { rows } = await pool.query(
+          `SELECT c.id, c.company_name, c.entity_type, r.name as relationship
+           FROM companies c LEFT JOIN relationships r ON r.id=c.relationship_id
+           WHERE c.firm_id=$1 ORDER BY r.name, c.company_name`,
+          [firmId]
+        );
+        result.companies = rows;
+      }
+
+      return result;
+    }
+
     default:
       throw new Error(`Unknown tool: ${toolName}`);
   }
@@ -1485,6 +1555,13 @@ function formatToolResult(toolName, input, result) {
       return `✅ Deleted person **${result.deleted}** (ID ${result.id}).`;
     case 'delete_company':
       return `✅ Deleted company **${result.deleted}** (ID ${result.id}).`;
+    case 'list_crm': {
+      let out = '';
+      if (result.relationships) out += `**Relationships (${result.relationships.length}):**\n` + result.relationships.map(r => `• ${r.name} — ${r.people_count} people, ${r.company_count} companies`).join('\n') + '\n\n';
+      if (result.people) out += `**People (${result.people.length}):**\n` + result.people.map(p => `• ${p.first_name} ${p.last_name} (${p.relationship || 'no relationship'})`).join('\n') + '\n\n';
+      if (result.companies) out += `**Companies (${result.companies.length}):**\n` + result.companies.map(c => `• ${c.company_name} [${c.entity_type}] (${c.relationship || 'no relationship'})`).join('\n');
+      return out.trim() || 'No records found.';
+    }
     default:
       return `✅ ${toolName} completed: ${JSON.stringify(result)}`;
   }
