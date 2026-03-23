@@ -209,6 +209,19 @@ app.use('/api/proposals/public', apiLimiter, proposalsPublicRouter);
 const { requireToken } = require('./middleware/requireToken');
 app.use('/api', requireToken);
 
+// Staff list — after requireToken so API key auth works
+const { pool: _pool } = require('./db');
+app.get('/api/staff', requireFirm, apiLimiter, async (req, res) => {
+  try {
+    const { rows } = await _pool.query(
+      `SELECT id, name, display_name, email, role, last_login_at, created_at
+       FROM firm_users WHERE firm_id = $1 AND accepted_at IS NOT NULL ORDER BY name ASC`,
+      [req.firm.id]
+    );
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch staff' }); }
+});
+
 // --- API routes (JWT required) ---
 app.use('/api', requireFirm, apiLimiter, apiRouter);
 
