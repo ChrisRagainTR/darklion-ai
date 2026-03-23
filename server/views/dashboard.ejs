@@ -613,7 +613,7 @@
             <img src="/viktor-icon.png" style="width:22px;height:22px;object-fit:contain;border-radius:6px;">
           </div>
           <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:0.88rem;">Viktor AI</div>
+            <div style="font-weight:700;font-size:0.88rem;">Agent AI</div>
             <div style="font-size:0.72rem;color:var(--muted);" id="viktor-status">Connecting…</div>
           </div>
         </div>
@@ -626,7 +626,7 @@
         </div>
 
         <div class="dash-ai-input-row">
-          <textarea class="dash-ai-input" id="dash-ai-input" placeholder="Ask Viktor anything about your firm…" rows="1" disabled></textarea>
+          <textarea class="dash-ai-input" id="dash-ai-input" placeholder="Ask Viktor… or start with 'Hey Claude' for instant reply" rows="1" disabled></textarea>
           <button class="dash-ai-send" id="dash-ai-send-btn" disabled title="Send">↑</button>
         </div>
       </div>
@@ -3053,6 +3053,9 @@
     el.scrollTop = el.scrollHeight;
   }
 
+  let _viktorReplyPoll = null;
+  let _pendingReplyCount = 0; // track last known message count to detect new replies
+
   async function sendViktorMessage() {
     const inputEl = document.getElementById('dash-ai-input');
     const sendBtn = document.getElementById('dash-ai-send-btn');
@@ -3060,48 +3063,107 @@
     if (!text) return;
 
     inputEl.value = '';
-    inputEl.disabled = true;
     inputEl.style.height = 'auto';
-    if (sendBtn) { sendBtn.disabled = true; sendBtn.style.opacity = '0.5'; }
 
     appendViktorMessage('user', text);
 
-    // Thinking indicator
+    const askingClaude = /^(hey claude|claude:|@claude)\b/i.test(text);
+
+    // Show typing indicator
     const thinkingId = 'viktor-thinking-' + Date.now();
-    const el = document.getElementById('dash-ai-messages');
-    if (el) {
+    const msgsEl = document.getElementById('dash-ai-messages');
+    if (msgsEl) {
       const thinking = document.createElement('div');
       thinking.className = 'dash-ai-bubble agent';
       thinking.id = thinkingId;
-      thinking.style.opacity = '0.6';
-      thinking.innerHTML = '<span style="animation:pulse 1s infinite">Viktor is thinking…</span>';
-      el.appendChild(thinking);
-      el.scrollTop = el.scrollHeight;
+      thinking.style.cssText = 'opacity:0.7;display:flex;gap:4px;align-items:center;padding:0.65rem 0.9rem;';
+      thinking.innerHTML = askingClaude
+        ? '<span style="font-size:0.8rem;color:var(--muted)">Claude is thinking…</span>'
+        : '<span style="font-size:0.8rem;color:var(--muted)">Viktor is thinking…</span><span style="display:flex;gap:3px">' +
+          '<span style="width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 1.2s ease-in-out infinite"></span>' +
+          '<span style="width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 1.2s ease-in-out 0.4s infinite"></span>' +
+          '<span style="width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 1.2s ease-in-out 0.8s infinite"></span></span>';
+      msgsEl.appendChild(thinking);
+      msgsEl.scrollTop = msgsEl.scrollHeight;
     }
+
+    // Disable input while waiting
+    if (inputEl) inputEl.disabled = true;
+    if (sendBtn) { sendBtn.disabled = true; sendBtn.style.opacity = '0.5'; }
 
     try {
       const res = await apiFetch('/api/viktor-chat/message', {
         method: 'POST',
         body: JSON.stringify({ message: text })
       });
-      const thinkingEl = document.getElementById(thinkingId);
-      if (thinkingEl) thinkingEl.remove();
+      const data = await res.json();
 
       if (!res.ok) {
+        const t = document.getElementById(thinkingId); if (t) t.remove();
         appendViktorMessage('assistant', 'Sorry, I encountered an error. Please try again.');
-      } else {
-        const data = await res.json();
-        appendViktorMessage('assistant', data.reply || 'No response received.');
+        if (inputEl) inputEl.disabled = false;
+        if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
+        return;
       }
-    } catch(e) {
-      const thinkingEl = document.getElementById(thinkingId);
-      if (thinkingEl) thinkingEl.remove();
-      appendViktorMessage('assistant', 'Connection error. Please try again.');
-    }
 
-    inputEl.disabled = false;
-    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
-    inputEl.focus();
+      if (data.reply) {
+        // Claude answered directly (Hey Claude mode)
+        const t = document.getElementById(thinkingId); if (t) t.remove();
+        appendViktorMessage('assistant', data.reply);
+        if (inputEl) inputEl.disabled = false;
+        if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
+        if (inputEl) inputEl.focus();
+        return;
+      }
+
+      // Viktor mode: stored, now poll for reply
+      _pendingReplyCount = (data.messages || []).length;
+      pollForViktorReply(thinkingId, inputEl, sendBtn);
+
+    } catch(e) {
+      const t = document.getElementById(thinkingId); if (t) t.remove();
+      appendViktorMessage('assistant', 'Connection error. Please try again.');
+      if (inputEl) inputEl.disabled = false;
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
+    }
+  }
+
+  function pollForViktorReply(thinkingId, inputEl, sendBtn) {
+    if (_viktorReplyPoll) clearInterval(_viktorReplyPoll);
+    const startTime = Date.now();
+    const MAX_WAIT = 130000; // 130s — slightly past the 120s server fallback
+
+    _viktorReplyPoll = setInterval(async function() {
+      try {
+        const sessionRes = await apiFetch('/api/viktor-chat/session');
+        if (!sessionRes.ok) return;
+        const session = await sessionRes.json();
+        const msgs = session.messages || [];
+
+        // Check if a new assistant message arrived
+        if (msgs.length > _pendingReplyCount) {
+          const lastMsg = msgs[msgs.length - 1];
+          if (lastMsg && lastMsg.role === 'assistant') {
+            clearInterval(_viktorReplyPoll);
+            const t = document.getElementById(thinkingId); if (t) t.remove();
+            appendViktorMessage('assistant', lastMsg.content);
+            if (inputEl) { inputEl.disabled = false; inputEl.focus(); }
+            if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
+            _pendingReplyCount = msgs.length;
+            return;
+          }
+        }
+
+        // Timeout check
+        if (Date.now() - startTime > MAX_WAIT) {
+          clearInterval(_viktorReplyPoll);
+          const t = document.getElementById(thinkingId); if (t) t.remove();
+          appendViktorMessage('assistant', 'Viktor is unavailable right now. Try "Hey Claude" for an immediate response.');
+          if (inputEl) { inputEl.disabled = false; inputEl.focus(); }
+          if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
+        }
+      } catch(e) { /* keep polling */ }
+    }, 5000); // poll every 5 seconds
   }
 
   // Wire up send button and Enter key
