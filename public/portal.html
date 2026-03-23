@@ -1469,6 +1469,7 @@
 
       let DOC_CATEGORIES = [
         { key: 'tax', label: 'Tax', icon: '🧾' },
+        { key: 'bookkeeping', label: 'Bookkeeping', icon: '📒' },
         { key: 'other', label: 'Other', icon: '📎' },
       ];
 
@@ -1481,9 +1482,10 @@
 
         function renderOneYear(yr) {
           const yrDocs = sectionDocs.filter(d => (d.year || '') === yr);
+          if (!yrDocs.length) return ''; // skip empty years
           const hasNew = yrDocs.some(d => isDocNew(d));
-          const open = yrDocs.length > 0;
-          let y = `<div class="year-folder${open ? ' open' : ''}" style="margin-bottom:0.4rem;">
+          // Always start collapsed
+          let y = `<div class="year-folder" style="margin-bottom:0.4rem;">
             <div class="year-header">
               <span class="yr-label">📅 ${yr} <span class="yr-count">${yrDocs.length}</span>${hasNew ? ' <span style="color:var(--gold);font-size:0.65rem;">NEW</span>' : ''}</span>
               <span class="yr-chevron">▼</span>
@@ -1491,36 +1493,28 @@
             <div class="year-body" style="padding-left:1rem;">`;
           DOC_CATEGORIES.forEach(cat => {
             const catDocs = yrDocs.filter(d => (d.folder_category || 'other') === cat.key);
+            if (!catDocs.length) return; // skip empty categories
             y += `<div style="margin-bottom:0.5rem;"><div style="font-size:0.82rem;font-weight:700;color:var(--text);padding:0.4rem 0.5rem;margin-bottom:0.25rem;border-left:3px solid var(--gold);background:rgba(201,168,76,0.06);">${cat.icon} ${cat.label} <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${catDocs.length})</span></div><div style="padding-left:0.5rem;">`;
-            if (catDocs.length === 0) {
-              y += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`;
-            } else {
-              catDocs.forEach(doc => {
-                const isNew = isDocNew(doc);
-                const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
-                y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
-              });
-            }
+            catDocs.forEach(doc => {
+              const isNew = isDocNew(doc);
+              const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
+              y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
+            });
             y += `</div></div>`;
           });
           y += `</div></div>`;
           return y;
         }
 
+        const yearsWithDocs = years.filter(yr => sectionDocs.some(d => (d.year || '') === yr));
         let s = `<div style="margin-bottom:1.5rem;">
           <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
 
-        recentYears.forEach(yr => { s += renderOneYear(yr); });
-
-        // Previous Years
-        const prevCount = prevYears.reduce((n, yr) => n + sectionDocs.filter(d => (d.year||'') === yr).length, 0);
-        s += `<div class="year-folder" style="margin-bottom:0.4rem;">
-          <div class="year-header">
-            <span class="yr-label">📂 Previous Years <span class="yr-count">${prevCount}</span></span>
-            <span class="yr-chevron">▼</span>
-          </div>
-          <div class="year-body" style="padding-left:0.5rem;">${prevYears.map(yr => renderOneYear(yr)).join('')}</div>
-        </div>`;
+        if (!yearsWithDocs.length) {
+          s += `<div style="color:var(--muted);font-size:0.82rem;font-style:italic;">No documents yet.</div>`;
+        } else {
+          yearsWithDocs.forEach(yr => { s += renderOneYear(yr); });
+        }
 
         s += `</div>`;
         return s;
