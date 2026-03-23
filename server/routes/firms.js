@@ -91,6 +91,13 @@ router.post('/register', registerLimiter, async (req, res) => {
 
     if (!name) return res.status(400).json({ error: 'Firm name is required' });
 
+    // Restrict registration to Sentinel email domains
+    const ALLOWED_DOMAINS = (process.env.ALLOWED_REGISTRATION_DOMAINS || 'sentineladvisors.co,sentineltax.co').split(',');
+    const emailDomain = email.split('@')[1] || '';
+    if (!ALLOWED_DOMAINS.includes(emailDomain)) {
+      return res.status(403).json({ error: 'Registration is currently restricted. Contact your administrator to request access.' });
+    }
+
     const emailErr = validateEmail(email);
     if (emailErr) return res.status(400).json({ error: emailErr });
 
