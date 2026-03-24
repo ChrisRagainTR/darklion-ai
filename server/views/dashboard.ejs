@@ -2992,19 +2992,25 @@
         return;
       }
 
-      // No messages yet — generate morning briefing
-      setViktorStatus('Generating briefing…', false);
-      const briefingRes = await apiFetch('/api/viktor-chat/briefing', { method: 'POST', body: '{}' });
-      if (!briefingRes.ok) {
-        setViktorStatus('Online', true);
-        messagesEl.innerHTML = '<div class="dash-ai-bubble agent">Good morning! I\'m Viktor. Ask me anything about your firm — pipeline status, unsigned returns, stalled messages, or anything else you need.</div>';
-        enableViktorInput();
-        return;
-      }
-      const { messages } = await briefingRes.json();
-      renderViktorMessages(messages || []);
-      setViktorStatus('Online', true);
+      // No messages yet — kick off briefing in background, don't block UI
+      setViktorStatus('Preparing briefing…', false);
+      messagesEl.innerHTML = '<div class="dash-ai-bubble agent" id="viktor-briefing-placeholder">Good morning! I\'m Viktor, your AI advisor assistant. Your morning briefing is being prepared — it\'ll appear here in a moment.<br><br>You can start chatting now if you like.</div>';
       enableViktorInput();
+
+      // Fire briefing generation in background (don't await — takes 5-15s)
+      apiFetch('/api/viktor-chat/briefing', { method: 'POST', body: '{}' }).then(async (briefingRes) => {
+        if (!briefingRes.ok) { setViktorStatus('Online', true); return; }
+        const { messages: bMessages } = await briefingRes.json();
+        if (bMessages && bMessages.length > 0) {
+          // Only replace placeholder if user hasn't sent messages yet
+          const currentMsgs = messagesEl.querySelectorAll('.dash-ai-bubble');
+          const hasUserMsg = Array.from(currentMsgs).some(el => el.classList.contains('user'));
+          if (!hasUserMsg) {
+            renderViktorMessages(bMessages);
+          }
+        }
+        setViktorStatus('Online', true);
+      }).catch(() => { setViktorStatus('Online', true); });
     } catch(e) {
       console.error('Viktor init error:', e);
       setViktorStatus('Offline', false);
