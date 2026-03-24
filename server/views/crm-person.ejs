@@ -24,6 +24,48 @@
   .ph-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
   .ph-title { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; opacity: 0.75; }
   .ph-desc { font-size: 0.84rem; }
+
+  /* ── Docs tab — portal-matched styles ── */
+  .docs-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 1.5rem; }
+  @media (max-width: 900px) { .docs-layout { grid-template-columns: 1fr; } }
+  .docs-col-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem; }
+  .year-folder { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 0.75rem; overflow: hidden; }
+  .year-header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; cursor: pointer; user-select: none; transition: background 0.15s; }
+  .year-header:hover { background: rgba(255,255,255,0.03); }
+  .year-header .yr-label { font-weight: 700; font-size: 0.95rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
+  .yr-count { font-size: 0.72rem; background: rgba(201,168,76,0.12); color: var(--gold); border: 1px solid rgba(201,168,76,0.25); border-radius: 20px; padding: 0.1rem 0.5rem; font-weight: 600; }
+  .yr-chevron { color: var(--muted); font-size: 0.8rem; transition: transform 0.2s; }
+  .year-folder.open .yr-chevron { transform: rotate(180deg); }
+  .year-body { display: none; border-top: 1px solid var(--border); }
+  .year-folder.open .year-body { display: block; }
+  .cat-folder { margin-bottom: 0.35rem; border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; }
+  .cat-folder-header { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.7rem; cursor: pointer; user-select: none; background: rgba(201,168,76,0.04); border-left: 3px solid var(--gold); }
+  .cat-folder-header:hover { background: rgba(201,168,76,0.08); }
+  .cat-folder-label { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+  .cat-folder-meta { font-size: 0.72rem; color: var(--muted); }
+  .cat-chevron { color: var(--muted); font-size: 0.75rem; transition: transform 0.15s; }
+  .cat-folder.open .cat-chevron { transform: rotate(180deg); }
+  .cat-folder-body { display: none; padding: 0.4rem 0.5rem; }
+  .cat-folder.open .cat-folder-body { display: block; }
+  .doc-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.1rem; border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+  .doc-row:hover { background: rgba(255,255,255,0.03); }
+  .doc-info { flex: 1; min-width: 0; }
+  .doc-name { font-weight: 600; font-size: 0.9rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc-name-link { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .doc-name-link:hover { color: var(--gold); }
+  .doc-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.25rem; }
+  .doc-badge { font-size: 0.68rem; border-radius: 20px; padding: 0.1rem 0.45rem; font-weight: 600; }
+  .doc-badge-type { background: rgba(138,143,168,0.12); color: var(--muted); border: 1px solid rgba(138,143,168,0.2); }
+  .doc-badge-viewed { background: rgba(62,207,142,0.1); color: var(--green); border: 1px solid rgba(62,207,142,0.25); }
+  .doc-badge-client { background: rgba(66,153,225,0.1); color: #63b3ed; border: 1px solid rgba(66,153,225,0.25); }
+  .btn-dl { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; border-radius: 6px; padding: 0.3rem 0.65rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; flex-shrink: 0; white-space: nowrap; }
+  .btn-dl:hover { border-color: var(--gold); color: var(--gold); }
+  @media (max-width: 600px) {
+    .doc-name { white-space: normal; word-break: break-word; font-size: 0.82rem; }
+    .btn-dl { font-size: 0.72rem; padding: 0.25rem 0.5rem; }
+    .doc-row { gap: 0.5rem; padding: 0.55rem 0.75rem; }
+    .docs-layout { grid-template-columns: 1fr; }
+  }
 </style>
 
   <!-- ── Entity Header ── -->
@@ -502,102 +544,144 @@
 
   // ── Docs Tab ──
   const CURRENT_YEAR = new Date().getFullYear();
-  const DOC_SECTIONS = [
-    { key: 'client_uploaded', label: 'Client Uploaded', icon: '📤' },
-    { key: 'firm_uploaded', label: 'Firm Uploaded', icon: '📁' },
-    { key: 'private', label: 'Private (Staff Only)', icon: '🔒' },
+
+  const DOC_CATS_PERSON = [
+    { key: 'tax',   label: 'Tax',   icon: '🧾' },
+    { key: 'other', label: 'Other', icon: '📎' },
   ];
-  const DOC_CATEGORIES = ['tax', 'other'];
-  let allDocs = [];
-  let docsLoaded = false;
+
+  function docTypeBadge(mimeType, displayName) {
+    const mime = (mimeType || '').toLowerCase();
+    const name = (displayName || '').toLowerCase();
+    const ext = name.includes('.') ? name.split('.').pop() : '';
+    let label, color;
+    if (mime === 'application/pdf' || ext === 'pdf') { label = 'PDF'; color = '#e53e3e'; }
+    else if (mime.includes('spreadsheet') || mime.includes('excel') || ext === 'xlsx' || ext === 'xls' || ext === 'csv') { label = ext === 'csv' ? 'CSV' : 'Excel'; color = '#38a169'; }
+    else if (mime.includes('word') || ext === 'docx' || ext === 'doc') { label = 'Word'; color = '#3182ce'; }
+    else if (mime.includes('presentation') || mime.includes('powerpoint') || ext === 'pptx' || ext === 'ppt') { label = 'PPT'; color = '#dd6b20'; }
+    else if (mime.startsWith('image/') || ['jpg','jpeg','png','gif','webp','heic'].includes(ext)) { label = 'Image'; color = '#805ad5'; }
+    else if (mime.includes('zip') || ext === 'zip') { label = 'ZIP'; color = '#718096'; }
+    else if (mime.startsWith('text/') || ext === 'txt') { label = 'TXT'; color = '#718096'; }
+    else { label = ext ? ext.toUpperCase().slice(0,4) : 'FILE'; color = '#718096'; }
+    return `<span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${color};letter-spacing:0.03em;">${label}</span>`;
+  }
+
+  function fmtBytes(b) {
+    if (!b) return '';
+    if (b < 1024) return b + ' B';
+    if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+    return (b/(1024*1024)).toFixed(1) + ' MB';
+  }
+
+  function buildDocsSection(sectionDocs, title, icon, isClient) {
+    const allYears = [];
+    for (let y = CURRENT_YEAR; y >= 2018; y--) allYears.push(String(y));
+    const recentYears = allYears.slice(0, 2);
+    const priorYears  = allYears.slice(2);
+    const byYearCat = {};
+    sectionDocs.forEach(d => {
+      const y   = d.year || String(CURRENT_YEAR);
+      const cat = d.folder_category || 'other';
+      if (!byYearCat[y]) byYearCat[y] = {};
+      if (!byYearCat[y][cat]) byYearCat[y][cat] = [];
+      byYearCat[y][cat].push(d);
+    });
+    const statusBadge = isClient
+      ? `<span class="doc-badge doc-badge-client">✓ Uploaded</span>`
+      : `<span class="doc-badge doc-badge-viewed">✓ Delivered</span>`;
+
+    function renderOneYear(yr, openByDefault) {
+      const yrDocs = sectionDocs.filter(d => (d.year || String(CURRENT_YEAR)) === yr);
+      return `<div class="year-folder${openByDefault ? ' open' : ''}" style="margin-bottom:0.4rem;">
+        <div class="year-header">
+          <span class="yr-label">📅 ${yr} <span class="yr-count">${yrDocs.length}</span></span>
+          <span class="yr-chevron">▼</span>
+        </div>
+        <div class="year-body" style="padding-left:1rem;">
+          ${DOC_CATS_PERSON.map(cat => {
+            const files = (byYearCat[yr] || {})[cat.key] || [];
+            return `<div class="cat-folder${files.length > 0 ? ' open' : ''}">
+              <div class="cat-folder-header" onclick="this.closest('.cat-folder').classList.toggle('open')">
+                <span class="cat-folder-label">${cat.icon} ${cat.label}</span>
+                <span style="display:flex;align-items:center;gap:0.5rem;"><span class="cat-folder-meta">${files.length} file${files.length !== 1 ? 's' : ''}</span><span class="cat-chevron">▼</span></span>
+              </div>
+              <div class="cat-folder-body">
+                ${files.length === 0
+                  ? `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`
+                  : files.map(f => `<div class="doc-row" data-docid="${f.id}">
+                      ${docTypeBadge(f.mime_type, f.display_name)}
+                      <div class="doc-info">
+                        <div class="doc-name doc-name-link" data-docid="${f.id}">${esc((f.display_name||'Untitled').replace(/_/g,' ').trim())}</div>
+                        <div class="doc-badges">
+                          ${statusBadge}
+                          ${f.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(f.size_bytes)}</span>` : ''}
+                          ${f.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(f.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'})}</span>` : ''}
+                        </div>
+                      </div>
+                      <div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;">
+                        <button class="btn-dl" data-docid="${f.id}">⬇</button>
+                        <button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${f.id},${JSON.stringify(f.folder_section||'firm_uploaded')},${JSON.stringify(f.folder_category||'other')},event,${JSON.stringify(f.year||'')})" title="Move">↕</button>
+                        <button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${f.id},event)" title="Delete">🗑</button>
+                      </div>
+                    </div>`).join('')}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }
+
+    const priorCount = priorYears.reduce((n,y) => n + sectionDocs.filter(d => (d.year||String(CURRENT_YEAR)) === y).length, 0);
+    let html = `<div class="docs-col-title">${icon} ${title} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
+    recentYears.forEach(y => { html += renderOneYear(y, true); });
+    html += `<div class="year-folder" style="margin-bottom:0.4rem;">
+      <div class="year-header">
+        <span class="yr-label">📂 Prior Years <span class="yr-count">${priorCount}</span></span>
+        <span class="yr-chevron">▼</span>
+      </div>
+      <div class="year-body" style="padding-left:0.5rem;">${priorYears.map(y => renderOneYear(y, false)).join('')}</div>
+    </div>`;
+    return html;
+  }
+
+  let docsData = [];
 
   async function loadDocs() {
-    if (docsLoaded) return;
-    docsLoaded = true;
-    const c = document.getElementById('docs-content');
-    c.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading documents…</div></div>';
+    const el = document.getElementById('docs-content');
+    if (el.dataset.loaded) return;
+    el.dataset.loaded = '1';
+    el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>';
     try {
       const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${personId}`);
-      if (!res.ok) throw new Error('Failed to load');
-      allDocs = await res.json();
+      docsData = await res.json();
       renderDocs();
-    } catch(e) {
-      c.innerHTML = '<div class="error-msg">Failed to load documents.</div>';
-    }
+    } catch(e) { el.innerHTML = '<div class="empty-state">Failed to load documents.</div>'; }
   }
 
   function renderDocs() {
-    const c = document.getElementById('docs-content');
-    const curYear = new Date().getFullYear();
-    const allYears = [];
-    for (let y = curYear; y >= 2018; y--) allYears.push(String(y));
-    const recentYears = allYears.slice(0, 2);
-    const prevYears = allYears.slice(2);
-    const CAT_ICONS = { tax: '🧾', other: '📎' };
-
-    function renderOneYear(yr, secDocs, secKey) {
-      const yrDocs = secDocs.filter(d => (d.year||'') === yr);
-      const open = yrDocs.length > 0;
-      let y = `<div style="margin-bottom:0.4rem;">
-        <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;padding:0.35rem 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;" onclick="const n=this.nextElementSibling;n.style.display=n.style.display==='none'?'':'none';this.querySelector('.ya').textContent=n.style.display===''?'▾':'▸'">
-          📅 ${yr} <span style="font-weight:400;">(${yrDocs.length})</span> <span class="ya" style="float:right;">${open?'▾':'▸'}</span>
-        </div>
-        <div style="padding-left:1rem;display:${open?'':'none'}">`;
-      DOC_CATEGORIES.forEach(cat => {
-        const catDocs = yrDocs.filter(d => (d.folder_category||'other') === cat);
-        y += `<div style="margin-bottom:0.25rem;">
-          <div style="font-size:0.71rem;font-weight:600;color:var(--muted);padding:0.3rem 0;cursor:pointer;display:flex;align-items:center;gap:0.3rem;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
-            ${CAT_ICONS[cat]||'📎'} ${cat.charAt(0).toUpperCase()+cat.slice(1)} <span style="font-weight:400;">(${catDocs.length})</span>
-            <button class="btn btn-ghost" style="font-size:0.68rem;padding:0.1rem 0.4rem;margin-left:auto;" onclick="event.stopPropagation();openUploadModalWith('${secKey}','${cat}','${yr}')">+ Add</button>
-          </div>
-          <div style="padding-left:1rem;">${catDocs.length===0?'<div style="color:var(--muted);font-size:0.78rem;font-style:italic;">Empty</div>':catDocs.map(d=>docRow(d)).join('')}</div>
-        </div>`;
-      });
-      y += `</div></div>`;
-      return y;
-    }
-
-    let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
-      <button class="btn btn-gold btn-sm" onclick="openUploadModal()">+ Upload Document</button>
-    </div>`;
-
-    DOC_SECTIONS.forEach(sec => {
-      const secDocs = allDocs.filter(d => (d.folder_section || 'firm_uploaded') === sec.key);
-      html += `<div class="card" style="margin-bottom:1.25rem;">
-        <div class="card-title">${sec.icon} ${sec.label} <span style="font-size:0.72rem;color:var(--muted);font-weight:400;">(${secDocs.length})</span></div>
-        <div>`;
-      recentYears.forEach(yr => { html += renderOneYear(yr, secDocs, sec.key); });
-      const prevCount = prevYears.reduce((n,yr)=>n+secDocs.filter(d=>(d.year||'')===yr).length,0);
-      html += `<div style="margin-bottom:0.4rem;">
-        <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;padding:0.35rem 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="const n=this.nextElementSibling;n.style.display=n.style.display==='none'?'block':'none';this.querySelector('.ya').textContent=n.style.display==='block'?'▾':'▸'">
-          📂 Previous Years <span style="font-weight:400;">(${prevCount})</span> <span class="ya" style="float:right;">▸</span>
-        </div>
-        <div style="display:none;padding-left:0.5rem;">${prevYears.map(yr=>renderOneYear(yr,secDocs,sec.key)).join('')}</div>
+    const el = document.getElementById('docs-content');
+    const firmDocs   = docsData.filter(d => !d.folder_section || d.folder_section === 'firm_uploaded');
+    const clientDocs = docsData.filter(d => d.folder_section === 'client_uploaded');
+    el.innerHTML = `<div style="display:flex;justify-content:flex-end;padding:1rem 1.5rem 0;"><button class="btn btn-gold btn-sm" onclick="openUploadModal()">+ Upload Document</button></div>
+      <div class="docs-layout">
+        <div>${buildDocsSection(firmDocs, 'Delivered by Advisor', '📁', false)}</div>
+        <div>${buildDocsSection(clientDocs, 'Uploaded by Client', '📤', true)}</div>
       </div>`;
-      html += `</div></div>`;
+    el.querySelectorAll('.year-header').forEach(h => {
+      h.addEventListener('click', () => h.closest('.year-folder').classList.toggle('open'));
     });
-    c.innerHTML = html;
+    el.querySelectorAll('.doc-name-link').forEach(nameEl => {
+      nameEl.addEventListener('click', e => { e.stopPropagation(); downloadDoc(parseInt(nameEl.dataset.docid)); });
+    });
+    el.querySelectorAll('.btn-dl').forEach(btn => {
+      btn.addEventListener('click', e => { e.stopPropagation(); downloadDoc(parseInt(btn.dataset.docid), btn); });
+    });
   }
 
-  function docRow(d) {
-    const icons = { tax_return:'📋', w2:'📄', '1099':'📄', engagement_letter:'✍️', organizer:'📝', statement:'🏦', other:'📎', tax:'🧾' };
-    const icon = icons[d.doc_type] || icons[d.folder_category] || '📎';
-    const delivered = d.is_delivered
-      ? '<span class="badge badge-green" style="font-size:0.68rem;">Delivered</span>'
-      : '<span class="badge badge-muted" style="font-size:0.68rem;">Not Delivered</span>';
-    const catBadge = d.folder_category ? `<span class="badge badge-muted" style="font-size:0.68rem;">${esc(d.folder_category)}</span>` : '';
-    return `<div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
-      <span style="font-size:1.2rem;">${icon}</span>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:0.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(d.display_name||'Untitled')}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.2rem;">${catBadge}${delivered}</div>
-      </div>
-      <div style="display:flex;gap:0.3rem;flex-shrink:0;">
-        <button class="btn btn-ghost btn-xs" onclick="downloadDoc(${d.id}, this)">⬇</button>
-        <button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${d.id},'${d.folder_section||'firm_uploaded'}','${d.folder_category||'other'}',event,'${d.year||''}')" title="Move">↕</button>
-        <button class="btn btn-danger btn-xs" onclick="deleteDoc(${d.id}, event)">🗑</button>
-      </div>
-    </div>`;
+  function reloadDocs() {
+    const el = document.getElementById('docs-content');
+    if (el) delete el.dataset.loaded;
+    loadDocs();
   }
 
   async function downloadDoc(id, btn) {
@@ -606,7 +690,6 @@
       const res = await apiFetch(`/api/documents/${id}/url`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');
-      // Use location.href — safe on iOS/Safari, avoids popup blocker
       if (data.url) window.location.href = data.url;
     } catch(e) { toast('Download failed: ' + e.message, 'error'); }
     if (btn) { btn.disabled = false; btn.textContent = '⬇'; }
@@ -619,8 +702,7 @@
       const res = await apiFetch(`/api/documents/${id}`, { method: 'DELETE' });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Document deleted');
-      docsLoaded = false;
-      loadDocs();
+      reloadDocs();
     } catch(e) { toast(e.message, 'error'); }
   }
 
@@ -630,7 +712,7 @@
     _moveDocId = id;
     const modal = document.getElementById('move-doc-modal');
     if (!modal) return;
-    document.getElementById('move-doc-year').value = currentYear || String(new Date().getFullYear() - 1);
+    document.getElementById('move-doc-year').value = currentYear || String(CURRENT_YEAR - 1);
     document.getElementById('move-doc-section').value = currentSection || 'firm_uploaded';
     document.getElementById('move-doc-category').value = currentCategory || 'other';
     modal.classList.add('open');
@@ -650,8 +732,7 @@
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
       toast('Document moved');
       closeMoveDocModal();
-      docsLoaded = false;
-      loadDocs();
+      reloadDocs();
     } catch(e) { toast(e.message, 'error'); }
   }
 
@@ -701,8 +782,7 @@
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Upload failed'); }
       document.getElementById('upload-modal').classList.remove('open');
       toast('Document uploaded');
-      docsLoaded = false;
-      if (document.getElementById('tab-docs').classList.contains('active')) loadDocs();
+      reloadDocs();
     } catch(e) {
       document.getElementById('upload-error').textContent = e.message;
       document.getElementById('upload-error').style.display = '';
