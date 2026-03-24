@@ -1009,11 +1009,11 @@
     document.getElementById('move-doc-year').value = currentYear || String(new Date().getFullYear() - 1);
     document.getElementById('move-doc-section').value = currentSection || 'firm_uploaded';
     document.getElementById('move-doc-category').value = currentCategory || 'tax';
-    modal.classList.add('open');
+    modal.classList.remove('hidden');
   }
   function closeMoveDocModal() {
     const modal = document.getElementById('move-doc-modal');
-    if (modal) modal.classList.remove('open');
+    if (modal) modal.classList.add('hidden');
     _moveDocId = null;
   }
   async function submitMoveDoc() {
@@ -2263,7 +2263,7 @@
 </div>
 
 <!-- Move Document Modal -->
-<div class="modal-overlay" id="move-doc-modal" onclick="closeMoveDocModal()">
+<div class="modal-overlay hidden" id="move-doc-modal" onclick="closeMoveDocModal()">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:380px;">
     <h2>Move Document</h2>
     <div class="form-group">
