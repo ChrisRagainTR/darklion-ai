@@ -888,7 +888,36 @@
               ? `<span class="doc-badge doc-badge-viewed">✓ Delivered</span>`
               : `<span class="doc-badge doc-badge-client">✓ Uploaded</span>`;
             const _dispName = (doc.display_name || 'Document').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-            y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(_dispName)}</div><div class="doc-badges">${statusBadge}${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}${doc.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(doc.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'})}</span>` : ''}</div></div><div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;"><button class="btn-dl" data-docid="${doc.id}">⬇</button><button class="btn btn-ghost btn-xs btn-move" onclick="toggleMoveRow(${doc.id},'${doc.folder_section||'firm_uploaded'}','${doc.folder_category||'other'}','${doc.year||''}')" title="Move">↕</button><button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${doc.id},event)" title="Delete">🗑</button></div></div>`;
+            const docYears = [];
+            for (let dy = new Date().getFullYear(); dy >= 2018; dy--) docYears.push(dy);
+            y += `<div class="doc-row" data-docid="${doc.id}">
+              <span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span>
+              <div class="doc-info">
+                <div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(_dispName)}</div>
+                <div class="doc-badges">${statusBadge}${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}${doc.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(doc.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'})}</span>` : ''}</div>
+                <div class="doc-move-panel" id="move-panel-${doc.id}" style="display:none;margin-top:0.4rem;padding:0.4rem;background:rgba(201,168,76,0.06);border-radius:5px;display:none;">
+                  <span style="font-size:0.72rem;color:var(--muted);margin-right:0.3rem;">Move to:</span>
+                  <select id="mv-year-${doc.id}" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.2rem 0.4rem;border-radius:4px;font-size:0.75rem;margin-right:0.3rem;">
+                    ${docYears.map(y2 => `<option value="${y2}"${String(doc.year||'')==String(y2)?' selected':''}>${y2}</option>`).join('')}
+                  </select>
+                  <select id="mv-sec-${doc.id}" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.2rem 0.4rem;border-radius:4px;font-size:0.75rem;margin-right:0.3rem;">
+                    <option value="firm_uploaded"${(doc.folder_section||'firm_uploaded')==='firm_uploaded'?' selected':''}>Advisor</option>
+                    <option value="client_uploaded"${doc.folder_section==='client_uploaded'?' selected':''}>Client</option>
+                  </select>
+                  <select id="mv-cat-${doc.id}" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.2rem 0.4rem;border-radius:4px;font-size:0.75rem;margin-right:0.3rem;">
+                    <option value="tax"${(doc.folder_category||'other')==='tax'?' selected':''}>Tax</option>
+                    <option value="other"${(doc.folder_category||'other')==='other'?' selected':''}>Other</option>
+                  </select>
+                  <button onclick="saveDocMove(${doc.id})" style="background:var(--gold);color:var(--navy);border:none;border-radius:4px;padding:0.2rem 0.55rem;font-size:0.75rem;font-weight:700;cursor:pointer;">Save</button>
+                  <button onclick="document.getElementById('move-panel-${doc.id}').style.display='none'" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:0.2rem 0.45rem;font-size:0.75rem;cursor:pointer;margin-left:0.2rem;">✕</button>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;">
+                <button class="btn-dl" data-docid="${doc.id}">⬇</button>
+                <button class="btn btn-ghost btn-xs" onclick="document.getElementById('move-panel-${doc.id}').style.display=document.getElementById('move-panel-${doc.id}').style.display==='none'?'block':'none'" title="Move">↕</button>
+                <button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${doc.id},event)" title="Delete">🗑</button>
+              </div>
+            </div>`;
           });
         }
         y += `</div></div>`; // close cat-folder-body + cat-folder
@@ -974,68 +1003,18 @@
     } catch(err) { alert('Delete failed: ' + err.message); }
   }
 
-  // ── MOVE: inline dropdowns on the row, auto-save on change ──
-  function toggleMoveRow(id, section, category, year) {
-    // Close any open move rows first
-    document.querySelectorAll('.doc-move-row').forEach(r => {
-      if (r.dataset.docid != id) { r.style.display = 'none'; r.closest('.doc-row').querySelector('.btn-move').textContent = '↕'; }
-    });
-    const existing = document.querySelector(`.doc-move-row[data-docid="${id}"]`);
-    if (existing && existing.style.display !== 'none') {
-      existing.style.display = 'none';
-      existing.closest('.doc-row').querySelector('.btn-move').textContent = '↕';
-      return;
-    }
-    if (existing) {
-      existing.style.display = '';
-      existing.closest('.doc-row').querySelector('.btn-move').textContent = '✕';
-      return;
-    }
-    // Build inline move row
-    const docRow = document.querySelector(`.doc-row[data-docid="${id}"]`);
-    if (!docRow) return;
-    const row = document.createElement('div');
-    row.className = 'doc-move-row';
-    row.dataset.docid = id;
-    row.style.cssText = 'display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;padding:0.4rem 1.1rem 0.5rem;background:rgba(201,168,76,0.05);border-top:1px solid rgba(201,168,76,0.15);';
-    const years = [];
-    for (let y = new Date().getFullYear(); y >= 2018; y--) years.push(y);
-    row.innerHTML = `
-      <span style="font-size:0.72rem;color:var(--muted);font-weight:600;">Move to:</span>
-      <select data-field="year" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.25rem 0.5rem;border-radius:5px;font-size:0.78rem;">
-        ${years.map(y => `<option value="${y}"${String(y)===String(year)?'  selected':''}>${y}</option>`).join('')}
-      </select>
-      <select data-field="section" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.25rem 0.5rem;border-radius:5px;font-size:0.78rem;">
-        <option value="firm_uploaded"${section==='firm_uploaded'?' selected':''}>Delivered by Advisor</option>
-        <option value="client_uploaded"${section==='client_uploaded'?' selected':''}>Client Uploaded</option>
-      </select>
-      <select data-field="category" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.25rem 0.5rem;border-radius:5px;font-size:0.78rem;">
-        <option value="tax"${category==='tax'?' selected':''}>Tax</option>
-        <option value="other"${category==='other'?' selected':''}>Other</option>
-      </select>
-      <button onclick="saveMoveRow(${id}, this)" style="background:var(--gold);color:var(--navy);border:none;border-radius:5px;padding:0.25rem 0.65rem;font-size:0.78rem;font-weight:700;cursor:pointer;">Save</button>
-      <span class="move-status" style="font-size:0.72rem;color:var(--green);display:none;">✓ Saved</span>`;
-    docRow.insertAdjacentElement('afterend', row);
-    docRow.querySelector('.btn-move').textContent = '✕';
-  }
-
-  async function saveMoveRow(id, btn) {
-    const row = btn.closest('.doc-move-row');
-    const year = row.querySelector('[data-field="year"]').value;
-    const section = row.querySelector('[data-field="section"]').value;
-    const category = row.querySelector('[data-field="category"]').value;
-    btn.disabled = true; btn.textContent = '…';
+  // ── MOVE: inline panel baked into rendered HTML ──
+  async function saveDocMove(id) {
+    const year = document.getElementById(`mv-year-${id}`).value;
+    const section = document.getElementById(`mv-sec-${id}`).value;
+    const category = document.getElementById(`mv-cat-${id}`).value;
     try {
       const res = await apiFetch(`/api/documents/${id}`, { method: 'PUT', body: JSON.stringify({ year, folder_section: section, folder_category: category }) });
       if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Error ' + res.status); }
-      // Update in-memory doc
       const doc = docsData.find(d => d.id === id);
       if (doc) { doc.year = year; doc.folder_section = section; doc.folder_category = category; }
-      row.style.display = 'none';
-      const docRow = document.querySelector(`.doc-row[data-docid="${id}"]`);
-      if (docRow) docRow.querySelector('.btn-move').textContent = '↕';
       renderDocs();
-    } catch(err) { alert('Move failed: ' + err.message); btn.disabled = false; btn.textContent = 'Save'; }
+    } catch(err) { alert('Move failed: ' + err.message); }
   }
 
   // ── Upload modal wiring ──
