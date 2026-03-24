@@ -1785,19 +1785,37 @@
     const getTA = () => document.getElementById('comm-reply-body');
     const getPicker = () => document.getElementById('comm-mention-picker');
 
-    function hidePicker() { const p = getPicker(); if (p) p.style.display = 'none'; _commMentionStart = -1; }
+    // Use a body-level picker to avoid overflow/z-index clipping
+    let _commPicker = null;
+    function getOrCreatePicker() {
+      if (!_commPicker) {
+        _commPicker = document.createElement('div');
+        _commPicker.id = 'comm-mention-picker-float';
+        _commPicker.style.cssText = 'display:none;position:fixed;z-index:9999;background:var(--charcoal,#1c2b3a);border:1px solid var(--gold,#c9a84c);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);min-width:200px;max-height:220px;overflow-y:auto;';
+        document.body.appendChild(_commPicker);
+      }
+      return _commPicker;
+    }
+    function hidePicker() { const p = getOrCreatePicker(); p.style.display = 'none'; _commMentionStart = -1; }
+    function positionPicker(ta) {
+      const picker = getOrCreatePicker();
+      const rect = ta.getBoundingClientRect();
+      picker.style.left = rect.left + 'px';
+      picker.style.top = (rect.top - picker.offsetHeight - 4) + 'px';
+      // After display, reposition if out of viewport
+      if (parseFloat(picker.style.top) < 8) picker.style.top = (rect.bottom + 4) + 'px';
+    }
     function insertMention(name) {
       const ta = getTA(); if (!ta) return;
       const val = ta.value, pos = ta.selectionStart;
-      const before = val.slice(0, _commMentionStart), after = val.slice(pos);
-      ta.value = before + '@' + name + ' ' + after;
+      ta.value = val.slice(0, _commMentionStart) + '@' + name + ' ' + val.slice(pos);
       const np = _commMentionStart + name.length + 2;
       ta.setSelectionRange(np, np); ta.focus(); hidePicker();
     }
 
     document.addEventListener('keyup', function(e) {
-      const ta = getTA(); const picker = getPicker();
-      if (!ta || !picker || e.target !== ta) return;
+      const ta = getTA();
+      if (!ta || e.target !== ta) return;
       const val = ta.value, pos = ta.selectionStart;
       const textBefore = val.slice(0, pos);
       const atIdx = textBefore.lastIndexOf('@');
@@ -1811,21 +1829,23 @@
       }
       const matches = _commFirmUsers.filter(u => (u.name || u.email || '').toLowerCase().includes(query)).slice(0, 8);
       if (!matches.length) { hidePicker(); return; }
+      const picker = getOrCreatePicker();
       picker.innerHTML = matches.map(u => {
         const name = u.name || u.email;
         const ini = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-        return `<div class="comm-mention-item" data-name="${name.replace(/"/g,'')}" style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.75rem;cursor:pointer;font-size:0.85rem;">
-          <div style="width:26px;height:26px;border-radius:50%;background:rgba(201,168,76,0.15);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;">${ini}</div>
+        return `<div class="comm-mention-item" data-name="${name.replace(/"/g,'')}" style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.75rem;cursor:pointer;font-size:0.85rem;color:var(--text,#e8edf2);">
+          <div style="width:26px;height:26px;border-radius:50%;background:rgba(201,168,76,0.15);color:var(--gold,#c9a84c);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;">${ini}</div>
           <span>${name}</span></div>`;
       }).join('');
       picker.style.display = 'block';
+      positionPicker(ta);
       picker.querySelectorAll('.comm-mention-item').forEach(item => {
         item.addEventListener('mouseenter', () => item.style.background = 'rgba(201,168,76,0.1)');
         item.addEventListener('mouseleave', () => item.style.background = '');
         item.addEventListener('mousedown', ev => { ev.preventDefault(); insertMention(item.dataset.name); });
       });
     });
-    document.addEventListener('keydown', e => { if (getPicker()?.style.display !== 'none' && e.key === 'Escape') hidePicker(); });
+    document.addEventListener('keydown', e => { if (getOrCreatePicker().style.display !== 'none' && e.key === 'Escape') hidePicker(); });
 
     // Pre-load users so picker is instant
     apiFetch('/firms/team').then(r => r.json()).then(u => { _commFirmUsers = u || []; }).catch(() => {});

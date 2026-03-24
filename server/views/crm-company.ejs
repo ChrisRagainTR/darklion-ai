@@ -3313,7 +3313,16 @@
     let _coMentionStart = -1;
     const getTA = () => document.getElementById('comm-co-reply-body');
     const getPicker = () => document.getElementById('comm-co-mention-picker');
-    function hidePicker() { const p = getPicker(); if (p) p.style.display = 'none'; _coMentionStart = -1; }
+    let _coPicker = null;
+    function getOrCreateCoPicker() {
+      if (!_coPicker) {
+        _coPicker = document.createElement('div');
+        _coPicker.style.cssText = 'display:none;position:fixed;z-index:9999;background:var(--charcoal,#1c2b3a);border:1px solid var(--gold,#c9a84c);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);min-width:200px;max-height:220px;overflow-y:auto;';
+        document.body.appendChild(_coPicker);
+      }
+      return _coPicker;
+    }
+    function hidePicker() { getOrCreateCoPicker().style.display = 'none'; _coMentionStart = -1; }
     function insertMention(name) {
       const ta = getTA(); if (!ta) return;
       const val = ta.value, pos = ta.selectionStart;
@@ -3322,8 +3331,8 @@
       ta.setSelectionRange(np, np); ta.focus(); hidePicker();
     }
     document.addEventListener('keyup', function(e) {
-      const ta = getTA(); const picker = getPicker();
-      if (!ta || !picker || e.target !== ta) return;
+      const ta = getTA();
+      if (!ta || e.target !== ta) return;
       const val = ta.value, pos = ta.selectionStart, textBefore = val.slice(0, pos);
       const atIdx = textBefore.lastIndexOf('@');
       if (atIdx === -1 || (atIdx > 0 && /\S/.test(val[atIdx - 1]))) { hidePicker(); return; }
@@ -3336,21 +3345,28 @@
       }
       const matches = _coFirmUsers.filter(u => (u.name || u.email || '').toLowerCase().includes(query)).slice(0, 8);
       if (!matches.length) { hidePicker(); return; }
+      const picker = getOrCreateCoPicker();
       picker.innerHTML = matches.map(u => {
         const name = u.name || u.email;
         const ini = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-        return `<div class="co-mention-item" data-name="${name.replace(/"/g,'')}" style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.75rem;cursor:pointer;font-size:0.85rem;">
-          <div style="width:26px;height:26px;border-radius:50%;background:rgba(201,168,76,0.15);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;">${ini}</div>
+        return `<div class="co-mention-item" data-name="${name.replace(/"/g,'')}" style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.75rem;cursor:pointer;font-size:0.85rem;color:var(--text,#e8edf2);">
+          <div style="width:26px;height:26px;border-radius:50%;background:rgba(201,168,76,0.15);color:var(--gold,#c9a84c);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;">${ini}</div>
           <span>${name}</span></div>`;
       }).join('');
+      const rect = ta.getBoundingClientRect();
+      picker.style.left = rect.left + 'px';
+      picker.style.top = (rect.top - 4) + 'px'; // will reposition after display
       picker.style.display = 'block';
+      // Reposition above or below textarea
+      const ph = picker.offsetHeight;
+      picker.style.top = rect.top - ph - 4 < 8 ? (rect.bottom + 4) + 'px' : (rect.top - ph - 4) + 'px';
       picker.querySelectorAll('.co-mention-item').forEach(item => {
         item.addEventListener('mouseenter', () => item.style.background = 'rgba(201,168,76,0.1)');
         item.addEventListener('mouseleave', () => item.style.background = '');
         item.addEventListener('mousedown', ev => { ev.preventDefault(); insertMention(item.dataset.name); });
       });
     });
-    document.addEventListener('keydown', e => { if (getPicker()?.style.display !== 'none' && e.key === 'Escape') hidePicker(); });
+    document.addEventListener('keydown', e => { if (getOrCreateCoPicker().style.display !== 'none' && e.key === 'Escape') hidePicker(); });
     apiFetch('/firms/team').then(r => r.json()).then(u => { _coFirmUsers = u || []; }).catch(() => {});
   })();
 
