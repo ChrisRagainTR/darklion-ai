@@ -22,7 +22,7 @@ const express = require('express');
 const https = require('https');
 const { URL } = require('url');
 
-const PORT = 7890;
+const PORT = 7891;
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
 const CACHE_TTL_MS = 30 * 1000;
@@ -226,16 +226,27 @@ function parsePath(reqPath) {
 
 function extractToken(req) {
   const authHeader = req.headers['authorization'];
-  if (!authHeader || !authHeader.startsWith('Basic ')) return null;
-  try {
-    const decoded = Buffer.from(authHeader.slice(6), 'base64').toString('utf8');
-    const colonIdx = decoded.indexOf(':');
-    if (colonIdx < 0) return null;
-    // username = "darklion", password = JWT token
-    return decoded.slice(colonIdx + 1).trim();
-  } catch {
-    return null;
+  if (!authHeader) return null;
+
+  // Bearer token auth (used by rclone bearer_token config)
+  if (authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    return token || null;
   }
+
+  // Basic auth: username=darklion, password=JWT token
+  if (authHeader.startsWith('Basic ')) {
+    try {
+      const decoded = Buffer.from(authHeader.slice(6), 'base64').toString('utf8');
+      const colonIdx = decoded.indexOf(':');
+      if (colonIdx < 0) return null;
+      return decoded.slice(colonIdx + 1).trim() || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  return null;
 }
 
 // ─── Express app ──────────────────────────────────────────────────────────────

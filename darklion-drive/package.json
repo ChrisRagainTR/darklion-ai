@@ -1,7 +1,7 @@
 {
   "name": "darklion-drive",
   "version": "1.0.0",
-  "description": "DarkLion Drive — mount your DarkLion documents as a Windows drive letter",
+  "description": "DarkLion Drive - mount your DarkLion documents as a Windows drive letter",
   "main": "app/main.js",
   "scripts": {
     "start": "electron .",
@@ -20,7 +20,7 @@
   "build": {
     "appId": "ai.darklion.drive",
     "productName": "DarkLion Drive",
-    "copyright": "Copyright © 2024 DarkLion AI",
+    "copyright": "Copyright 2024 DarkLion AI",
     "win": {
       "target": [
         {
@@ -38,10 +38,23 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "DarkLion Drive"
+      "shortcutName": "DarkLion Drive",
+      "include": "installer/installer.nsh"
     },
     "files": [
-      "app/**/*"
+      "app/**/*",
+      "!app/node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "vendor/rclone.exe",
+        "to": "rclone.exe"
+      },
+      {
+        "from": "installer/winfsp.msi",
+        "to": "winfsp.msi",
+        "filter": ["**/*"]
+      }
     ],
     "directories": {
       "output": "dist"

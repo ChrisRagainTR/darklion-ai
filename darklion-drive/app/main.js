@@ -1,17 +1,26 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, shell } = require('electron');
-const path = require('path');
+var electron = require('electron');
+var app = electron.app;
+var BrowserWindow = electron.BrowserWindow;
+var ipcMain = electron.ipcMain;
+var Tray = electron.Tray;
+var Menu = electron.Menu;
+var nativeImage = electron.nativeImage;
+var path = require('path');
 
-// Must be before app.whenReady()
-const gotLock = app.requestSingleInstanceLock();
+// Single instance lock - MUST be before app.whenReady()
+var gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
   process.exit(0);
 }
 
-// Lazy imports
-let auth, apiModule, webdavServer, drive;
+// Lazy-loaded modules
+var auth = null;
+var apiModule = null;
+var webdavServer = null;
+var drive = null;
 
 function loadModules() {
   auth = require('./auth');
@@ -20,29 +29,30 @@ function loadModules() {
   drive = require('./drive');
 }
 
-// State
-let tray = null;
-let loginWindow = null;
-let isConnected = false;
-let currentToken = null;
+// App state
+var tray = null;
+var loginWindow = null;
+var isConnected = false;
+var currentToken = null;
 
-// Valid 16x16 PNGs generated with Node zlib
-const GOLD_ICON_B64 = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAANElEQVR4nGPgF1f5TwlmGJwGnFzhgxUTZQAuzbgMYSBFMzZDRg2gtgEURyNVEtLgyAukYACSBsiYUYvh7QAAAABJRU5ErkJggg==';
-const GREY_ICON_B64 = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAANElEQVR4nGPgF1f5TwlmGJwGpKSkYMVEGYBLMy5DGEjRjM2QUQOobQDF0UiVhDQ48gIpGAAJd5bAmYtGRwAAAABJRU5ErkJggg==';
+// Tray icons as base64 PNGs (16x16)
+// GOLD = connected state, GREY = disconnected state
+var GOLD_ICON_B64 = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAANElEQVR4nGPgF1f5TwlmGJwGnFzhgxUTZQAuzbgMYSBFMzZDRg2gtgEURyNVEtLgyAukYACSBsiYUYvh7QAAAABJRU5ErkJggg==';
+var GREY_ICON_B64 = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAANElEQVR4nGPgF1f5TwlmGJwGpKSkYMVEGYBLMy5DGEjRjM2QUQOobQDF0UiVhDQ48gIpGAAJd5bAmYtGRwAAAABJRU5ErkJggg==';
 
 function createTrayIcon(connected) {
   try {
-    const b64 = connected ? GOLD_ICON_B64 : GREY_ICON_B64;
-    const img = nativeImage.createFromBuffer(Buffer.from(b64, 'base64'));
+    var b64 = connected ? GOLD_ICON_B64 : GREY_ICON_B64;
+    var img = nativeImage.createFromBuffer(Buffer.from(b64, 'base64'));
     if (!img.isEmpty()) return img;
   } catch (e) {
-    // ignore
+    // fall through to empty
   }
   return nativeImage.createEmpty();
 }
 
 function buildTrayMenu() {
-  const statusLabel = isConnected
+  var statusLabel = isConnected
     ? 'DarkLion Drive (L:)  Connected'
     : 'DarkLion Drive -- Not Connected';
 
@@ -52,22 +62,26 @@ function buildTrayMenu() {
     {
       label: 'Open Drive',
       enabled: isConnected,
-      click: function() { if (drive) drive.openDrive(); }
+      click: function() {
+        if (drive) drive.openDrive();
+      }
     },
     { type: 'separator' },
     {
       label: 'Log Out',
-      click: async function() {
-        await disconnectDrive();
-        if (auth) auth.clearAuth();
-        showLoginWindow();
+      click: function() {
+        disconnectDrive().then(function() {
+          if (auth) auth.clearAuth();
+          showLoginWindow();
+        });
       }
     },
     {
       label: 'Quit',
-      click: async function() {
-        await disconnectDrive();
-        app.quit();
+      click: function() {
+        disconnectDrive().then(function() {
+          app.quit();
+        });
       }
     }
   ]);
@@ -87,6 +101,7 @@ function showLoginWindow() {
   }
 
   var appPath = app.getAppPath();
+
   loginWindow = new BrowserWindow({
     width: 420,
     height: 520,
@@ -109,54 +124,71 @@ function showLoginWindow() {
   });
 }
 
-async function connectDrive(token) {
-  try {
-    console.log('[Main] Starting WebDAV server...');
-    await webdavServer.startServer(function() {
-      console.log('[Main] Token expired, showing login');
-      isConnected = false;
-      currentToken = null;
-      if (auth) auth.clearAuth();
-      updateTray();
-      showLoginWindow();
-    });
+// Called when rclone unexpectedly disconnects (crash, auth error, etc.)
+function onDriveDisconnected() {
+  console.log('[Main] Drive disconnected unexpectedly');
+  isConnected = false;
+  currentToken = null;
+  updateTray();
+  if (auth) auth.clearAuth();
+  showLoginWindow();
+}
 
-    console.log('[Main] Mounting drive...');
-    await drive.mountDrive(token);
-
+function connectDrive(token) {
+  console.log('[Main] Starting WebDAV server on port 7891...');
+  return webdavServer.startServer(function() {
+    // Called when WebDAV server gets a 401 from the API (token expired)
+    console.log('[Main] Token expired, showing login');
+    isConnected = false;
+    currentToken = null;
+    if (drive) drive.unmountDrive();
+    if (auth) auth.clearAuth();
+    updateTray();
+    showLoginWindow();
+  }).then(function() {
+    console.log('[Main] Mounting drive via rclone...');
+    return drive.mountDrive(token, onDriveDisconnected);
+  }).then(function() {
     isConnected = true;
     currentToken = token;
     updateTray();
-    console.log('[Main] Drive connected successfully');
+    console.log('[Main] Drive connected successfully on L:');
     return true;
-  } catch (err) {
+  }).catch(function(err) {
     console.error('[Main] connectDrive failed:', err.message);
     isConnected = false;
     currentToken = null;
     updateTray();
     throw err;
-  }
+  });
 }
 
-async function disconnectDrive() {
-  try {
-    if (drive) await drive.unmountDrive();
-  } catch (e) {
-    console.warn('[Main] Unmount error:', e.message);
+function disconnectDrive() {
+  var p = Promise.resolve();
+  if (drive) {
+    p = p.then(function() {
+      return drive.unmountDrive();
+    }).catch(function(e) {
+      console.warn('[Main] Unmount error:', e.message);
+    });
   }
-  try {
-    if (webdavServer) await webdavServer.stopServer();
-  } catch (e) {
-    console.warn('[Main] Stop server error:', e.message);
+  if (webdavServer) {
+    p = p.then(function() {
+      return webdavServer.stopServer();
+    }).catch(function(e) {
+      console.warn('[Main] Stop server error:', e.message);
+    });
   }
-  isConnected = false;
-  currentToken = null;
-  updateTray();
+  return p.then(function() {
+    isConnected = false;
+    currentToken = null;
+    updateTray();
+  });
 }
 
-ipcMain.handle('login', async function(event, creds) {
-  try {
-    var result = await apiModule.login(creds.email, creds.password);
+// IPC: login handler
+ipcMain.handle('login', function(event, creds) {
+  return apiModule.login(creds.email, creds.password).then(function(result) {
     var token = result.token;
     var firm = result.firm;
 
@@ -166,26 +198,31 @@ ipcMain.handle('login', async function(event, creds) {
       loginWindow.close();
     }
 
-    await connectDrive(token);
-    return { success: true };
-  } catch (err) {
+    return connectDrive(token).then(function() {
+      return { success: true };
+    });
+  }).catch(function(err) {
     console.error('[IPC] Login error:', err.message);
     return { success: false, error: err.message || 'Login failed' };
-  }
+  });
 });
 
 ipcMain.handle('get-version', function() {
   return app.getVersion();
 });
 
-app.whenReady().then(async function() {
+// App ready
+app.whenReady().then(function() {
   loadModules();
 
+  // Auto-start on Windows login
   app.setLoginItemSettings({ openAtLogin: true });
 
+  // Create system tray icon (disconnected state initially)
   tray = new Tray(createTrayIcon(false));
   tray.setToolTip('DarkLion Drive');
   tray.setContextMenu(buildTrayMenu());
+
   tray.on('double-click', function() {
     if (isConnected) {
       drive.openDrive();
@@ -194,41 +231,36 @@ app.whenReady().then(async function() {
     }
   });
 
+  // Try auto-connect if we have a stored token
   var stored = auth.loadAuth();
   if (stored && stored.token) {
     console.log('[Main] Found stored token, attempting auto-connect...');
-    try {
-      await connectDrive(stored.token);
+    connectDrive(stored.token).then(function() {
       console.log('[Main] Auto-connect successful');
-    } catch (err) {
+    }).catch(function(err) {
       console.warn('[Main] Auto-connect failed, showing login:', err.message);
       auth.clearAuth();
       showLoginWindow();
-    }
+    });
   } else {
     showLoginWindow();
   }
 });
 
+// Focus existing window if second instance launched
 app.on('second-instance', function() {
   if (loginWindow && !loginWindow.isDestroyed()) {
     loginWindow.focus();
   }
 });
 
+// Keep app alive even with no windows open (lives in tray)
 app.on('window-all-closed', function(e) {
   e.preventDefault();
 });
 
-app.on('before-quit', async function() {
+// Clean up before quit
+app.on('before-quit', function() {
   console.log('[Main] App quitting, cleaning up...');
-  await disconnectDrive();
-});
-
-app.on('will-quit', async function(e) {
-  if (isConnected) {
-    e.preventDefault();
-    await disconnectDrive();
-    app.quit();
-  }
+  disconnectDrive();
 });
