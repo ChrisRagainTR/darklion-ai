@@ -570,11 +570,15 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
       return res.status(403).json({ error: 'Only the assigned staff member can send external replies on this thread' });
     }
 
+    // Any message containing @mentions is always internal — staff coordination never reaches the client
+    const hasMentions = body && /@[A-Za-z]/.test(body);
+    const effectiveInternal = is_internal || hasMentions;
+
     const { rows: msgRows } = await pool.query(
       `INSERT INTO messages (thread_id, sender_type, sender_id, body, is_internal)
        VALUES ($1, 'staff', $2, $3, $4)
        RETURNING id, created_at`,
-      [threadId, userId, body || '', is_internal]
+      [threadId, userId, body || '', effectiveInternal]
     );
     const messageId = msgRows[0].id;
 
@@ -634,7 +638,7 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
       }
     }
 
-    if (!is_internal) {
+    if (!effectiveInternal) {
       await pool.query(
         `UPDATE message_threads SET status = 'open', last_message_at = NOW() WHERE id = $1`,
         [threadId]
@@ -650,9 +654,9 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
     }
 
     const pusher = req.app.get('pusher');
-    if (pusher && !is_internal) {
+    if (pusher && !effectiveInternal) {
       pusher.trigger([`private-firm-${firmId}`, `private-portal-${firmId}-${thread.person_id}`], 'message-new', { threadId, senderType: 'staff' });
-    } else if (pusher && is_internal) {
+    } else if (pusher && effectiveInternal) {
       pusher.trigger(`private-firm-${firmId}`, 'message-new', { threadId, senderType: 'staff' });
     }
 
