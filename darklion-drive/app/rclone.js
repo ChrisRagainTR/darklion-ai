@@ -54,7 +54,13 @@ function mountDrive(token, onDisconnect) {
 function doMount(token) {
   return new Promise(function(resolve, reject) {
     var rcloneBin = findRclone();
-    var driveLetter = 'L:';
+    // Use a directory path mount instead of drive letter to bypass WinFsp service isolation
+    // rclone docs: "mapping to a directory path does not suffer from the same limitations"
+    var mountDir = path.join(os.homedir(), 'DarkLion Drive');
+    if (!fs.existsSync(mountDir)) {
+      fs.mkdirSync(mountDir, { recursive: true });
+    }
+    var driveLetter = mountDir;
 
     // Write a temp rclone config file — avoids inline spec parsing issues with URLs/tokens
     var configPath = path.join(os.tmpdir(), 'darklion-rclone.conf');
@@ -72,8 +78,7 @@ function doMount(token) {
       '--dir-cache-time', '30s',
       '--poll-interval', '30s',
       '--attr-timeout', '1s',
-      '--log-level', 'ERROR',
-      '--network-mode'
+      '--log-level', 'ERROR'
     ];
 
     console.log('[Rclone] Starting rclone mount with binary:', rcloneBin);
@@ -182,14 +187,17 @@ function unmountDrive() {
 }
 
 function openDrive() {
-  // Use shell: true to open drive letter correctly
+  var mountDir = path.join(os.homedir(), 'DarkLion Drive');
   var shell = require('electron').shell;
   if (shell) {
-    shell.openPath('L:\\').catch(function(e) {
+    shell.openPath(mountDir).catch(function(e) {
       console.warn('[Rclone] shell.openPath failed:', e);
+      exec('explorer.exe "' + mountDir + '"', function(err) {
+        if (err) console.warn('[Rclone] Could not open Explorer:', err.message);
+      });
     });
   } else {
-    exec('start explorer.exe L:', { shell: true }, function(err) {
+    exec('explorer.exe "' + mountDir + '"', function(err) {
       if (err) console.warn('[Rclone] Could not open Explorer:', err.message);
     });
   }
