@@ -57,15 +57,25 @@ function doMount(token) {
     // Use a directory path mount instead of drive letter to bypass WinFsp service isolation
     // rclone docs: "mapping to a directory path does not suffer from the same limitations"
     var mountDir = path.join(os.homedir(), 'DarkLion Drive');
-    // Remove existing dir if it exists (leftover from previous mount)
+    var driveLetter = mountDir;
+
+    // Attempt to forcefully unmount any stale WinFsp mount before proceeding
+    // This handles cases where rclone was killed without proper cleanup
+    var rcloneBinForClean = findRclone();
+    try {
+      var cleanCmd = '"' + rcloneBinForClean + '" unmount "' + mountDir + '"';
+      require('child_process').execSync(cleanCmd, { timeout: 3000 });
+      console.log('[Rclone] Cleaned up stale mount');
+    } catch(e) { /* stale mount may not exist - ok */ }
+
+    // Remove the directory if it still exists (empty or after unmount)
     if (fs.existsSync(mountDir)) {
-      try { fs.rmdirSync(mountDir); } catch(e) { /* ignore if not empty */ }
+      try { fs.rmdirSync(mountDir); } catch(e) { /* ignore */ }
     }
-    // Create fresh empty dir for mount point
+    // Create fresh empty dir
     if (!fs.existsSync(mountDir)) {
       fs.mkdirSync(mountDir, { recursive: true });
     }
-    var driveLetter = mountDir;
 
     // Write a temp rclone config file — avoids inline spec parsing issues with URLs/tokens
     var configPath = path.join(os.tmpdir(), 'darklion-rclone.conf');
