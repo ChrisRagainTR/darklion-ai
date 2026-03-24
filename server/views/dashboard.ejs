@@ -2985,8 +2985,11 @@
       const session = await sessionRes.json();
 
       // If session has existing messages, render them
-      if (session.messages && session.messages.length > 0) {
-        renderViktorMessages(session.messages);
+      // (messages may come back as a string from Postgres JSON column)
+      let sessionMsgs = session.messages;
+      if (typeof sessionMsgs === 'string') { try { sessionMsgs = JSON.parse(sessionMsgs); } catch(_) { sessionMsgs = []; } }
+      if (sessionMsgs && sessionMsgs.length > 0) {
+        renderViktorMessages(sessionMsgs);
         setViktorStatus('Online', true);
         enableViktorInput();
         return;

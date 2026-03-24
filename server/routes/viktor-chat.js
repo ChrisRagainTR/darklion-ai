@@ -95,14 +95,21 @@ router.get('/session', async (req, res) => {
     // Purge yesterday's sessions — keep only today (non-blocking)
     pool.query('DELETE FROM viktor_sessions WHERE session_date < CURRENT_DATE').catch(() => {});
 
-    let { rows } = await pool.query(
+    // Upsert session row for today (creates if missing, touches updated_at if exists)
+    await pool.query(
       `INSERT INTO viktor_sessions (firm_id, user_id, session_date)
        VALUES ($1, $2, $3)
-       ON CONFLICT (firm_id, user_id, session_date) DO UPDATE SET updated_at = NOW()
-       RETURNING *`,
+       ON CONFLICT (firm_id, user_id, session_date) DO UPDATE SET updated_at = NOW()`,
       [firmId, userId, today]
     );
-    res.json(rows[0]);
+
+    // Always fetch fresh — ensures we get current messages/briefing_generated
+    const { rows } = await pool.query(
+      'SELECT * FROM viktor_sessions WHERE firm_id = $1 AND user_id = $2 AND session_date = $3',
+      [firmId, userId, today]
+    );
+
+    res.json(rows[0] || { messages: [], briefing_generated: false });
   } catch (err) {
     console.error('[viktor-chat] GET /session error:', err);
     res.status(500).json({ error: 'Failed to get session' });
