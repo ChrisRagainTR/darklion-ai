@@ -1409,11 +1409,14 @@
   })();
 
   async function downloadDoc(id) {
+    const win = window.open('', '_blank');
     try {
       const res = await apiFetch(`/api/documents/${id}/url`);
       const data = await res.json();
-      if (data.url) window.open(data.url, '_blank');
-    } catch(e) { toast('Failed to get download link', 'error'); }
+      if (data.url && win) { win.location.href = data.url; }
+      else if (data.url) { window.location.href = data.url; }
+      else if (win) { win.close(); }
+    } catch(e) { if (win) win.close(); toast('Failed to get download link', 'error'); }
   }
 
   function reloadDocs() {
