@@ -72,7 +72,8 @@ function doMount(token) {
       '--dir-cache-time', '30s',
       '--poll-interval', '30s',
       '--attr-timeout', '1s',
-      '--log-level', 'ERROR'
+      '--log-level', 'ERROR',
+      '--network-mode'
     ];
 
     console.log('[Rclone] Starting rclone mount with binary:', rcloneBin);
