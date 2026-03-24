@@ -2,6 +2,7 @@
   "name": "darklion-print-agent",
   "version": "1.0.0",
   "description": "DarkLion Print Agent — routes print jobs to DarkLion document management",
+  "author": "DarkLion AI",
   "main": "main.js",
   "scripts": {
     "start": "electron-forge start",
