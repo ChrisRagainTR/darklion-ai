@@ -254,9 +254,7 @@
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar-el">
     <div class="nav-section">Clients</div>
-    <a class="nav-item <%= activeNav==='relationships'?'active':'' %>" href="/crm/relationships">👥 <span>Relationships</span></a>
-    <a class="nav-item <%= activeNav==='people'?'active':'' %>" href="/crm/people">👤 <span>People</span></a>
-    <a class="nav-item <%= activeNav==='companies'?'active':'' %>" href="/crm/companies">🏢 <span>Companies</span></a>
+    <a class="nav-item <%= ['relationships','people','companies'].includes(activeNav)?'active':'' %>" href="/crm">🗂️ <span>CRM</span></a>
     <div class="nav-section" style="margin-top:0.5rem;">Messages</div>
     <a class="nav-item <%= activeNav==='messages'?'active':'' %>" href="/messages">💬 <span>My Inbox</span></a>
     <a class="nav-item <%= activeNav==='conversation-summaries'?'active':'' %>" href="/conversation-summaries">🗒️ <span>Summaries</span></a>

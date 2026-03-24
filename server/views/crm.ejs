@@ -532,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // =====================================================================
 function switchTab(tab, linkEl) {
   document.querySelectorAll('#tab-relationships, #tab-people, #tab-companies').forEach(el => el.style.display = 'none');
-  document.getElementById('tab-' + tab).style.display = '';
+  document.getElementById('tab-' + tab).style.display = 'block';
   document.querySelectorAll('.page-tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
 }
 
