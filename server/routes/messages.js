@@ -192,14 +192,20 @@ router.get('/', async (req, res) => {
       `SELECT mt.*,
          p.first_name, p.last_name, p.email as person_email,
          fu.name as staff_name,
+         (mt.staff_user_id != $2) as is_participant,
+         tp.added_by_id,
+         adder.name as shared_by_name,
          (SELECT body FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) as last_body,
          (SELECT created_at FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) as last_message_at_sub,
-         (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) as unread_count,
-         EXISTS(SELECT 1 FROM message_mentions mm JOIN messages m2 ON m2.id = mm.message_id WHERE m2.thread_id = mt.id AND mm.firm_user_id = $2) as has_mention
+         (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) as unread_count
        FROM message_threads mt
        JOIN people p ON p.id = mt.person_id
        JOIN firm_users fu ON fu.id = mt.staff_user_id
-       WHERE mt.firm_id = $1 AND mt.staff_user_id = $2 AND mt.status != 'archived'
+       LEFT JOIN thread_participants tp ON tp.thread_id = mt.id AND tp.firm_user_id = $2 AND tp.archived_at IS NULL
+       LEFT JOIN firm_users adder ON adder.id = tp.added_by_id
+       WHERE mt.firm_id = $1
+         AND mt.status != 'archived'
+         AND (mt.staff_user_id = $2 OR tp.id IS NOT NULL)
        ORDER BY mt.last_message_at DESC NULLS LAST`,
       [firmId, userId]
     );
@@ -213,6 +219,8 @@ router.get('/', async (req, res) => {
       createdAt: t.created_at,
       staffUserId: t.staff_user_id,
       staffName: t.staff_name,
+      isParticipant: t.is_participant,
+      sharedByName: t.shared_by_name || null,
       person: {
         id: t.person_id,
         firstName: t.first_name,
@@ -221,7 +229,6 @@ router.get('/', async (req, res) => {
       },
       lastPreview: t.last_body ? t.last_body.slice(0, 80) : '',
       unreadCount: parseInt(t.unread_count, 10) || 0,
-      hasMention: t.has_mention || false,
     })));
   } catch (err) {
     console.error('[GET /messages] error:', err);
@@ -332,14 +339,20 @@ router.get('/:threadId', async (req, res) => {
   const threadId = parseInt(req.params.threadId);
 
   try {
+    // Resolve caller's userId for participant check
+    let callerUserId = req.firm.userId;
+    if (!callerUserId) {
+      try { const { rows: ur } = await pool.query('SELECT id FROM firm_users WHERE firm_id=$1 AND email=$2 LIMIT 1', [firmId, req.firm.email]); if (ur[0]) callerUserId = ur[0].id; } catch(e) {}
+    }
     const { rows: threadRows } = await pool.query(
       `SELECT mt.*, p.first_name, p.last_name, p.email,
-              fu.name as staff_name, fu.display_name as staff_display_name
+              fu.name as staff_name, fu.display_name as staff_display_name,
+              (mt.staff_user_id != $3) as is_participant_check
        FROM message_threads mt
        JOIN people p ON p.id = mt.person_id
        LEFT JOIN firm_users fu ON fu.id = mt.staff_user_id
        WHERE mt.id = $1 AND mt.firm_id = $2`,
-      [threadId, firmId]
+      [threadId, firmId, callerUserId || 0]
     );
     if (!threadRows[0]) return res.status(404).json({ error: 'Thread not found' });
 
@@ -417,6 +430,7 @@ router.get('/:threadId', async (req, res) => {
       status: thread.status,
       category: thread.category,
       staffUserId: thread.staff_user_id,
+      isParticipant: thread.is_participant_check || false,
       staffName: thread.staff_display_name || thread.staff_name || null,
       lastMessageAt: thread.last_message_at,
       createdAt: thread.created_at,
@@ -574,10 +588,20 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
           [firmId, mentionedName]
         );
         if (mentioned.length) {
+          const mentionedUserId = mentioned[0].id;
           await pool.query(
             `INSERT INTO message_mentions (message_id, firm_user_id, firm_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
-            [messageId, mentioned[0].id, firmId]
+            [messageId, mentionedUserId, firmId]
           ).catch(() => {});
+          // Auto-share thread with mentioned staff member (skip if they're the owner)
+          if (mentionedUserId !== thread.staff_user_id) {
+            await pool.query(
+              `INSERT INTO thread_participants (thread_id, firm_user_id, added_by_id, firm_id)
+               VALUES ($1, $2, $3, $4)
+               ON CONFLICT (thread_id, firm_user_id) DO UPDATE SET archived_at = NULL, added_by_id = $3, added_at = NOW()`,
+              [threadId, mentionedUserId, userId, firmId]
+            ).catch(() => {});
+          }
         }
       }
     }
@@ -639,17 +663,58 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
   }
 });
 
+// ── POST /messages/:threadId/share — add a participant (called on @mention) ──
+router.post('/:threadId/share', async (req, res) => {
+  const firmId = req.firm.id;
+  const threadId = parseInt(req.params.threadId);
+  let userId = req.firm.userId;
+  if (!userId) {
+    try { const { rows } = await pool.query('SELECT id FROM firm_users WHERE firm_id=$1 AND email=$2 LIMIT 1', [firmId, req.firm.email]); if (rows[0]) userId = rows[0].id; } catch(e) {}
+  }
+  const { staff_user_id } = req.body;
+  if (!staff_user_id) return res.status(400).json({ error: 'staff_user_id required' });
+
+  try {
+    // Verify thread belongs to this firm
+    const { rows: threadRows } = await pool.query('SELECT id, staff_user_id FROM message_threads WHERE id=$1 AND firm_id=$2', [threadId, firmId]);
+    if (!threadRows[0]) return res.status(404).json({ error: 'Thread not found' });
+    // Don't add the owner as a participant
+    if (threadRows[0].staff_user_id === parseInt(staff_user_id)) return res.json({ ok: true, skipped: true });
+
+    await pool.query(
+      `INSERT INTO thread_participants (thread_id, firm_user_id, added_by_id, firm_id)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (thread_id, firm_user_id) DO UPDATE SET archived_at = NULL, added_by_id = $3, added_at = NOW()`,
+      [threadId, staff_user_id, userId, firmId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[POST /messages/:threadId/share] error:', err);
+    res.status(500).json({ error: 'Failed to share thread' });
+  }
+});
+
 // ── PUT /messages/:threadId/archive — archive a thread ───────────────────────
+// Owners: archive the whole thread. Participants: remove themselves from thread.
 router.put('/:threadId/archive', async (req, res) => {
   const firmId = req.firm.id;
   const threadId = parseInt(req.params.threadId);
+  let userId = req.firm.userId;
+  if (!userId) {
+    try { const { rows } = await pool.query('SELECT id FROM firm_users WHERE firm_id=$1 AND email=$2 LIMIT 1', [firmId, req.firm.email]); if (rows[0]) userId = rows[0].id; } catch(e) {}
+  }
 
   try {
-    const { rowCount } = await pool.query(
-      `UPDATE message_threads SET status = 'archived' WHERE id = $1 AND firm_id = $2`,
-      [threadId, firmId]
-    );
-    if (!rowCount) return res.status(404).json({ error: 'Thread not found' });
+    const { rows: threadRows } = await pool.query('SELECT staff_user_id FROM message_threads WHERE id=$1 AND firm_id=$2', [threadId, firmId]);
+    if (!threadRows[0]) return res.status(404).json({ error: 'Thread not found' });
+
+    if (threadRows[0].staff_user_id === userId) {
+      // Owner: archive the whole thread
+      await pool.query(`UPDATE message_threads SET status = 'archived' WHERE id = $1 AND firm_id = $2`, [threadId, firmId]);
+    } else {
+      // Participant: just remove themselves
+      await pool.query(`UPDATE thread_participants SET archived_at = NOW() WHERE thread_id = $1 AND firm_user_id = $2`, [threadId, userId]);
+    }
     res.json({ ok: true });
   } catch (err) {
     console.error('[PUT /messages/:threadId/archive] error:', err);

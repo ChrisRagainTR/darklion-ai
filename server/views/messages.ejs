@@ -390,10 +390,14 @@ function renderInbox() {
 
   document.getElementById('inboxList').innerHTML = threads.map(t => {
     const name = esc((t.person?.firstName || '') + ' ' + (t.person?.lastName || ''));
-    const isMentioned = t.hasMention;
-    return `<div class="thread-card${t.id === activeThreadId ? ' active' : ''}${isMentioned ? ' mentioned' : ''}" onclick="loadThread(${t.id})">
+    const sharedBadge = t.isParticipant
+      ? `<span style="font-size:0.65rem;background:rgba(138,99,241,0.15);color:#a78bfa;border:1px solid rgba(138,99,241,0.3);border-radius:4px;padding:0.1rem 0.4rem;font-weight:600;">Shared${t.sharedByName ? ' by ' + esc(t.sharedByName.split(' ')[0]) : ''}</span>`
+      : '';
+    const archiveLabel = t.isParticipant ? 'Remove' : 'Archive';
+    const archiveTitle = t.isParticipant ? 'Remove from your inbox' : 'Archive this thread';
+    return `<div class="thread-card${t.id === activeThreadId ? ' active' : ''}" onclick="loadThread(${t.id})">
       <div class="thread-card-name">
-        <span>${name}</span>
+        <span>${name} ${sharedBadge}</span>
         <span style="font-size:0.7rem;color:var(--muted);">${relTime(t.lastMessageAt)}</span>
       </div>
       <div class="thread-card-subject">${esc(t.subject || '(no subject)')}</div>
@@ -402,7 +406,7 @@ function renderInbox() {
         ${t.unreadCount > 0 ? `<span class="unread-count-badge">${t.unreadCount} new</span>` : ''}
       </div>
       <div class="thread-card-actions" onclick="event.stopPropagation();">
-        <button class="archive-btn" onclick="archiveThread(${t.id})" title="Archive this thread">Archive</button>
+        <button class="archive-btn" onclick="archiveThread(${t.id})" title="${archiveTitle}">${archiveLabel}</button>
       </div>
     </div>`;
   }).join('');
@@ -423,7 +427,11 @@ async function archiveThread(threadId) {
 
 async function archiveCurrentThread() {
   if (!activeThreadId) return;
-  if (!confirm('Archive this thread? It will be removed from your inbox.')) return;
+  const t = allThreads.find(x => x.id === activeThreadId);
+  const msg = t?.isParticipant
+    ? 'Remove this thread from your inbox? The original owner\'s thread is unaffected.'
+    : 'Archive this thread? It will be removed from your inbox.';
+  if (!confirm(msg)) return;
   await archiveThread(activeThreadId);
 }
 
@@ -469,9 +477,18 @@ async function loadThread(threadId, silent = false) {
         <div class="detail-header-subject">${esc(data.subject || '(no subject)')}${data.staffName ? ` · <span style="color:var(--gold);">${esc(data.staffName)}</span>` : ''}</div>
       </div>
       <div class="detail-header-controls">
-        <button class="btn btn-sm btn-danger" onclick="archiveCurrentThread()">Archive</button>
+        ${data.isParticipant ? `<span style="font-size:0.72rem;background:rgba(138,99,241,0.15);color:#a78bfa;border:1px solid rgba(138,99,241,0.3);border-radius:4px;padding:0.2rem 0.6rem;font-weight:600;">Shared thread — internal notes only</span>` : ''}
+        <button class="btn btn-sm btn-danger" onclick="archiveCurrentThread()">${data.isParticipant ? 'Remove' : 'Archive'}</button>
       </div>
     `;
+    // Lock internal toggle for participants
+    const internalToggle = document.getElementById('internalToggle');
+    if (internalToggle) {
+      internalToggle.checked = !!data.isParticipant;
+      internalToggle.disabled = !!data.isParticipant;
+      internalToggle.parentElement.style.opacity = data.isParticipant ? '0.5' : '';
+      internalToggle.parentElement.title = data.isParticipant ? 'You can only send internal notes on shared threads' : '';
+    }
 
     const msgs = data.messages || [];
     const msgContainer = document.getElementById('detailMessages');

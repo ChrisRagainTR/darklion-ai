@@ -811,6 +811,19 @@ async function initDB() {
       viewed_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(firm_id, summary_date, firm_user_id)
     );
+
+    -- Thread participants: staff members who have been @mentioned/shared into a thread
+    CREATE TABLE IF NOT EXISTS thread_participants (
+      id SERIAL PRIMARY KEY,
+      thread_id INTEGER NOT NULL REFERENCES message_threads(id) ON DELETE CASCADE,
+      firm_user_id INTEGER NOT NULL REFERENCES firm_users(id) ON DELETE CASCADE,
+      added_by_id INTEGER REFERENCES firm_users(id),
+      firm_id INTEGER NOT NULL,
+      added_at TIMESTAMPTZ DEFAULT NOW(),
+      archived_at TIMESTAMPTZ DEFAULT NULL,
+      UNIQUE(thread_id, firm_user_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_thread_participants_user ON thread_participants(firm_user_id, firm_id) WHERE archived_at IS NULL;
   `);
 }
 
