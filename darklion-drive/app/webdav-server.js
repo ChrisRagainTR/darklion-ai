@@ -142,14 +142,16 @@ async function buildTree(token) {
     for (const p of (people || [])) {
       const name = [p.first_name, p.last_name].filter(Boolean).join(' ');
       if (!name) continue;
-      const docs = await apiGet(`/api/documents?owner_type=person&owner_id=${p.id}`, token).catch(() => []);
+      const docsRaw = await apiGet('/api/documents?owner_type=person&owner_id=' + p.id, token).catch(function() { return []; });
+      const docs = Array.isArray(docsRaw) ? docsRaw : [];
       entities.set(name, { id: p.id, type: 'person', docs: groupDocs(docs) });
     }
 
     for (const c of (companies || [])) {
       const name = c.company_name || c.name;
       if (!name) continue;
-      const docs = await apiGet(`/api/documents?owner_type=company&owner_id=${c.id}`, token).catch(() => []);
+      const docsRaw2 = await apiGet('/api/documents?owner_type=company&owner_id=' + c.id, token).catch(function() { return []; });
+      const docs = Array.isArray(docsRaw2) ? docsRaw2 : [];
       entities.set(name, { id: c.id, type: 'company', docs: groupDocs(docs) });
     }
 
