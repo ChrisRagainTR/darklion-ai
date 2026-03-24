@@ -197,7 +197,7 @@ app.get('/documents', (req, res) => res.render('documents', { title: 'Documents'
 app.get('/dashboard.html', (req, res) => res.redirect('/dashboard'));
 app.get('/theme-preview', (req, res) => res.sendFile(path.join(publicDir, 'theme-preview.html')));
 // Team page — redirect to dashboard team section for now
-app.get('/team', (req, res) => res.sendFile(path.join(publicDir, 'team.html')));
+app.get('/team', (req, res) => res.render('team', { title: 'Team', activeNav: '' }));
 // CRM pages — EJS shell
 app.get('/crm', (req, res) => res.render('crm', { title: 'CRM', activeNav: 'relationships' }));
 app.get('/crm.html', (req, res) => res.redirect('/crm'));
