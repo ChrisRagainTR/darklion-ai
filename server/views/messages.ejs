@@ -194,7 +194,7 @@
     <div class="inbox-header">
       <div class="inbox-header-row">
         <h2>💬 My Inbox</h2>
-        <button class="btn btn-gold btn-sm" onclick="openNewConversationModal()">+ New</button>
+
       </div>
       <input type="text" class="inbox-search" id="searchBox" placeholder="Search by name…" oninput="filterThreads()">
     </div>
@@ -382,7 +382,7 @@ function renderInbox() {
   });
 
   if (!threads.length) {
-    document.getElementById('inboxList').innerHTML = '<div style="color:var(--muted);padding:1.5rem 1rem;font-size:0.85rem;">No threads. Use "+ New" to start a conversation.</div>';
+    document.getElementById('inboxList').innerHTML = '<div style="color:var(--muted);padding:1.5rem 1rem;font-size:0.85rem;">No active threads.</div>';
     return;
   }
 
@@ -807,7 +807,7 @@ if ('serviceWorker' in navigator) {
 apiFetch('/firms/team').then(r => r.json()).then(users => { firmUsers = users || []; }).catch(() => {});
 
 // Show empty state immediately — no spinner on initial load
-document.getElementById('inboxList').innerHTML = '<div style="color:var(--muted);padding:1.5rem 1rem;font-size:0.85rem;">No threads. Use "+ New" to start a conversation.</div>';
+document.getElementById('inboxList').innerHTML = '<div style="color:var(--muted);padding:1.5rem 1rem;font-size:0.85rem;">No active threads.</div>';
 loadInbox(false);
 </script>
 
