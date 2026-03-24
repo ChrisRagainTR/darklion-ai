@@ -9,7 +9,6 @@
     "build:win": "electron-builder --win --x64"
   },
   "dependencies": {
-    "chokidar": "^3.6.0",
     "form-data": "^4.0.0",
     "node-fetch": "^2.7.0"
   },

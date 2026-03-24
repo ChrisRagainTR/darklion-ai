@@ -23,19 +23,18 @@ const fs = require('fs');
 const os = require('os');
 
 const { storeToken, getToken, clearToken, isTokenExpired } = require('./auth');
+const { startPrintServer, stopPrintServer } = require('./print-server');
 
 // ── Config ───────────────────────────────────────────────────────────────────
 const BASE_DIR = path.join(
   process.env.PROGRAMDATA || 'C:\\ProgramData',
   'DarkLion'
 );
-const SPOOL_DIR = path.join(BASE_DIR, 'Spool');
 
 // ── State ────────────────────────────────────────────────────────────────────
 let tray = null;
 let loginWindow = null;
 let routingWindows = new Map(); // filePath → BrowserWindow
-let watcher = null;
 let pendingJobs = []; // jobs queued while login window is open
 
 // ── Single instance lock (must be before whenReady per Electron docs) ─────────
@@ -52,7 +51,7 @@ app.whenReady().then(async () => {
   }
 
   setupTray();
-  startWatcher();
+  startPrintServer(handleNewPrintJob);
   await checkAuth();
 });
 
@@ -65,7 +64,7 @@ app.on('second-instance', () => {
 app.on('window-all-closed', () => {});
 
 app.on('before-quit', () => {
-  if (watcher) watcher.close();
+  stopPrintServer();
 });
 
 // ── Tray ─────────────────────────────────────────────────────────────────────
@@ -89,35 +88,6 @@ function setupTray() {
   }
 }
 
-// ── Spool watcher (chokidar inside Electron) ──────────────────────────────────
-function startWatcher() {
-  const chokidar = require('chokidar');
-
-  watcher = chokidar.watch(SPOOL_DIR, {
-    awaitWriteFinish: { stabilityThreshold: 1500, pollInterval: 200 },
-    ignoreInitial: true,
-    persistent: true,
-    depth: 0,
-  });
-
-  watcher.on('add', async (filePath) => {
-    if (path.extname(filePath).toLowerCase() !== '.pdf') return;
-
-    // Small extra delay to ensure Ghostscript has fully closed the file
-    await sleep(500);
-
-    try {
-      const stat = fs.statSync(filePath);
-      if (stat.size < 100) return; // skip empty/corrupt files
-    } catch (_) { return; }
-
-    console.log('[watcher] New PDF:', filePath);
-    handleNewPrintJob(filePath);
-  });
-
-  watcher.on('error', (err) => console.error('[watcher] Error:', err.message));
-  console.log('[watcher] Watching:', SPOOL_DIR);
-}
 
 // ── Handle new print job ──────────────────────────────────────────────────────
 async function handleNewPrintJob(filePath) {

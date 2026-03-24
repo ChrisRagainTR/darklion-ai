@@ -1,11 +1,11 @@
 ; installer.nsh — Custom NSIS macros for DarkLion Print Agent
+; Uses TCP/IP port approach — no Redmon DLL needed.
 ; electron-builder automatically includes this file when it exists in build/
-; Docs: https://www.electron.build/nsis#custom-nsis-script
 
 !macro customInstall
   ; ── Step 1: Install Ghostscript if not already present ────────────────────
   DetailPrint "Checking for Ghostscript..."
-  IfFileExists "C:\Program Files\gs\gs10.03.1\bin\gswin64c.exe" gs_done gs_needed
+  IfFileExists "C:\Program Files\gs\*.*" gs_done gs_needed
 
   gs_needed:
     DetailPrint "Downloading Ghostscript (required for PDF conversion)..."
@@ -17,45 +17,39 @@
     StrCmp $0 "OK" gs_run gs_fail
 
     gs_fail:
-      MessageBox MB_OK|MB_ICONEXCLAMATION "Could not download Ghostscript. Please check your internet connection and try again."
+      MessageBox MB_OK|MB_ICONEXCLAMATION "Could not download Ghostscript. Please check your internet connection and try again.$\nAfter connecting, re-run this installer."
       Abort
 
     gs_run:
-      DetailPrint "Installing Ghostscript..."
+      DetailPrint "Installing Ghostscript silently..."
       ExecWait '"$PLUGINSDIR\gs_setup.exe" /S' $0
-      DetailPrint "Ghostscript installer returned: $0"
+      DetailPrint "Ghostscript installer exited: $0"
 
   gs_done:
-    DetailPrint "Ghostscript ready."
+    DetailPrint "Ghostscript is ready."
 
-  ; ── Step 2: Copy Redmon DLL and setup scripts to temp location ─────────────
+  ; ── Step 2: Run printer setup PowerShell script ────────────────────────────
+  DetailPrint "Installing DarkLion Printer..."
   SetOutPath "$PLUGINSDIR\darklion-setup"
-  File "${BUILD_RESOURCES_DIR}\redmon64.dll"
   File "${BUILD_RESOURCES_DIR}\printer-setup.ps1"
 
-  ; ── Step 3: Install DarkLion Printer via PowerShell ───────────────────────
-  DetailPrint "Installing DarkLion Printer..."
-  nsExec::ExecToLog 'powershell.exe -ExecutionPolicy Bypass -NonInteractive -File \
-    "$PLUGINSDIR\darklion-setup\printer-setup.ps1" \
-    -RedmonDll "$PLUGINSDIR\darklion-setup\redmon64.dll"'
+  nsExec::ExecToLog 'powershell.exe -ExecutionPolicy Bypass -NonInteractive -File "$PLUGINSDIR\darklion-setup\printer-setup.ps1"'
   Pop $0
-  DetailPrint "Printer setup returned: $0"
+  DetailPrint "Printer setup exited: $0"
 
-  ; ── Step 4: Register app to auto-start for current user ───────────────────
+  ; ── Step 3: Register app to auto-start for current user ───────────────────
   WriteRegStr HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\Run" \
     "DarkLionPrintAgent" "$INSTDIR\DarkLion Print Agent.exe"
 
 !macroend
 
 !macro customUnInstall
-  ; ── Remove the printer ─────────────────────────────────────────────────────
+  ; ── Remove printer and port ────────────────────────────────────────────────
   SetOutPath "$PLUGINSDIR\darklion-setup"
   File "${BUILD_RESOURCES_DIR}\printer-remove.ps1"
+  nsExec::ExecToLog 'powershell.exe -ExecutionPolicy Bypass -NonInteractive -File "$PLUGINSDIR\darklion-setup\printer-remove.ps1"'
 
-  nsExec::ExecToLog 'powershell.exe -ExecutionPolicy Bypass -NonInteractive -File \
-    "$PLUGINSDIR\darklion-setup\printer-remove.ps1"'
-
-  ; ── Remove auto-start entry ────────────────────────────────────────────────
+  ; ── Remove auto-start ─────────────────────────────────────────────────────
   DeleteRegValue HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\Run" "DarkLionPrintAgent"
 
 !macroend
