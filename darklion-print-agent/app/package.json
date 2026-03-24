@@ -5,10 +5,8 @@
   "author": "DarkLion AI",
   "main": "main.js",
   "scripts": {
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "build:win": "electron-forge make --platform win32 --arch x64"
+    "start": "electron .",
+    "build:win": "electron-builder --win --x64"
   },
   "dependencies": {
     "chokidar": "^3.6.0",
@@ -16,33 +14,43 @@
     "node-fetch": "^2.7.0"
   },
   "devDependencies": {
-    "@electron-forge/cli": "^7.4.0",
-    "@electron-forge/maker-squirrel": "^7.4.0",
-    "@electron-forge/maker-zip": "^7.4.0",
-    "electron": "^28.3.0"
+    "electron": "^28.3.0",
+    "electron-builder": "^24.13.0"
   },
-  "config": {
-    "forge": {
-      "packagerConfig": {
-        "asar": false,
-        "name": "DarkLion Print Agent",
-        "executableName": "DarkLionPrintAgent",
-        "extraResource": [
-          "../installer/printer-setup.ps1",
-          "../installer/printer-remove.ps1",
-          "../shared/config.js"
-        ]
-      },
-      "makers": [
+  "build": {
+    "appId": "ai.darklion.printagent",
+    "productName": "DarkLion Print Agent",
+    "copyright": "Copyright © 2025 DarkLion AI",
+    "asar": false,
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/.cache",
+      "!**/*.map",
+      "!dist/**",
+      "!out/**"
+    ],
+    "win": {
+      "target": [
         {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "name": "DarkLionPrintAgent",
-            "setupExe": "DarkLionPrintAgent_Setup_1.0.0.exe",
-            "noMsi": true
-          }
+          "target": "nsis",
+          "arch": ["x64"]
         }
-      ]
+      ],
+      "artifactName": "DarkLionPrintAgent_Setup_${version}.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": false,
+      "runAfterFinish": true,
+      "installerSidebar": null,
+      "uninstallerSidebar": null
     }
   }
 }
