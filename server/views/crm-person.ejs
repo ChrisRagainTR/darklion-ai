@@ -1,34 +1,29 @@
-<%- include('partials/shell-top', {title: 'Person', activeNav: 'people'}) %>
+<%- include('partials/shell-top', { title: title, activeNav: activeNav }) %>
 
 <style>
-  /* ── 2-col layout ── */
-  .detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; align-items: start; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; padding: 1.5rem; }
   @media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr 320px; gap: 0.85rem; align-items: start; }
+  @media (max-width: 900px) { .overview-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) {
+    .detail-grid { grid-template-columns: 1fr; padding: 0.75rem; gap: 0.75rem; }
+    .overview-grid { grid-template-columns: 1fr; }
+  }
+  .info-row { display: flex; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.86rem; }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { color: var(--muted); width: 140px; flex-shrink: 0; font-size: 0.8rem; }
+  .info-val { flex: 1; }
+  .save-indicator { font-size: 0.75rem; color: var(--green); margin-top: 0.3rem; height: 1rem; }
+  .placeholder-section { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; color: var(--muted); text-align: center; }
+  .ph-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+  .ph-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+  .ph-desc { font-size: 0.86rem; }
+  .portal-btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
 
-  /* ── Stanford link ── */
-  .stanford-card { background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.25); border-radius: 8px; padding: 1rem 1.2rem; display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; }
-  .stanford-card .sc-text { flex: 1; min-width: 0; }
-  .stanford-card .sc-label { font-size: 0.7rem; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: 0.07em; }
-  .stanford-card .sc-url { font-size: 0.82rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.1rem; }
-
-  /* ── Notes save indicator ── */
-  .save-indicator { font-size: 0.78rem; color: var(--green); margin-top: 0.35rem; min-height: 1.1em; }
-
-  .info-row { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.4rem; }
-  .info-label { font-size: 0.76rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; min-width: 90px; flex-shrink: 0; }
-  .info-val { font-size: 0.88rem; color: var(--text); word-break: break-word; }
-  .info-val a { color: var(--gold); text-decoration: none; }
-  .info-val a:hover { text-decoration: underline; }
-
-  .placeholder-section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 3rem; text-align: center; color: var(--muted); }
-  .ph-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
-  .ph-title { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; opacity: 0.75; }
-  .ph-desc { font-size: 0.84rem; }
-
-  /* ── Docs tab — portal-matched styles ── */
-  .docs-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 1.5rem; }
-  @media (max-width: 900px) { .docs-layout { grid-template-columns: 1fr; } }
-  .docs-col-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem; }
+  /* ── Docs: folder hierarchy (exact portal match) ── */
+  .docs-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1.5rem; }
+  @media (max-width: 800px) { .docs-layout { grid-template-columns: 1fr; } }
+  .docs-col-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
   .year-folder { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 0.75rem; overflow: hidden; }
   .year-header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; cursor: pointer; user-select: none; transition: background 0.15s; }
   .year-header:hover { background: rgba(255,255,255,0.03); }
@@ -47,289 +42,506 @@
   .cat-folder.open .cat-chevron { transform: rotate(180deg); }
   .cat-folder-body { display: none; padding: 0.4rem 0.5rem; }
   .cat-folder.open .cat-folder-body { display: block; }
+  .section-heading { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 0.6rem 1.1rem 0.3rem; }
   .doc-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.1rem; border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
   .doc-row:hover { background: rgba(255,255,255,0.03); }
   .doc-info { flex: 1; min-width: 0; }
   .doc-name { font-weight: 600; font-size: 0.9rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .doc-name-link { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
-  .doc-name-link:hover { color: var(--gold); }
   .doc-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.25rem; }
   .doc-badge { font-size: 0.68rem; border-radius: 20px; padding: 0.1rem 0.45rem; font-weight: 600; }
   .doc-badge-type { background: rgba(138,143,168,0.12); color: var(--muted); border: 1px solid rgba(138,143,168,0.2); }
+  .doc-badge-new { background: rgba(201,168,76,0.16); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
   .doc-badge-viewed { background: rgba(62,207,142,0.1); color: var(--green); border: 1px solid rgba(62,207,142,0.25); }
-  .doc-badge-client { background: rgba(66,153,225,0.1); color: #63b3ed; border: 1px solid rgba(66,153,225,0.25); }
+  .doc-badge-client { background: rgba(99,102,241,0.12); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.25); }
   .btn-dl { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; border-radius: 6px; padding: 0.3rem 0.65rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; flex-shrink: 0; white-space: nowrap; }
-  .btn-dl:hover { border-color: var(--gold); color: var(--gold); }
   @media (max-width: 600px) {
-    .doc-name { white-space: normal; word-break: break-word; font-size: 0.82rem; }
+    .doc-name { white-space: normal; overflow-wrap: break-word; word-break: break-word; font-size: 0.82rem; }
+    .doc-badges { flex-wrap: wrap; }
     .btn-dl { font-size: 0.72rem; padding: 0.25rem 0.5rem; }
-    .doc-row { gap: 0.5rem; padding: 0.55rem 0.75rem; }
-    .docs-layout { grid-template-columns: 1fr; }
+    .doc-row { gap: 0.5rem; padding: 0.55rem 0.75rem; align-items: flex-start; }
+    .docs-page-wrap { padding: 0.75rem 0; }
+    .year-folder { border-radius: 0; margin-bottom: 0.5rem; }
+    .docs-col-title { padding: 0 0.75rem; }
   }
+  .btn-dl:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-dl:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Upload modal (exact portal match) ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+  .modal-overlay.hidden { display: none; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem 1.75rem; width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+  .modal h2 { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 1.25rem; }
+  .modal .form-group { margin-bottom: 1rem; }
+  .modal .form-group label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.35rem; letter-spacing: 0.03em; }
+  .modal .form-group select { width: 100%; background: var(--charcoal); border: 1px solid var(--border); border-radius: 7px; color: var(--text); font-size: 0.93rem; padding: 0.6rem 0.8rem; outline: none; transition: border-color 0.2s; appearance: none; }
+  .modal .form-group select:focus { border-color: var(--gold); }
+  .file-drop { border: 2px dashed var(--border); border-radius: 9px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; color: var(--muted); font-size: 0.88rem; position: relative; }
+  .file-drop:hover, .file-drop.drag-over { border-color: var(--gold); background: rgba(201,168,76,0.04); }
+  .file-drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .selected-file { margin-top: 0.5rem; font-size: 0.8rem; color: var(--gold); }
+  .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
+  .btn-cancel { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.88rem; border-radius: 7px; padding: 0.55rem 1rem; cursor: pointer; }
+  .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+  .btn-submit { background: var(--gold); color: #0f1117; font-weight: 700; font-size: 0.88rem; border: none; border-radius: 7px; padding: 0.55rem 1.25rem; cursor: pointer; transition: background 0.2s; }
+  .btn-submit:hover { background: var(--gold-light); }
+  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+  .upload-msg { font-size: 0.8rem; color: var(--green); margin-top: 0.5rem; }
+  .upload-err { font-size: 0.8rem; color: var(--red); margin-top: 0.5rem; }
 </style>
 
-  <!-- ── Entity Header ── -->
-  <div class="entity-header" id="entity-header">
-    <a href="/crm?tab=people" class="entity-back">← People</a>
-    <div class="entity-header-content">
-      <div class="entity-name" id="entity-name">Loading…</div>
-      <div class="entity-badges" id="entity-badges"></div>
-      <div class="entity-meta" id="entity-meta"></div>
-    </div>
-    <div class="entity-actions">
-      <button class="btn btn-outline btn-sm" id="edit-btn" onclick="openEditModal()">Edit</button>
-    </div>
+<div class="entity-header">
+  <a href="/crm/people" class="entity-back">← People</a>
+  <div class="entity-header-content">
+    <div class="entity-name" id="entity-name">Loading…</div>
+    <div class="entity-meta" id="entity-meta"></div>
   </div>
-
-  <!-- ── Tab Bar ── -->
-  <div class="tab-bar" id="tab-bar">
-    <div class="tab-item active" onclick="switchTab('overview', this)">Overview</div>
-    <div class="tab-item" onclick="switchTab('docs', this)">Docs</div>
-    <div class="tab-item" onclick="switchTab('tax', this)">Tax</div>
-    <div class="tab-item" onclick="switchTab('communication', this)">Communication</div>
-    <div class="tab-item" onclick="switchTab('organizers', this)">Organizers</div>
-    <div class="tab-item" onclick="switchTab('workflow', this)">Workflow</div>
-    <div class="tab-item" onclick="switchTab('notes', this)">Notes</div>
-    <div class="tab-item" onclick="switchTab('billing', this)">Billing</div>
-  </div>
-
-  <!-- ── Tab: Overview ── -->
-  <div id="tab-overview" class="tab-content active">
-    <div class="detail-grid" id="overview-grid">
-      <div id="overview-left">
-        <div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>
-      </div>
-      <div id="overview-right">
-        <div class="card">
-          <div class="card-title">Internal Notes</div>
-          <textarea class="form-control" id="notes-ta" rows="6" placeholder="Internal staff notes…" onblur="autoSaveNotes(this.value)"></textarea>
-          <div class="save-indicator" id="notes-saved"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">Quick Actions</div>
-          <div style="display:flex;flex-direction:column;gap:0.5rem;">
-            <button class="btn btn-outline btn-sm" onclick="openEditModal()">✏️ Edit Person</button>
-            <button class="btn btn-outline btn-sm" id="invite-btn" onclick="sendPortalInvite()" style="display:none;">📧 Send Portal Invite</button>
-            <button class="btn btn-outline btn-sm" id="resend-invite-btn" onclick="sendPortalInvite()" style="display:none;">🔄 Reset Portal Password</button>
-            <button class="btn btn-outline btn-sm" id="disable-portal-btn" onclick="disablePortal()" style="display:none;">🚫 Disable Portal</button>
-            <a href="/portal-login" target="_blank" class="btn btn-outline btn-sm">🔗 Open Portal Login</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Tab: Docs ── -->
-  <div id="tab-docs" class="tab-content">
-    <div id="docs-content">
-      <div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>
-    </div>
-  </div>
-
-  <!-- ── Tab: Tax ── -->
-  <div id="tab-tax" class="tab-content">
-    <div id="tax-content">
-      <div class="loading-state"><div class="loading-spinner"></div></div>
-    </div>
-  </div>
-
-  <!-- ── Tab: Communication ── -->
-  <div id="tab-communication" class="tab-content">
-    <div id="comm-content" style="display:flex;gap:1.5rem;max-width:1100px;">
-      <!-- Thread list -->
-      <div id="comm-thread-list" style="width:280px;flex-shrink:0;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-          <div style="font-size:0.8rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.05em;">Messages</div>
-          <button class="btn btn-gold btn-sm" onclick="openNewThread()">+ New Message</button>
-        </div>
-        <div id="comm-threads"><div class="loading-state"><div class="loading-spinner"></div></div></div>
-      </div>
-      <!-- Thread detail -->
-      <div id="comm-thread-detail" style="flex:1;display:none;">
-        <div id="comm-thread-header" style="margin-bottom:1rem;"></div>
-        <div id="comm-messages-list" style="display:flex;flex-direction:column;gap:0.75rem;max-height:420px;overflow-y:auto;padding:0.5rem;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;margin-bottom:1rem;"></div>
-        <div class="card" style="padding:1rem;">
-          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
-            <label style="font-size:0.8rem;color:var(--muted);display:flex;align-items:center;gap:0.3rem;cursor:pointer;">
-              <input type="checkbox" id="comm-internal-toggle" style="cursor:pointer;"> Internal note
-            </label>
-            <div style="flex:1;"></div>
-            <select id="comm-status-select" onchange="updateThreadStatus()" style="font-size:0.78rem;background:var(--charcoal);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:0.2rem 0.4rem;">
-              <option value="open">Open</option>
-              <option value="waiting">Waiting</option>
-              <option value="resolved">Resolved</option>
-            </select>
-          </div>
-          <textarea id="comm-reply-body" rows="3" class="form-control" placeholder="Reply…" style="margin-bottom:0.5rem;"></textarea>
-          <div id="comm-attach-chips" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.4rem;"></div>
-          <input type="file" id="comm-attach-input" multiple style="display:none;" onchange="handleCommAttach(this.files)">
-          <div style="display:flex;gap:0.5rem;align-items:center;">
-            <button class="btn btn-gold btn-sm" onclick="sendReply()">Send Reply</button>
-            <button class="btn btn-outline btn-sm" onclick="document.getElementById('comm-attach-input').click()" title="Attach files">📎 Attach</button>
-          </div>
-        </div>
-      </div>
-      <!-- New thread compose -->
-      <div id="comm-compose" style="flex:1;display:none;">
-        <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:1rem;">New Message</div>
-        <div class="form-group" style="margin-bottom:0.75rem;">
-          <label>Subject</label>
-          <input type="text" id="comm-new-subject" class="form-control" placeholder="Subject…">
-        </div>
-        <div class="form-group" style="margin-bottom:0.75rem;">
-          <label>Message</label>
-          <textarea id="comm-new-body" rows="5" class="form-control" placeholder="Write your message…"></textarea>
-        </div>
-        <div style="display:flex;gap:0.5rem;">
-          <button class="btn btn-gold btn-sm" onclick="sendNewThread()">Send</button>
-          <button class="btn btn-outline btn-sm" onclick="closeCompose()">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Tab: Organizers ── -->
-  <div id="tab-organizers" class="tab-content">
-    <div class="placeholder-section">
-      <div class="ph-icon">📝</div>
-      <div class="ph-title">Tax Organizers</div>
-      <div class="ph-desc">Tax organizers coming soon.</div>
-      <div id="org-stanford-link" style="margin-top:1rem;"></div>
-    </div>
-  </div>
-
-  <!-- ── Tab: Workflow ── -->
-  <div id="tab-workflow" class="tab-content">
-    <div style="max-width:860px;">
-      <div style="font-size:1.05rem;font-weight:700;margin-bottom:1.25rem;">Active Pipelines</div>
-      <div id="workflow-loading" style="color:var(--muted);padding:2rem 0;">Loading…</div>
-      <div id="workflow-list" style="display:none;"></div>
-    </div>
-  </div>
-
-  <!-- ── Tab: Notes ── -->
-  <div id="tab-notes" class="tab-content">
-    <div class="card" style="max-width:800px;">
-      <div class="card-title">Internal Notes</div>
-      <textarea class="form-control" id="notes-ta-full" rows="12" placeholder="Internal staff notes…" onblur="autoSaveNotes(this.value)"></textarea>
-      <div style="display:flex;align-items:center;gap:1rem;margin-top:0.75rem;">
-        <button class="btn btn-gold btn-sm" onclick="autoSaveNotes(document.getElementById('notes-ta-full').value, true)">Save Notes</button>
-        <div class="save-indicator" id="notes-saved-full"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Tab: Billing ── -->
-  <div id="tab-billing" class="tab-content">
-    <div id="billing-content">
-      <div class="loading-state"><div class="loading-spinner"></div></div>
-    </div>
-  </div>
-
-<!-- ── Edit Modal ── -->
-<div class="modal-overlay" id="edit-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Edit Person</div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="edit-error" class="error-msg" style="display:none;"></div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">First Name</label>
-          <input type="text" class="form-control" id="ef-fname">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Last Name</label>
-          <input type="text" class="form-control" id="ef-lname">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input type="email" class="form-control" id="ef-email">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Phone</label>
-          <input type="text" class="form-control" id="ef-phone">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Filing Status</label>
-          <select class="form-control" id="ef-filing">
-            <option value="">— Select —</option>
-            <option value="single">Single</option>
-            <option value="mfj">MFJ</option>
-            <option value="mfs">MFS</option>
-            <option value="hoh">HOH</option>
-            <option value="qw">QW</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Stanford Tax URL</label>
-          <input type="url" class="form-control" id="ef-stanford">
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-gold" id="ef-submit" onclick="submitEdit()">Save Changes</button>
+  <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;flex-wrap:wrap;">
+    <div class="entity-badges" id="entity-badges"></div>
+    <div class="entity-actions" id="entity-actions">
+      <button class="btn btn-outline btn-sm" onclick="openEditModal()">Edit</button>
     </div>
   </div>
 </div>
 
-<!-- ── Upload Document Modal ── -->
-<div class="modal-overlay" id="upload-modal">
-  <div class="modal" style="width:480px;">
-    <div class="modal-header">
-      <div class="modal-title">Upload Document</div>
-      <button class="modal-close" onclick="document.getElementById('upload-modal').classList.remove('open')">✕</button>
+<div class="tab-bar">
+  <div class="tab-item active" onclick="switchTab('overview', this)">Overview</div>
+  <div class="tab-item" onclick="switchTab('docs', this)">Docs</div>
+  <div class="tab-item" onclick="switchTab('tax', this)">Tax</div>
+  <div class="tab-item" onclick="switchTab('communication', this)">Communication</div>
+  <div class="tab-item" onclick="switchTab('organizers', this)">Organizers</div>
+  <div class="tab-item" onclick="switchTab('workflow', this)">Workflow</div>
+  <div class="tab-item" onclick="switchTab('notes', this)">Notes</div>
+</div>
+
+<div id="tab-overview" class="tab-content active">
+  <div style="padding:0.85rem;display:flex;flex-direction:column;gap:0.85rem;">
+    <!-- 3-COL LAYOUT -->
+    <div class="overview-grid">
+      <!-- LEFT col -->
+      <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">
+        <div id="overview-contact-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+        <div id="overview-messages-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+      </div>
+      <!-- CENTER col -->
+      <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">
+        <div id="overview-spouse-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+        <div id="overview-tax-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+      </div>
+      <!-- RIGHT col -->
+      <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">
+        <div id="overview-companies-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Internal Notes</div>
+          <textarea class="form-control" id="notes-ta" rows="5" placeholder="Internal staff notes…" style="width:100%;box-sizing:border-box;" onblur="autoSaveNotes(this.value)"></textarea>
+          <div class="save-indicator" id="notes-saved"></div>
+        </div>
+        <div id="overview-portal-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
+      </div>
     </div>
-    <div class="modal-body">
-      <div id="upload-error" class="error-msg" style="display:none;"></div>
-      <div id="upload-dropzone" style="border:2px dashed var(--border);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;"
-           onclick="document.getElementById('upload-file-input').click()"
-           ondragover="event.preventDefault()"
-           ondrop="event.preventDefault();uploadFile=event.dataTransfer.files[0];showUploadFile(uploadFile);">
-        <div id="upload-dropzone-text" style="color:var(--muted);">
-          <div style="font-size:2rem;margin-bottom:0.5rem;">📂</div>
-          <div>Drag &amp; drop or <span style="color:var(--gold);text-decoration:underline;">click to browse</span></div>
-          <div style="font-size:0.78rem;margin-top:0.4rem;">Max 50 MB</div>
-        </div>
-        <div id="upload-file-name" style="display:none;font-weight:600;color:var(--text);"></div>
-      </div>
-      <input type="file" id="upload-file-input" style="display:none;" onchange="uploadFile=this.files[0];showUploadFile(uploadFile);">
-      <div class="form-group">
-        <label class="form-label">Display Name</label>
-        <input type="text" class="form-control" id="upload-display-name" placeholder="Friendly name">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Year</label>
-          <input type="text" class="form-control" id="upload-year" maxlength="4">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Section</label>
-          <select class="form-control" id="upload-section">
-            <option value="firm_uploaded">Firm Uploaded</option>
-            <option value="client_uploaded">Client Uploaded</option>
-            <option value="private">Private (Staff Only)</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Category</label>
-        <select class="form-control" id="upload-category">
-          <option value="other">Other</option>
-          <option value="tax">Tax</option>
-        </select>
+  </div>
+</div>
+
+<div id="tab-docs" class="tab-content">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem 0;">
+    <div style="font-size:0.85rem;color:var(--muted);">Drag a file anywhere on the page to upload.</div>
+    <button class="btn btn-gold btn-sm" onclick="openUploadModal()">↑ Upload Document</button>
+  </div>
+  <div id="docs-content"><div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div></div>
+</div>
+
+<!-- Upload Modal (portal-matched) -->
+<div class="modal-overlay hidden" id="upload-modal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2>Upload a Document</h2>
+    <div class="form-group">
+      <label>Tax Year</label>
+      <select id="upload-year"></select>
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="upload-doc-type">
+        <option value="tax">Tax</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Section</label>
+      <select id="upload-section">
+        <option value="firm_uploaded">Delivered by Advisor</option>
+        <option value="client_uploaded">Client Uploaded</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>File</label>
+      <div class="file-drop" id="upload-file-drop">
+        <input type="file" id="upload-file-input">
+        <span>Click to select or drag a file here</span>
+        <div class="selected-file" id="upload-selected-name"></div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="document.getElementById('upload-modal').classList.remove('open')">Cancel</button>
-      <button class="btn btn-gold" onclick="submitUpload()">Upload</button>
+    <div class="upload-err" id="upload-error" style="display:none;"></div>
+    <div class="upload-msg" id="upload-msg" style="display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="upload-cancel-btn">Cancel</button>
+      <button class="btn-submit" id="upload-submit-btn" disabled>Upload</button>
+    </div>
+  </div>
+</div>
+
+<div id="tab-tax" class="tab-content">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem 0;">
+    <span style="font-size:0.84rem;color:var(--muted);">Tax return deliveries &amp; e-signatures</span>
+    <button class="btn btn-gold btn-sm" onclick="openPersonDeliveryModal()">+ New Delivery</button>
+  </div>
+  <div id="tax-content" style="padding:1.5rem;"></div>
+
+  <!-- Edit Delivery Docs Modal -->
+  <div class="modal-overlay hidden" id="edit-delivery-modal">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">
+      <h2>Update Delivery Documents</h2>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">Select new documents to replace the existing ones, then resend.</p>
+      <input type="hidden" id="ed-id" />
+      <div class="form-group"><label>Review Document (PDF for client to review)</label>
+        <select class="form-control" id="ed-review-doc"><option value="">— No change —</option></select>
+      </div>
+      <div class="form-group"><label>Signature Document (8879 / signature pages)</label>
+        <select class="form-control" id="ed-sig-doc"><option value="">— No change —</option></select>
+      </div>
+      <div id="ed-error" style="display:none;color:var(--red);font-size:0.82rem;margin-bottom:0.5rem;"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeEditDeliveryModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="submitEditDelivery()">Save & Ready to Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Delivery Modal (person) -->
+  <div class="modal-overlay hidden" id="person-delivery-modal">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:680px;">
+      <h2>New Tax Delivery</h2>
+      <div id="pd-error" style="display:none;color:var(--red);font-size:0.82rem;margin-bottom:0.75rem;"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+        <div class="form-group"><label>Tax Year *</label>
+          <select class="form-control" id="pd-year" onchange="pdFilterDocsByYear(); document.getElementById('pd-title').value = this.value + ' Tax Return Delivery';"></select>
+        </div>
+        <div class="form-group"><label>Title</label><input type="text" class="form-control" id="pd-title" placeholder="e.g. 2024 Individual Return"></div>
+      </div>
+      <div class="form-group"><label>Message to Client <span style="font-weight:400;color:var(--muted);">(shown in the portal — edit as needed)</span></label><textarea class="form-control" id="pd-intro" rows="9" style="font-size:0.88rem;line-height:1.6;"></textarea></div>
+      <div class="form-group"><label>Review Document (PDF for client to review)</label>
+        <select class="form-control" id="pd-review-doc"><option value="">— Select document —</option></select>
+      </div>
+      <div class="form-group"><label>Signature Document (8879 / signature pages)</label>
+        <select class="form-control" id="pd-sig-doc"><option value="">— Select document —</option></select>
+      </div>
+      <div class="form-group">
+        <label>Signers <span style="font-weight:400;color:var(--muted);">(who needs to sign — e.g. both spouses)</span></label>
+        <div id="pd-signers-list" style="display:flex;flex-direction:column;gap:0.4rem;margin-top:0.25rem;"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closePersonDeliveryModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="submitPersonDelivery()">Create Draft</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+    #tab-communication.active { display:flex !important; flex-direction:column; }
+    /* Height = viewport minus top header, entity header, and tab bar */
+    #tab-communication {
+      overflow:hidden;
+      height: calc(100vh - var(--header-h, 58px) - var(--tab-bar-top, 58px) - 42px);
+    }
+    /* Prevent .main scrollbar when comm tab is active */
+    body:has(#tab-communication.active) .main { overflow-y: hidden !important; }
+
+    /* Layout */
+    #tab-communication .crm-inbox-wrap { display:flex; flex:1; min-height:0; overflow:hidden; }
+    #tab-communication .crm-thread-list { width:300px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+    #tab-communication .crm-thread-list-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    #tab-communication .crm-thread-list-header h3 { font-size:0.9rem; font-weight:700; color:var(--text); margin:0; }
+    #tab-communication .crm-thread-list-inner { flex:1; overflow-y:auto; }
+    /* Thread cards — same as team inbox */
+    #tab-communication .thread-card { padding:0.85rem 1rem; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; transition:background 0.12s; }
+    #tab-communication .thread-card:hover { background:rgba(255,255,255,0.03); }
+    #tab-communication .thread-card.active { background:rgba(201,168,76,0.07); border-left:3px solid var(--gold); padding-left:calc(1rem - 3px); }
+    #tab-communication .thread-card-name { font-size:0.85rem; font-weight:600; color:var(--text); }
+    #tab-communication .thread-card-preview { font-size:0.76rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:0.1rem; }
+    #tab-communication .thread-card-meta { display:flex; align-items:center; gap:0.4rem; margin-top:0.3rem; font-size:0.7rem; color:var(--muted); }
+    #tab-communication .unread-dot { width:8px; height:8px; border-radius:50%; background:var(--gold); flex-shrink:0; }
+    /* Detail panel */
+    #tab-communication .crm-detail-panel { flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; position:relative; }
+    #tab-communication .detail-header { padding:1rem 1.5rem; border-bottom:1px solid var(--border); background:var(--card); flex-shrink:0; }
+    #tab-communication .detail-header-person { font-size:1rem; font-weight:700; color:var(--text); }
+    #tab-communication .detail-header-subject { font-size:0.85rem; color:var(--muted); margin-top:0.15rem; }
+    #tab-communication .detail-messages { flex:1; overflow-y:auto; min-height:0; padding:1.25rem 1.5rem; display:flex; flex-direction:column; gap:1rem; }
+    /* Bubbles — same as team inbox */
+    #tab-communication .msg-bubble-wrap { display:flex; flex-direction:column; }
+    #tab-communication .msg-bubble-wrap.staff { align-items:flex-end; }
+    #tab-communication .msg-bubble-wrap.client { align-items:flex-start; }
+    #tab-communication .msg-bubble-wrap.internal { align-items:flex-start; }
+    #tab-communication .msg-bubble { max-width:75%; padding:0.6rem 0.9rem; border-radius:12px; font-size:0.875rem; line-height:1.5; word-break:break-word; }
+    #tab-communication .msg-bubble.staff { background:var(--gold); color:var(--navy); }
+    #tab-communication .msg-bubble.client { background:var(--charcoal); color:var(--text); border:1px solid var(--border); }
+    #tab-communication .msg-bubble.internal { background:rgba(255,200,0,0.1); border:1px dashed var(--gold); color:var(--text); }
+    #tab-communication .msg-meta { font-size:0.68rem; color:var(--muted); margin-top:0.15rem; }
+    #tab-communication .msg-internal-label { font-size:0.62rem; color:var(--gold); margin-bottom:0.15rem; }
+    /* Attachments */
+    #tab-communication .msg-attachments { display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem; }
+    #tab-communication .attachment-chip { display:inline-flex; align-items:center; gap:0.35rem; background:rgba(0,0,0,0.25); border:1px solid rgba(0,0,0,0.2); border-radius:6px; padding:0.25rem 0.6rem; font-size:0.75rem; color:#fff; text-decoration:none; font-weight:500; }
+    #tab-communication .attachment-chip:hover { background:rgba(0,0,0,0.4); }
+    /* Reply box — identical to team inbox */
+    #tab-communication .reply-box { padding:1rem 1.5rem; border-top:1px solid var(--border); background:var(--card); flex-shrink:0; }
+    #tab-communication .reply-box-controls { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem; }
+    #tab-communication .reply-box-controls label { font-size:0.78rem; color:var(--muted); display:flex; align-items:center; gap:0.3rem; cursor:pointer; }
+    #tab-communication .reply-box textarea { width:100%; background:var(--input-bg); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:0.6rem 0.75rem; font-size:0.88rem; font-family:inherit; resize:vertical; min-height:120px; max-height:320px; margin-bottom:0.5rem; }
+    #tab-communication .reply-box textarea:focus { outline:none; border-color:var(--gold); }
+    #tab-communication .reply-box-actions { display:flex; gap:0.5rem; }
+    #tab-communication .attach-chips { display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:0.4rem; }
+    #tab-communication .attach-chip-input { display:inline-flex; align-items:center; gap:0.3rem; background:rgba(255,255,255,0.07); border:1px solid var(--border); border-radius:4px; padding:0.15rem 0.5rem; font-size:0.75rem; color:var(--text); }
+    #tab-communication .attach-chip-input button { background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.8rem; padding:0; line-height:1; }
+    #tab-communication .btn-attach { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:6px; padding:0.4rem 0.7rem; font-size:0.82rem; cursor:pointer; transition:all 0.15s; }
+    #tab-communication .btn-attach:hover { color:var(--text); border-color:var(--gold); }
+    /* Empty/no-selection state */
+    #tab-communication .no-thread-selected { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:0.75rem; color:var(--muted); }
+    #tab-communication .nts-icon { font-size:3rem; opacity:0.4; }
+    /* Spinner */
+    #tab-communication .spinner { display:inline-block; width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin 0.7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    @media(max-width:700px) { #tab-communication .crm-thread-list { width:240px; } }
+
+    /* ── Thread rows for overview messages panel (matches relationship CRM) ── */
+    .ov-panel-title { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.6rem; }
+    .ov-panel-title span { font-size:0.72rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+    .thread-row { display:flex; align-items:flex-start; gap:0.7rem; padding:0.5rem 0; border-bottom:1px solid rgba(255,255,255,0.04); text-decoration:none; transition:background 0.12s; border-radius:6px; }
+    .thread-row:last-child { border-bottom:none; }
+    .thread-row:hover { background:rgba(255,255,255,0.025); }
+    .thread-row.has-unread { border-left:2px solid var(--gold); padding-left:0.5rem; }
+    .thread-row-avatar { width:28px; height:28px; border-radius:50%; background:rgba(201,168,76,0.15); display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:700; color:var(--gold); flex-shrink:0; margin-top:0.1rem; }
+    .thread-row-body { flex:1; min-width:0; }
+    .thread-row-top { display:flex; align-items:baseline; justify-content:space-between; gap:0.5rem; margin-bottom:0.15rem; }
+    .thread-row-name { font-size:0.75rem; font-weight:700; color:var(--gold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .thread-row-time { font-size:0.67rem; color:var(--muted); flex-shrink:0; }
+    .thread-row-subject { font-size:0.8rem; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:0.15rem; }
+    .thread-row-preview { font-size:0.73rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .thread-unread-badge { display:inline-block; background:var(--gold); color:var(--navy); font-size:0.6rem; font-weight:800; border-radius:8px; padding:0.05rem 0.35rem; margin-left:0.3rem; vertical-align:middle; }
+
+  /* ── Tax Summary Modal ── */
+  .tax-summary-modal { position:fixed; inset:0; z-index:1000; display:flex; align-items:flex-start; justify-content:center; overflow-y:auto; padding:2rem 1rem; background:rgba(0,0,0,0.75); }
+  .tax-summary-modal.hidden { display:none !important; }
+  .tax-summary-box { background:var(--navy, #0f1923); border:1px solid var(--border); border-radius:14px; width:100%; max-width:860px; padding:0; overflow:hidden; margin:auto; }
+  .tsm-header { background:linear-gradient(135deg,#462161,#2e1540); padding:1.5rem 1.75rem; display:flex; align-items:center; justify-content:space-between; }
+  .tsm-header h2 { margin:0; font-size:1.15rem; font-weight:800; color:#fff; }
+  .tsm-close { background:none; border:none; color:rgba(255,255,255,0.6); font-size:1.4rem; cursor:pointer; line-height:1; padding:0; }
+  .tsm-body { padding:1.5rem 1.75rem; display:flex; flex-direction:column; gap:1.25rem; max-height:75vh; overflow-y:auto; }
+  .tsm-stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:0.75rem; }
+  .tsm-stat { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:10px; padding:0.85rem 1rem; }
+  .tsm-stat-val { font-size:1.35rem; font-weight:800; color:var(--gold,#c9a84c); }
+  .tsm-stat-label { font-size:0.68rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:0.2rem; }
+  .tsm-section-title { font-size:0.72rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.6rem; }
+  .tsm-table { width:100%; border-collapse:collapse; font-size:0.83rem; }
+  .tsm-table th { text-align:left; color:var(--muted); font-weight:700; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em; padding:0.3rem 0.5rem; border-bottom:1px solid var(--border); }
+  .tsm-table td { padding:0.35rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.04); color:var(--text); }
+  .tsm-table td:last-child { text-align:right; font-variant-numeric:tabular-nums; }
+  .tsm-table tr:last-child td { border-bottom:none; font-weight:700; color:var(--gold,#c9a84c); }
+  .tsm-rate-row { display:flex; gap:0.75rem; flex-wrap:wrap; }
+  .tsm-rate-pill { background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.25); border-radius:8px; padding:0.5rem 0.85rem; font-size:0.82rem; }
+  .tsm-rate-pill strong { color:var(--gold,#c9a84c); }
+  .tsm-savings-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:0.75rem; }
+  .tsm-savings-card { background:rgba(201,168,76,0.07); border:1px solid rgba(201,168,76,0.2); border-radius:10px; padding:0.85rem 1rem; }
+  .tsm-savings-amount { font-size:1.1rem; font-weight:800; color:var(--gold,#c9a84c); }
+  .tsm-savings-title { font-size:0.82rem; font-weight:700; color:var(--text); margin:0.2rem 0; }
+  .tsm-savings-desc { font-size:0.76rem; color:var(--muted); line-height:1.45; }
+  .tsm-strategies-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:0.75rem; }
+  .tsm-strategy-card { background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:0.85rem 1rem; display:flex; flex-direction:column; gap:0.3rem; }
+  .tsm-strategy-title { font-size:0.85rem; font-weight:700; color:var(--text); display:flex; align-items:center; gap:0.5rem; }
+  .tsm-strategy-badge { font-size:0.62rem; font-weight:700; border-radius:6px; padding:0.1rem 0.4rem; text-transform:uppercase; }
+  .tsm-strategy-badge.personal { background:rgba(74,144,217,0.15); color:#4a90d9; }
+  .tsm-strategy-badge.business { background:rgba(62,207,142,0.15); color:#3ecf8e; }
+  .tsm-strategy-savings { font-size:0.75rem; color:var(--gold,#c9a84c); font-weight:600; }
+  .tsm-strategy-desc { font-size:0.78rem; color:var(--muted); line-height:1.45; }
+  .tsm-footer { padding:1.25rem 1.75rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:flex-end; gap:0.75rem; background:rgba(255,255,255,0.02); }
+  .tsm-processing { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; padding:3rem; color:var(--muted); }
+  .tsm-spinner { width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--gold,#c9a84c); border-radius:50%; animation:tsm-spin 0.8s linear infinite; }
+  @keyframes tsm-spin { to { transform:rotate(360deg); } }
+  .tsm-yoy-table { width:100%; border-collapse:collapse; font-size:0.78rem; }
+  .tsm-yoy-table th { text-align:right; color:var(--muted); font-weight:700; font-size:0.68rem; text-transform:uppercase; padding:0.3rem 0.5rem; border-bottom:1px solid var(--border); }
+  .tsm-yoy-table th:first-child { text-align:left; }
+  .tsm-yoy-table td { padding:0.3rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.03); text-align:right; }
+  .tsm-yoy-table td:first-child { text-align:left; color:var(--text); }
+  .tsm-yoy-table tr.total-row td { font-weight:700; color:var(--gold,#c9a84c); border-top:1px solid var(--border); }
+  .tsm-highlight-pill { display:inline-flex; align-items:center; gap:0.4rem; background:rgba(255,255,255,0.04); border-radius:8px; padding:0.4rem 0.75rem; font-size:0.78rem; margin:0.25rem; }
+  .tsm-est-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+  .tsm-est-table th { text-align:left; color:var(--muted); font-weight:700; font-size:0.7rem; text-transform:uppercase; padding:0.3rem 0.5rem; border-bottom:1px solid var(--border); }
+  .tsm-est-table td { padding:0.35rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .workflow-job-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; cursor: pointer; transition: border-color 0.15s; }
+  .workflow-job-card:hover { border-color: var(--gold); }
+  </style>
+
+<div id="tab-communication" class="tab-content" style="padding:0;overflow:hidden;">
+  <div class="crm-inbox-wrap">
+    <!-- Left: thread list for this person -->
+    <div class="crm-thread-list">
+      <div class="crm-thread-list-header">
+        <h3>Messages</h3>
+        <div style="display:flex;gap:0.4rem;align-items:center;">
+          <button class="btn btn-gold btn-sm" onclick="commOpenNew()">+ New</button>
+          <button class="btn btn-outline btn-sm" onclick="openSmsModal()" title="Send SMS text message">📱 Text</button>
+        </div>
+      </div>
+      <div class="crm-thread-list-inner" id="comm-threads">
+        <div class="loading-state"><div class="loading-spinner"></div></div>
+      </div>
+    </div>
+    <!-- Right: same as team inbox detail panel -->
+    <div class="crm-detail-panel">
+      <!-- Empty state -->
+      <!-- Thread view — always in DOM so scroll dimensions work -->
+      <div id="comm-thread-view" style="flex:1;flex-direction:column;min-height:0;overflow:hidden;display:flex;">
+        <!-- Empty state — shown by default, hidden when thread selected -->
+        <div class="no-thread-selected" id="comm-no-thread" style="position:absolute;inset:0;z-index:1;background:var(--navy);">
+          <div class="nts-icon">💬</div>
+          <div>Select a thread or start a new one</div>
+        </div>
+        <div class="detail-header" id="comm-detail-header"></div>
+        <div class="detail-messages" id="comm-detail-messages"></div>
+        <div id="comm-typing-indicator" style="display:none;padding:0.3rem 1rem;font-size:0.78rem;color:var(--muted);font-style:italic;"></div>
+        <div class="reply-box" id="comm-reply-box" style="display:none;">
+          <div class="reply-box-controls">
+            <label><input type="checkbox" id="comm-internal-toggle"> 🔒 Internal note</label>
+            <label id="comm-sms-toggle-wrap" style="display:none;"><input type="checkbox" id="comm-sms-toggle"> 📱 Send as Text</label>
+            <div style="flex:1;"></div>
+          </div>
+          <textarea id="comm-reply-body" placeholder="Write a reply…" rows="5"></textarea>
+          <div class="attach-chips" id="comm-attach-chips"></div>
+          <input type="file" id="comm-attach-input" multiple style="display:none;" onchange="handleCommAttach(this.files)">
+          <div class="reply-box-actions">
+            <button class="btn btn-gold btn-sm" id="comm-send-reply-btn" onclick="commSendReply()">Send Reply</button>
+            <button class="btn-attach" onclick="document.getElementById('comm-attach-input').click()">📎 Attach</button>
+            <button class="btn btn-outline btn-sm" onclick="commResolve()">✅ Resolve</button>
+          </div>
+        </div>
+      </div>
+      <!-- New thread compose -->
+      <div id="comm-compose-view" style="display:none;position:absolute;inset:0;z-index:2;background:var(--navy);flex-direction:column;overflow:hidden;">
+        <div class="detail-header" style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-weight:700;">New Message</span>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <button class="btn btn-outline btn-sm" onclick="commOpenTemplatePicker()" title="Load a pre-written template">📋 Load Template</button>
+            <button class="btn btn-outline btn-sm" onclick="commCloseNew()">Cancel</button>
+          </div>
+        </div>
+        <div style="flex:1;padding:1rem 1.5rem;display:flex;flex-direction:column;min-height:0;">
+          <textarea id="comm-new-body" placeholder="Write your message…" style="flex:1;resize:none;width:100%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:0.6rem 0.75rem;font-size:0.88rem;font-family:inherit;min-height:0;"></textarea>
+        </div>
+        <div class="reply-box">
+          <div class="attach-chips" id="comm-new-attach-chips"></div>
+          <input type="file" id="comm-new-attach-input" multiple style="display:none;" onchange="handleNewCommAttach(this.files)">
+          <div class="reply-box-actions">
+            <button class="btn btn-gold btn-sm" onclick="commSendNew()">Send Message</button>
+            <button class="btn-attach" onclick="document.getElementById('comm-new-attach-input').click()">📎 Attach</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Template picker modal (person) -->
+      <div id="comm-tmpl-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;align-items:center;justify-content:center;">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;width:90%;max-width:520px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
+          <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-weight:700;">Load Template</div>
+            <button onclick="commCloseTemplatePicker()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;line-height:1;">✕</button>
+          </div>
+          <div style="padding:0.75rem 1rem;border-bottom:1px solid var(--border);">
+            <input type="text" id="comm-tmpl-search" class="form-control" placeholder="Search templates…" oninput="commFilterTemplates(this.value)" style="font-size:0.88rem;">
+          </div>
+          <div id="comm-tmpl-list" style="overflow-y:auto;flex:1;padding:0.5rem 0;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-organizers" class="tab-content">
+  <div style="max-width:700px;">
+    <div class="card">
+      <div class="card-title">Stanford Tax Organizer</div>
+      <div id="org-stanford-link" style="margin-bottom:1rem;"></div>
+      <div style="display:flex;gap:0.75rem;align-items:flex-end;">
+        <div class="form-group" style="flex:1;margin:0;">
+          <label style="font-size:0.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:0.35rem;">Organizer URL</label>
+          <input type="url" id="stanford-url-input" class="form-control" placeholder="https://..." style="font-size:0.88rem;">
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="saveStanfordUrl()">Save</button>
+      </div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem;">Paste the client's Stanford Tax organizer link. It will also appear in their portal.</div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-workflow" class="tab-content">
+  <div style="max-width:860px;padding:1.5rem 2rem;">
+    <div style="font-size:1.05rem;font-weight:700;margin-bottom:1.25rem;">Active Pipelines</div>
+    <div id="workflow-loading" style="color:var(--muted);padding:2rem 0;">Loading…</div>
+    <div id="workflow-list" style="display:none;"></div>
+  </div>
+</div>
+
+<div id="tab-notes" class="tab-content">
+  <div class="card" style="max-width:800px;margin:1.5rem;">
+    <div class="card-title">Internal Notes</div>
+    <textarea class="form-control" id="notes-ta-full" rows="12" placeholder="Internal staff notes…" onblur="autoSaveNotes(this.value)"></textarea>
+    <div style="display:flex;align-items:center;gap:1rem;margin-top:0.75rem;">
+      <button class="btn btn-gold btn-sm" onclick="autoSaveNotes(document.getElementById('notes-ta-full').value, true)">Save Notes</button>
+      <div class="save-indicator" id="notes-saved-full"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay hidden" id="edit-modal">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
+    <h2>Edit Person</h2>
+    <div id="edit-error" style="display:none;color:var(--red);font-size:0.82rem;margin-bottom:0.75rem;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+      <div class="form-group"><label>First Name</label><input type="text" class="form-control" id="ef-fname"></div>
+      <div class="form-group"><label>Last Name</label><input type="text" class="form-control" id="ef-lname"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+      <div class="form-group"><label>Email</label><input type="email" class="form-control" id="ef-email"></div>
+      <div class="form-group"><label>Phone</label><input type="text" class="form-control" id="ef-phone"></div>
+    </div>
+    <div class="form-group"><label>Date of Birth</label><input type="date" class="form-control" id="ef-dob"></div>
+    <div class="form-group"><label>Filing Status</label>
+      <select class="form-control" id="ef-filing">
+        <option value="">— Select —</option>
+        <option value="single">Single</option><option value="married_joint">Married Filing Jointly</option>
+        <option value="married_separate">Married Filing Separately</option><option value="head_household">Head of Household</option>
+        <option value="widow">Qualifying Widow(er)</option>
+      </select>
+    </div>
+    <div class="form-group" style="position:relative;">
+      <label>Spouse <span style="font-weight:400;color:var(--muted);font-size:0.78rem;">(must be in same relationship)</span></label>
+      <input type="text" class="form-control" id="ef-spouse-search" placeholder="Search by name…" autocomplete="off"
+        oninput="efSpouseFilter(this.value)" onfocus="efSpouseOpen()" onblur="setTimeout(efSpouseClose,150)">
+      <input type="hidden" id="ef-spouse-id">
+      <div id="ef-spouse-options" style="display:none;position:absolute;z-index:200;background:var(--charcoal);border:1px solid var(--border);border-radius:8px;width:100%;max-height:180px;overflow-y:auto;top:calc(100% - 2px);box-shadow:0 4px 16px rgba(0,0,0,0.4);"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" id="ef-submit" onclick="submitEdit()">Save Changes</button>
     </div>
   </div>
 </div>
@@ -338,46 +550,73 @@
 
 <script>
   const personId = location.pathname.split('/').pop();
+  const token = localStorage.getItem('dl_token');
+  if (!token) window.location.href = '/login';
+
   let personData = null;
+
+  function authHeaders() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }; }
+  async function apiFetch(url, opts = {}) {
+    const isFormData = opts.body instanceof FormData;
+    const headers = isFormData
+      ? { 'Authorization': 'Bearer ' + token, ...(opts.headers||{}) }
+      : { ...authHeaders(), ...(opts.headers||{}) };
+    const res = await fetch(url, { ...opts, headers });
+    if (res.status === 401) window.location.href = '/login';
+    return res;
+  }
+  function esc(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  // Format phone as 239.297.2988 and wrap in tel: link
+  function fmtPhone(raw) {
+    if (!raw) return '—';
+    const digits = raw.replace(/\D/g, '');
+    let formatted = raw; // fallback to raw if can't parse
+    if (digits.length === 10) {
+      formatted = `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6)}`;
+    } else if (digits.length === 11 && digits[0] === '1') {
+      formatted = `${digits.slice(1,4)}.${digits.slice(4,7)}.${digits.slice(7)}`;
+    }
+    return `<a href="tel:${formatted}" style="color:var(--gold);text-decoration:none;">${esc(formatted)}</a>`;
+  }
+
+  // Format date_of_birth as mm/dd/yyyy
+  function fmtDOB(raw) {
+    if (!raw) return '—';
+    // raw may be ISO date string like "1955-04-12" or "1955-04-12T00:00:00.000Z"
+    const d = new Date(raw);
+    if (isNaN(d)) return esc(raw);
+    // Use UTC parts to avoid timezone shift
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const yyyy = d.getUTCFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  }
+  const _shellToast = window.toast;
+  function toast(msg, type) { if (_shellToast) _shellToast(msg, type === 'error' ? 'error' : undefined); }
 
   function switchTab(name, el) {
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     if (el) el.classList.add('active');
-    else {
-      document.querySelectorAll('.tab-item').forEach(t => {
-        if (t.getAttribute('onclick') && t.getAttribute('onclick').includes(`'${name}'`)) t.classList.add('active');
-      });
-    }
     const tc = document.getElementById('tab-' + name);
     if (tc) tc.classList.add('active');
-    // Lazy-load on demand
+    // Hide main scrollbar on comm tab, restore on others
+    const mainEl = document.querySelector('.main');
+    if (mainEl) mainEl.style.overflowY = (name === 'communication') ? 'hidden' : 'auto';
     if (name === 'docs') loadDocs();
-    if (name === 'tax') loadTax();
-    if (name === 'billing') loadBilling();
-    if (name === 'communication' && personData) {
-      initComm(personData.id || personId);
-    }
-    if (name === 'organizers' && personData && personData.stanford_tax_url) {
+    if (name === 'tax') loadTax(true);
+    if (name === 'communication') initComm(personData?.id || personId);
+    if (name === 'organizers') {
+      const urlInput = document.getElementById('stanford-url-input');
+      if (urlInput && personData) urlInput.value = personData.stanford_tax_url || '';
       const el = document.getElementById('org-stanford-link');
-      if (el) el.innerHTML = `<a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
+      if (el && personData && personData.stanford_tax_url) {
+        el.innerHTML = `<a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
+      }
     }
-    if (name === 'notes' && personData) {
-      const ta = document.getElementById('notes-ta-full');
-      if (ta) ta.value = personData.notes || '';
-    }
+    if (name === 'notes' && personData) document.getElementById('notes-ta-full').value = personData.notes || '';
     if (name === 'workflow') loadWorkflow();
-  }
-
-  function filingLabel(s) {
-    const m = { single:'Single',mfj:'MFJ',mfs:'MFS',hoh:'HOH',qw:'QW' };
-    return m[s] || s || '';
-  }
-
-  function portalStatusLabel(p) {
-    if (p.portal_enabled) return { label: 'Portal Enabled', cls: 'badge-green' };
-    if (p.portal_invite_token) return { label: 'Invited', cls: 'badge-orange' };
-    return { label: 'Not Set Up', cls: 'badge-muted' };
   }
 
   async function loadWorkflow() {
@@ -388,269 +627,290 @@
       const res = await apiFetch(`/api/pipelines/entity-jobs?entity_type=person&entity_id=${personId}`);
       const jobs = await res.json();
       loading.style.display = 'none'; list.style.display = '';
-      if (!jobs.length) {
-        list.innerHTML = '<div style="color:var(--muted);padding:2rem 0;">This person is not in any pipelines yet.</div>';
-        return;
-      }
+      if (!jobs.length) { list.innerHTML = '<div style="color:var(--muted);">This person is not in any pipelines yet.</div>'; return; }
       list.innerHTML = jobs.map(j => {
         const stageColor = j.stage_color || 'var(--gold)';
         const yearBadge = j.tax_year ? `<span style="font-size:0.72rem;background:rgba(255,255,255,0.06);border-radius:4px;padding:0.1rem 0.45rem;margin-left:0.5rem;color:var(--muted);">${j.tax_year}</span>` : '';
-        const statusColor = j.job_status === 'blocked' ? 'var(--red)' : j.job_status === 'waiting_client' || j.job_status === 'missing_info' ? 'var(--orange)' : 'var(--green)';
-        const statusLabels = { active:'Active', waiting_client:'Waiting on Client', missing_info:'Missing Info', blocked:'Blocked', under_extension:'Under Extension', on_hold:'On Hold' };
-        const statusLabel = statusLabels[j.job_status] || 'Active';
+        const statusColor = j.job_status === 'blocked' ? 'var(--red)' : (j.job_status === 'waiting_client' || j.job_status === 'missing_info') ? 'var(--orange)' : 'var(--green)';
+        const statusLabel = {active:'Active',waiting_client:'Waiting on Client',missing_info:'Missing Info',blocked:'Blocked',under_extension:'Under Extension',on_hold:'On Hold'}[j.job_status] || 'Active';
         const updateText = j.last_update ? (j.last_update.length > 80 ? j.last_update.substring(0,80)+'…' : j.last_update) : null;
         const updateDate = j.last_update_at ? new Date(j.last_update_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
         const updateAuthor = j.last_update_author || '';
         const lastUpdate = updateText ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">${esc(updateText)}<span style="font-size:0.72rem;color:rgba(143,163,184,0.6);margin-left:0.4rem;">— ${esc(updateAuthor)}${updateDate ? ', '+updateDate : ''}</span></div>` : '';
-        return `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
-          <div style="flex:1;min-width:180px;">
-            <div style="font-weight:700;font-size:0.95rem;">${esc(j.pipeline_name)}${yearBadge}</div>
-            ${lastUpdate}
-          </div>
-          <div style="text-align:center;min-width:140px;">
-            <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Current Stage</div>
-            <div style="font-weight:700;color:${stageColor};font-size:0.9rem;">${esc(j.stage_name)}</div>
-          </div>
-          <div style="text-align:center;min-width:100px;">
-            <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Status</div>
-            <div style="font-weight:600;font-size:0.82rem;color:${statusColor};">${statusLabel}</div>
-          </div>
+        return `<div class="workflow-job-card" onclick="window.location.href='/pipelines?job=${j.id}'">
+          <div style="flex:1;min-width:180px;"><div style="font-weight:700;font-size:0.95rem;">${esc(j.pipeline_name)}${yearBadge}</div>${lastUpdate}</div>
+          <div style="text-align:center;min-width:140px;"><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Current Stage</div><div style="font-weight:700;color:${stageColor};font-size:0.9rem;">${esc(j.stage_name)}</div></div>
+          <div style="text-align:center;min-width:100px;"><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Status</div><div style="font-weight:600;font-size:0.82rem;color:${statusColor};">${statusLabel}</div></div>
           ${j.assigned_name ? `<div style="text-align:center;min-width:80px;"><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Assigned</div><div style="font-size:0.82rem;">${esc(j.assigned_name)}</div></div>` : ''}
         </div>`;
       }).join('');
-    } catch(e) {
-      loading.textContent = 'Failed to load pipelines: ' + e.message;
-    }
+    } catch(e) { loading.textContent = 'Failed to load pipelines: ' + e.message; }
   }
 
   async function loadPerson() {
     try {
       const res = await apiFetch(`/api/people/${personId}`);
-      if (!res.ok) { document.getElementById('entity-name').textContent = 'Not Found'; return; }
-      const p = await res.json();
-      personData = p;
-      renderHeader(p);
-      renderOverview(p);
+      if (res.status === 404 || res.status === 403) { window.location.href = '/404'; return; }
+      if (!res.ok) { document.getElementById('entity-name').textContent = 'Error loading'; return; }
+      personData = await res.json();
+      renderHeader(personData);
+      renderOverview(personData);
     } catch(e) {
-      document.getElementById('entity-name').textContent = 'Error loading person';
+      document.getElementById('entity-name').textContent = 'Error loading';
     }
   }
 
   function renderHeader(p) {
-    document.title = `${p.first_name} ${p.last_name} — DarkLion CRM`;
-    document.getElementById('entity-name').textContent = `${p.first_name} ${p.last_name}`;
-    const badges = document.getElementById('entity-badges');
-    const portalStatus = portalStatusLabel(p);
+    const name = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Unnamed';
+    document.title = `${name} — DarkLion`;
+    document.getElementById('entity-name').textContent = name;
     let html = `<span class="badge badge-muted">Person</span>`;
-    if (p.filing_status) html += ` <span class="badge badge-muted">${filingLabel(p.filing_status)}</span>`;
-    html += ` <span class="badge ${portalStatus.cls}">${portalStatus.label}</span>`;
-    badges.innerHTML = html;
+    if (p.filing_status) {
+      const fsColors = { MFJ:'rgba(74,144,217,0.18)', Single:'rgba(143,163,184,0.2)', HOH:'rgba(237,137,54,0.18)', MFS:'rgba(138,99,241,0.18)' };
+      const fsTextColors = { MFJ:'#4a90d9', Single:'#8fa3b8', HOH:'#ed8936', MFS:'#a78bfa' };
+      const fsKey = p.filing_status.toUpperCase() === 'MFJ' ? 'MFJ' : p.filing_status === 'single' ? 'Single' : p.filing_status === 'hoh' ? 'HOH' : p.filing_status === 'mfs' ? 'MFS' : null;
+      const fsLabel = { mfj:'MFJ', single:'Single', hoh:'HOH', mfs:'MFS' }[p.filing_status] || p.filing_status.replace(/_/g,' ');
+      const bg = fsColors[fsKey] || 'rgba(143,163,184,0.2)';
+      const tc = fsTextColors[fsKey] || '#8fa3b8';
+      html += ` <span class="badge" style="background:${bg};color:${tc};">${esc(fsLabel)}</span>`;
+    }
+    if (p.portal_enabled) html += ` <span class="badge badge-green">Portal Active</span>`;
+    else if (p.portal_invite_token) html += ` <span class="badge badge-orange">Portal Invited</span>`;
+    document.getElementById('entity-badges').innerHTML = html;
     const meta = [];
-    if (p.email) meta.push(`📧 ${esc(p.email)}`);
-    if (p.phone) meta.push(`📞 ${esc(p.phone)}`);
+    if (p.email) meta.push(esc(p.email));
+    if (p.phone) meta.push(fmtPhone(p.phone));
+    if (p.relationship_name) meta.push(`👥 <a href="#" style="color:var(--gold);text-decoration:none;">${esc(p.relationship_name)}</a>`);
     document.getElementById('entity-meta').innerHTML = meta.join('  ·  ');
+    // Track recent visit
+    if (window.addRecentClient) window.addRecentClient({ _type:'person', id: p.id, _label: name, _sub: p.relationship_name || 'Person' });
   }
 
   function renderOverview(p) {
-    // Sync notes textareas
     document.getElementById('notes-ta').value = p.notes || '';
-    document.getElementById('notes-ta-full').value = p.notes || '';
 
-    // Invite button
-    if (!p.portal_enabled) document.getElementById('invite-btn').style.display = '';
-    if (p.portal_enabled) {
-      document.getElementById('resend-invite-btn').style.display = '';
-      document.getElementById('disable-portal-btn').style.display = '';
-    }
-
-    // Left column
-    const left = document.getElementById('overview-left');
-    let html = '';
-
-    // Contact card
-    html += `<div class="card">
-      <div class="card-title">Contact</div>
-      <div class="info-row"><span class="info-label">Email</span><span class="info-val">${p.email ? esc(p.email) : '—'}</span></div>
-      <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${p.phone ? esc(p.phone) : '—'}</span></div>
-      <div class="info-row"><span class="info-label">Filing</span><span class="info-val">${p.filing_status ? `<span class="badge badge-muted">${filingLabel(p.filing_status)}</span>` : '—'}</span></div>
-      <div class="info-row"><span class="info-label">DOB</span><span class="info-val">${p.date_of_birth ? esc(p.date_of_birth) : '—'}</span></div>
-    </div>`;
-
-    // Spouse
-    if (p.spouse_id) {
-      html += `<div class="card">
-        <div class="card-title">Spouse</div>
-        <a href="/crm/person/${p.spouse_id}" class="btn btn-outline btn-sm">👤 View Spouse Record</a>
-      </div>`;
-    }
-
-    // Stanford Tax
-    if (p.stanford_tax_url) {
-      html += `<div class="card stanford-card" style="padding:1rem 1.2rem;">
-        <div class="sc-text">
-          <div class="sc-label">Stanford Tax</div>
-          <div class="sc-url">${esc(p.stanford_tax_url)}</div>
+    // ── LEFT COL: Contact Details ──
+    const contactEl = document.getElementById('overview-contact-panel');
+    const initials = ((p.first_name||'').charAt(0)+(p.last_name||'').charAt(0)).toUpperCase() || '?';
+    const fsLabel = { mfj:'MFJ', single:'Single', hoh:'Head of Household', mfs:'MFS' }[p.filing_status] || (p.filing_status||'').replace(/_/g,' ');
+    const fsColors = { MFJ:'rgba(74,144,217,0.15)', Single:'rgba(143,163,184,0.15)', HOH:'rgba(237,137,54,0.15)', MFS:'rgba(138,99,241,0.15)' };
+    const fsTextColors = { MFJ:'#4a90d9', Single:'#8fa3b8', HOH:'#ed8936', MFS:'#a78bfa' };
+    const fsKey = p.filing_status === 'mfj' ? 'MFJ' : p.filing_status === 'single' ? 'Single' : p.filing_status === 'hoh' ? 'HOH' : p.filing_status === 'mfs' ? 'MFS' : null;
+    const fsBg = fsColors[fsKey] || 'rgba(143,163,184,0.15)';
+    const fsTc = fsTextColors[fsKey] || '#8fa3b8';
+    contactEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Contact Details</div>
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.85rem;">
+        <div style="width:48px;height:48px;border-radius:50%;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
+        <div>
+          <div style="font-weight:700;font-size:0.95rem;">${esc((p.first_name||'')+' '+(p.last_name||'')).trim() || 'Unnamed'}</div>
+          ${p.filing_status ? `<span style="background:${fsBg};color:${fsTc};border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">${esc(fsLabel)}</span>` : ''}
         </div>
-        <a href="${esc(p.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">Open →</a>
-      </div>`;
-    }
-
-    // Relationship
-    if (p.relationship_id) {
-      html += `<div class="card">
-        <div class="card-title">Relationship</div>
-        <a href="/crm/relationship/${p.relationship_id}" class="btn btn-outline btn-sm">👥 View Relationship</a>
-      </div>`;
-    }
-
-    // Companies
-    const companies = p.company_access || [];
-    html += `<div class="card">
-      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
-        <span>Company Access</span>
-        <button class="btn btn-gold btn-sm" onclick="openGrantCompanyModal()">+ Grant Access</button>
       </div>
-      <div id="companies-list">`;
-    if (!companies.length) {
-      html += `<div style="color:var(--muted);font-size:0.84rem;padding:0.5rem 0;">No company access. Use "+ Grant Access" to link this person to a company.</div>`;
-    } else {
-      companies.forEach(a => {
-        const accessCls = { view: 'badge-muted', full: 'badge-gold', sign: 'badge-green' };
-        const accessLbl = { view: 'View', full: 'Full', sign: 'Sign' };
-        html += `<div class="person-row">
-          <div class="person-info">
-            <div class="person-name"><a href="/crm/company/${a.company_id}" style="color:var(--text);text-decoration:none;">${esc(a.company_name || 'Unknown')}</a></div>
-            <div class="person-meta">${a.entity_type ? esc(a.entity_type) : ''}${a.ownership_pct != null ? ' · ' + a.ownership_pct + '%' : ''}</div>
+      <div class="info-row"><span class="info-label">Email</span><span class="info-val">${p.email ? `<a href="mailto:${esc(p.email)}" style="color:var(--gold);">${esc(p.email)}</a>` : '—'}</span></div>
+      <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${fmtPhone(p.phone)}</span></div>
+      <div class="info-row"><span class="info-label">Date of Birth</span><span class="info-val">${fmtDOB(p.date_of_birth)}</span></div>
+      ${p.relationship_name ? `<div class="info-row"><span class="info-label">Relationship</span><span class="info-val"><a href="#" style="color:var(--gold);">${esc(p.relationship_name)}</a></span></div>` : ''}`;
+
+    // ── LEFT COL: Client Portal ──
+    const portalEl = document.getElementById('overview-portal-panel');
+    portalEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Client Portal</div>
+      <div style="font-size:0.84rem;color:var(--muted);margin-bottom:0.75rem;">
+        ${p.portal_enabled ? '✅ Portal active' : p.portal_invite_token ? '📧 Invite sent' : '⭕ Not set up'}
+      </div>
+      <div class="portal-btn-row">
+        ${!p.portal_enabled ? `<button class="btn btn-gold btn-sm" onclick="sendPortalInvite()">Send Invite</button>` : ''}
+        ${p.portal_enabled ? `<button class="btn btn-outline btn-sm" onclick="resetPortalPassword()">Reset Password</button>` : ''}
+        ${p.portal_enabled ? `<button class="btn btn-outline btn-sm" onclick="disablePortal()">Disable Portal</button>` : ''}
+      </div>`;
+
+    // ── CENTER COL: Spouse ──
+    const spouseEl = document.getElementById('overview-spouse-panel');
+    if (p.spouse) {
+      const sp = p.spouse;
+      const spInitials = ((sp.first_name||'').charAt(0)+(sp.last_name||'').charAt(0)).toUpperCase() || '?';
+      spouseEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Spouse</div>
+        <div style="background:var(--charcoal);border:1px solid var(--border);border-radius:8px;padding:0.75rem;display:flex;align-items:flex-start;gap:0.65rem;">
+          <div style="width:38px;height:38px;border-radius:50%;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:0.95rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${spInitials}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.2rem;"><a href="/crm/person/${sp.id||sp.person_id}" style="color:var(--text);text-decoration:none;">${esc((sp.first_name||'')+' '+(sp.last_name||'')).trim()}</a></div>
+            ${sp.email ? `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.15rem;">${esc(sp.email)}</div>` : ''}
+            ${sp.phone ? `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.15rem;">${fmtPhone(sp.phone)}</div>` : ''}
+            ${sp.portal_enabled ? `<span style="font-size:0.7rem;background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.1rem 0.35rem;font-weight:600;">Portal Active</span>` : ''}
           </div>
-          <span class="badge ${accessCls[a.access_level]||'badge-muted'}">${accessLbl[a.access_level]||esc(a.access_level)}</span>
-          <button class="btn btn-danger btn-xs" onclick="revokeCompanyAccess(${a.company_id})">✕</button>
-          <a href="/crm/company/${a.company_id}" class="btn btn-ghost btn-xs">→</a>
         </div>`;
+    } else {
+      spouseEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Spouse</div>
+        <div style="color:var(--muted);font-size:0.84rem;font-style:italic;">No spouse linked — set via Edit</div>`;
+    }
+
+    // ── CENTER COL: Tax Deliveries ──
+    const taxEl = document.getElementById('overview-tax-panel');
+    taxEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;">
+      <span>Tax Deliveries</span>
+      <a href="#" onclick="switchTab('tax',document.querySelector('.tab-item:nth-child(3)'));return false;" style="font-size:0.72rem;color:var(--gold);">View all →</a>
+    </div><div id="ov-tax-inner" style="color:var(--muted);font-size:0.82rem;">Loading…</div>`;
+
+    // Use cached personData deliveries or fetch
+    const renderPersonTaxSnippet = (deliveries) => {
+      const el = document.getElementById('ov-tax-inner');
+      if (!el) return;
+      if (!deliveries || !deliveries.length) { el.innerHTML=`<div style="font-style:italic;">No tax deliveries yet.</div>`; return; }
+      const STATUS_DOT = { draft:'#8fa3b8', sent:'#4a90d9', signed:'#3ecf8e', complete:'#3ecf8e', needs_changes:'#ed8936', approved:'#c9a84c' };
+      const STATUS_LABEL = { draft:'Draft', sent:'Sent', signed:'Signed', complete:'Complete', needs_changes:'Needs Changes', approved:'Approved' };
+      el.innerHTML = deliveries.slice(0,3).map(d => {
+        const dot = STATUS_DOT[d.status] || '#8fa3b8';
+        const label = STATUS_LABEL[d.status] || d.status || '';
+        return `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span style="background:rgba(201,168,76,0.12);color:var(--gold);border-radius:4px;padding:0.1rem 0.4rem;font-size:0.72rem;font-weight:700;flex-shrink:0;">${esc(String(d.tax_year||''))}</span>
+          <span style="flex:1;min-width:0;font-size:0.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(d.title||'Return')}</span>
+          <span style="display:flex;align-items:center;gap:0.3rem;font-size:0.75rem;flex-shrink:0;"><span style="width:7px;height:7px;border-radius:50%;background:${dot};display:inline-block;flex-shrink:0;"></span>${esc(label)}</span>
+        </div>`;
+      }).join('');
+    };
+    if (p.tax_deliveries && p.tax_deliveries.length) {
+      renderPersonTaxSnippet(p.tax_deliveries);
+    } else {
+      apiFetch(`/api/tax-deliveries?person_id=${personId}`).then(r=>r.json()).then(renderPersonTaxSnippet).catch(()=>{
+        const el=document.getElementById('ov-tax-inner'); if(el) el.innerHTML='<span>—</span>';
       });
     }
-    html += `</div></div>`;
 
-    left.innerHTML = html;
+    // ── RIGHT COL: Companies ──
+    const companiesEl = document.getElementById('overview-companies-panel');
+    const companies = p.company_access || p.companies || [];
+    let compHtml = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Companies</div>`;
+    if (!companies.length) {
+      compHtml += `<div style="color:var(--muted);font-size:0.84rem;font-style:italic;">No companies linked.</div>`;
+    } else {
+      compHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">`;
+      companies.forEach(c => {
+        const cInitial = (c.company_name||'?').charAt(0).toUpperCase();
+        compHtml += `<div style="background:var(--charcoal);border:1px solid var(--border);border-radius:8px;padding:0.55rem 0.65rem;display:flex;align-items:flex-start;gap:0.45rem;cursor:pointer;" onclick="window.location.href='/crm/company/${c.company_id}'">
+          <div style="width:28px;height:28px;border-radius:5px;background:rgba(74,144,217,0.15);color:#4a90d9;font-weight:700;font-size:0.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🏢</div>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:0.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.company_name||'Company')}</div>
+            ${c.access_level ? `<div style="font-size:0.68rem;color:var(--muted);">${esc(c.access_level)}</div>` : ''}
+          </div>
+        </div>`;
+      });
+      compHtml += `</div>`;
+    }
+    companiesEl.innerHTML = compHtml;
+
+    // ── LEFT COL: Recent Messages (thread-row style matching relationship CRM) ──
+    const msgsEl = document.getElementById('overview-messages-panel');
+    msgsEl.innerHTML = `<div class="ov-panel-title"><span>💬 Recent Messages</span><a href="#" onclick="switchTab('communication',document.querySelector('.tab-item:nth-child(4)'));return false;" class="btn btn-ghost btn-xs">View all →</a></div><div id="ov-person-msgs-inner"></div>`;
+    apiFetch(`/api/messages/person/${personId}`).then(r=>r.json()).then(threads=>{
+      const el = document.getElementById('ov-person-msgs-inner');
+      if (!el) return;
+      const arr = Array.isArray(threads) ? threads : (threads.threads || threads.data || []);
+      if (!arr.length) { el.innerHTML=`<div style="color:var(--muted);font-size:0.78rem;padding:0.25rem 0;">No message threads yet.</div>`; return; }
+      function timeAgo(ts) { if(!ts) return ''; const d=new Date(ts); const diff=Date.now()-d; if(diff<60000) return 'just now'; if(diff<3600000) return Math.floor(diff/60000)+'m ago'; if(diff<86400000) return Math.floor(diff/3600000)+'h ago'; return d.toLocaleDateString(); }
+      el.innerHTML = arr.slice(0,5).map(t => {
+        const subject = t.subject || '(no subject)';
+        const preview = t.lastPreview || t.last_body || '';
+        const unread = (t.unreadCount || t.unread_count || 0) > 0;
+        const unreadCount = t.unreadCount || t.unread_count || 0;
+        const personName = ((t.firstName||t.first_name||'') + ' ' + (t.lastName||t.last_name||'')).trim() || 'Client';
+        const ini = personName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+        const when = timeAgo(t.lastMessageAt || t.last_message_at || t.createdAt || t.created_at);
+        return `<a href="#" class="thread-row${unread?' has-unread':''}" onclick="switchTab('communication',document.querySelector('.tab-item:nth-child(4)'));setTimeout(()=>loadThread(${t.id}),200);return false;">
+          <div class="thread-row-avatar">${ini}</div>
+          <div class="thread-row-body">
+            <div class="thread-row-top">
+              <span class="thread-row-name">${esc(personName)}${unread?`<span class="thread-unread-badge">${unreadCount}</span>`:''}</span>
+              <span class="thread-row-time">${when}</span>
+            </div>
+            <div class="thread-row-subject">${esc(subject)}</div>
+            <div class="thread-row-preview">${esc(preview)}</div>
+          </div>
+        </a>`;
+      }).join('');
+    }).catch(()=>{ const el=document.getElementById('ov-person-msgs-inner'); if(el) el.innerHTML='<span style="color:var(--muted);">—</span>'; });
   }
 
-  async function loadPersonCompanies() {
-    try {
-      const res = await apiFetch(`/api/people/${personId}`);
-      const p = await res.json();
-      personData = p;
-      renderOverview(p);
-    } catch(e) { toast('Failed to refresh', 'error'); }
-  }
-
-  // ── Docs Tab ──
-  const CURRENT_YEAR = new Date().getFullYear();
-
-  const DOC_CATS_PERSON = [
-    { key: 'tax',   label: 'Tax',   icon: '🧾' },
-    { key: 'other', label: 'Other', icon: '📎' },
-  ];
-
-  function docTypeBadge(mimeType, displayName) {
+  // ── Docs: helpers ──
+  function fileTypeBadge(mimeType, displayName) {
     const mime = (mimeType || '').toLowerCase();
     const name = (displayName || '').toLowerCase();
     const ext = name.includes('.') ? name.split('.').pop() : '';
-    let label, color;
-    if (mime === 'application/pdf' || ext === 'pdf') { label = 'PDF'; color = '#e53e3e'; }
-    else if (mime.includes('spreadsheet') || mime.includes('excel') || ext === 'xlsx' || ext === 'xls' || ext === 'csv') { label = ext === 'csv' ? 'CSV' : 'Excel'; color = '#38a169'; }
-    else if (mime.includes('word') || ext === 'docx' || ext === 'doc') { label = 'Word'; color = '#3182ce'; }
-    else if (mime.includes('presentation') || mime.includes('powerpoint') || ext === 'pptx' || ext === 'ppt') { label = 'PPT'; color = '#dd6b20'; }
-    else if (mime.startsWith('image/') || ['jpg','jpeg','png','gif','webp','heic'].includes(ext)) { label = 'Image'; color = '#805ad5'; }
-    else if (mime.includes('zip') || ext === 'zip') { label = 'ZIP'; color = '#718096'; }
-    else if (mime.startsWith('text/') || ext === 'txt') { label = 'TXT'; color = '#718096'; }
-    else { label = ext ? ext.toUpperCase().slice(0,4) : 'FILE'; color = '#718096'; }
-    return `<span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${color};letter-spacing:0.03em;">${label}</span>`;
+    if (mime === 'application/pdf' || ext === 'pdf') return { label: 'PDF', color: '#e53e3e' };
+    if (mime.includes('spreadsheet') || mime.includes('excel') || ext === 'xlsx' || ext === 'xls' || ext === 'csv')
+      return { label: ext === 'csv' ? 'CSV' : 'Excel', color: '#38a169' };
+    if (mime.includes('word') || ext === 'docx' || ext === 'doc')
+      return { label: 'Word', color: '#3182ce' };
+    if (mime.includes('presentation') || mime.includes('powerpoint') || ext === 'pptx' || ext === 'ppt')
+      return { label: 'PPT', color: '#dd6b20' };
+    if (mime.startsWith('image/') || ['jpg','jpeg','png','gif','webp','heic'].includes(ext))
+      return { label: 'Image', color: '#805ad5' };
+    if (mime.includes('zip') || ext === 'zip') return { label: 'ZIP', color: '#718096' };
+    if (mime.startsWith('text/') || ext === 'txt') return { label: 'TXT', color: '#718096' };
+    return { label: ext ? ext.toUpperCase().slice(0, 4) : 'FILE', color: '#718096' };
   }
 
   function fmtBytes(b) {
     if (!b) return '';
     if (b < 1024) return b + ' B';
-    if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
-    return (b/(1024*1024)).toFixed(1) + ' MB';
-  }
-
-  function buildDocsSection(sectionDocs, title, icon, isClient) {
-    const allYears = [];
-    for (let y = CURRENT_YEAR; y >= 2018; y--) allYears.push(String(y));
-    const recentYears = allYears.slice(0, 2);
-    const priorYears  = allYears.slice(2);
-    const byYearCat = {};
-    sectionDocs.forEach(d => {
-      const y   = d.year || String(CURRENT_YEAR);
-      const cat = d.folder_category || 'other';
-      if (!byYearCat[y]) byYearCat[y] = {};
-      if (!byYearCat[y][cat]) byYearCat[y][cat] = [];
-      byYearCat[y][cat].push(d);
-    });
-    const statusBadge = isClient
-      ? `<span class="doc-badge doc-badge-client">✓ Uploaded</span>`
-      : `<span class="doc-badge doc-badge-viewed">✓ Delivered</span>`;
-
-    function renderOneYear(yr, openByDefault) {
-      const yrDocs = sectionDocs.filter(d => (d.year || String(CURRENT_YEAR)) === yr);
-      return `<div class="year-folder${openByDefault ? ' open' : ''}" style="margin-bottom:0.4rem;">
-        <div class="year-header">
-          <span class="yr-label">📅 ${yr} <span class="yr-count">${yrDocs.length}</span></span>
-          <span class="yr-chevron">▼</span>
-        </div>
-        <div class="year-body" style="padding-left:1rem;">
-          ${DOC_CATS_PERSON.map(cat => {
-            const files = (byYearCat[yr] || {})[cat.key] || [];
-            return `<div class="cat-folder${files.length > 0 ? ' open' : ''}">
-              <div class="cat-folder-header" onclick="this.closest('.cat-folder').classList.toggle('open')">
-                <span class="cat-folder-label">${cat.icon} ${cat.label}</span>
-                <span style="display:flex;align-items:center;gap:0.5rem;"><span class="cat-folder-meta">${files.length} file${files.length !== 1 ? 's' : ''}</span><span class="cat-chevron">▼</span></span>
-              </div>
-              <div class="cat-folder-body">
-                ${files.length === 0
-                  ? `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`
-                  : files.map(f => `<div class="doc-row" data-docid="${f.id}">
-                      ${docTypeBadge(f.mime_type, f.display_name)}
-                      <div class="doc-info">
-                        <div class="doc-name doc-name-link" data-docid="${f.id}">${esc((f.display_name||'Untitled').replace(/_/g,' ').trim())}</div>
-                        <div class="doc-badges">
-                          ${statusBadge}
-                          ${f.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(f.size_bytes)}</span>` : ''}
-                          ${f.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(f.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'})}</span>` : ''}
-                        </div>
-                      </div>
-                      <div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;">
-                        <button class="btn-dl" data-docid="${f.id}">⬇</button>
-                        <button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${f.id},${JSON.stringify(f.folder_section||'firm_uploaded')},${JSON.stringify(f.folder_category||'other')},event,${JSON.stringify(f.year||'')})" title="Move">↕</button>
-                        <button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${f.id},event)" title="Delete">🗑</button>
-                      </div>
-                    </div>`).join('')}
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`;
-    }
-
-    const priorCount = priorYears.reduce((n,y) => n + sectionDocs.filter(d => (d.year||String(CURRENT_YEAR)) === y).length, 0);
-    let html = `<div class="docs-col-title">${icon} ${title} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
-    recentYears.forEach(y => { html += renderOneYear(y, true); });
-    html += `<div class="year-folder" style="margin-bottom:0.4rem;">
-      <div class="year-header">
-        <span class="yr-label">📂 Prior Years <span class="yr-count">${priorCount}</span></span>
-        <span class="yr-chevron">▼</span>
-      </div>
-      <div class="year-body" style="padding-left:0.5rem;">${priorYears.map(y => renderOneYear(y, false)).join('')}</div>
-    </div>`;
-    return html;
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
   }
 
   let docsData = [];
+  const PERSON_CATS = [{ key: 'tax', label: 'Tax', icon: '🧾' }, { key: 'other', label: 'Other', icon: '📎' }];
+  const DOCS_YEARS = (() => { const a = []; for (let y = new Date().getFullYear(); y >= 2018; y--) a.push(String(y)); return a; })();
+
+  function buildDocsSection(docs, sectionKey, sectionTitle, sectionIcon) {
+    const sectionDocs = docs.filter(d => (d.folder_section || 'firm_uploaded') === sectionKey);
+    let s = `<div class="docs-col-title">${sectionIcon} ${sectionTitle} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
+    const recentYears = DOCS_YEARS.slice(0, 2);
+    const prevYears = DOCS_YEARS.slice(2);
+
+    function renderOneYear(yr) {
+      const yrDocs = sectionDocs.filter(d => (d.year || '') === yr);
+      const open = yrDocs.length > 0;
+      let y = `<div class="year-folder${open ? ' open' : ''}" style="margin-bottom:0.4rem;">
+        <div class="year-header"><span class="yr-label">📅 ${yr} <span class="yr-count">${yrDocs.length}</span></span><span class="yr-chevron">▼</span></div>
+        <div class="year-body" style="padding-left:1rem;">`;
+      PERSON_CATS.forEach(cat => {
+        const catDocs = yrDocs.filter(d => (d.folder_category || 'other') === cat.key);
+        y += `<div class="cat-folder${catDocs.length > 0 ? ' open' : ''}">
+          <div class="cat-folder-header" onclick="this.closest('.cat-folder').classList.toggle('open')">
+            <span class="cat-folder-label">${cat.icon} ${cat.label}</span>
+            <span style="display:flex;align-items:center;gap:0.5rem;"><span class="cat-folder-meta">${catDocs.length} file${catDocs.length !== 1 ? 's' : ''}</span><span class="cat-chevron">▼</span></span>
+          </div>
+          <div class="cat-folder-body">`;
+        if (!catDocs.length) {
+          y += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`;
+        } else {
+          catDocs.forEach(doc => {
+            const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
+            const statusBadge = sectionKey === 'firm_uploaded'
+              ? `<span class="doc-badge doc-badge-viewed">✓ Delivered</span>`
+              : `<span class="doc-badge doc-badge-client">✓ Uploaded</span>`;
+            const _dispName = (doc.display_name || 'Document').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+            y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(_dispName)}</div><div class="doc-badges">${statusBadge}${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}${doc.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(doc.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'})}</span>` : ''}</div></div><div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;"><button class="btn-dl" data-docid="${doc.id}">⬇</button><button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${doc.id},${JSON.stringify(doc.folder_section||'firm_uploaded')},${JSON.stringify(doc.folder_category||'tax')},event,${JSON.stringify(doc.year||'')})" title="Move">↕</button><button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${doc.id},event)" title="Delete">🗑</button></div></div>`;
+          });
+        }
+        y += `</div></div>`; // close cat-folder-body + cat-folder
+      });
+      y += `</div></div>`;
+      return y;
+    }
+
+    recentYears.forEach(yr => { s += renderOneYear(yr); });
+    const prevCount = prevYears.reduce((n, yr) => n + sectionDocs.filter(d => (d.year || '') === yr).length, 0);
+    s += `<div class="year-folder" style="margin-bottom:0.4rem;">
+      <div class="year-header"><span class="yr-label">📂 Prior Years <span class="yr-count">${prevCount}</span></span><span class="yr-chevron">▼</span></div>
+      <div class="year-body" style="padding-left:0.5rem;">${prevYears.map(yr => renderOneYear(yr)).join('')}</div>
+    </div>`;
+    return s;
+  }
 
   async function loadDocs() {
     const el = document.getElementById('docs-content');
     if (el.dataset.loaded) return;
     el.dataset.loaded = '1';
-    el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>';
+    el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading documents…</div></div>';
     try {
       const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${personId}`);
       docsData = await res.json();
@@ -660,39 +920,46 @@
 
   function renderDocs() {
     const el = document.getElementById('docs-content');
-    const firmDocs   = docsData.filter(d => !d.folder_section || d.folder_section === 'firm_uploaded');
-    const clientDocs = docsData.filter(d => d.folder_section === 'client_uploaded');
-    el.innerHTML = `<div style="display:flex;justify-content:flex-end;padding:1rem 1.5rem 0;"><button class="btn btn-gold btn-sm" onclick="openUploadModal()">+ Upload Document</button></div>
-      <div class="docs-layout">
-        <div>${buildDocsSection(firmDocs, 'Delivered by Advisor', '📁', false)}</div>
-        <div>${buildDocsSection(clientDocs, 'Uploaded by Client', '📤', true)}</div>
-      </div>`;
+    el.innerHTML = `<div class="docs-layout">
+      <div>${buildDocsSection(docsData, 'firm_uploaded', 'Delivered by Advisor', '📁')}</div>
+      <div>${buildDocsSection(docsData, 'client_uploaded', 'Uploaded by Client', '📤')}</div>
+    </div>`;
+    // Wire year folder toggles
     el.querySelectorAll('.year-header').forEach(h => {
       h.addEventListener('click', () => h.closest('.year-folder').classList.toggle('open'));
     });
+    // Wire doc name click to open
     el.querySelectorAll('.doc-name-link').forEach(nameEl => {
-      nameEl.addEventListener('click', e => { e.stopPropagation(); downloadDoc(parseInt(nameEl.dataset.docid)); });
+      nameEl.addEventListener('click', e => {
+        e.stopPropagation();
+        const btn = nameEl.closest('.doc-row').querySelector('.btn-dl');
+        downloadDoc(parseInt(nameEl.dataset.docid), btn);
+      });
     });
+    // Wire download buttons
     el.querySelectorAll('.btn-dl').forEach(btn => {
-      btn.addEventListener('click', e => { e.stopPropagation(); downloadDoc(parseInt(btn.dataset.docid), btn); });
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        downloadDoc(parseInt(btn.dataset.docid), btn);
+      });
     });
+  }
+
+  async function downloadDoc(id, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try {
+      const res = await apiFetch('/api/documents/' + id + '/url');
+      const data = await res.json();
+      // window.location.href works from async on iOS — only window.open() is blocked
+      if (data.url) window.location.href = data.url;
+    } catch(e) { toast('Failed to open document', 'error'); }
+    if (btn) { btn.disabled = false; btn.textContent = '⬇'; }
   }
 
   function reloadDocs() {
     const el = document.getElementById('docs-content');
     if (el) delete el.dataset.loaded;
     loadDocs();
-  }
-
-  async function downloadDoc(id, btn) {
-    if (btn) { btn.disabled = true; btn.textContent = '…'; }
-    try {
-      const res = await apiFetch(`/api/documents/${id}/url`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
-      if (data.url) window.location.href = data.url;
-    } catch(e) { toast('Download failed: ' + e.message, 'error'); }
-    if (btn) { btn.disabled = false; btn.textContent = '⬇'; }
   }
 
   async function deleteDoc(id, e) {
@@ -712,14 +979,14 @@
     _moveDocId = id;
     const modal = document.getElementById('move-doc-modal');
     if (!modal) return;
-    document.getElementById('move-doc-year').value = currentYear || String(CURRENT_YEAR - 1);
+    document.getElementById('move-doc-year').value = currentYear || String(new Date().getFullYear() - 1);
     document.getElementById('move-doc-section').value = currentSection || 'firm_uploaded';
-    document.getElementById('move-doc-category').value = currentCategory || 'other';
-    modal.classList.add('open');
+    document.getElementById('move-doc-category').value = currentCategory || 'tax';
+    modal.classList.remove('hidden');
   }
   function closeMoveDocModal() {
     const modal = document.getElementById('move-doc-modal');
-    if (modal) modal.classList.remove('open');
+    if (modal) modal.classList.add('hidden');
     _moveDocId = null;
   }
   async function submitMoveDoc() {
@@ -736,303 +1003,958 @@
     } catch(e) { toast(e.message, 'error'); }
   }
 
-  // Upload modal state
-  let uploadFile = null;
-  function openUploadModal() {
-    document.getElementById('upload-modal').classList.add('open');
-    document.getElementById('upload-year').value = CURRENT_YEAR;
-    document.getElementById('upload-section').value = 'firm_uploaded';
-    document.getElementById('upload-category').value = 'other';
-    document.getElementById('upload-display-name').value = '';
-    document.getElementById('upload-error').style.display = 'none';
-    uploadFile = null;
-    document.getElementById('upload-file-name').style.display = 'none';
-    document.getElementById('upload-dropzone-text').style.display = '';
-  }
+  // ── Upload modal wiring ──
+  (function() {
+    var modal     = document.getElementById('upload-modal');
+    var yearSel   = document.getElementById('upload-year');
+    var fileDrop  = document.getElementById('upload-file-drop');
+    var fileInput = document.getElementById('upload-file-input');
+    var submitBtn = document.getElementById('upload-submit-btn');
+    var cancelBtn = document.getElementById('upload-cancel-btn');
+    var errEl     = document.getElementById('upload-error');
+    var msgEl     = document.getElementById('upload-msg');
+    if (!modal) return;
 
-  function openUploadModalWith(section, category, year) {
-    openUploadModal();
-    document.getElementById('upload-year').value = year || CURRENT_YEAR;
-    document.getElementById('upload-section').value = section || 'firm_uploaded';
-    document.getElementById('upload-category').value = category || 'other';
-  }
-
-  function showUploadFile(f) {
-    if (!f) return;
-    document.getElementById('upload-dropzone-text').style.display = 'none';
-    document.getElementById('upload-file-name').style.display = '';
-    document.getElementById('upload-file-name').textContent = f.name;
-    if (!document.getElementById('upload-display-name').value) {
-      document.getElementById('upload-display-name').value = f.name.replace(/\.[^.]+$/, '');
+    var _uploadFile = null;
+    var CY = new Date().getFullYear();
+    for (var y = CY; y >= 2018; y--) {
+      var o = document.createElement('option');
+      o.value = String(y); o.textContent = String(y);
+      if (y === CY - 1) o.selected = true;
+      yearSel.appendChild(o);
     }
-  }
 
-  async function submitUpload() {
-    if (!uploadFile) { document.getElementById('upload-error').textContent = 'Select a file first.'; document.getElementById('upload-error').style.display=''; return; }
-    const formData = new FormData();
-    formData.append('file', uploadFile);
-    formData.append('owner_type', 'person');
-    formData.append('owner_id', personId);
-    formData.append('display_name', document.getElementById('upload-display-name').value || uploadFile.name);
-    formData.append('year', document.getElementById('upload-year').value || String(CURRENT_YEAR));
-    formData.append('folder_section', document.getElementById('upload-section').value);
-    formData.append('folder_category', document.getElementById('upload-category').value);
-    try {
-      const res = await apiFetch('/api/documents/upload', { method: 'POST', body: formData });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Upload failed'); }
-      document.getElementById('upload-modal').classList.remove('open');
-      toast('Document uploaded');
-      reloadDocs();
-    } catch(e) {
-      document.getElementById('upload-error').textContent = e.message;
-      document.getElementById('upload-error').style.display = '';
+    function setFile(f) {
+      _uploadFile = f;
+      document.getElementById('upload-selected-name').textContent = f.name;
+      submitBtn.disabled = false;
     }
-  }
 
-  // ── Tax Tab ──
-  async function loadTax() {
-    const c = document.getElementById('tax-content');
-    if (!personData) { c.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>'; return; }
-    let html = '';
-    if (personData.stanford_tax_url) {
-      html += `<div class="card stanford-card" style="margin-bottom:1rem;">
-        <div class="sc-text">
-          <div class="sc-label">Stanford Tax Organizer</div>
-          <div class="sc-url">${esc(personData.stanford_tax_url)}</div>
-        </div>
-        <a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">Open Organizer →</a>
-      </div>`;
-    } else {
-      html += `<div class="card" style="margin-bottom:1rem;">
-        <div class="card-title">Stanford Tax</div>
-        <div style="display:flex;align-items:center;gap:1rem;">
-          <span style="color:var(--muted);font-size:0.84rem;">No Stanford Tax URL set.</span>
-          <button class="btn btn-outline btn-sm" onclick="promptStanfordUrl()">+ Add URL</button>
-        </div>
-      </div>`;
+    fileDrop.addEventListener('click', function() { fileInput.click(); });
+    fileDrop.addEventListener('dragover', function(e) { e.preventDefault(); fileDrop.classList.add('drag-over'); });
+    fileDrop.addEventListener('dragleave', function() { fileDrop.classList.remove('drag-over'); });
+    fileDrop.addEventListener('drop', function(e) { e.preventDefault(); fileDrop.classList.remove('drag-over'); if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
+    fileInput.addEventListener('change', function() { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+    cancelBtn.addEventListener('click', function() { window.closeUploadModal(); });
+    modal.addEventListener('click', function(e) { if (e.target === modal) window.closeUploadModal(); });
+
+    submitBtn.addEventListener('click', async function() {
+      if (!_uploadFile) return;
+      submitBtn.disabled = true; submitBtn.textContent = 'Uploading…';
+      errEl.style.display = 'none'; msgEl.style.display = 'none';
+      try {
+        var fd = new FormData();
+        fd.append('file', _uploadFile);
+        fd.append('owner_type', 'person');
+        fd.append('owner_id', personId);
+        fd.append('year', yearSel.value);
+        fd.append('doc_type', document.getElementById('upload-doc-type').value);
+        fd.append('folder_category', document.getElementById('upload-doc-type').value);
+        fd.append('folder_section', document.getElementById('upload-section').value);
+        var res = await fetch('/api/documents/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+        msgEl.textContent = 'Uploaded!'; msgEl.style.display = 'block';
+        var docEl = document.getElementById('docs-content');
+        delete docEl.dataset.loaded;
+        docsData = [];
+        await loadDocs();
+        setTimeout(function() { window.closeUploadModal(); toast('Document uploaded'); }, 800);
+      } catch(e2) {
+        errEl.textContent = e2.message; errEl.style.display = 'block';
+        submitBtn.disabled = false; submitBtn.textContent = 'Upload';
+      }
+    });
+
+    window.openUploadModal = function(preloadFile) {
+      _uploadFile = null;
+      document.getElementById('upload-selected-name').textContent = '';
+      submitBtn.disabled = true; submitBtn.textContent = 'Upload';
+      errEl.style.display = 'none'; msgEl.style.display = 'none';
+      modal.classList.remove('hidden');
+      if (preloadFile) setFile(preloadFile);
+    };
+    window.closeUploadModal = function() { modal.classList.add('hidden'); };
+  })();
+
+  // ── Page-wide drag-and-drop (opens upload modal when Docs tab active) ──
+  (function() {
+    var dragCounter = 0;
+    var dragOverlay = document.createElement('div');
+    dragOverlay.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(201,168,76,0.08);border:3px dashed var(--gold);pointer-events:none;align-items:center;justify-content:center;font-size:1.5rem;color:var(--gold);font-weight:700;';
+    dragOverlay.textContent = '📄 Drop to upload document';
+    document.body.appendChild(dragOverlay);
+
+    function isDocsTabActive() {
+      var t = document.getElementById('tab-docs');
+      return t && t.classList.contains('active');
     }
-    html += `<div class="placeholder-section">
-      <div class="ph-icon">📋</div>
-      <div class="ph-title">Tax Workflows</div>
-      <div class="ph-desc">No active tax workflows. Tax return delivery and e-signatures coming soon.</div>
-    </div>`;
-    c.innerHTML = html;
-  }
 
-  async function promptStanfordUrl() {
-    const url = prompt('Enter Stanford Tax URL:');
-    if (!url) return;
+    document.addEventListener('dragenter', function(e) {
+      if (!isDocsTabActive()) return;
+      dragCounter++;
+      dragOverlay.style.display = 'flex';
+    });
+    document.addEventListener('dragleave', function(e) {
+      if (!isDocsTabActive()) return;
+      dragCounter--;
+      if (dragCounter <= 0) { dragCounter = 0; dragOverlay.style.display = 'none'; }
+    });
+    document.addEventListener('dragover', function(e) {
+      if (!isDocsTabActive()) return;
+      e.preventDefault();
+    });
+    document.addEventListener('drop', function(e) {
+      if (!isDocsTabActive()) return;
+      e.preventDefault();
+      dragCounter = 0;
+      dragOverlay.style.display = 'none';
+      var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!file) return;
+      window.openUploadModal(file);
+    });
+  })();
+
+  async function saveStanfordUrl() {
+    const url = document.getElementById('stanford-url-input').value.trim();
     try {
       await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify({ stanford_tax_url: url }) });
-      personData.stanford_tax_url = url;
-      toast('Stanford Tax URL saved');
-      loadTax();
-    } catch(e) { toast('Failed to save', 'error'); }
+      if (personData) personData.stanford_tax_url = url;
+      const el = document.getElementById('org-stanford-link');
+      if (el && url) el.innerHTML = `<a href="${esc(url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
+      else if (el) el.innerHTML = '';
+      toast('Organizer URL saved');
+    } catch(e) { toast(e.message, 'error'); }
   }
 
-  // ── Billing Tab ──
-  async function loadBilling() {
-    const c = document.getElementById('billing-content');
-    if (!personData) { c.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>'; return; }
-    let html = '';
-    if (personData.relationship_id) {
-      try {
-        const res = await apiFetch(`/api/relationships/${personData.relationship_id}`);
-        if (res.ok) {
-          const rel = await res.json();
-          const tierLabels = { standard:'Standard',legacy_blueprint:'Legacy Blueprint',tax_only:'Tax Only',full_service:'Full Service' };
-          const tierCls = { standard:'badge-muted',legacy_blueprint:'badge-gold',tax_only:'badge-blue',full_service:'badge-green' };
-          const billCls = { active:'badge-green',past_due:'badge-orange',cancelled:'badge-red' };
-          html += `<div class="card" style="max-width:600px;margin-bottom:1rem;">
-            <div class="card-title">Relationship Billing — ${esc(rel.name)}</div>
-            <div class="info-row"><span class="info-label">Service Tier</span><span class="info-val"><span class="badge ${tierCls[rel.service_tier]||'badge-muted'}">${tierLabels[rel.service_tier]||rel.service_tier||'—'}</span></span></div>
-            <div class="info-row"><span class="info-label">Billing</span><span class="info-val"><span class="badge ${billCls[rel.billing_status]||'badge-muted'}">${rel.billing_status||'—'}</span></span></div>
-            ${rel.stripe_customer_id ? `<div class="info-row"><span class="info-label">Stripe</span><span class="info-val" style="font-family:monospace;font-size:0.8rem;">${esc(rel.stripe_customer_id)}</span></div>` : ''}
-            <div style="margin-top:0.75rem;"><a href="/crm/relationship/${rel.id}" class="btn btn-outline btn-sm">View Relationship →</a></div>
-          </div>`;
-        }
-      } catch(e) {}
-    }
-    html += `<div class="placeholder-section">
-      <div class="ph-icon">💳</div>
-      <div class="ph-title">Billing Management</div>
-      <div class="ph-desc">Stripe integration and individual billing coming soon.</div>
-    </div>`;
-    c.innerHTML = html;
-  }
-
-  // ── Notes auto-save ──
-  async function autoSaveNotes(val, force = false) {
-    if (!personData && !force) return;
+  async function autoSaveNotes(val, force) {
     try {
       await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify({ notes: val }) });
+      const ind = document.getElementById('notes-saved-full') || document.getElementById('notes-saved');
+      if (ind) { ind.textContent = '✓ Saved'; setTimeout(() => { ind.textContent = ''; }, 2000); }
       if (personData) personData.notes = val;
-      const ta1 = document.getElementById('notes-ta');
-      const ta2 = document.getElementById('notes-ta-full');
-      if (ta1) ta1.value = val;
-      if (ta2) ta2.value = val;
-      const s1 = document.getElementById('notes-saved');
-      const s2 = document.getElementById('notes-saved-full');
-      if (s1) { s1.textContent = '✓ Saved'; setTimeout(() => s1.textContent = '', 2000); }
-      if (s2) { s2.textContent = '✓ Saved'; setTimeout(() => s2.textContent = '', 2000); }
-      if (force) toast('Notes saved');
     } catch(e) { toast('Failed to save notes', 'error'); }
   }
 
-  // ── Portal Invite ──
-  async function sendPortalInvite() {
+    // ── Spouse search dropdown (edit modal) ──
+  let efSpousePeople = [];
+
+  async function efSpouseLoadPeople() {
+    if (!personData || !personData.relationship_id) { efSpousePeople = []; return; }
     try {
-      const res = await apiFetch(`/portal-auth/send-invite`, {
-        method: 'POST',
-        body: JSON.stringify({ personId })
-      });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
-      toast('Portal invite sent! Client will receive an email shortly.');
-      loadPerson();
-    } catch(e) { toast('Could not send invite: ' + e.message, 'error'); }
+      const res = await apiFetch(`/api/relationships/${personData.relationship_id}`);
+      if (!res.ok) { efSpousePeople = []; return; }
+      const data = await res.json();
+      // Exclude self
+      efSpousePeople = (data.people || []).filter(p => p.id !== parseInt(personId));
+    } catch(e) { efSpousePeople = []; }
   }
 
-  async function disablePortal() {
-    if (!confirm('Disable portal access for this person? They will not be able to log in until re-invited.')) return;
-    try {
-      const res = await apiFetch(`/api/people/${personId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ portal_enabled: false })
-      });
-      if (!res.ok) throw new Error('Failed');
-      toast('Portal access disabled.');
-      loadPerson();
-    } catch(e) { toast('Could not disable portal: ' + e.message, 'error'); }
+  function efSpouseFilter(q) {
+    const filtered = q
+      ? efSpousePeople.filter(p => (`${p.first_name} ${p.last_name}`).toLowerCase().includes(q.toLowerCase()))
+      : efSpousePeople;
+    efSpouseRender(filtered);
+    efSpouseOpen();
+    // If the search box is cleared, also clear the hidden id
+    if (!q.trim()) document.getElementById('ef-spouse-id').value = '';
   }
 
-  // ── Edit Modal ──
-  function openEditModal() {
+  function efSpouseRender(list) {
+    const el = document.getElementById('ef-spouse-options');
+    if (!list.length) {
+      el.innerHTML = `<div style="padding:0.6rem 0.9rem;color:var(--muted);font-size:0.84rem;font-style:italic;">No other people in this relationship</div>`;
+    } else {
+      el.innerHTML = list.map(p =>
+        `<div style="padding:0.55rem 0.9rem;cursor:pointer;font-size:0.88rem;border-bottom:1px solid var(--border);"
+          onmousedown="efSpouseSelect(${p.id},'${esc((p.first_name||'')+' '+(p.last_name||''))}')"
+          onmouseover="this.style.background='rgba(201,168,76,0.1)'" onmouseout="this.style.background=''"
+        >${esc((p.first_name||'')+' '+(p.last_name||''))}</div>`
+      ).join('');
+    }
+  }
+
+  function efSpouseOpen() {
+    const el = document.getElementById('ef-spouse-options');
+    efSpouseRender(efSpousePeople);
+    el.style.display = 'block';
+  }
+
+  function efSpouseClose() {
+    document.getElementById('ef-spouse-options').style.display = 'none';
+  }
+
+  function efSpouseSelect(id, name) {
+    document.getElementById('ef-spouse-id').value = id;
+    document.getElementById('ef-spouse-search').value = name;
+    efSpouseClose();
+  }
+
+  function efSpouseClear() {
+    document.getElementById('ef-spouse-id').value = '';
+    document.getElementById('ef-spouse-search').value = '';
+  }
+
+  async function openEditModal() {
     if (!personData) return;
     document.getElementById('ef-fname').value = personData.first_name || '';
     document.getElementById('ef-lname').value = personData.last_name || '';
     document.getElementById('ef-email').value = personData.email || '';
     document.getElementById('ef-phone').value = personData.phone || '';
+    document.getElementById('ef-dob').value = personData.date_of_birth || '';
     document.getElementById('ef-filing').value = personData.filing_status || '';
-    document.getElementById('ef-stanford').value = personData.stanford_tax_url || '';
-    document.getElementById('edit-error').style.display = 'none';
-    document.getElementById('edit-modal').classList.add('open');
+    // Spouse
+    document.getElementById('ef-spouse-id').value = personData.spouse_id || '';
+    if (personData.spouse) {
+      document.getElementById('ef-spouse-search').value = `${personData.spouse.first_name||''} ${personData.spouse.last_name||''}`.trim();
+    } else {
+      document.getElementById('ef-spouse-search').value = '';
+    }
+    await efSpouseLoadPeople();
+    document.getElementById('edit-modal').classList.remove('hidden');
   }
-
-  function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
+  function closeModal() { document.getElementById('edit-modal').classList.add('hidden'); }
 
   async function submitEdit() {
+    const btn = document.getElementById('ef-submit');
+    const errEl = document.getElementById('edit-error');
+    errEl.style.display = 'none';
+    btn.disabled = true; btn.textContent = 'Saving…';
+    const spouseIdRaw = document.getElementById('ef-spouse-id').value;
     const body = {
       first_name: document.getElementById('ef-fname').value.trim(),
       last_name: document.getElementById('ef-lname').value.trim(),
-      email: document.getElementById('ef-email').value.trim() || null,
-      phone: document.getElementById('ef-phone').value.trim() || null,
-      filing_status: document.getElementById('ef-filing').value || null,
-      stanford_tax_url: document.getElementById('ef-stanford').value.trim() || null,
+      email: document.getElementById('ef-email').value.trim(),
+      phone: document.getElementById('ef-phone').value.trim(),
+      date_of_birth: document.getElementById('ef-dob').value || null,
+      filing_status: document.getElementById('ef-filing').value,
+      spouse_id: spouseIdRaw ? parseInt(spouseIdRaw) : null,
     };
-    if (!body.first_name || !body.last_name) {
-      const e = document.getElementById('edit-error');
-      e.textContent = 'First and last name are required.';
-      e.style.display = '';
-      return;
-    }
-    const btn = document.getElementById('ef-submit');
-    btn.disabled = true;
     try {
       const res = await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify(body) });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
-      const updated = await res.json();
-      personData = { ...personData, ...updated };
-      closeModal();
-      toast('Person updated');
-      renderHeader(personData);
-      renderOverview(personData);
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error||'Failed'); }
+      btn.textContent = '✓ Saved';
+      setTimeout(() => { closeModal(); window.location.reload(); }, 600);
     } catch(e) {
-      const err = document.getElementById('edit-error');
-      err.textContent = e.message;
-      err.style.display = '';
+      errEl.textContent = e.message; errEl.style.display = '';
+      btn.disabled = false; btn.textContent = 'Save Changes';
     }
-    btn.disabled = false;
   }
 
-  // Init
-  loadPerson();
+  async function sendPortalInvite() {
+    try {
+      const res = await apiFetch('/portal-auth/send-invite', { method: 'POST', body: JSON.stringify({ person_id: parseInt(personId) }) });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      toast('Invite sent');
+      await loadPerson();
+    } catch(e) { toast(e.message, 'error'); }
+  }
 
-  // ── Communication Tab ──────────────────────────────────────────────────────
+  async function resetPortalPassword() {
+    try {
+      const res = await apiFetch(`/api/people/${personId}/portal-reset`, { method: 'POST', body: '{}' });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      toast('Password reset email sent');
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function disablePortal() {
+    if (!confirm('Disable portal access for this person?')) return;
+    try {
+      const res = await apiFetch(`/api/people/${personId}/portal-disable`, { method: 'POST', body: '{}' });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      toast('Portal disabled');
+      await loadPerson();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // ── Tax delivery JS ──
+  function statusPill(status) {
+    return `<span class="status-pill status-${status}" style="display:inline-block;padding:0.15rem 0.5rem;border-radius:20px;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;background:rgba(201,168,76,0.12);color:var(--gold);">${(status||'draft').replace(/_/g,' ')}</span>`;
+  }
+
+  function renderTaxDeliveries(deliveries) {
+    const el = document.getElementById('tax-content');
+    if (!deliveries.length) {
+      el.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted);">
+        <div style="font-size:2.5rem;margin-bottom:1rem;">📄</div>
+        <div style="font-weight:700;color:var(--text);margin-bottom:0.5rem;">No tax deliveries yet</div>
+        <div style="font-size:0.84rem;margin-bottom:1.5rem;">Create a delivery to send the tax return for review and e-signature</div>
+        <button class="btn btn-gold" onclick="openPersonDeliveryModal()">+ New Delivery</button>
+      </div>`;
+      return;
+    }
+    el.innerHTML = deliveries.map(d => {
+      const signers = d.signers || [];
+      const signerChips = signers.map(s => {
+        const name = esc(s.person_name || ('Person #' + s.person_id));
+        if (s.signed_at) return '<span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.72rem;background:rgba(62,207,142,0.1);color:var(--green);border:1px solid rgba(62,207,142,0.25);">✓ ' + name + '</span>';
+        if (s.needs_changes_at) return '<span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.72rem;background:rgba(245,101,101,0.1);color:var(--red);border:1px solid rgba(245,101,101,0.3);">↩ ' + name + ' — Changes Requested</span>';
+        return '<span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.72rem;background:rgba(237,137,54,0.1);color:var(--orange);border:1px solid rgba(237,137,54,0.25);">⏳ ' + name + '</span>';
+      }).join(' ');
+      // Show change request notes — check signer record first, fall back to delivery-level note
+      const changeNoteText = (signers.find(s => s.needs_changes_note) || {}).needs_changes_note || d.needs_changes_note || '';
+      const changeNoteAuthor = (signers.find(s => s.needs_changes_at) || {}).person_name || 'Client';
+      const changeNotes = changeNoteText
+        ? '<div style="margin-top:0.5rem;padding:0.6rem 0.85rem;background:rgba(245,101,101,0.07);border:1px solid rgba(245,101,101,0.2);border-radius:6px;font-size:0.82rem;">' +
+            '<span style="font-weight:700;color:var(--red);">↩ ' + esc(changeNoteAuthor) + ':</span> ' +
+            '<span style="color:var(--text);">' + esc(changeNoteText) + '</span>' +
+          '</div>'
+        : '';
+      // Doc links for signed/sent deliveries
+      const signedDocs = signers.filter(s => s.signed_doc_id).map(s =>
+        `<button class="btn btn-outline btn-sm" onclick="downloadDeliveryDoc(${s.signed_doc_id})" title="Signed by ${esc(s.person_name)}">⬇ Signed (${esc((s.person_name||'').split(' ')[0])})</button>`
+      ).join('');
+      const reviewDocLink = d.review_doc_id && d.status !== 'draft'
+        ? `<button class="btn btn-outline btn-sm" onclick="downloadDeliveryDoc(${d.review_doc_id})">📄 Review Copy</button>`
+        : '';
+
+      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:0.75rem;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:${(signedDocs||reviewDocLink)?'0.75rem':'0'}">
+          <div>
+            <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.25rem;">${esc(d.title || d.tax_year + ' Tax Return')} ${statusPill(d.status)}</div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">Tax Year: ${esc(d.tax_year)}${d.company_name ? ' · ' + esc(d.company_name) : ''} · Created ${new Date(d.created_at).toLocaleDateString()}</div>
+            ${signerChips ? `<div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:${changeNotes?'0.4rem':'0'}">${signerChips}</div>` : ''}
+            ${changeNotes}
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-shrink:0;flex-wrap:wrap;">
+            ${d.status === 'draft' ? `<button class="btn btn-gold btn-sm" onclick="personSendDelivery(${d.id})">Send →</button>` : ''}
+            ${d.status === 'draft' ? `<button class="btn btn-outline btn-sm" onclick="openEditDeliveryModal(${d.id},${d.review_doc_id||'null'},${d.sig_doc_id||d.signature_doc_id||'null'},${JSON.stringify(d.tax_year||'')})">✏️ Edit Docs</button>` : ''}
+            ${d.status === 'draft' ? `<button class="btn btn-outline btn-sm" onclick="personDeleteDelivery(${d.id})">Delete</button>` : ''}
+            ${['sent','approved','needs_changes'].includes(d.status) ? `<button class="btn btn-outline btn-sm" onclick="personCancelDelivery(${d.id})" style="color:var(--orange);border-color:var(--orange);">↩ Cancel & Revise</button>` : ''}
+            ${d.review_doc_id ? `<button class="btn btn-outline btn-sm" onclick="openTaxSummary(${d.id})">📊 Tax Summary</button>` : ''}
+          </div>
+        </div>
+        ${(signedDocs || reviewDocLink) ? `<div style="display:flex;gap:0.5rem;flex-wrap:wrap;padding-top:0.75rem;border-top:1px solid var(--border);">${reviewDocLink}${signedDocs}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  async function loadTax(force) {
+    const el = document.getElementById('tax-content');
+    if (el.dataset.loaded && !force) return;
+    el.dataset.loaded = '1';
+    el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>';
+    try {
+      const res = await apiFetch(`/api/tax-deliveries?person_id=${personId}`);
+      const deliveries = await res.json();
+      renderTaxDeliveries(deliveries);
+    } catch(e) { el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Failed to load.</div>'; }
+  }
+
+  let _pdAllDocs = [];
+  async function openPersonDeliveryModal() {
+    const modal = document.getElementById('person-delivery-modal');
+    // Populate year dropdown
+    const yearSel = document.getElementById('pd-year');
+    const cy = new Date().getFullYear();
+    yearSel.innerHTML = '';
+    for (let y = cy - 1; y >= cy - 6; y--) {
+      const o = document.createElement('option');
+      o.value = String(y); o.textContent = String(y);
+      yearSel.appendChild(o);
+    }
+    yearSel.value = String(cy - 1);
+    const titleEl = document.getElementById('pd-title'); if (titleEl) titleEl.value = String(cy - 1) + ' Tax Return Delivery';
+    const introEl = document.getElementById('pd-intro');
+    if (introEl && !introEl.value) {
+      introEl.value = 'Dear Client,\n\nYour ' + String(cy - 1) + ' tax return has been prepared and is ready for your review. Please take a moment to carefully review all information for accuracy.\n\nOnce you have reviewed the return, you will have the opportunity to either approve it and provide your electronic signature, or request changes if anything needs to be corrected.\n\nIf you have any questions prior to signing, please don\'t hesitate to reach out to our office directly.\n\nThank you for trusting Sentinel Wealth & Tax with your tax preparation.';
+    }
+
+    // Load personal docs
+    _pdAllDocs = [];
+    try {
+      const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${personId}`);
+      _pdAllDocs = await res.json();
+      pdFilterDocsByYear();
+    } catch(e) { _pdAllDocs = []; }
+
+    // Load relationship members for signer selection
+    const signersList = document.getElementById('pd-signers-list');
+    signersList.innerHTML = '';
+    try {
+      if (personData && personData.relationship_id) {
+        const relRes = await apiFetch(`/api/relationships/${personData.relationship_id}/people`);
+        const relPeople = await relRes.json();
+        relPeople.forEach(function(p) {
+          const div = document.createElement('div');
+          div.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:6px;';
+          const checked = p.id == personId; // current person always checked
+          div.innerHTML = '<input type="checkbox" class="pd-signer-cb" value="' + p.id + '"' + (checked ? ' checked' : '') + (checked ? ' disabled' : '') + ' style="cursor:pointer;width:16px;height:16px;accent-color:var(--gold);"> ' +
+            '<label style="cursor:pointer;font-size:0.88rem;">' + esc((p.first_name || '') + ' ' + (p.last_name || '')) + (p.portal_enabled ? ' <span style="font-size:0.72rem;color:var(--green);">✓ Portal</span>' : ' <span style="font-size:0.72rem;color:var(--orange);">No portal</span>') + '</label>';
+          signersList.appendChild(div);
+        });
+      } else {
+        signersList.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);">' + esc((personData && (personData.first_name + ' ' + personData.last_name)) || 'This person') + ' <span style="color:var(--green);">✓</span></div>';
+      }
+    } catch(e) {
+      signersList.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);">Could not load relationship members.</div>';
+    }
+
+    document.getElementById('pd-error').style.display = 'none';
+    modal.classList.remove('hidden');
+  }
+
+  function pdFilterDocsByYear() {
+    const year = document.getElementById('pd-year').value;
+    const filtered = _pdAllDocs.filter(d =>
+      (d.year || '') === year &&
+      (d.folder_section === 'firm_uploaded' || !d.folder_section) &&
+      (d.folder_category === 'tax') &&
+      d.mime_type && d.mime_type.includes('pdf')
+    );
+    const opts = filtered.length
+      ? '<option value="">— None —</option>' + filtered.map(d => `<option value="${d.id}">${esc(d.display_name || 'Untitled')}</option>`).join('')
+      : '<option value="">— No Tax PDFs for ' + year + ' —</option>';
+    document.getElementById('pd-review-doc').innerHTML = opts;
+    document.getElementById('pd-sig-doc').innerHTML = opts;
+  }
+
+  document.addEventListener('change', function(e) {
+    if (e.target.id === 'pd-year') pdFilterDocsByYear();
+  });
+
+  function closePersonDeliveryModal() { document.getElementById('person-delivery-modal').classList.add('hidden'); }
+
+  async function submitPersonDelivery() {
+    const year = document.getElementById('pd-year').value.trim();
+    if (!year) { document.getElementById('pd-error').textContent = 'Tax year is required'; document.getElementById('pd-error').style.display = ''; return; }
+    const body = {
+      company_id: null,
+      person_id: parseInt(personId),
+      tax_year: year,
+      title: document.getElementById('pd-title').value.trim(),
+      intro_note: document.getElementById('pd-intro').value.trim(),
+      review_doc_id: document.getElementById('pd-review-doc').value ? parseInt(document.getElementById('pd-review-doc').value) : null,
+      signature_doc_id: document.getElementById('pd-sig-doc').value ? parseInt(document.getElementById('pd-sig-doc').value) : null,
+      signer_person_ids: (function() {
+        var checked = Array.from(document.querySelectorAll('.pd-signer-cb:checked')).map(function(cb){ return parseInt(cb.value); });
+        if (checked.length === 0) checked = [parseInt(personId)]; // always include current person
+        return checked;
+      })(),
+    };
+    try {
+      const res = await apiFetch('/api/tax-deliveries', { method: 'POST', body: JSON.stringify(body) });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      closePersonDeliveryModal();
+      var _tabEl = null; document.querySelectorAll('.tab-item').forEach(function(t){ if(t.getAttribute('onclick')&&t.getAttribute('onclick').indexOf("'tax'")!==-1) _tabEl=t; }); switchTab('tax', _tabEl);
+    } catch(e) { document.getElementById('pd-error').textContent = e.message; document.getElementById('pd-error').style.display = ''; }
+  }
+
+  async function personSendDelivery(id) {
+    try {
+      const summaryRes = await apiFetch('/api/tax-deliveries/' + id + '/summary');
+      const summary = await summaryRes.json();
+      openTaxSummary(id, { sendAfter: true });
+      return;
+    } catch(e) {
+      // Fall through to direct send if summary check fails
+    }
+    if (!await window.dlConfirm('Send this tax return to the client for review and e-signature?', {title:'Send Tax Return', confirmLabel:'Send', icon:'📤'})) return;
+    try {
+      const res = await apiFetch('/api/tax-deliveries/' + id + '/send', { method: 'POST', body: '{}' });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      sessionStorage.setItem('openTab','tax');
+      window.location.reload();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // ── Tax Summary Modal ──
+  let _tsmPendingDeliveryId = null;
+  let _tsmPollTimer = null;
+
+  function openTaxSummary(deliveryId, opts) {
+    const sendAfter = opts && opts.sendAfter;
+    _tsmPendingDeliveryId = deliveryId;
+    const modal = document.getElementById('tax-summary-modal');
+    const body = document.getElementById('tsm-body');
+    const footer = document.getElementById('tsm-footer');
+    const sendBtn = document.getElementById('tsm-send-btn');
+    modal.classList.remove('hidden');
+    body.innerHTML = '<div class="tsm-processing"><div class="tsm-spinner"></div><div>Loading summary…</div></div>';
+    footer.style.display = 'none';
+    if (sendAfter) sendBtn.style.display = ''; else sendBtn.style.display = 'none';
+
+    apiFetch('/api/tax-deliveries/' + deliveryId + '/summary').then(function(r) { return r.json(); }).then(function(s) {
+      if (s.status === 'completed' && s.data) {
+        renderTaxSummary(s.data);
+        footer.style.display = '';
+      } else if (s.status === 'processing') {
+        showSummaryProcessing();
+        pollSummary(deliveryId);
+      } else {
+        apiFetch('/api/tax-deliveries/' + deliveryId + '/generate-summary', { method: 'POST' })
+          .then(function() { showSummaryProcessing(); pollSummary(deliveryId); })
+          .catch(function(e) { showSummaryError(e.message); });
+      }
+    }).catch(function(e) { showSummaryError(e.message); });
+  }
+
+  function showSummaryProcessing() {
+    document.getElementById('tsm-body').innerHTML = '<div class="tsm-processing"><div class="tsm-spinner"></div><div style="font-weight:600;">Analyzing return with Claude…</div><div style="font-size:0.75rem;opacity:0.6;">This usually takes 30–60 seconds</div></div>';
+    document.getElementById('tsm-footer').style.display = 'none';
+  }
+
+  function showSummaryError(msg, deliveryId) {
+    var retryBtn = deliveryId ? '<button class="btn btn-gold btn-sm" style="margin-top:1rem;" onclick="retrySummary(' + deliveryId + ')">↺ Retry</button>' : '';
+    document.getElementById('tsm-body').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--red,#f56565);"><div style="font-size:1.5rem;margin-bottom:0.5rem;">⚠️</div><div style="font-weight:700;">Failed to generate summary</div><div style="font-size:0.8rem;margin-top:0.4rem;color:var(--muted);">' + esc(msg || 'Unknown error') + '</div>' + retryBtn + '</div>';
+    document.getElementById('tsm-footer').style.display = '';
+  }
+
+  function retrySummary(deliveryId) {
+    apiFetch('/api/tax-deliveries/' + deliveryId + '/generate-summary', { method: 'POST' })
+      .then(function() { showSummaryProcessing(); pollSummary(deliveryId); })
+      .catch(function(e) { showSummaryError(e.message, deliveryId); });
+  }
+
+  function pollSummary(deliveryId) {
+    if (_tsmPollTimer) clearInterval(_tsmPollTimer);
+    _tsmPollTimer = setInterval(function() {
+      apiFetch('/api/tax-deliveries/' + deliveryId + '/summary').then(function(r) { return r.json(); }).then(function(s) {
+        if (s.status === 'completed' && s.data) {
+          clearInterval(_tsmPollTimer);
+          renderTaxSummary(s.data);
+          document.getElementById('tsm-footer').style.display = '';
+        } else if (s.status === 'error') {
+          clearInterval(_tsmPollTimer);
+          showSummaryError(s.error || 'Claude analysis failed — check Railway logs for details.', deliveryId);
+          document.getElementById('tsm-footer').style.display = '';
+        }
+      }).catch(function() {});
+    }, 3000);
+  }
+
+  function closeTaxSummary() {
+    if (_tsmPollTimer) clearInterval(_tsmPollTimer);
+    document.getElementById('tax-summary-modal').classList.add('hidden');
+    _tsmPendingDeliveryId = null;
+  }
+
+  function confirmAndSendDelivery() {
+    if (!_tsmPendingDeliveryId) return;
+    var id = _tsmPendingDeliveryId;
+    closeTaxSummary();
+    apiFetch('/api/tax-deliveries/' + id + '/send', { method: 'POST', body: '{}' }).then(function(res) {
+      if (!res.ok) return res.json().then(function(d) { throw new Error(d.error || 'Failed'); });
+      sessionStorage.setItem('openTab', 'tax');
+      window.location.reload();
+    }).catch(function(e) { toast(e.message, 'error'); });
+  }
+
+  function fmt$(n) {
+    if (n === null || n === undefined) return '—';
+    var abs = Math.abs(n);
+    var formatted = '$' + Math.round(abs).toLocaleString();
+    return n < 0 ? '(' + formatted + ')' : formatted;
+  }
+
+  function renderTaxSummary(d) {
+    var title = document.getElementById('tsm-title');
+    var subtitle = document.getElementById('tsm-subtitle');
+    if (title) title.textContent = (d.client && d.client.tax_year ? d.client.tax_year + ' ' : '') + 'Tax Return Summary';
+    if (subtitle) subtitle.textContent = (d.client ? (d.client.names || '') + ' · ' + (d.client.filing_status || '') : '');
+
+    var refundColor = d.is_refund ? 'var(--green,#3ecf8e)' : 'var(--red,#f56565)';
+    var refundLabel = d.is_refund ? 'Refund' : 'Balance Due';
+
+    var html = '<div class="tsm-stat-row">' +
+      '<div class="tsm-stat"><div class="tsm-stat-val">' + fmt$(d.total_income) + '</div><div class="tsm-stat-label">Total Income</div></div>' +
+      '<div class="tsm-stat"><div class="tsm-stat-val">' + fmt$(d.taxable_income) + '</div><div class="tsm-stat-label">Taxable Income</div></div>' +
+      '<div class="tsm-stat"><div class="tsm-stat-val">' + fmt$(d.total_tax) + '</div><div class="tsm-stat-label">Total Federal Tax</div></div>' +
+      '<div class="tsm-stat"><div class="tsm-stat-val" style="color:' + refundColor + '">' + fmt$(d.refund_or_owed_amount) + '</div><div class="tsm-stat-label">' + refundLabel + '</div></div>' +
+      '</div>';
+
+    // Rate pills
+    html += '<div><div class="tsm-section-title">Tax Rates</div><div class="tsm-rate-row">';
+    html += '<div class="tsm-rate-pill">Effective Rate: <strong>' + (d.effective_rate || 0) + '%</strong></div>';
+    html += '<div class="tsm-rate-pill">Marginal Bracket: <strong>' + (d.marginal_bracket || 0) + '%</strong></div>';
+    if (d.key_stats && d.key_stats.capital_loss_carryover) html += '<div class="tsm-rate-pill">Cap Loss C/O: <strong>' + fmt$(d.key_stats.capital_loss_carryover) + '</strong></div>';
+    if (d.social_security && d.social_security.percent_taxable) html += '<div class="tsm-rate-pill">SS Taxable: <strong>' + d.social_security.percent_taxable + '%</strong></div>';
+    html += '</div></div>';
+
+    // Income sources
+    if (d.income_sources && d.income_sources.length) {
+      html += '<div><div class="tsm-section-title">📊 Income Breakdown</div><table class="tsm-table"><thead><tr><th>Source</th><th style="text-align:right">Amount</th></tr></thead><tbody>';
+      d.income_sources.forEach(function(s) {
+        html += '<tr><td>' + esc(s.source) + (s.note ? ' <span style="color:var(--muted);font-size:0.75em">(' + esc(s.note) + ')</span>' : '') + '</td><td>' + fmt$(s.amount) + '</td></tr>';
+      });
+      html += '<tr><td><strong>Total Income (AGI)</strong></td><td><strong>' + fmt$(d.adjusted_gross_income || d.total_income) + '</strong></td></tr></tbody></table></div>';
+    }
+
+    // Tax Computation — two-column layout
+    html += '<div><div class="tsm-section-title">🧾 Tax Computation</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">';
+    html += '<table class="tsm-table"><tbody>';
+    html += '<tr><td>Adjusted Gross Income</td><td>' + fmt$(d.adjusted_gross_income || d.total_income) + '</td></tr>';
+    (d.deductions || []).forEach(function(ded) {
+      html += '<tr><td style="color:var(--green,#3ecf8e)">' + esc(ded.name) + '</td><td style="color:var(--green,#3ecf8e)">(' + fmt$(ded.amount) + ')</td></tr>';
+    });
+    html += '<tr style="border-top:1px solid var(--border)"><td><strong>Taxable Income</strong></td><td><strong>' + fmt$(d.taxable_income) + '</strong></td></tr>';
+    html += '</tbody></table>';
+    html += '<table class="tsm-table"><tbody>';
+    html += '<tr><td>Federal Income Tax</td><td>' + fmt$(d.tax_before_credits) + '</td></tr>';
+    if (d.credits > 0) html += '<tr><td style="color:var(--green,#3ecf8e)">Less: Credits</td><td style="color:var(--green,#3ecf8e)">(' + fmt$(d.credits) + ')</td></tr>';
+    html += '<tr><td><strong>Total Tax</strong></td><td><strong>' + fmt$(d.total_tax) + '</strong></td></tr>';
+    html += '<tr><td style="color:var(--muted)">Less: Payments &amp; Withholding</td><td style="color:var(--muted)">(' + fmt$(d.total_payments) + ')</td></tr>';
+    var refColor = d.is_refund ? 'var(--green,#3ecf8e)' : 'var(--red,#f56565)';
+    html += '<tr style="border-top:1px solid var(--border)"><td style="color:' + refColor + '"><strong>' + (d.is_refund ? 'Refund' : 'Balance Due') + '</strong></td><td style="color:' + refColor + '"><strong>' + fmt$(d.refund_or_owed_amount) + '</strong></td></tr>';
+    html += '</tbody></table>';
+    html += '</div></div>';
+
+    // Savings highlights
+    if (d.savings_highlights && d.savings_highlights.length) {
+      html += '<div><div class="tsm-section-title">💰 How We Saved You Money</div><div class="tsm-savings-grid">';
+      d.savings_highlights.forEach(function(s) {
+        html += '<div class="tsm-savings-card"><div class="tsm-savings-amount">' + esc(s.amount) + '</div><div class="tsm-savings-title">' + esc(s.title) + '</div><div class="tsm-savings-desc">' + esc(s.description) + '</div></div>';
+      });
+      html += '</div></div>';
+    }
+
+    // Strategies
+    if (d.strategies && d.strategies.length) {
+      html += '<div><div class="tsm-section-title">🔭 Forward-Looking Strategies</div><div class="tsm-strategies-grid">';
+      d.strategies.forEach(function(s) {
+        html += '<div class="tsm-strategy-card"><div class="tsm-strategy-title">' + esc(s.title) + (s.category ? '<span class="tsm-strategy-badge ' + s.category + '">' + s.category + '</span>' : '') + '</div>';
+        if (s.potential_savings) html += '<div class="tsm-strategy-savings">Potential savings: ' + esc(s.potential_savings) + '</div>';
+        html += '<div class="tsm-strategy-desc">' + esc(s.description) + '</div></div>';
+      });
+      html += '</div></div>';
+    }
+
+    // Estimated payments
+    if (d.estimated_payments_required && (d.federal_estimated_payments && d.federal_estimated_payments.length || d.state_estimated_payments && d.state_estimated_payments.length)) {
+      html += '<div><div class="tsm-section-title">📅 Estimated Tax Payments</div>';
+      if (d.federal_estimated_payments && d.federal_estimated_payments.length) {
+        html += '<div style="font-size:0.78rem;font-weight:700;color:var(--text);margin-bottom:0.4rem;">Federal</div><table class="tsm-est-table"><thead><tr><th>Quarter</th><th>Due Date</th><th>Amount</th><th>Method</th></tr></thead><tbody>';
+        d.federal_estimated_payments.forEach(function(p) {
+          html += '<tr><td>' + esc(p.quarter) + '</td><td>' + esc(p.due_date) + '</td><td style="font-weight:600;color:var(--gold)">' + esc(p.amount) + '</td><td style="color:var(--muted)">' + esc(p.method || '') + '</td></tr>';
+        });
+        html += '</tbody></table>';
+      }
+      if (d.state_estimated_payments && d.state_estimated_payments.length) {
+        html += '<div style="font-size:0.78rem;font-weight:700;color:var(--text);margin:0.75rem 0 0.4rem;">State</div><table class="tsm-est-table"><thead><tr><th>State</th><th>Quarter</th><th>Due Date</th><th>Amount</th></tr></thead><tbody>';
+        d.state_estimated_payments.forEach(function(p) {
+          html += '<tr><td>' + esc(p.state) + '</td><td>' + esc(p.quarter) + '</td><td>' + esc(p.due_date) + '</td><td style="font-weight:600;color:var(--gold)">' + esc(p.amount) + '</td></tr>';
+        });
+        html += '</tbody></table>';
+      }
+      html += '</div>';
+    }
+
+    // YOY comparison
+    if (d.prior_year_comparison) {
+      var yoy = d.prior_year_comparison;
+      var nonZero = (yoy.items || []).filter(function(item) { return item.prior_year !== 0 || item.current_year !== 0; });
+      var totalRows = ['Total Income','Total Adjusted Gross Income','Taxable Income','Total Tax','Effective tax rate (%)'];
+      html += '<div><div class="tsm-section-title">📊 Year-Over-Year (' + esc(yoy.prior_tax_year) + ' → ' + esc(yoy.current_tax_year) + ')</div>';
+      if (yoy.highlights && yoy.highlights.length) {
+        html += '<div style="margin-bottom:0.75rem;">';
+        yoy.highlights.forEach(function(h) {
+          var arrow = h.direction === 'increase' ? '▲' : h.direction === 'decrease' ? '▼' : h.direction === 'new' ? '✦' : '✕';
+          var color = h.direction === 'increase' ? 'var(--red,#f56565)' : h.direction === 'decrease' ? 'var(--green,#3ecf8e)' : 'var(--gold,#c9a84c)';
+          html += '<span class="tsm-highlight-pill"><span style="color:' + color + ';font-weight:700">' + arrow + '</span> <span style="font-weight:600">' + esc(h.title) + '</span></span>';
+        });
+        html += '</div>';
+      }
+      html += '<table class="tsm-yoy-table"><thead><tr><th>Line Item</th><th>' + esc(yoy.prior_tax_year) + '</th><th>' + esc(yoy.current_tax_year) + '</th><th>Change</th></tr></thead><tbody>';
+      nonZero.forEach(function(item) {
+        var isTotal = totalRows.indexOf(item.label) >= 0;
+        var isRate = item.label.indexOf('rate') >= 0 || item.label.indexOf('Rate') >= 0;
+        var fmtV = function(v) { if (v === null || v === undefined) return '—'; return isRate ? v + '%' : fmt$(v); };
+        var diffColor = item.difference > 0 ? 'var(--red,#f56565)' : item.difference < 0 ? 'var(--green,#3ecf8e)' : 'var(--muted)';
+        var diffStr = item.difference !== null ? (item.difference > 0 ? '+' : '') + (isRate ? parseFloat(item.difference).toFixed(2) + '%' : fmt$(item.difference)) : '—';
+        html += '<tr' + (isTotal ? ' class="total-row"' : '') + '><td>' + esc(item.label) + '</td><td>' + fmtV(item.prior_year) + '</td><td>' + fmtV(item.current_year) + '</td><td style="color:' + diffColor + '">' + diffStr + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+
+    // Carryovers
+    if (d.carryovers && d.carryovers.length) {
+      html += '<div><div class="tsm-section-title">Carryovers</div><div style="display:flex;flex-wrap:wrap;gap:0.5rem;">';
+      d.carryovers.forEach(function(c) { html += '<div class="tsm-rate-pill">' + esc(c.item) + ': <strong>' + esc(c.amount) + '</strong></div>'; });
+      html += '</div></div>';
+    }
+
+    document.getElementById('tsm-body').innerHTML = html;
+    document.getElementById('tsm-footer').style.display = '';
+  }
+
+  async function personDeleteDelivery(id) {
+    if (!await window.dlConfirm('Delete this draft delivery? This cannot be undone.', {title:'Delete Draft', confirmLabel:'Delete', danger:true, icon:'🗑️'})) return;
+    try {
+      await apiFetch('/api/tax-deliveries/' + id, { method: 'DELETE' });
+      var _tabEl = null; document.querySelectorAll('.tab-item').forEach(function(t){ if(t.getAttribute('onclick')&&t.getAttribute('onclick').indexOf("'tax'")!==-1) _tabEl=t; }); switchTab('tax', _tabEl);
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function personCancelDelivery(id) {
+    if (!await window.dlConfirm('Cancel this delivery? The client will no longer see it in their portal. It will return to draft status.', {title:'Cancel Delivery', confirmLabel:'Cancel Delivery', danger:true, icon:'↩'})) return;
+    try {
+      const res = await apiFetch('/api/tax-deliveries/' + id + '/cancel', { method: 'POST' });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      var _tabEl = null; document.querySelectorAll('.tab-item').forEach(function(t){ if(t.getAttribute('onclick')&&t.getAttribute('onclick').indexOf("'tax'")!==-1) _tabEl=t; }); switchTab('tax', _tabEl);
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function openEditDeliveryModal(deliveryId, currentReviewDocId, currentSigDocId, taxYear) {
+    document.getElementById('ed-id').value = deliveryId;
+    document.getElementById('ed-error').style.display = 'none';
+    try {
+      const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${personId}`);
+      const docs = await res.json();
+      // Filter to tax PDFs matching the delivery's tax year (strict) — fall back to all tax PDFs if none match
+      const taxPdfs = docs.filter(d =>
+        (d.folder_category === 'tax' || d.doc_type === 'tax') &&
+        ((d.mime_type||'').includes('pdf') || (d.display_name||'').toLowerCase().endsWith('.pdf'))
+      );
+      const yearFiltered = taxYear ? taxPdfs.filter(d => String(d.year||'') === String(taxYear)) : taxPdfs;
+      const pdfDocs = yearFiltered.length ? yearFiltered : taxPdfs; // fall back if no year match
+      const makeOpts = (selectedId) => '<option value="">— None —</option>' + pdfDocs.map(d =>
+        `<option value="${d.id}" ${d.id == selectedId ? 'selected' : ''}>${esc(d.display_name||'Document')}</option>`
+      ).join('');
+      document.getElementById('ed-review-doc').innerHTML = makeOpts(currentReviewDocId);
+      document.getElementById('ed-sig-doc').innerHTML = makeOpts(currentSigDocId);
+    } catch(e) {}
+    document.getElementById('edit-delivery-modal').classList.remove('hidden');
+  }
+
+  function closeEditDeliveryModal() {
+    document.getElementById('edit-delivery-modal').classList.add('hidden');
+  }
+
+  async function submitEditDelivery() {
+    const id = document.getElementById('ed-id').value;
+    const reviewDocId = document.getElementById('ed-review-doc').value;
+    const sigDocId = document.getElementById('ed-sig-doc').value;
+    const body = {};
+    if (reviewDocId) body.review_doc_id = parseInt(reviewDocId);
+    if (sigDocId) body.signature_doc_id = parseInt(sigDocId);
+    try {
+      const res = await apiFetch('/api/tax-deliveries/' + id, { method: 'PUT', body: JSON.stringify(body) });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      closeEditDeliveryModal();
+      var _tabEl = null; document.querySelectorAll('.tab-item').forEach(function(t){ if(t.getAttribute('onclick')&&t.getAttribute('onclick').indexOf("'tax'")!==-1) _tabEl=t; }); switchTab('tax', _tabEl);
+    } catch(e) {
+      document.getElementById('ed-error').textContent = e.message;
+      document.getElementById('ed-error').style.display = '';
+    }
+  }
+
+  async function downloadDeliveryDoc(docId) {
+    try {
+      const res = await apiFetch(`/api/documents/${docId}/download`);
+      if (!res.ok) { toast('Failed to get download link', 'error'); return; }
+      const { url } = await res.json();
+      window.open(url, '_blank');
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function personDownloadSigned(id) {
+    try {
+      const res = await apiFetch('/api/tax-deliveries/' + id + '/download-signature');
+      const d = await res.json();
+      if (d.url) window.open(d.url, '_blank');
+    } catch(e) { toast('Failed to download', 'error'); }
+  }
+
+  // ── Communication JS ──
   let commPersonId = null;
   let commActiveThreadId = null;
   let commAttachFiles = [];
+  let commNewAttachFiles = [];
 
   function initComm(pid) {
+    if (!pid) { console.error('[comm] initComm called with no personId'); return; }
+    if (commPersonId === pid) return; // already initialized for this person
     commPersonId = pid;
+    commActiveThreadId = null;
+    commShowEmpty();
     loadThreads();
+  }
+
+  function commShowEmpty() {
+    document.getElementById('comm-no-thread').style.display = 'flex';
+    document.getElementById('comm-compose-view').style.display = 'none';
+    document.getElementById('comm-reply-box').style.display = 'none';
+    document.getElementById('comm-detail-header').innerHTML = '';
+    document.getElementById('comm-detail-messages').innerHTML = '';
+  }
+  function commShowDetail() {
+    document.getElementById('comm-no-thread').style.display = 'none';
+    document.getElementById('comm-compose-view').style.display = 'none';
+    document.getElementById('comm-reply-box').style.display = '';
+    // Show SMS toggle if person has a phone number on file
+    apiFetch(`/api/people/${personId}`).then(r=>r.json()).then(p => {
+      const wrap = document.getElementById('comm-sms-toggle-wrap');
+      if (wrap) wrap.style.display = p.phone ? '' : 'none';
+    }).catch(()=>{});
+  }
+  function commShowCompose() {
+    document.getElementById('comm-no-thread').style.display = 'none';
+    document.getElementById('comm-compose-view').style.display = 'flex';
+    document.getElementById('comm-reply-box').style.display = 'none';
+  }
+  function commOpenNew() { commShowCompose(); document.getElementById('comm-new-body').value = ''; commNewAttachFiles = []; renderNewCommAttachChips(); }
+  function commCloseNew() { commShowEmpty(); }
+
+  // ── Template picker ──
+  let _commTemplates = null;
+  async function commOpenTemplatePicker() {
+    const overlay = document.getElementById('comm-tmpl-overlay');
+    overlay.style.display = 'flex';
+    document.getElementById('comm-tmpl-search').value = '';
+    document.getElementById('comm-tmpl-list').innerHTML = '<div style="padding:1rem;text-align:center;color:var(--muted);">Loading…</div>';
+    if (!_commTemplates) {
+      try {
+        const res = await apiFetch('/api/templates');
+        _commTemplates = await res.json();
+      } catch(e) { _commTemplates = []; }
+    }
+    commRenderTemplates(_commTemplates);
+  }
+  function commCloseTemplatePicker() {
+    document.getElementById('comm-tmpl-overlay').style.display = 'none';
+  }
+  function commFilterTemplates(q) {
+    if (!_commTemplates) return;
+    const filtered = q ? _commTemplates.filter(t => t.name.toLowerCase().includes(q.toLowerCase()) || t.body.toLowerCase().includes(q.toLowerCase())) : _commTemplates;
+    commRenderTemplates(filtered);
+  }
+  function commRenderTemplates(list) {
+    const el = document.getElementById('comm-tmpl-list');
+    if (!list.length) {
+      el.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--muted);font-style:italic;">No templates found</div>';
+      return;
+    }
+    el.innerHTML = list.map(t => `
+      <div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;"
+        onmouseover="this.style.background='rgba(201,168,76,0.07)'" onmouseout="this.style.background=''"
+        onclick="commLoadTemplate(${t.id})">
+        <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.25rem;">${esc(t.name)}</div>
+        <div style="font-size:0.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(t.body.slice(0,100))}${t.body.length>100?'…':''}</div>
+      </div>`).join('');
+  }
+  function resolveTemplateVars(body) {
+    const p = personData || {};
+    const firmName = (() => { try { return JSON.parse(atob(localStorage.getItem('dl_token').split('.')[1])).firmName || ''; } catch(e) { return ''; } })();
+    const companies = p.company_access || [];
+    let companyResolved;
+    if (companies.length === 1) {
+      companyResolved = companies[0].company_name || '{Company Name}';
+    } else if (companies.length > 1) {
+      // List all company names separated by " / " — staff deletes the ones they don't want
+      companyResolved = companies.map(c => c.company_name).filter(Boolean).join(' / ');
+    } else {
+      companyResolved = '{Company Name}';
+    }
+    return body
+      .replace(/\{First Name\}/g, p.first_name || '')
+      .replace(/\{Last Name\}/g, p.last_name || '')
+      .replace(/\{Full Name\}/g, [p.first_name, p.last_name].filter(Boolean).join(' ') || '')
+      .replace(/\{Company Name\}/g, companyResolved)
+      .replace(/\{Firm Name\}/g, firmName);
+  }
+
+  function commLoadTemplate(id) {
+    const t = _commTemplates && _commTemplates.find(x => x.id === id);
+    if (!t) return;
+    document.getElementById('comm-new-body').value = resolveTemplateVars(t.body);
+    commCloseTemplatePicker();
+    document.getElementById('comm-new-body').focus();
+  }
+
+  function commInitials(name) {
+    return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) || '?';
   }
 
   async function loadThreads() {
     const el = document.getElementById('comm-threads');
     if (!el) return;
+    if (!commPersonId) { el.innerHTML = '<div style="color:var(--muted);padding:1rem;font-size:0.84rem;">No person ID.</div>'; return; }
     el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
     try {
       const res = await apiFetch(`/api/messages/person/${commPersonId}`);
+      if (!res.ok) { const err = await res.json().catch(()=>({})); throw new Error(err.error || `HTTP ${res.status}`); }
       const threads = await res.json();
       if (!threads.length) {
-        el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0;">No messages yet.</div>';
+        el.innerHTML = '<div style="color:var(--muted);font-size:0.84rem;padding:1.5rem 1rem;text-align:center;">No messages yet.</div>';
         return;
       }
-      el.innerHTML = threads.map(t => `
-        <div class="comm-thread-card" onclick="loadThread(${t.id})" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:6px;margin-bottom:0.5rem;cursor:pointer;background:var(--charcoal);transition:background 0.15s;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div style="font-size:0.82rem;font-weight:600;color:var(--text);">${esc(t.subject || '(no subject)')}</div>
-            ${t.unreadCount > 0 ? `<span style="background:var(--gold);color:var(--navy);border-radius:10px;padding:0.1rem 0.4rem;font-size:0.7rem;font-weight:700;">${t.unreadCount}</span>` : ''}
+      el.innerHTML = threads.map(t => {
+        const statusLabel = t.status === 'resolved' ? 'Resolved' : 'Active';
+        const statusColor = t.status === 'resolved' ? '#4caf50' : '#c9a84c';
+        return `<div class="thread-card" id="comm-item-${t.id}" onclick="loadThread(${t.id})">
+          <div class="thread-card-name">${esc(t.subject || '(no subject)')}${t.unreadCount > 0 ? ` <span style="background:var(--gold);color:var(--navy);border-radius:10px;padding:0.05rem 0.35rem;font-size:0.65rem;font-weight:700;margin-left:0.3rem;">${t.unreadCount}</span>` : ''}</div>
+          <div class="thread-card-preview">${esc(t.lastPreview || '')}</div>
+          <div class="thread-card-meta">
+            <span style="background:${statusColor};color:#fff;font-size:0.65rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:3px;text-transform:uppercase;">${statusLabel}</span>
+            <span>${relTime(t.lastMessageAt)}</span>
+            ${t.unreadCount > 0 ? '<span class="unread-dot"></span>' : ''}
           </div>
-          <div style="font-size:0.75rem;color:var(--muted);margin-top:0.2rem;">${esc(t.lastPreview)}</div>
-          <div style="display:flex;gap:0.5rem;margin-top:0.3rem;">
-            <span style="font-size:0.7rem;padding:0.1rem 0.4rem;border-radius:4px;background:${statusColor(t.status)};color:#fff;">${t.status}</span>
-            <span style="font-size:0.7rem;color:var(--muted);">${relTime(t.lastMessageAt)}</span>
-          </div>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
     } catch(e) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">Failed to load messages.</div>';
+      console.error('[comm] loadThreads error:', e);
+      el.innerHTML = `<div style="color:#e55;font-size:0.84rem;padding:1rem;">Failed to load messages: ${e.message}</div>`;
     }
   }
 
-  async function loadThread(threadId) {
+  async function loadThread(threadId, silent = false) {
     commActiveThreadId = threadId;
-    document.getElementById('comm-compose').style.display = 'none';
-    document.getElementById('comm-thread-detail').style.display = 'flex';
-    document.getElementById('comm-thread-detail').style.flexDirection = 'column';
-    document.getElementById('comm-messages-list').innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    // Mark active
+    document.querySelectorAll('#comm-threads .thread-card').forEach(el => el.classList.remove('active'));
+    const item = document.getElementById('comm-item-' + threadId);
+    if (item) item.classList.add('active');
+    if (!silent) {
+      document.getElementById('comm-detail-messages').innerHTML = '<div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>';
+      document.getElementById('comm-detail-header').innerHTML = '';
+    }
+    commShowDetail();
     try {
       const res = await apiFetch(`/api/messages/${threadId}`);
       const data = await res.json();
-      document.getElementById('comm-thread-header').innerHTML = `
-        <div style="display:flex;align-items:center;gap:1rem;">
-          <div style="font-size:1rem;font-weight:700;color:var(--text);">${esc(data.subject || '(no subject)')}</div>
-          <span style="font-size:0.75rem;padding:0.15rem 0.5rem;border-radius:4px;background:${statusColor(data.status)};color:#fff;">${data.status}</span>
-        </div>
-      `;
-      document.getElementById('comm-status-select').value = data.status;
-      const msgEl = document.getElementById('comm-messages-list');
-      msgEl.innerHTML = data.messages.map(m => {
-        const isStaff = m.senderType === 'staff';
+
+      // Header — same as team inbox
+      document.getElementById('comm-detail-header').innerHTML = `
+        <div class="detail-header-person">${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}</div>
+        <div class="detail-header-subject">${esc(data.subject || '(no subject)')} · <span style="color:var(--gold);font-size:0.75rem;">${data.category || ''}</span></div>`;
+
+      // Messages — same render as team inbox
+      const msgEl = document.getElementById('comm-detail-messages');
+      const msgs = data.messages || [];
+
+      function buildCommBubble(m) {
         const isInternal = m.isInternal;
-        const attachmentsHtml = (m.attachments || []).length > 0
-          ? `<div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.4rem;">${(m.attachments).map(a => {
-              const size = a.sizeBytes ? ' (' + commFormatBytes(a.sizeBytes) + ')' : '';
-              return `<a href="#" onclick="commDownloadAttachment(${a.documentId});return false;" style="display:inline-flex;align-items:center;gap:0.3rem;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:0.15rem 0.5rem;font-size:0.73rem;color:inherit;text-decoration:none;">📎 ${esc(a.displayName)}${esc(size)}</a>`;
-            }).join('')}</div>`
-          : '';
-        return `<div style="display:flex;flex-direction:column;align-items:${isStaff ? 'flex-end' : 'flex-start'};">
-          <div style="max-width:80%;padding:0.5rem 0.75rem;border-radius:8px;background:${isInternal ? 'rgba(255,200,0,0.1)' : isStaff ? 'var(--gold)' : 'var(--charcoal)'};color:${isStaff && !isInternal ? 'var(--navy)' : 'var(--text)'};border:${isInternal ? '1px dashed var(--gold)' : 'none'};">
-            ${isInternal ? '<div style="font-size:0.65rem;color:var(--gold);margin-bottom:0.2rem;">🔒 Internal note</div>' : ''}
-            <div style="font-size:0.85rem;">${m.body ? esc(m.body) : ''}${attachmentsHtml}</div>
-          </div>
-          <div style="font-size:0.68rem;color:var(--muted);margin-top:0.15rem;">${m.senderName} · ${relTime(m.createdAt)}</div>
+        const isStaff = m.senderType === 'staff';
+        const side = isInternal ? 'internal' : isStaff ? 'staff' : 'client';
+        const bubbleClass = isInternal ? 'internal' : side;
+        const attachmentsHtml = (m.attachments||[]).length > 0
+          ? `<div class="msg-attachments">${m.attachments.map(a => {
+              const size = a.sizeBytes ? ` <span style="font-size:0.7rem;opacity:0.7;">(${commFormatBytes(a.sizeBytes)})</span>` : '';
+              return `<a href="#" class="attachment-chip" onclick="commDownloadAttachment(${a.documentId});return false;">📎 ${esc(a.displayName)}${size}</a>`;
+            }).join('')}</div>` : '';
+        return `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
+          ${isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
+          <div class="msg-bubble ${bubbleClass}">${esc(m.body||'').replace(/\n/g,'<br>')}${attachmentsHtml}</div>
+          <div class="msg-meta">${esc(m.senderName||'')} · ${relTime(m.createdAt)}</div>
         </div>`;
-      }).join('');
-      msgEl.scrollTop = msgEl.scrollHeight;
+      }
+
+      if (!msgs.length) {
+        if (!silent) msgEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem;">No messages yet.</div>';
+      } else if (silent) {
+        // Append-only — only add new messages
+        const existingIds = new Set([...msgEl.querySelectorAll('[data-msg-id]')].map(el => parseInt(el.dataset.msgId)));
+        let appended = false;
+        for (const m of msgs) {
+          if (!existingIds.has(m.id)) { msgEl.insertAdjacentHTML('beforeend', buildCommBubble(m)); appended = true; }
+        }
+        if (appended) msgEl.scrollTop = msgEl.scrollHeight;
+      } else {
+        msgEl.innerHTML = msgs.map(buildCommBubble).join('');
+        msgEl.scrollTop = msgEl.scrollHeight;
+      }
     } catch(e) {
-      document.getElementById('comm-messages-list').innerHTML = '<div style="color:var(--muted);">Failed to load thread.</div>';
+      document.getElementById('comm-detail-messages').innerHTML = '<div style="color:var(--muted);padding:1rem;">Failed to load thread.</div>';
     }
   }
 
@@ -1043,13 +1965,35 @@
     return (b/1048576).toFixed(1) + ' MB';
   }
 
-  function handleCommAttach(fileList) {
+    function handleCommAttach(fileList) {
     for (const f of Array.from(fileList)) {
       if (commAttachFiles.length >= 8) { alert('Maximum 8 files per message'); break; }
       commAttachFiles.push(f);
     }
     document.getElementById('comm-attach-input').value = '';
     renderCommAttachChips();
+  }
+
+  function handleNewCommAttach(fileList) {
+    for (const f of Array.from(fileList)) {
+      if (commNewAttachFiles.length >= 8) { alert('Maximum 8 files per message'); break; }
+      commNewAttachFiles.push(f);
+    }
+    document.getElementById('comm-new-attach-input').value = '';
+    renderNewCommAttachChips();
+  }
+
+  function removeNewCommAttachFile(idx) {
+    commNewAttachFiles.splice(idx, 1);
+    renderNewCommAttachChips();
+  }
+
+  function renderNewCommAttachChips() {
+    const el = document.getElementById('comm-new-attach-chips');
+    if (!el) return;
+    el.innerHTML = commNewAttachFiles.map((f, i) =>
+      `<span style="display:inline-flex;align-items:center;gap:0.3rem;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:4px;padding:0.15rem 0.5rem;font-size:0.75rem;color:var(--text);">📎 ${esc(f.name)} <button onclick="removeNewCommAttachFile(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;padding:0;line-height:1;">×</button></span>`
+    ).join('');
   }
 
   function removeCommAttachFile(idx) {
@@ -1074,54 +2018,102 @@
     } catch(e) { alert('Failed to download attachment'); }
   }
 
-  async function sendReply() {
+  // Wire SMS toggle to update button label
+  document.addEventListener('change', function(e) {
+    if (e.target.id === 'comm-sms-toggle') {
+      const btn = document.getElementById('comm-send-reply-btn');
+      if (btn) btn.textContent = e.target.checked ? '📱 Send Text' : 'Send Reply';
+    }
+    if (e.target.id === 'comm-internal-toggle' && e.target.checked) {
+      // Internal note can't be SMS
+      const smsToggle = document.getElementById('comm-sms-toggle');
+      if (smsToggle) smsToggle.checked = false;
+      const btn = document.getElementById('comm-send-reply-btn');
+      if (btn) btn.textContent = 'Send Reply';
+    }
+  });
+
+  async function commSendReply() {
     const body = document.getElementById('comm-reply-body').value.trim();
-    if ((!body && commAttachFiles.length === 0) || !commActiveThreadId) return;
+    if (!commActiveThreadId) { toast('No thread selected', 'error'); return; }
+    if (!body && commAttachFiles.length === 0) return;
     const isInternal = document.getElementById('comm-internal-toggle').checked;
+    const isSms = document.getElementById('comm-sms-toggle')?.checked && !isInternal;
+
+    if (isSms) {
+      // Send as SMS via Twilio
+      try {
+        const res = await apiFetch('/api/messages/sms', {
+          method: 'POST',
+          body: JSON.stringify({ person_id: personId, body, thread_id: commActiveThreadId })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to send SMS');
+        document.getElementById('comm-reply-body').value = '';
+        // Use returned thread_id in case a new thread was created
+        const useThreadId = data.thread_id || commActiveThreadId;
+        if (useThreadId !== commActiveThreadId) {
+          commActiveThreadId = useThreadId;
+          await loadThreads();
+          await loadThread(useThreadId, false);
+        } else {
+          await loadThread(useThreadId, true);
+          await loadThreads();
+        }
+        toast('Text message sent ✓');
+      } catch(e) { toast(e.message, 'error'); }
+      return;
+    }
+
     try {
       const fd = new FormData();
       fd.append('body', body);
       fd.append('is_internal', isInternal ? 'true' : 'false');
       commAttachFiles.forEach(f => fd.append('files', f));
-      await apiFetch(`/api/messages/${commActiveThreadId}/reply`, { method: 'POST', body: fd });
+      const replyRes = await apiFetch(`/api/messages/${commActiveThreadId}/reply`, { method: 'POST', body: fd });
+      if (!replyRes.ok) {
+        const errData = await replyRes.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error ${replyRes.status}`);
+      }
       document.getElementById('comm-reply-body').value = '';
       document.getElementById('comm-internal-toggle').checked = false;
       commAttachFiles = [];
       renderCommAttachChips();
-      await loadThread(commActiveThreadId);
+      await loadThread(commActiveThreadId, false); // full reload so new message is guaranteed visible
       await loadThreads();
-    } catch(e) { alert('Failed to send reply'); }
+    } catch(e) { console.error('[comm] sendReply error:', e); toast('Failed to send reply: ' + e.message, 'error'); }
   }
 
-  async function updateThreadStatus() {
+  async function commResolve() {
     if (!commActiveThreadId) return;
-    const status = document.getElementById('comm-status-select').value;
-    await apiFetch(`/api/messages/${commActiveThreadId}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
+    await apiFetch(`/api/messages/${commActiveThreadId}/status`, { method: 'PUT', body: JSON.stringify({ status: 'resolved' }) });
+    commShowEmpty();
     await loadThreads();
   }
 
-  function openNewThread() {
-    document.getElementById('comm-thread-detail').style.display = 'none';
-    document.getElementById('comm-compose').style.display = 'block';
-    document.getElementById('comm-new-subject').value = '';
-    document.getElementById('comm-new-body').value = '';
-  }
-
-  function closeCompose() {
-    document.getElementById('comm-compose').style.display = 'none';
-  }
-
-  async function sendNewThread() {
-    const subject = document.getElementById('comm-new-subject').value.trim();
+  async function commSendNew() {
     const body = document.getElementById('comm-new-body').value.trim();
-    if (!body) { alert('Message body is required'); return; }
+    if (!body && commNewAttachFiles.length === 0) { toast('Message body is required', 'error'); return; }
     try {
-      const res = await apiFetch('/api/messages', { method: 'POST', body: JSON.stringify({ person_id: commPersonId, subject, body, is_internal: false }) });
+      // Create thread first
+      const res = await apiFetch('/api/messages', { method: 'POST', body: JSON.stringify({ person_id: commPersonId, subject: '', body, is_internal: false }) });
       const data = await res.json();
-      closeCompose();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      // Send attachments as a reply if any
+      if (commNewAttachFiles.length > 0 && data.threadId) {
+        const fd = new FormData();
+        fd.append('body', '');
+        commNewAttachFiles.forEach(f => fd.append('files', f));
+        await apiFetch(`/api/messages/${data.threadId}/reply`, { method: 'POST', body: fd });
+      }
+      document.getElementById('comm-new-body').value = '';
+      commNewAttachFiles = [];
+      renderNewCommAttachChips();
+      commCloseNew();
       await loadThreads();
       if (data.threadId) loadThread(data.threadId);
-    } catch(e) { alert('Failed to send message'); }
+      toast('Message sent');
+    } catch(e) { toast('Failed to send message', 'error'); }
   }
 
   function statusColor(s) {
@@ -1133,136 +2125,163 @@
 
   function relTime(ts) {
     if (!ts) return '';
-    const d = new Date(ts);
-    const diff = Date.now() - d;
+    const d = new Date(ts); const diff = Date.now() - d;
     if (diff < 60000) return 'just now';
     if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
     if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
     return d.toLocaleDateString();
   }
 
-  // ── Page-level drag-and-drop for Docs tab ──
-  let dragCounter = 0;
-  const pageDragOverlay = document.createElement('div');
-  pageDragOverlay.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(201,168,76,0.08);border:3px dashed var(--gold);pointer-events:none;align-items:center;justify-content:center;font-size:1.5rem;color:var(--gold);font-weight:700;';
-  pageDragOverlay.innerHTML = '📄 Drop to upload document';
-  document.body.appendChild(pageDragOverlay);
-  function isDocTabActive() { return document.getElementById('tab-docs')?.classList.contains('active'); }
-  document.addEventListener('dragenter', (e) => { if (!isDocTabActive()) return; dragCounter++; pageDragOverlay.style.display = 'flex'; });
-  document.addEventListener('dragleave', (e) => { if (!isDocTabActive()) return; dragCounter--; if (dragCounter <= 0) { dragCounter = 0; pageDragOverlay.style.display = 'none'; } });
-  document.addEventListener('dragover', (e) => { if (!isDocTabActive()) return; e.preventDefault(); });
-  document.addEventListener('drop', (e) => {
-    if (!isDocTabActive()) return;
-    e.preventDefault(); dragCounter = 0; pageDragOverlay.style.display = 'none';
-    const file = e.dataTransfer?.files?.[0];
-    if (!file) return;
-    openUploadModal();
-    setTimeout(() => {
-      uploadFile = file; showUploadFile(file);
-      const n = document.getElementById('upload-display-name');
-      if (n && !n.value) n.value = file.name.replace(/\.[^/.]+$/, '');
-    }, 50);
+
+  loadPerson().then(function() {
+    var openTab = sessionStorage.getItem('openTab');
+    sessionStorage.removeItem('openTab');
+    if (openTab) {
+      var tabEl = null;
+      document.querySelectorAll('.tab-item').forEach(function(t) {
+        if (t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'" + openTab + "'") !== -1) tabEl = t;
+      });
+      switchTab(openTab, tabEl);
+    }
   });
 
-  // ── Grant Company Access Modal ──
-  async function openGrantCompanyModal() {
-    if (!personData) return;
-    const relId = personData.relationship_id;
-    if (!relId) { toast('Person has no relationship assigned', 'error'); return; }
-    try {
-      const res = await apiFetch(`/api/relationships/${relId}/companies`);
-      const companies = await res.json();
-      const existing = (personData.company_access || []).map(a => a.company_id);
-      const available = companies.filter(c => !existing.includes(c.id));
-      if (!available.length) { toast('All companies in this relationship are already linked', 'error'); return; }
-      const opts = available.map(c => `<option value="${c.id}">${esc(c.company_name||'Unknown')}</option>`).join('');
-      const html = `<div class="modal-overlay open" id="grant-company-modal" onclick="if(event.target===this)this.remove()">
-        <div class="modal" onclick="event.stopPropagation()" style="max-width:400px;">
-          <h2 style="margin-bottom:1rem;">Grant Company Access</h2>
-          <div class="form-group"><label>Company</label><select id="gc-company" class="form-control">${opts}</select></div>
-          <div class="form-group"><label>Access Level</label>
-            <select id="gc-access" class="form-control">
-              <option value="full">Full (upload + message)</option>
-              <option value="view">View only</option>
-              <option value="sign">Sign only</option>
-            </select>
-          </div>
-          <div class="form-group"><label>Ownership % (optional)</label><input type="number" id="gc-ownership" class="form-control" placeholder="e.g. 50" min="0" max="100" step="0.01"></div>
-          <div class="modal-actions">
-            <button class="btn btn-outline" onclick="document.getElementById('grant-company-modal').remove()">Cancel</button>
-            <button class="btn btn-gold" onclick="submitGrantCompany()">Grant Access</button>
-          </div>
-        </div></div>`;
-      document.body.insertAdjacentHTML('beforeend', html);
-    } catch(e) { toast('Failed to load companies: ' + e.message, 'error'); }
+  // ── SMS ──────────────────────────────────────────────────────────────────
+  let _smsThreadId = null;
+
+  async function openSmsModal(threadId) {
+    _smsThreadId = threadId || null;
+    const phoneDisplay = document.getElementById('sms-phone-display');
+    if (phoneDisplay) {
+      try {
+        const r = await apiFetch(`/api/people/${personId}`);
+        const p = await r.json();
+        phoneDisplay.textContent = p.phone ? `To: ${p.phone}` : '⚠️ No phone number on file for this person';
+        phoneDisplay.style.color = p.phone ? 'var(--muted)' : 'var(--red)';
+      } catch(e) { phoneDisplay.textContent = 'Loading phone…'; }
+    }
+    document.getElementById('sms-body').value = '';
+    document.getElementById('sms-char-count').textContent = '0 / 160';
+    document.getElementById('sms-error').style.display = 'none';
+    document.getElementById('sms-modal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('sms-body').focus(), 100);
   }
 
-  async function submitGrantCompany() {
-    const companyId = parseInt(document.getElementById('gc-company').value);
-    const accessLevel = document.getElementById('gc-access').value;
-    const ownershipPct = document.getElementById('gc-ownership').value;
+  function closeSmsModal() {
+    document.getElementById('sms-modal').classList.add('hidden');
+    _smsThreadId = null;
+  }
+
+  async function submitSms() {
+    const body = document.getElementById('sms-body').value.trim();
+    const btn = document.getElementById('sms-submit-btn');
+    const errEl = document.getElementById('sms-error');
+    if (!body) { errEl.textContent = 'Please enter a message.'; errEl.style.display = ''; return; }
+    btn.disabled = true; btn.textContent = 'Sending…';
+    errEl.style.display = 'none';
     try {
-      const res = await apiFetch(`/api/people/${personId}/company-access`, {
+      const res = await apiFetch('/api/messages/sms', {
         method: 'POST',
-        body: JSON.stringify({ company_id: companyId, access_level: accessLevel, ownership_pct: ownershipPct || null })
+        body: JSON.stringify({ person_id: personId, body, thread_id: _smsThreadId })
       });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
-      document.getElementById('grant-company-modal').remove();
-      toast('Company access granted');
-      const freshRes = await apiFetch(`/api/people/${personId}`);
-      personData = await freshRes.json();
-      renderOverview(personData);
-    } catch(e) { toast('Failed: ' + e.message, 'error'); }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send');
+      closeSmsModal();
+      toast('Text message sent ✓');
+      if (typeof loadThreads === 'function') await loadThreads();
+      if (data.thread_id && typeof loadThread === 'function') loadThread(data.thread_id);
+    } catch(e) {
+      errEl.textContent = e.message;
+      errEl.style.display = '';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Send Text';
+    }
   }
 
-  async function revokeCompanyAccess(companyId) {
-    if (!confirm('Remove access to this company?')) return;
-    try {
-      const res = await apiFetch(`/api/people/${personId}/company-access/${companyId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed');
-      toast('Access revoked');
-      const freshRes = await apiFetch(`/api/people/${personId}`);
-      personData = await freshRes.json();
-      renderOverview(personData);
-    } catch(e) { toast('Failed: ' + e.message, 'error'); }
-  }
+  document.addEventListener('DOMContentLoaded', function() {
+    const smsBody = document.getElementById('sms-body');
+    const smsCount = document.getElementById('sms-char-count');
+    if (smsBody && smsCount) {
+      smsBody.addEventListener('input', function() {
+        const len = this.value.length;
+        smsCount.textContent = `${len} / 160`;
+        smsCount.style.color = len > 160 ? 'var(--red)' : 'var(--muted)';
+      });
+    }
+  });
 </script>
 
-<!-- Move Document Modal -->
-<div class="modal-overlay" id="move-doc-modal" onclick="if(event.target===this)closeMoveDocModal()">
-  <div class="modal" onclick="event.stopPropagation()" style="max-width:380px;">
-    <div class="modal-header">
-      <div class="modal-title">Move Document</div>
-      <button class="modal-close" onclick="closeMoveDocModal()">✕</button>
+<!-- Tax Summary Modal -->
+<div class="tax-summary-modal hidden" id="tax-summary-modal">
+  <div class="tax-summary-box" onclick="event.stopPropagation()">
+    <div class="tsm-header">
+      <div>
+        <h2 id="tsm-title">Tax Summary</h2>
+        <div id="tsm-subtitle" style="font-size:0.8rem;color:rgba(255,255,255,0.65);margin-top:0.2rem;"></div>
+      </div>
+      <button class="tsm-close" onclick="closeTaxSummary()">✕</button>
     </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">Tax Year</label>
-        <select id="move-doc-year" class="form-control">
-          <% for (let y = new Date().getFullYear(); y >= new Date().getFullYear() - 8; y--) { %>
-            <option value="<%= y %>"><%= y %></option>
-          <% } %>
-        </select>
+    <div class="tsm-body" id="tsm-body">
+      <div class="tsm-processing">
+        <div class="tsm-spinner"></div>
+        <div>Analyzing return with Claude…</div>
+        <div style="font-size:0.75rem;opacity:0.6;">This takes about 30–60 seconds</div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Section</label>
-        <select id="move-doc-section" class="form-control">
-          <option value="firm_uploaded">Delivered by Advisor</option>
-          <option value="client_uploaded">Client Uploaded</option>
-          <option value="private">Private (Staff Only)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Category</label>
-        <select id="move-doc-category" class="form-control">
-          <option value="tax">Tax</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
+    </div>
+    <div class="tsm-footer" id="tsm-footer" style="display:none;">
+      <button class="btn btn-outline btn-sm" id="tsm-reanalyze-btn" onclick="retrySummary(_tsmPendingDeliveryId)" style="margin-right:auto;">↺ Re-analyze</button>
+      <button class="btn btn-outline btn-sm" onclick="closeTaxSummary()">Close</button>
+      <button class="btn btn-gold" id="tsm-send-btn" onclick="confirmAndSendDelivery()" style="display:none;">Send to Client →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Move Document Modal -->
+<div class="modal-overlay hidden" id="move-doc-modal" onclick="closeMoveDocModal()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:380px;">
+    <h2>Move Document</h2>
+    <div class="form-group">
+      <label>Tax Year</label>
+      <select id="move-doc-year" class="form-control">
+        <% for (let y = new Date().getFullYear(); y >= new Date().getFullYear() - 8; y--) { %>
+          <option value="<%= y %>"><%= y %></option>
+        <% } %>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Section</label>
+      <select id="move-doc-section" class="form-control">
+        <option value="firm_uploaded">Delivered by Advisor</option>
+        <option value="client_uploaded">Client Uploaded</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="move-doc-category" class="form-control">
+        <option value="tax">Tax</option>
+        <option value="other">Other</option>
+      </select>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeMoveDocModal()">Cancel</button>
-      <button class="btn btn-gold" onclick="submitMoveDoc()">Move</button>
+      <button class="btn-cancel" onclick="closeMoveDocModal()">Cancel</button>
+      <button class="btn-submit" onclick="submitMoveDoc()">Move</button>
+    </div>
+  </div>
+</div>
+
+<!-- SMS Modal -->
+<div class="modal-overlay hidden" id="sms-modal" onclick="closeSmsModal()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:440px;">
+    <h2>📱 Send Text Message</h2>
+    <div id="sms-phone-display" style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;"></div>
+    <div class="form-group">
+      <label>Message</label>
+      <textarea class="form-control" id="sms-body" rows="4" placeholder="Type your SMS message… (160 chars recommended)" maxlength="1600" style="width:100%;box-sizing:border-box;"></textarea>
+      <div id="sms-char-count" style="font-size:0.72rem;color:var(--muted);text-align:right;margin-top:0.25rem;">0 / 160</div>
+    </div>
+    <div id="sms-error" style="color:var(--red);font-size:0.82rem;display:none;margin-bottom:0.5rem;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeSmsModal()">Cancel</button>
+      <button class="btn-submit" id="sms-submit-btn" onclick="submitSms()">Send Text</button>
     </div>
   </div>
 </div>
