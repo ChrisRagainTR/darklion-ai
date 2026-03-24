@@ -128,18 +128,21 @@ async function buildTree(token) {
   const cached = cacheGet(cacheKey);
   if (cached) return cached;
 
-  const relationships = await apiGet('/api/relationships', token);
+  const relationshipsRaw = await apiGet('/api/relationships', token).catch(function() { return []; });
+  const relationships = Array.isArray(relationshipsRaw) ? relationshipsRaw : [];
   const tree = new Map();
 
-  for (const rel of (relationships || [])) {
+  for (const rel of relationships) {
     const entities = new Map();
 
-    const [people, companies] = await Promise.all([
-      apiGet(`/api/people?relationship_id=${rel.id}`, token).catch(() => []),
-      apiGet(`/api/companies?relationship_id=${rel.id}`, token).catch(() => []),
+    var rawResults = await Promise.all([
+      apiGet('/api/people?relationship_id=' + rel.id, token).catch(function() { return []; }),
+      apiGet('/api/companies?relationship_id=' + rel.id, token).catch(function() { return []; }),
     ]);
+    var people = Array.isArray(rawResults[0]) ? rawResults[0] : [];
+    var companies = Array.isArray(rawResults[1]) ? rawResults[1] : [];
 
-    for (const p of (people || [])) {
+    for (const p of people) {
       const name = [p.first_name, p.last_name].filter(Boolean).join(' ');
       if (!name) continue;
       const docsRaw = await apiGet('/api/documents?owner_type=person&owner_id=' + p.id, token).catch(function() { return []; });
@@ -147,7 +150,7 @@ async function buildTree(token) {
       entities.set(name, { id: p.id, type: 'person', docs: groupDocs(docs) });
     }
 
-    for (const c of (companies || [])) {
+    for (const c of companies) {
       const name = c.company_name || c.name;
       if (!name) continue;
       const docsRaw2 = await apiGet('/api/documents?owner_type=company&owner_id=' + c.id, token).catch(function() { return []; });
