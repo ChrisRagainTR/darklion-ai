@@ -424,6 +424,123 @@ function startNightlyCron() {
   setTimeout(runNightlyScans, ms);
 }
 
+// ── Viktor briefing pre-generation (runs at 4 AM UTC = midnight EDT) ─────────
+// Pre-generates morning briefings for all active firm users so they're
+// instant when staff open the app at 8am.
+function startViktorBriefingCron() {
+  const { pool } = require('./db');
+  const Anthropic = require('@anthropic-ai/sdk');
+  const { getFirmContext } = require('./routes/viktor');
+
+  function msUntil4AM() {
+    const now = new Date();
+    const next = new Date(now);
+    next.setUTCHours(4, 0, 0, 0);
+    if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+    return next - now;
+  }
+
+  async function runBriefings() {
+    const today = new Date().toISOString().split('T')[0];
+    console.log(`[briefing-cron] Starting Viktor briefing pre-generation for ${today}...`);
+
+    try {
+      // Get all active firm users (accepted, not archived)
+      const { rows: users } = await pool.query(`
+        SELECT fu.id as user_id, fu.firm_id, fu.name, fu.email
+        FROM firm_users fu
+        WHERE fu.accepted_at IS NOT NULL
+          AND fu.archived_at IS NULL
+        ORDER BY fu.firm_id, fu.id
+      `);
+
+      console.log(`[briefing-cron] Generating briefings for ${users.length} users...`);
+
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        console.error('[briefing-cron] ANTHROPIC_API_KEY not set — skipping.');
+        setTimeout(runBriefings, msUntil4AM());
+        return;
+      }
+
+      const client = new Anthropic({ apiKey });
+
+      for (const user of users) {
+        try {
+          // Skip if already generated today
+          const { rows: existing } = await pool.query(
+            'SELECT briefing_generated FROM viktor_sessions WHERE firm_id = $1 AND user_id = $2 AND session_date = $3',
+            [user.firm_id, user.user_id, today]
+          );
+          if (existing[0]?.briefing_generated) {
+            console.log(`[briefing-cron] Already done: user ${user.user_id} (${user.email})`);
+            continue;
+          }
+
+          // Fetch firm context
+          const context = await getFirmContext(user.firm_id).catch(() => ({}));
+
+          // Build context summary
+          const contextParts = [];
+          if (context.pipelineJobs?.length) contextParts.push(`Pipeline jobs: ${context.pipelineJobs.length} active`);
+          if (context.unsignedReturns?.length) contextParts.push(`Unsigned returns: ${context.unsignedReturns.length} waiting`);
+          if (context.stalledMessages?.length) contextParts.push(`Stalled messages: ${context.stalledMessages.length} threads >48h`);
+          if (context.openProposals?.length) contextParts.push(`Open proposals: ${context.openProposals.length}`);
+          if (context.expiringEngagements?.length) contextParts.push(`Expiring engagements: ${context.expiringEngagements.length}`);
+          const contextSummary = contextParts.join('\n') || 'No urgent items at this time.';
+
+          const greeting = 'Good morning';
+          const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' });
+
+          const { buildSystemPrompt } = require('./routes/viktor-chat');
+          const systemPrompt = await buildSystemPrompt(user.firm_id).catch(() => 'You are Viktor, an AI advisor assistant for a CPA/wealth management firm.');
+
+          const response = await client.messages.create({
+            model: 'claude-haiku-4-5-20251001', // use Haiku for cron — faster + cheaper
+            max_tokens: 1000,
+            system: systemPrompt,
+            messages: [{
+              role: 'user',
+              content: `${greeting}. Generate my daily briefing for today (${dateStr}).\n\nCurrent firm data:\n${contextSummary}\n\nProvide a concise, actionable morning briefing with prioritized tasks.`
+            }]
+          });
+
+          const briefingText = response.content[0]?.text || 'Good morning! Ready when you are.';
+          const messages = [
+            { role: 'assistant', content: briefingText, timestamp: new Date().toISOString() }
+          ];
+
+          await pool.query(
+            `INSERT INTO viktor_sessions (firm_id, user_id, session_date, messages, briefing_generated)
+             VALUES ($1, $2, $3, $4, TRUE)
+             ON CONFLICT (firm_id, user_id, session_date)
+             DO UPDATE SET messages = $4, briefing_generated = TRUE, updated_at = NOW()`,
+            [user.firm_id, user.user_id, today, JSON.stringify(messages)]
+          );
+
+          console.log(`[briefing-cron] Done: ${user.email}`);
+
+          // Small delay between users to avoid hammering the API
+          await new Promise(r => setTimeout(r, 500));
+
+        } catch (e) {
+          console.error(`[briefing-cron] Failed for user ${user.user_id} (${user.email}):`, e.message);
+        }
+      }
+
+      console.log('[briefing-cron] All briefings generated.');
+    } catch (e) {
+      console.error('[briefing-cron] Fatal error:', e.message);
+    }
+
+    setTimeout(runBriefings, msUntil4AM());
+  }
+
+  const ms = msUntil4AM();
+  console.log(`[briefing-cron] Scheduled in ${Math.round(ms / 3600000)}h ${Math.round((ms % 3600000) / 60000)}m (4:00 AM UTC / midnight EDT)`);
+  setTimeout(runBriefings, ms);
+}
+
 // ── Pusher setup ─────────────────────────────────────────────────────────────
 const Pusher = require('pusher');
 const pusher = new Pusher({
@@ -495,6 +612,7 @@ async function start() {
   console.log('Database initialized');
 
   startNightlyCron();
+  startViktorBriefingCron();
 
   const { scheduleAt10PM } = require('./scheduler');
   scheduleAt10PM();

@@ -1785,3 +1785,4 @@ router.get('/context', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.buildSystemPrompt = buildSystemPrompt;
