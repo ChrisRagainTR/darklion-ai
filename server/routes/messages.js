@@ -401,7 +401,7 @@ router.get('/attachments/:documentId/download', async (req, res) => {
 // Staff can delete their own messages only — must be before /:threadId wildcard
 router.delete('/message/:messageId', async (req, res) => {
   const firmId = req.firm.id;
-  const staffId = req.user.id;
+  const staffId = req.firm.userId;
   const messageId = parseInt(req.params.messageId);
 
   try {
