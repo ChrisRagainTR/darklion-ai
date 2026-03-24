@@ -158,10 +158,8 @@ function showLoginWindow() {
       nodeIntegration: false,
     },
   });
-
   loginWindow.setMenu(null);
-  loginWindow.loadFile(path.join(__dirname, 'renderer', 'login.html'));
-  loginWindow.webContents.openDevTools({ mode: 'detach' }); // DEBUG
+  loginWindow.loadFile('login.html');
   loginWindow.on('closed', () => { loginWindow = null; });
 }
 
@@ -190,7 +188,7 @@ function showRoutingWindow(filePath) {
   });
 
   win.setMenu(null);
-  win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  win.loadFile('index.html');
   routingWindows.set(filePath, win);
 
   win.webContents.on('did-finish-load', () => {

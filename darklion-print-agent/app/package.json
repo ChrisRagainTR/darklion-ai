@@ -4,9 +4,10 @@
   "description": "DarkLion Print Agent — routes print jobs to DarkLion document management",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "build:win": "electron-builder --win --x64",
-    "build:dir": "electron-builder --dir --x64"
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "build:win": "electron-forge make --platform win32 --arch x64"
   },
   "dependencies": {
     "chokidar": "^3.6.0",
@@ -14,56 +15,33 @@
     "node-fetch": "^2.7.0"
   },
   "devDependencies": {
-    "electron": "^28.3.0",
-    "electron-builder": "^24.13.0"
+    "@electron-forge/cli": "^7.4.0",
+    "@electron-forge/maker-squirrel": "^7.4.0",
+    "@electron-forge/maker-zip": "^7.4.0",
+    "electron": "^28.3.0"
   },
-  "build": {
-    "appId": "ai.darklion.printagent",
-    "productName": "DarkLion Print Agent",
-    "copyright": "Copyright © 2025 DarkLion AI",
-    "directories": {
-      "output": "../dist",
-      "buildResources": "renderer"
-    },
-    "asar": false,
-    "files": [
-      "**/*",
-      "!node_modules/.cache",
-      "!**/*.map"
-    ],
-    "extraResources": [
-      {
-        "from": "../installer/printer-setup.ps1",
-        "to": "installer/printer-setup.ps1"
+  "config": {
+    "forge": {
+      "packagerConfig": {
+        "asar": false,
+        "name": "DarkLion Print Agent",
+        "executableName": "DarkLionPrintAgent",
+        "extraResource": [
+          "../installer/printer-setup.ps1",
+          "../installer/printer-remove.ps1",
+          "../shared/config.js"
+        ]
       },
-      {
-        "from": "../installer/printer-remove.ps1",
-        "to": "installer/printer-remove.ps1"
-      },
-      {
-        "from": "../shared",
-        "to": "shared"
-      }
-    ],
-    "win": {
-      "target": [
+      "makers": [
         {
-          "target": "nsis",
-          "arch": ["x64"]
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "DarkLionPrintAgent",
+            "setupExe": "DarkLionPrintAgent_Setup_1.0.0.exe",
+            "noMsi": true
+          }
         }
-      ],
-      "artifactName": "DarkLionPrintAgent_Setup_${version}.exe",
-      "signingHashAlgorithms": null,
-      "sign": null
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowElevation": true,
-      "allowToChangeInstallationDirectory": false,
-      "createDesktopShortcut": false,
-      "createStartMenuShortcut": false,
-      "runAfterFinish": true,
-      "include": "../installer/nsis-extra.nsh"
+      ]
     }
   }
 }
