@@ -1269,7 +1269,7 @@
                       </div>
                       <div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;">
                         <button class="btn-dl" data-docid="${f.id}">⬇</button>
-                        <button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${f.id},${JSON.stringify(f.folder_section||'firm_uploaded')},${JSON.stringify(f.folder_category||'tax')},event,${JSON.stringify(f.year||'')})" title="Move">↕</button>
+                        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openMoveDocModal(${f.id},${JSON.stringify(f.folder_section||'firm_uploaded')},${JSON.stringify(f.folder_category||'tax')},null,${JSON.stringify(f.year||'')})" title="Move">↕</button>
                         <button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${f.id},event)" title="Delete">🗑</button>
                       </div>
                     </div>`).join('')}

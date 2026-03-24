@@ -1228,9 +1228,15 @@
       document.getElementById('ef-spouse-search').value = '';
     }
     await efSpouseLoadPeople();
-    document.getElementById('edit-modal').classList.remove('hidden');
+    const m = document.getElementById('edit-modal');
+    m.classList.remove('hidden');
+    m.classList.add('open');
   }
-  function closeModal() { document.getElementById('edit-modal').classList.add('hidden'); }
+  function closeModal() {
+    const m = document.getElementById('edit-modal');
+    m.classList.add('hidden');
+    m.classList.remove('open');
+  }
 
   async function submitEdit() {
     const btn = document.getElementById('ef-submit');
