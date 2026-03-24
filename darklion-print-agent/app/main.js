@@ -72,10 +72,13 @@ app.on('before-quit', () => {
 // ── Tray ─────────────────────────────────────────────────────────────────────
 function setupTray() {
   try {
-    // 16x16 gold square icon — inline so no external file needed
-    const icon = nativeImage.createFromDataURL(
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAI0lEQVQ4T2NkIAIwEqmHgXoNRg0YNYDRAAaQmkFqBpEAAFZaAAFr+e7PAAAAAElFTkSuQmCC'
-    );
+    // Write icon to a temp file — more reliable than createFromDataURL on Windows
+    // 16x16 gold/dark PNG (DarkLion brand colors)
+    const iconBase64 = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABQSURBVDhPY/hPIqAKMJIqkA8GNQgKkqEBTQMDBACXoXEYyADxCABrBpIBuBLBoAFgcMKhAGRQCIwKGBUwKmBUwKiAUQGjAkYFjAr4TyUGANmcBjOCWlQAAAAASUVORK5CYII=';
+    const iconBuffer = Buffer.from(iconBase64, 'base64');
+    const tmpIcon = path.join(app.getPath('temp'), 'darklion-tray.png');
+    fs.writeFileSync(tmpIcon, iconBuffer);
+    const icon = nativeImage.createFromPath(tmpIcon);
     tray = new Tray(icon);
     tray.setToolTip('DarkLion Print Agent — Running');
     const menu = Menu.buildFromTemplate([
