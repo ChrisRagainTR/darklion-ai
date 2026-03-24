@@ -25,6 +25,7 @@
       "output": "../dist",
       "buildResources": "renderer"
     },
+    "asar": false,
     "files": [
       "**/*",
       "!node_modules/.cache",
