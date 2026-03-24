@@ -69,7 +69,9 @@ function startPrintServer(onPDF) {
         return;
       }
       console.log(`[print-server] Job complete: ${psData.length} bytes`);
-      convertToPDF(psData);
+      // Extract job title from PostScript %%Title: header
+      const jobTitle = extractPSTitle(psData);
+      convertToPDF(psData, jobTitle);
     });
 
     socket.on('error', (err) => {
@@ -97,7 +99,23 @@ function stopPrintServer() {
   }
 }
 
-function convertToPDF(psData) {
+/**
+ * Extract the %%Title: line from a PostScript job header.
+ * Drake typically sends: %%Title: 2024 Drake Tax Return - Smith, John
+ */
+function extractPSTitle(psData) {
+  try {
+    // Only scan the first 4KB — the title is always in the header
+    const header = psData.slice(0, 4096).toString('utf8', 0, 4096);
+    const match = header.match(/%%Title:\s*(.+)/);
+    if (match) {
+      return match[1].trim().replace(/\r?\n.*/, ''); // first line only
+    }
+  } catch (_) {}
+  return null;
+}
+
+function convertToPDF(psData, jobTitle) {
   const gs = findGhostscript();
   if (!gs) {
     console.error('[print-server] Ghostscript not found! Cannot convert print job.');
@@ -139,8 +157,8 @@ function convertToPDF(psData) {
       return;
     }
 
-    console.log(`[print-server] PDF ready: ${outPath}`);
-    if (onNewPDF) onNewPDF(outPath);
+    console.log(`[print-server] PDF ready: ${outPath} (title: ${jobTitle || 'unknown'})`);
+    if (onNewPDF) onNewPDF(outPath, jobTitle || path.basename(outPath, '.pdf'));
   });
 }
 

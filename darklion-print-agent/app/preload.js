@@ -1,16 +1,16 @@
 'use strict';
 
-/**
- * Preload script — bridges the renderer process to the main process.
- * Exposes only the specific APIs the renderer needs.
- */
-
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Called when a new print job is ready to route
+  // Routing window: initial jobs payload
   onJobReady: (callback) => {
     ipcRenderer.on('job-ready', (event, data) => callback(data));
+  },
+
+  // Additional jobs added while window is open
+  onAddJobs: (callback) => {
+    ipcRenderer.on('add-jobs', (event, jobs) => callback(jobs));
   },
 
   // Search for clients
@@ -19,11 +19,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Upload a document
   upload: (params) => ipcRenderer.invoke('upload', params),
 
-  // Notify main that upload completed
+  // Notify main that a single file was uploaded (for cleanup)
   uploadComplete: (filePath) => ipcRenderer.send('upload-complete', { filePath }),
 
-  // Cancel — close the window without uploading
-  cancel: (filePath) => ipcRenderer.send('cancel', { filePath }),
+  // All jobs done — close window
+  allDone: () => ipcRenderer.send('all-done'),
+
+  // Cancel — close without uploading
+  cancel: () => ipcRenderer.send('cancel'),
 
   // Login
   login: (email, password) => ipcRenderer.invoke('login', { email, password }),

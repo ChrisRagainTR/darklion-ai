@@ -34,8 +34,13 @@ const BASE_DIR = path.join(
 // ── State ────────────────────────────────────────────────────────────────────
 let tray = null;
 let loginWindow = null;
-let routingWindows = new Map(); // filePath → BrowserWindow
+let batchWindow = null; // single routing window for all batched jobs
 let pendingJobs = []; // jobs queued while login window is open
+
+// Job batching — collect jobs arriving within BATCH_WINDOW_MS into one window
+const BATCH_WINDOW_MS = 3000;
+let batchQueue = [];    // { filePath, jobTitle }
+let batchTimer = null;
 
 // ── Single instance lock (must be before whenReady per Electron docs) ─────────
 if (!app.requestSingleInstanceLock()) {
@@ -94,15 +99,26 @@ function setupTray() {
 }
 
 
-// ── Handle new print job ──────────────────────────────────────────────────────
-async function handleNewPrintJob(filePath) {
+// ── Handle new print job — with batching ─────────────────────────────────────
+async function handleNewPrintJob(filePath, jobTitle) {
   const token = await getToken();
   if (!token || isTokenExpired(token)) {
-    pendingJobs.push(filePath);
+    pendingJobs.push({ filePath, jobTitle });
     showLoginWindow();
     return;
   }
-  showRoutingWindow(filePath);
+
+  // Add to batch queue
+  batchQueue.push({ filePath, jobTitle });
+
+  // Reset/start batch timer — wait for more jobs to arrive
+  if (batchTimer) clearTimeout(batchTimer);
+  batchTimer = setTimeout(() => {
+    const jobs = [...batchQueue];
+    batchQueue = [];
+    batchTimer = null;
+    showBatchWindow(jobs);
+  }, BATCH_WINDOW_MS);
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -138,19 +154,24 @@ function showLoginWindow() {
   loginWindow.on('closed', () => { loginWindow = null; });
 }
 
-// ── Routing window ────────────────────────────────────────────────────────────
-function showRoutingWindow(filePath) {
-  if (routingWindows.has(filePath)) {
-    const existing = routingWindows.get(filePath);
-    if (!existing.isDestroyed()) { existing.focus(); return; }
+// ── Batch routing window — one window for all jobs ───────────────────────────
+function showBatchWindow(jobs) {
+  if (!jobs.length) return;
+
+  // If window already open, add jobs to it
+  if (batchWindow && !batchWindow.isDestroyed()) {
+    batchWindow.webContents.send('add-jobs', jobs);
+    batchWindow.focus();
+    return;
   }
 
-  const jobName = cleanJobName(path.basename(filePath, '.pdf'));
+  // Height scales with job count, min 500, max 700
+  const height = Math.min(700, Math.max(500, 300 + jobs.length * 80));
 
-  const win = new BrowserWindow({
-    width: 440,
-    height: 560,
-    resizable: false,
+  batchWindow = new BrowserWindow({
+    width: 480,
+    height,
+    resizable: true,
     minimizable: false,
     maximizable: false,
     title: 'Route to DarkLion',
@@ -162,18 +183,19 @@ function showRoutingWindow(filePath) {
     },
   });
 
-  win.setMenu(null);
-  win.loadFile(path.join(__dirname, 'index.html'));
-  routingWindows.set(filePath, win);
+  batchWindow.setMenu(null);
+  batchWindow.loadFile(path.join(__dirname, 'index.html'));
 
-  win.webContents.on('did-finish-load', () => {
-    win.webContents.send('job-ready', { filePath, jobName });
+  batchWindow.webContents.on('did-finish-load', () => {
+    batchWindow.webContents.send('job-ready', { jobs });
   });
 
-  win.on('closed', () => {
-    routingWindows.delete(filePath);
-    // Clean up spool file if user closed without uploading
-    try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
+  batchWindow.on('closed', () => {
+    // Clean up any remaining spool files
+    for (const job of jobs) {
+      try { if (fs.existsSync(job.filePath)) fs.unlinkSync(job.filePath); } catch (_) {}
+    }
+    batchWindow = null;
   });
 }
 
@@ -197,15 +219,22 @@ ipcMain.handle('upload', async (event, params) => {
 });
 
 ipcMain.on('upload-complete', (event, { filePath }) => {
-  const win = BrowserWindow.fromWebContents(event.sender);
-  if (win && !win.isDestroyed()) win.destroy();
-  routingWindows.delete(filePath);
-  try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
+  // Delete the spool file after successful upload
+  try { if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
+  // Don't close window — user may have more jobs in the batch to upload
 });
 
-ipcMain.on('cancel', (event, { filePath }) => {
+ipcMain.on('all-done', (event) => {
+  // User clicked done after uploading all jobs — close the window
   const win = BrowserWindow.fromWebContents(event.sender);
   if (win && !win.isDestroyed()) win.destroy();
+  batchWindow = null;
+});
+
+ipcMain.on('cancel', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win && !win.isDestroyed()) win.destroy();
+  batchWindow = null;
 });
 
 ipcMain.handle('login', async (event, { email, password }) => {
@@ -221,7 +250,7 @@ ipcMain.on('login-success', async () => {
   }
   const jobs = [...pendingJobs];
   pendingJobs = [];
-  for (const fp of jobs) showRoutingWindow(fp);
+  if (jobs.length) showBatchWindow(jobs);
 });
 
 ipcMain.on('logout', async () => {
