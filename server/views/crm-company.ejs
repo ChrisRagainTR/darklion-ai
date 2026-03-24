@@ -718,7 +718,6 @@
     <div class="crm-thread-list">
       <div class="crm-thread-list-header">
         <h3>Messages</h3>
-        <button class="btn btn-gold btn-sm" onclick="coCommOpenNew()">+ New</button>
       </div>
       <div class="crm-thread-list-inner" id="comm-co-threads">
         <div class="loading-state"><div class="loading-spinner"></div></div>
@@ -739,7 +738,10 @@
             <input type="checkbox" id="comm-co-internal-toggle" style="display:none;">
             <div style="flex:1;"></div>
           </div>
-          <textarea id="comm-co-reply-body" placeholder="Write a reply…" rows="3"></textarea>
+          <div style="position:relative;">
+            <textarea id="comm-co-reply-body" placeholder="Write a reply… (use @Name to loop in a colleague)" rows="3"></textarea>
+            <div id="comm-co-mention-picker" style="display:none;position:absolute;bottom:100%;left:0;z-index:500;background:var(--charcoal);border:1px solid var(--gold);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);min-width:200px;max-height:200px;overflow-y:auto;"></div>
+          </div>
           <div class="attach-chips" id="comm-co-attach-chips"></div>
           <input type="file" id="comm-co-attach-input" multiple style="display:none;" onchange="handleCoCommAttach(this.files)">
           <div class="reply-box-actions">
@@ -3304,6 +3306,53 @@
     coCommCloseTemplatePicker();
     document.getElementById('comm-co-new-body').focus();
   }
+
+  // ── @mention picker for company comm tab ──
+  (function() {
+    let _coFirmUsers = [];
+    let _coMentionStart = -1;
+    const getTA = () => document.getElementById('comm-co-reply-body');
+    const getPicker = () => document.getElementById('comm-co-mention-picker');
+    function hidePicker() { const p = getPicker(); if (p) p.style.display = 'none'; _coMentionStart = -1; }
+    function insertMention(name) {
+      const ta = getTA(); if (!ta) return;
+      const val = ta.value, pos = ta.selectionStart;
+      ta.value = val.slice(0, _coMentionStart) + '@' + name + ' ' + val.slice(pos);
+      const np = _coMentionStart + name.length + 2;
+      ta.setSelectionRange(np, np); ta.focus(); hidePicker();
+    }
+    document.addEventListener('keyup', function(e) {
+      const ta = getTA(); const picker = getPicker();
+      if (!ta || !picker || e.target !== ta) return;
+      const val = ta.value, pos = ta.selectionStart, textBefore = val.slice(0, pos);
+      const atIdx = textBefore.lastIndexOf('@');
+      if (atIdx === -1 || (atIdx > 0 && /\S/.test(val[atIdx - 1]))) { hidePicker(); return; }
+      const query = textBefore.slice(atIdx + 1).toLowerCase();
+      if (query.includes(' ') && query.split(' ').length > 2) { hidePicker(); return; }
+      _coMentionStart = atIdx;
+      if (!_coFirmUsers.length) {
+        apiFetch('/firms/team').then(r => r.json()).then(u => { _coFirmUsers = u || []; }).catch(() => {});
+        return;
+      }
+      const matches = _coFirmUsers.filter(u => (u.name || u.email || '').toLowerCase().includes(query)).slice(0, 8);
+      if (!matches.length) { hidePicker(); return; }
+      picker.innerHTML = matches.map(u => {
+        const name = u.name || u.email;
+        const ini = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+        return `<div class="co-mention-item" data-name="${name.replace(/"/g,'')}" style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.75rem;cursor:pointer;font-size:0.85rem;">
+          <div style="width:26px;height:26px;border-radius:50%;background:rgba(201,168,76,0.15);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;">${ini}</div>
+          <span>${name}</span></div>`;
+      }).join('');
+      picker.style.display = 'block';
+      picker.querySelectorAll('.co-mention-item').forEach(item => {
+        item.addEventListener('mouseenter', () => item.style.background = 'rgba(201,168,76,0.1)');
+        item.addEventListener('mouseleave', () => item.style.background = '');
+        item.addEventListener('mousedown', ev => { ev.preventDefault(); insertMention(item.dataset.name); });
+      });
+    });
+    document.addEventListener('keydown', e => { if (getPicker()?.style.display !== 'none' && e.key === 'Escape') hidePicker(); });
+    apiFetch('/firms/team').then(r => r.json()).then(u => { _coFirmUsers = u || []; }).catch(() => {});
+  })();
 
   function initCoComm() {
     commCoId = companyId;
