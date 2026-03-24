@@ -8,25 +8,47 @@
 const { exec } = require('child_process');
 
 const DRIVE_LETTER = 'L:';
-const WEBDAV_HOST = '\\\\127.0.0.1@7890\\DavWWWRoot';
+const WEBDAV_PORT = 7890;
 const WEBDAV_USER = 'darklion';
 
 /**
- * Mount L: drive via net use.
+ * Mount L: drive via PowerShell net use.
+ * Uses PowerShell to safely pass the token as a SecureString, avoiding
+ * command-line injection / special character issues with JWT tokens.
  * @param {string} token - JWT token used as password for WebDAV basic auth
- * @returns {Promise<void>}
  */
 function mountDrive(token) {
-  return new Promise((resolve, reject) => {
-    // First, try to delete any existing mount to avoid "already in use" errors
-    exec(`net use ${DRIVE_LETTER} /delete /y`, () => {
-      // Ignore errors from the delete (may not exist)
-      const cmd = `net use ${DRIVE_LETTER} ${WEBDAV_HOST} /user:${WEBDAV_USER} "${token}" /persistent:yes`;
-      exec(cmd, (err, stdout, stderr) => {
+  return new Promise(function(resolve, reject) {
+    // Delete existing mount first
+    exec('net use ' + DRIVE_LETTER + ' /delete /y', function() {
+      // Use PowerShell to safely handle the token (avoids special char issues)
+      var psScript = [
+        '$pwd = ConvertTo-SecureString \'' + token.replace(/'/g, "''") + '\' -AsPlainText -Force',
+        '$cred = New-Object System.Management.Automation.PSCredential(\'' + WEBDAV_USER + '\', $pwd)',
+        'net use ' + DRIVE_LETTER + ' \\\\127.0.0.1@' + WEBDAV_PORT + '\\DavWWWRoot /user:' + WEBDAV_USER + ' $cred.GetNetworkCredential().Password /persistent:yes'
+      ].join('; ');
+
+      // Simpler approach: write token to temp file to avoid shell escaping
+      var os = require('os');
+      var fs = require('fs');
+      var tmpFile = require('path').join(os.tmpdir(), 'dl_token.tmp');
+      fs.writeFileSync(tmpFile, token, 'utf8');
+
+      var cmd = 'powershell -NoProfile -Command "' +
+        '$t = Get-Content \\"' + tmpFile + '\\" -Raw; ' +
+        'net use ' + DRIVE_LETTER + ' \\\\\\\\127.0.0.1@' + WEBDAV_PORT + '\\\\DavWWWRoot /user:' + WEBDAV_USER + ' $t /persistent:yes; ' +
+        'Remove-Item \\"' + tmpFile + '\\" -Force"';
+
+      console.log('[Drive] Mounting via PowerShell...');
+      exec(cmd, function(err, stdout, stderr) {
+        // Clean up temp file regardless
+        try { fs.unlinkSync(tmpFile); } catch(e) {}
+
         if (err) {
           console.error('[Drive] Mount failed:', stderr || err.message);
           return reject(new Error(stderr || err.message));
         }
+        console.log('[Drive] stdout:', stdout);
         console.log('[Drive] Mounted L: successfully');
         resolve();
       });
