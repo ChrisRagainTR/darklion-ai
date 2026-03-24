@@ -92,10 +92,10 @@ router.get('/session', async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
 
-    // Purge yesterday's sessions — keep only today (non-blocking)
-    pool.query('DELETE FROM viktor_sessions WHERE session_date < CURRENT_DATE').catch(() => {});
+    // Purge all sessions from previous days — clean slate each morning
+    pool.query('DELETE FROM viktor_sessions WHERE session_date < $1', [today]).catch(() => {});
 
-    // Upsert session row for today (creates if missing, touches updated_at if exists)
+    // Get or create today's session (preserve today's messages — don't wipe mid-day)
     await pool.query(
       `INSERT INTO viktor_sessions (firm_id, user_id, session_date)
        VALUES ($1, $2, $3)
@@ -103,7 +103,7 @@ router.get('/session', async (req, res) => {
       [firmId, userId, today]
     );
 
-    // Always fetch fresh — ensures we get current messages/briefing_generated
+    // Always fetch fresh
     const { rows } = await pool.query(
       'SELECT * FROM viktor_sessions WHERE firm_id = $1 AND user_id = $2 AND session_date = $3',
       [firmId, userId, today]
