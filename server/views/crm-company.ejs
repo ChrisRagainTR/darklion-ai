@@ -1936,19 +1936,20 @@
     } catch(e) { toast('Failed to save notes', 'error'); }
   }
 
-  async function openEditModal() {
+  function openEditModal() {
     if (!companyData) return;
+    // Show modal synchronously first — iOS Safari loses gesture context after await
     document.getElementById('ef-name').value = companyData.company_name || '';
     document.getElementById('ef-entity-type').value = companyData.entity_type || '';
     document.getElementById('ef-tax-year-end').value = companyData.tax_year_end || '';
     document.getElementById('ef-stanford').value = companyData.stanford_tax_url || '';
     document.getElementById('ef-status').value = companyData.status || 'active';
     document.getElementById('ef-bookkeeping-service').value = companyData.bookkeeping_service || 'none';
-    // Populate bookkeeper select
+    document.getElementById('edit-modal').classList.add('open');
+    // Load bookkeeper options async after modal is visible
     const bkSel = document.getElementById('ef-bookkeeper');
     bkSel.innerHTML = '<option value="">— None —</option>';
-    try {
-      const r = await apiFetch('/firms/team'); const team = await r.json();
+    apiFetch('/firms/team').then(r => r.json()).then(team => {
       (Array.isArray(team) ? team : (team.members||[])).forEach(m => {
         const opt = document.createElement('option');
         opt.value = m.id || m.user_id || '';
@@ -1956,8 +1957,7 @@
         if (companyData.bookkeeper_id && String(opt.value) === String(companyData.bookkeeper_id)) opt.selected = true;
         bkSel.appendChild(opt);
       });
-    } catch(e) {}
-    document.getElementById('edit-modal').classList.add('open');
+    }).catch(() => {});
   }
   function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
 
