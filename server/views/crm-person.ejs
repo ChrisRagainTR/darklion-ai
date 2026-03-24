@@ -991,7 +991,12 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Server error ' + res.status);
       toast('Document deleted');
-      reloadDocs();
+      // Remove from in-memory array and re-render immediately (no flicker)
+      docsData = docsData.filter(d => d.id !== id);
+      renderDocs();
+      // Also clear the cache so next tab switch fetches fresh
+      const docsEl = document.getElementById('docs-content');
+      if (docsEl) delete docsEl.dataset.loaded;
     } catch(err) { toast('Delete failed: ' + err.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = '🗑'; btn.dataset.confirm = ''; btn.style = ''; } }
   }
 
