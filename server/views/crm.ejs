@@ -1,54 +1,163 @@
+<%- include('partials/shell-top', {title: 'CRM', activeNav: 'relationships'}) %>
+
+<style>
+  /* ── Page tabs ── */
+  .page-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+  .page-tab { padding: 0.65rem 1.25rem; cursor: pointer; font-size: 0.88rem; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+  .page-tab:hover { color: var(--text); }
+  .page-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* ── Section header ── */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+  .section-title { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+  .section-actions { display: flex; gap: 0.5rem; align-items: center; }
+
+  /* ── Inline search ── */
+  .inline-search { padding: 0.4rem 0.75rem; background: var(--charcoal); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.84rem; outline: none; min-width: 200px; }
+  .inline-search:focus { border-color: var(--gold); }
+
+  /* ── Table ── */
+  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table thead tr { background: rgba(201,168,76,0.06); }
+  .data-table th { padding: 0.75rem 1rem; text-align: left; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .data-table td { padding: 0.75rem 1rem; font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+  .data-table tbody tr:last-child td { border-bottom: none; }
+  .data-table tbody tr { cursor: pointer; transition: background 0.1s; }
+  .data-table tbody tr:hover { background: rgba(201,168,76,0.04); }
+
+  /* ── Content area ── */
+  .crm-content { padding: 1.5rem; }
+
+  /* ── Slide-in Panel ── */
+  .panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 300; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .panel-overlay.open { opacity: 1; pointer-events: all; }
+  .slide-panel { position: fixed; top: 0; right: -640px; width: 640px; max-width: 100vw; height: 100vh; background: var(--charcoal); border-left: 1px solid var(--border); z-index: 310; transition: right 0.25s cubic-bezier(0.4,0,0.2,1); display: flex; flex-direction: column; overflow: hidden; }
+  .slide-panel.open { right: 0; }
+  .panel-header { padding: 1.2rem 1.5rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 1rem; background: rgba(15,25,35,0.5); flex-shrink: 0; }
+  .panel-header-content { flex: 1; min-width: 0; }
+  .panel-title { font-size: 1.15rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
+  .panel-subtitle { font-size: 0.82rem; color: var(--muted); }
+  .panel-close { background: none; border: none; color: var(--muted); font-size: 1.3rem; cursor: pointer; padding: 0.1rem 0.3rem; line-height: 1; flex-shrink: 0; }
+  .panel-close:hover { color: var(--text); }
+  .panel-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 1.5rem; flex-shrink: 0; }
+  .panel-tab { padding: 0.6rem 1rem; cursor: pointer; font-size: 0.83rem; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+  .panel-tab:hover { color: var(--text); }
+  .panel-tab.active { color: var(--gold); border-bottom-color: var(--gold); font-weight: 600; }
+  .panel-body { flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem; }
+  .panel-section { margin-bottom: 1.5rem; }
+  .panel-section-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.75rem; }
+
+  /* ── Info cards ── */
+  .info-card { background: rgba(15,25,35,0.5); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 0.75rem; }
+  .info-row { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.35rem; }
+  .info-row:last-child { margin-bottom: 0; }
+  .info-label { font-size: 0.74rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; min-width: 80px; }
+  .info-val { font-size: 0.88rem; color: var(--text); word-break: break-word; }
+
+  /* ── Person list items ── */
+  .person-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .person-item:last-child { border-bottom: none; }
+  .person-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(201,168,76,0.15); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; color: var(--gold); flex-shrink: 0; }
+  .person-info { flex: 1; min-width: 0; }
+  .person-name { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+  .person-meta { font-size: 0.76rem; color: var(--muted); }
+  .person-actions { display: flex; gap: 0.35rem; align-items: center; flex-shrink: 0; }
+
+  /* ── Placeholder sections ── */
+  .placeholder-section { padding: 3rem; text-align: center; color: var(--muted); }
+  .placeholder-section .ph-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
+  .placeholder-section .ph-title { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.5rem; opacity: 0.7; }
+  .placeholder-section .ph-desc { font-size: 0.85rem; color: var(--muted); }
+
+  /* ── Inline edit ── */
+  .inline-edit-wrap { display: flex; align-items: center; gap: 0.5rem; }
+  .inline-edit-link { color: var(--gold); font-size: 0.84rem; text-decoration: none; }
+  .inline-edit-link:hover { text-decoration: underline; }
+
+  /* ── Toast container (CRM custom toasts) ── */
+  .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999; display: flex; flex-direction: column; gap: 0.5rem; }
+  .crm-toast { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.84rem; color: var(--text); box-shadow: 0 4px 16px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 0.5rem; animation: slideIn 0.2s; min-width: 260px; max-width: 360px; }
+  .crm-toast.success { border-color: rgba(62,207,142,0.4); }
+  .crm-toast.error { border-color: rgba(245,101,101,0.4); }
+  @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* ── Searchable select ── */
+  .searchable-select-wrap { position: relative; }
+  .searchable-select-options { position: absolute; top: 100%; left: 0; right: 0; z-index: 500; background: var(--card); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); max-height: 220px; overflow-y: auto; display: none; }
+  .searchable-select-options.open { display: block; }
+  .ss-option { padding: 0.5rem 0.75rem; font-size: 0.85rem; cursor: pointer; }
+  .ss-option:hover { background: rgba(201,168,76,0.08); color: var(--gold); }
+  .ss-option.selected { color: var(--gold); font-weight: 600; }
+  .ss-empty { padding: 0.75rem; font-size: 0.82rem; color: var(--muted); text-align: center; }
+
+  /* ── Error / success msgs ── */
+  .error-msg { background: rgba(245,101,101,0.1); border: 1px solid rgba(245,101,101,0.25); border-radius: 6px; padding: 0.7rem 1rem; color: var(--red); font-size: 0.84rem; margin-bottom: 1rem; }
+  .success-msg { background: rgba(62,207,142,0.1); border: 1px solid rgba(62,207,142,0.25); border-radius: 6px; padding: 0.7rem 1rem; color: var(--green); font-size: 0.84rem; margin-bottom: 1rem; }
+
+  /* ── Form overrides for modals ── */
+  .modal-body .form-control { background: var(--navy); }
+  .form-label .req { color: var(--red); margin-left: 2px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  select.form-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238fa3b8'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; background-color: var(--navy); padding-right: 2rem; }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .slide-panel { width: 100vw; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+</style>
+
 <!-- ── Content ── -->
-  <div class="content">
-    <!-- Page tabs -->
-    <div class="page-tabs" id="page-tabs">
-      <div class="page-tab active" data-tab="relationships" onclick="switchTab('relationships',null)">👥 Relationships</div>
-      <div class="page-tab" data-tab="people" onclick="switchTab('people',null)">👤 People</div>
-      <div class="page-tab" data-tab="companies" onclick="switchTab('companies',null)">🏢 Companies</div>
-    </div>
+<div class="crm-content">
+  <!-- Page tabs -->
+  <div class="page-tabs" id="page-tabs">
+    <div class="page-tab active" data-tab="relationships" onclick="switchTab('relationships',null)">👥 Relationships</div>
+    <div class="page-tab" data-tab="people" onclick="switchTab('people',null)">👤 People</div>
+    <div class="page-tab" data-tab="companies" onclick="switchTab('companies',null)">🏢 Companies</div>
+  </div>
 
-    <!-- ── Tab: Relationships ── -->
-    <div id="tab-relationships" class="tab-content">
-      <div class="section-header">
-        <div class="section-title">Relationships</div>
-        <div class="section-actions">
-          <input type="text" class="inline-search" id="rel-search" placeholder="Filter…" oninput="filterRelationships(this.value)">
-          <button class="btn btn-gold btn-sm" onclick="openNewRelationship()">+ New Relationship</button>
-        </div>
-      </div>
-      <div id="rel-list-container">
-        <div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>
+  <!-- ── Tab: Relationships ── -->
+  <div id="tab-relationships" class="tab-content" style="display:block;">
+    <div class="section-header">
+      <div class="section-title">Relationships</div>
+      <div class="section-actions">
+        <input type="text" class="inline-search" id="rel-search" placeholder="Filter…" oninput="filterRelationships(this.value)">
+        <button class="btn btn-gold btn-sm" onclick="openNewRelationship()">+ New Relationship</button>
       </div>
     </div>
+    <div id="rel-list-container">
+      <div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>
+    </div>
+  </div>
 
-    <!-- ── Tab: People ── -->
-    <div id="tab-people" class="tab-content" style="display:none;">
-      <div class="section-header">
-        <div class="section-title">People</div>
-        <div class="section-actions">
-          <input type="text" class="inline-search" id="people-search" placeholder="Filter…" oninput="filterPeople(this.value)">
-          <button class="btn btn-gold btn-sm" onclick="openNewPerson()">+ New Person</button>
-        </div>
-      </div>
-      <div id="people-list-container">
-        <div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>
+  <!-- ── Tab: People ── -->
+  <div id="tab-people" class="tab-content" style="display:none;">
+    <div class="section-header">
+      <div class="section-title">People</div>
+      <div class="section-actions">
+        <input type="text" class="inline-search" id="people-search" placeholder="Filter…" oninput="filterPeople(this.value)">
+        <button class="btn btn-gold btn-sm" onclick="openNewPerson()">+ New Person</button>
       </div>
     </div>
+    <div id="people-list-container">
+      <div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>
+    </div>
+  </div>
 
-    <!-- ── Tab: Companies ── -->
-    <div id="tab-companies" class="tab-content" style="display:none;">
-      <div class="section-header">
-        <div class="section-title">Companies</div>
-        <div class="section-actions">
-          <input type="text" class="inline-search" id="co-search" placeholder="Filter…" oninput="filterCompanies(this.value)">
-        </div>
-      </div>
-      <div id="companies-list-container">
-        <div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>
+  <!-- ── Tab: Companies ── -->
+  <div id="tab-companies" class="tab-content" style="display:none;">
+    <div class="section-header">
+      <div class="section-title">Companies</div>
+      <div class="section-actions">
+        <input type="text" class="inline-search" id="co-search" placeholder="Filter…" oninput="filterCompanies(this.value)">
       </div>
     </div>
-  </div><!-- /content -->
-</div><!-- /main -->
+    <div id="companies-list-container">
+      <div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div>
+    </div>
+  </div>
+</div><!-- /crm-content -->
 
 <!-- ── Panel Overlay ── -->
 <div class="panel-overlay" id="panel-overlay" onclick="closeAllPanels()"></div>
@@ -152,15 +261,14 @@
 </div>
 
 <!-- ── Upload Document Modal ── -->
-<div class="modal-overlay" id="upload-modal">
-  <div class="modal" style="width:480px;">
+<div class="modal-overlay hidden" id="upload-modal">
+  <div class="modal" style="max-width:480px;">
     <div class="modal-header">
       <div class="modal-title">Upload Document</div>
       <button class="modal-close" onclick="closeModal('upload-modal')">✕</button>
     </div>
     <div class="modal-body">
       <div id="upload-form-error" class="error-msg" style="display:none;"></div>
-      <!-- Drag & drop zone -->
       <div id="upload-dropzone" style="border:2px dashed var(--border);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;transition:border-color 0.2s;margin-bottom:1rem;"
            onclick="document.getElementById('upload-file-input').click()"
            ondragover="uploadDragOver(event)"
@@ -196,7 +304,6 @@
           </select>
         </div>
       </div>
-      <!-- Progress bar -->
       <div id="upload-progress-wrap" style="display:none;margin-top:0.5rem;">
         <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;">
           <div id="upload-progress-bar" style="background:var(--gold);height:100%;width:0%;transition:width 0.3s;"></div>
@@ -204,7 +311,7 @@
         <div id="upload-progress-label" style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;text-align:center;">Uploading…</div>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('upload-modal')">Cancel</button>
       <button class="btn btn-gold" id="upload-submit-btn" onclick="submitUpload()">Upload</button>
     </div>
@@ -212,7 +319,7 @@
 </div>
 
 <!-- ── Relationship Form Modal ── -->
-<div class="modal-overlay" id="rel-modal">
+<div class="modal-overlay hidden" id="rel-modal">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title" id="rel-modal-title">New Relationship</div>
@@ -250,7 +357,7 @@
         <textarea class="form-control" id="rel-form-notes" placeholder="Internal notes…"></textarea>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('rel-modal')">Cancel</button>
       <button class="btn btn-gold" id="rel-form-submit" onclick="submitRelationshipForm()">Create Relationship</button>
     </div>
@@ -258,8 +365,8 @@
 </div>
 
 <!-- ── Person Form Modal ── -->
-<div class="modal-overlay" id="person-modal">
-  <div class="modal">
+<div class="modal-overlay hidden" id="person-modal">
+  <div class="modal" style="max-width:560px;">
     <div class="modal-header">
       <div class="modal-title" id="person-modal-title">New Person</div>
       <button class="modal-close" onclick="closeModal('person-modal')">✕</button>
@@ -335,7 +442,7 @@
         <textarea class="form-control" id="person-form-notes" placeholder="Internal notes…"></textarea>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('person-modal')">Cancel</button>
       <button class="btn btn-gold" id="person-form-submit" onclick="submitPersonForm()">Create Person</button>
     </div>
@@ -343,8 +450,8 @@
 </div>
 
 <!-- ── Grant Access Modal ── -->
-<div class="modal-overlay" id="grant-modal">
-  <div class="modal" style="width:400px;">
+<div class="modal-overlay hidden" id="grant-modal">
+  <div class="modal" style="max-width:400px;">
     <div class="modal-header">
       <div class="modal-title">Grant Company Access</div>
       <button class="modal-close" onclick="closeModal('grant-modal')">✕</button>
@@ -372,7 +479,7 @@
         </div>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('grant-modal')">Cancel</button>
       <button class="btn btn-gold" onclick="submitGrantAccess()">Grant Access</button>
     </div>
@@ -380,220 +487,21 @@
 </div>
 
 <!-- ── Toast container ── -->
+<div class="toast-container" id="toast-container"></div>
 
-<%- contentFor('styles') %>
-<style>
-    .page-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
-    .page-tab {
-      padding: 0.65rem 1.25rem; cursor: pointer; font-size: 0.88rem; font-weight: 500;
-      color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px;
-      transition: all 0.15s;
-    }
-    .page-tab:hover { color: var(--text); }
-    .page-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+<%- include('partials/shell-globals') %>
 
-    /* ── Section header ── */
-    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
-    .section-title { font-size: 1.15rem; font-weight: 700; color: var(--text); }
-    .section-actions { display: flex; gap: 0.5rem; align-items: center; }
-
-    /* ── Inline search ── */
-    .inline-search {
-      padding: 0.4rem 0.75rem; background: var(--charcoal); border: 1px solid var(--border);
-      border-radius: 6px; color: var(--text); font-size: 0.84rem; outline: none; min-width: 200px;
-    }
-    .inline-search:focus { border-color: var(--gold); }
-
-    /* ── Buttons ── */
-    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.95rem; border-radius: 6px; font-size: 0.84rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
-    .btn-gold { background: var(--gold); color: var(--navy); }
-    .btn-gold:hover { background: var(--gold-light); }
-    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
-    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
-    .btn-ghost { background: transparent; color: var(--muted); padding: 0.3rem 0.6rem; font-size: 0.8rem; }
-    .btn-ghost:hover { color: var(--text); }
-    .btn-danger { background: transparent; border: 1px solid rgba(245,101,101,0.3); color: var(--red); }
-    .btn-danger:hover { background: rgba(245,101,101,0.1); }
-    .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
-    .btn-xs { padding: 0.2rem 0.5rem; font-size: 0.72rem; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    /* ── Table ── */
-    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-    .data-table { width: 100%; border-collapse: collapse; }
-    .data-table thead tr { background: rgba(201,168,76,0.06); }
-    .data-table th { padding: 0.75rem 1rem; text-align: left; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); white-space: nowrap; }
-    .data-table td { padding: 0.75rem 1rem; font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
-    .data-table tbody tr:last-child td { border-bottom: none; }
-    .data-table tbody tr { cursor: pointer; transition: background 0.1s; }
-    .data-table tbody tr:hover { background: rgba(201,168,76,0.04); }
-
-    /* ── Badges ── */
-    .badge { display: inline-block; padding: 0.18rem 0.6rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-    .badge-gold { background: rgba(201,168,76,0.15); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
-    .badge-green { background: rgba(62,207,142,0.12); color: var(--green); border: 1px solid rgba(62,207,142,0.25); }
-    .badge-red { background: rgba(245,101,101,0.12); color: var(--red); border: 1px solid rgba(245,101,101,0.25); }
-    .badge-orange { background: rgba(237,137,54,0.12); color: var(--orange); border: 1px solid rgba(237,137,54,0.25); }
-    .badge-muted { background: rgba(143,163,184,0.12); color: var(--muted); border: 1px solid rgba(143,163,184,0.2); }
-    .badge-blue { background: rgba(66,153,225,0.12); color: #63b3ed; border: 1px solid rgba(66,153,225,0.25); }
-
-    /* ── Loading / empty states ── */
-    .loading-state { padding: 3rem; text-align: center; color: var(--muted); }
-    .loading-spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid rgba(201,168,76,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 0.5rem; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .empty-state { padding: 3rem; text-align: center; color: var(--muted); }
-    .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.5; }
-    .error-msg { background: rgba(245,101,101,0.1); border: 1px solid rgba(245,101,101,0.25); border-radius: 6px; padding: 0.7rem 1rem; color: var(--red); font-size: 0.84rem; margin-bottom: 1rem; }
-    .success-msg { background: rgba(62,207,142,0.1); border: 1px solid rgba(62,207,142,0.25); border-radius: 6px; padding: 0.7rem 1rem; color: var(--green); font-size: 0.84rem; margin-bottom: 1rem; }
-
-    /* ── Slide-in Panel ── */
-    .panel-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 300;
-      opacity: 0; pointer-events: none; transition: opacity 0.2s;
-    }
-    .panel-overlay.open { opacity: 1; pointer-events: all; }
-    .slide-panel {
-      position: fixed; top: 0; right: -640px; width: 640px; max-width: 100vw; height: 100vh;
-      background: var(--charcoal); border-left: 1px solid var(--border);
-      z-index: 310; transition: right 0.25s cubic-bezier(0.4,0,0.2,1);
-      display: flex; flex-direction: column; overflow: hidden;
-    }
-    .slide-panel.open { right: 0; }
-    .panel-header {
-      padding: 1.2rem 1.5rem 1rem; border-bottom: 1px solid var(--border);
-      display: flex; align-items: flex-start; gap: 1rem; background: rgba(15,25,35,0.5);
-      flex-shrink: 0;
-    }
-    .panel-header-content { flex: 1; min-width: 0; }
-    .panel-title { font-size: 1.15rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
-    .panel-subtitle { font-size: 0.82rem; color: var(--muted); }
-    .panel-close { background: none; border: none; color: var(--muted); font-size: 1.3rem; cursor: pointer; padding: 0.1rem 0.3rem; line-height: 1; flex-shrink: 0; }
-    .panel-close:hover { color: var(--text); }
-    .panel-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 1.5rem; flex-shrink: 0; }
-    .panel-tab { padding: 0.6rem 1rem; cursor: pointer; font-size: 0.83rem; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
-    .panel-tab:hover { color: var(--text); }
-    .panel-tab.active { color: var(--gold); border-bottom-color: var(--gold); font-weight: 600; }
-    .panel-body { flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem; }
-    .panel-section { margin-bottom: 1.5rem; }
-    .panel-section-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.75rem; }
-
-    /* ── Modal (forms) ── */
-    .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 400;
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0; pointer-events: none; transition: opacity 0.18s;
-    }
-    .modal-overlay.open { opacity: 1; pointer-events: all; }
-    .modal {
-      background: var(--charcoal); border: 1px solid var(--border); border-radius: 12px;
-      width: 520px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column;
-      transform: translateY(20px); transition: transform 0.18s;
-    }
-    .modal-overlay.open .modal { transform: translateY(0); }
-    .modal-header { padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .modal-title { font-size: 1rem; font-weight: 700; color: var(--text); }
-    .modal-close { background: none; border: none; color: var(--muted); font-size: 1.3rem; cursor: pointer; line-height: 1; }
-    .modal-close:hover { color: var(--text); }
-    .modal-body { padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1; }
-    .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.5rem; }
-
-    /* ── Forms ── */
-    .form-group { margin-bottom: 1rem; }
-    .form-label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.05em; }
-    .form-label .req { color: var(--red); margin-left: 2px; }
-    .form-control {
-      width: 100%; padding: 0.5rem 0.75rem;
-      background: var(--navy); border: 1px solid var(--border); border-radius: 6px;
-      color: var(--text); font-size: 0.88rem; outline: none; transition: border-color 0.15s;
-    }
-    .form-control:focus { border-color: var(--gold); }
-    .form-control::placeholder { color: var(--muted); opacity: 0.7; }
-    textarea.form-control { resize: vertical; min-height: 80px; }
-    select.form-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238fa3b8'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2rem; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-    .form-hint { font-size: 0.74rem; color: var(--muted); margin-top: 0.25rem; }
-    .searchable-select-wrap { position: relative; }
-    .searchable-select-options {
-      position: absolute; top: 100%; left: 0; right: 0; z-index: 500;
-      background: var(--card); border: 1px solid var(--border); border-radius: 6px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5); max-height: 220px; overflow-y: auto;
-      display: none;
-    }
-    .searchable-select-options.open { display: block; }
-    .ss-option { padding: 0.5rem 0.75rem; font-size: 0.85rem; cursor: pointer; }
-    .ss-option:hover { background: rgba(201,168,76,0.08); color: var(--gold); }
-    .ss-option.selected { color: var(--gold); font-weight: 600; }
-    .ss-empty { padding: 0.75rem; font-size: 0.82rem; color: var(--muted); text-align: center; }
-
-    /* ── Info cards ── */
-    .info-card { background: rgba(15,25,35,0.5); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 0.75rem; }
-    .info-row { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.35rem; }
-    .info-row:last-child { margin-bottom: 0; }
-    .info-label { font-size: 0.74rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; min-width: 80px; }
-    .info-val { font-size: 0.88rem; color: var(--text); word-break: break-word; }
-
-    /* ── Person list items ── */
-    .person-item {
-      display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.7rem 0; border-bottom: 1px solid rgba(255,255,255,0.04);
-    }
-    .person-item:last-child { border-bottom: none; }
-    .person-avatar {
-      width: 36px; height: 36px; border-radius: 50%;
-      background: rgba(201,168,76,0.15); display: flex; align-items: center; justify-content: center;
-      font-size: 0.85rem; font-weight: 700; color: var(--gold); flex-shrink: 0;
-    }
-    .person-info { flex: 1; min-width: 0; }
-    .person-name { font-size: 0.88rem; font-weight: 600; color: var(--text); }
-    .person-meta { font-size: 0.76rem; color: var(--muted); }
-    .person-actions { display: flex; gap: 0.35rem; align-items: center; flex-shrink: 0; }
-
-    /* ── Placeholder sections ── */
-    .placeholder-section { padding: 3rem; text-align: center; color: var(--muted); }
-    .placeholder-section .ph-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
-    .placeholder-section .ph-title { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.5rem; opacity: 0.7; }
-    .placeholder-section .ph-desc { font-size: 0.85rem; color: var(--muted); }
-
-    /* ── Inline edit ── */
-    .inline-edit-wrap { display: flex; align-items: center; gap: 0.5rem; }
-    .inline-edit-link { color: var(--gold); font-size: 0.84rem; text-decoration: none; }
-    .inline-edit-link:hover { text-decoration: underline; }
-
-    /* ── Toast ── */
-    .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999; display: flex; flex-direction: column; gap: 0.5rem; }
-    .toast { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.84rem; color: var(--text); box-shadow: 0 4px 16px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 0.5rem; animation: slideIn 0.2s; min-width: 260px; max-width: 360px; }
-    .toast.success { border-color: rgba(62,207,142,0.4); }
-    .toast.error { border-color: rgba(245,101,101,0.4); }
-    @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-    /* ── Responsive ── */
-    @media (max-width: 768px) {
-      .sidebar { width: 56px; }
-      .sidebar .sidebar-section, .sidebar-nav li a span, .sidebar-brand .nav-name { display: none; }
-      .sidebar-nav li a { justify-content: center; padding: 0.75rem; }
-      .main { margin-left: 56px; }
-      .header-logo .hl-name { display: none; }
-      .header-search-wrap { max-width: 100%; }
-      .slide-panel { width: 100vw; }
-      .form-row { grid-template-columns: 1fr; }
-    }
-    .sidebar-nav li a.nav-coming-soon { opacity: 0.4; cursor: default; pointer-events: none; }
-</style>
-
-<%- contentFor('scripts') %>
 <script>
 // =====================================================================
 //  STATE
 // =====================================================================
-const token = localStorage.getItem('dl_token');
 let allRelationships = [];
 let allPeople = [];
 let allCompanies = [];
 let currentRelId = null;
 let currentPersonId = null;
-let editingRelId = null;   // null = creating new
+let editingRelId = null;
 let editingPersonId = null;
-let relSearchTimer = null;
 
 // Searchable select state
 const ssData = { rel: [], spouse: [] };
@@ -603,7 +511,6 @@ const ssFiltered = { rel: [], spouse: [] };
 //  INIT
 // =====================================================================
 document.addEventListener('DOMContentLoaded', () => {
-  if (!token) { window.location.href = '/login'; return; }
   // Honor ?tab= query param from sidebar links
   const urlTab = new URLSearchParams(window.location.search).get('tab');
   if (urlTab && ['relationships','people','companies'].includes(urlTab)) {
@@ -614,31 +521,19 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCompanies();
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllPanels(); });
   document.addEventListener('click', e => {
-    // Close searchable selects
     if (!e.target.closest('.searchable-select-wrap')) {
       document.querySelectorAll('.searchable-select-options.open').forEach(el => el.classList.remove('open'));
     }
   });
 });
 
-function authHeaders() {
-  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
-}
-
-async function apiFetch(url, opts = {}) {
-  const res = await fetch(url, { ...opts, headers: { ...authHeaders(), ...(opts.headers || {}) } });
-  if (res.status === 401) { window.location.href = '/login'; throw new Error('Unauthorized'); }
-  return res;
-}
-
 // =====================================================================
 //  TABS
 // =====================================================================
 function switchTab(tab, linkEl) {
-  document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('#tab-relationships, #tab-people, #tab-companies').forEach(el => el.style.display = 'none');
   document.getElementById('tab-' + tab).style.display = '';
   document.querySelectorAll('.page-tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
-  document.querySelectorAll('.sidebar-nav li a[data-tab]').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
 }
 
 // =====================================================================
@@ -656,12 +551,19 @@ function closePanel(id) {
 function closeAllPanels() {
   document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('open'));
   document.getElementById('panel-overlay').classList.remove('open');
-  // Also close modals
   document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
 }
 
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('hidden');
+  el.classList.add('open');
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('open');
+  el.classList.add('hidden');
+}
 
 function switchPanelTab(prefix, el, tabId) {
   const panel = el.closest('.slide-panel');
@@ -669,7 +571,6 @@ function switchPanelTab(prefix, el, tabId) {
   panel.querySelectorAll('[id^="' + prefix + '-panel-content-"], [id^="person-panel-content-"]').forEach(c => {
     c.style.display = c.id === prefix + '-panel-content-' + tabId ? '' : 'none';
   });
-  // Lazy load
   if (tabId === 'rel-people') loadRelPeople();
   if (tabId === 'rel-companies') loadRelCompanies();
   if (tabId === 'rel-documents') loadRelDocuments();
@@ -679,15 +580,15 @@ function switchPanelTab(prefix, el, tabId) {
 }
 
 // =====================================================================
-//  TOAST
+//  TOAST (CRM custom — appends to #toast-container)
 // =====================================================================
-function toast(msg, type = 'success') {
+const toast = (msg, type = 'success') => {
   const el = document.createElement('div');
-  el.className = `toast ${type}`;
+  el.className = `crm-toast ${type}`;
   el.innerHTML = `<span>${type === 'success' ? '✓' : '✕'}</span><span>${msg}</span>`;
   document.getElementById('toast-container').appendChild(el);
   setTimeout(() => el.remove(), 3500);
-}
+};
 
 // =====================================================================
 //  RELATIONSHIPS
@@ -706,7 +607,7 @@ async function loadRelationships() {
 function renderRelationships(list) {
   const c = document.getElementById('rel-list-container');
   if (!list.length) {
-    c.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div>No relationships yet.</div></div>`;
+    c.innerHTML = `<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:0.75rem;opacity:0.5;">👥</div><div>No relationships yet.</div></div>`;
     return;
   }
   c.innerHTML = `<div class="table-wrap"><table class="data-table">
@@ -714,8 +615,8 @@ function renderRelationships(list) {
       <th>Name</th><th>Service Tier</th><th>Companies</th><th>People</th><th>Billing</th><th>Actions</th>
     </tr></thead>
     <tbody>${list.map(r => `
-      <tr onclick="window.location.href='/crm/relationship/'+r.id">
-        <td style="font-weight:600;">${esc(r.name)}</td>
+      <tr onclick="window.location.href='/crm/relationship/${r.id}'">
+        <td style="font-weight:600;">${esc(r.name)}${parseInt(r.unread_count||0)>0?` <span style="display:inline-flex;align-items:center;justify-content:center;background:#e74c3c;color:#fff;border-radius:999px;padding:0.1rem 0.45rem;font-size:0.65rem;font-weight:800;margin-left:0.35rem;">${r.unread_count}</span>`:''}</td>
         <td>${tierBadge(r.service_tier)}</td>
         <td>${r.company_count ?? 0}</td>
         <td>${r.people_count ?? 0}</td>
@@ -743,7 +644,6 @@ async function openRelationship(id) {
   document.getElementById('rel-panel-title').textContent = rel.name || 'Relationship';
   document.getElementById('rel-panel-sub').innerHTML = tierBadge(rel.service_tier) + ' ' + billingBadge(rel.billing_status);
   document.getElementById('rel-notes-textarea').value = rel.notes || '';
-  // Reset tabs
   const panel = document.getElementById('rel-panel');
   panel.querySelectorAll('.panel-tab').forEach((t,i) => t.classList.toggle('active', i===0));
   panel.querySelectorAll('[id^="rel-panel-content-"]').forEach((c,i) => c.style.display = i===0?'':'none');
@@ -758,7 +658,7 @@ async function loadRelPeople() {
   try {
     const res = await apiFetch(`/api/relationships/${currentRelId}/people`);
     const people = await res.json();
-    if (!people.length) { c.innerHTML = `<div class="empty-state"><div class="empty-icon">👤</div><div>No people yet.</div></div>`; return; }
+    if (!people.length) { c.innerHTML = `<div class="empty-state"><div style="font-size:2rem;opacity:0.5;">👤</div><div>No people yet.</div></div>`; return; }
     c.innerHTML = people.map(p => `
       <div class="person-item">
         <div class="person-avatar">${initials(p.first_name, p.last_name)}</div>
@@ -781,7 +681,7 @@ async function loadRelCompanies() {
   try {
     const res = await apiFetch(`/api/relationships/${currentRelId}/companies`);
     const companies = await res.json();
-    if (!companies.length) { c.innerHTML = `<div class="empty-state"><div class="empty-icon">🏢</div><div>No companies linked.</div></div>`; return; }
+    if (!companies.length) { c.innerHTML = `<div class="empty-state"><div style="font-size:2rem;opacity:0.5;">🏢</div><div>No companies linked.</div></div>`; return; }
     c.innerHTML = `<div class="table-wrap"><table class="data-table">
       <thead><tr><th>Company</th><th>Entity Type</th><th>Status</th></tr></thead>
       <tbody>${companies.map(co => `
@@ -808,7 +708,6 @@ async function saveRelationshipNotes() {
   } catch(e) { toast('Failed to save notes', 'error'); }
 }
 
-// Relationship form
 function openNewRelationship() {
   editingRelId = null;
   document.getElementById('rel-modal-title').textContent = 'New Relationship';
@@ -867,7 +766,7 @@ async function submitRelationshipForm() {
 }
 
 async function deleteRelationship(id) {
-  if (!confirm('Delete this relationship? This cannot be undone.')) return;
+  if (!await dlConfirm('Delete this relationship? This cannot be undone.', { danger: true, confirmLabel: 'Delete' })) return;
   try {
     await apiFetch(`/api/relationships/${id}`, { method: 'DELETE' });
     toast('Relationship deleted');
@@ -892,7 +791,7 @@ async function loadPeople() {
 function renderPeople(list) {
   const c = document.getElementById('people-list-container');
   if (!list.length) {
-    c.innerHTML = `<div class="empty-state"><div class="empty-icon">👤</div><div>No people yet.</div></div>`;
+    c.innerHTML = `<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:0.75rem;opacity:0.5;">👤</div><div>No people yet.</div></div>`;
     return;
   }
   c.innerHTML = `<div class="table-wrap"><table class="data-table">
@@ -901,7 +800,7 @@ function renderPeople(list) {
     </tr></thead>
     <tbody>${list.map(p => `
       <tr onclick="window.location.href='/crm/person/${p.id}'">
-        <td style="font-weight:600;">${esc(p.first_name)} ${esc(p.last_name)}</td>
+        <td style="font-weight:600;">${esc(p.first_name)} ${esc(p.last_name)}${parseInt(p.unread_count||0)>0?` <span style="display:inline-flex;align-items:center;justify-content:center;background:#e74c3c;color:#fff;border-radius:999px;padding:0.1rem 0.45rem;font-size:0.65rem;font-weight:800;margin-left:0.35rem;">${p.unread_count}</span>`:''}</td>
         <td style="color:var(--muted);">${p.email ? esc(p.email) : '—'}</td>
         <td>${p.relationship_name ? `<span style="color:var(--gold);">${esc(p.relationship_name)}</span>` : '—'}</td>
         <td>${p.filing_status ? `<span class="badge badge-muted">${filingLabel(p.filing_status)}</span>` : '—'}</td>
@@ -927,7 +826,6 @@ async function openPerson(id) {
   currentPersonId = id;
   const p = allPeople.find(x => x.id === id);
   if (p) populatePersonPanelHeader(p);
-  // Reset tabs
   const panel = document.getElementById('person-panel');
   panel.querySelectorAll('.panel-tab').forEach((t,i) => t.classList.toggle('active', i===0));
   panel.querySelectorAll('[id^="person-panel-content-"]').forEach((c,i) => c.style.display = i===0?'':'none');
@@ -1006,7 +904,7 @@ async function loadPersonCompanies() {
     const res = await apiFetch(`/api/people/${currentPersonId}`);
     const p = await res.json();
     const access = p.company_access || p.companies || [];
-    if (!access.length) { c.innerHTML = `<div class="empty-state"><div class="empty-icon">🏢</div><div>No company access yet.</div></div>`; return; }
+    if (!access.length) { c.innerHTML = `<div class="empty-state"><div style="font-size:2rem;opacity:0.5;">🏢</div><div>No company access yet.</div></div>`; return; }
     c.innerHTML = `<div class="table-wrap"><table class="data-table">
       <thead><tr><th>Company</th><th>Entity Type</th><th>Access</th><th>Ownership</th><th></th></tr></thead>
       <tbody>${access.map(a => `
@@ -1055,7 +953,6 @@ async function sendPortalInvite(id) {
 
 async function openGrantAccess() {
   if (!currentPersonId) return;
-  // Load companies from the person's relationship
   const person = allPeople.find(p => p.id === currentPersonId);
   const relId = person?.relationship_id;
   let companies = [];
@@ -1065,7 +962,6 @@ async function openGrantAccess() {
       companies = await res.json();
     } catch(e) {}
   }
-  // Fallback: load all companies
   if (!companies.length) companies = allCompanies;
   const sel = document.getElementById('grant-company-id');
   sel.innerHTML = '<option value="">— Select company —</option>' +
@@ -1094,7 +990,7 @@ async function submitGrantAccess() {
 }
 
 async function revokeAccess(personId, companyId) {
-  if (!confirm('Revoke this company access?')) return;
+  if (!await dlConfirm('Revoke this company access?', { danger: true, confirmLabel: 'Revoke' })) return;
   try {
     const res = await apiFetch(`/api/people/${personId}/company-access/${companyId}`, { method: 'DELETE' });
     if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
@@ -1103,7 +999,6 @@ async function revokeAccess(personId, companyId) {
   } catch(e) { toast('Failed to revoke: ' + e.message, 'error'); }
 }
 
-// Person form
 function openNewPerson(prefilledRelId = null, prefilledRelName = null) {
   editingPersonId = null;
   document.getElementById('person-modal-title').textContent = 'New Person';
@@ -1152,7 +1047,6 @@ async function openEditPerson(id) {
   document.getElementById('person-form-rel-id').value = p.relationship_id || '';
   document.getElementById('person-form-rel-search').value = rel?.name || '';
   document.getElementById('person-form-error').style.display = 'none';
-  // Spouse
   document.getElementById('person-form-spouse-id').value = p.spouse_id || '';
   if (p.spouse_id) {
     const sp = allPeople.find(x => x.id === p.spouse_id);
@@ -1205,7 +1099,7 @@ async function submitPersonForm() {
 }
 
 async function deletePerson(id) {
-  if (!confirm('Delete this person? This cannot be undone.')) return;
+  if (!await dlConfirm('Delete this person? This cannot be undone.', { danger: true, confirmLabel: 'Delete' })) return;
   try {
     await apiFetch(`/api/people/${id}`, { method: 'DELETE' });
     toast('Person deleted');
@@ -1219,7 +1113,6 @@ async function deletePerson(id) {
 // =====================================================================
 async function loadCompanies() {
   try {
-    // Load all relationships first to get relationship names
     const relRes = await apiFetch('/api/relationships');
     const rels = await relRes.json();
     let companies = [];
@@ -1244,7 +1137,7 @@ async function loadCompanies() {
 function renderCompanies(list) {
   const c = document.getElementById('companies-list-container');
   if (!list.length) {
-    c.innerHTML = `<div class="empty-state"><div class="empty-icon">🏢</div><div>No companies found.</div></div>`;
+    c.innerHTML = `<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:0.75rem;opacity:0.5;">🏢</div><div>No companies found.</div></div>`;
     return;
   }
   c.innerHTML = `<div class="table-wrap"><table class="data-table">
@@ -1266,12 +1159,6 @@ function filterCompanies(q) {
     (c.entity_type||'').toLowerCase().includes(f) ||
     (c.relationship_name||'').toLowerCase().includes(f)
   ));
-}
-
-function openCompanyDetail(id) {
-  const co = allCompanies.find(c => (c.id||c.company_id) === id);
-  if (!co) return;
-  alert(`Company: ${co.display_name||co.company_name||co.name}\nEntity Type: ${co.entity_type||'—'}\nRelationship: ${co.relationship_name||'—'}\nStatus: ${co.active !== false ? 'Active' : 'Inactive'}\n\nFull detail view coming in a future update.`);
 }
 
 // =====================================================================
@@ -1300,7 +1187,6 @@ function searchableSelectFilter(key, q) {
   }
   renderSearchableOptions(key);
   document.getElementById(`ss-${key}-options`).classList.add('open');
-  // Clear selection when typing
   if (key === 'rel') document.getElementById('person-form-rel-id').value = '';
   if (key === 'spouse') document.getElementById('person-form-spouse-id').value = '';
 }
@@ -1319,7 +1205,6 @@ function selectSearchableOption(key, id, label) {
   if (key === 'rel') {
     document.getElementById('person-form-rel-id').value = id;
     document.getElementById('person-form-rel-search').value = label;
-    // Update spouse list based on new relationship
     ssData.spouse = allPeople.filter(p => p.relationship_id === id && p.id !== editingPersonId).map(p => ({ id: p.id, label: `${p.first_name} ${p.last_name}` }));
     ssFiltered.spouse = [...ssData.spouse];
     document.getElementById('person-form-spouse-search').value = '';
@@ -1339,11 +1224,6 @@ function openRelByName(name) {
 // =====================================================================
 //  HELPERS
 // =====================================================================
-function esc(s) {
-  if (s == null) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-
 function initials(first, last) {
   return ((first||'').charAt(0) + (last||'').charAt(0)).toUpperCase() || '?';
 }
@@ -1386,24 +1266,11 @@ function showFormError(elId, msg) {
   el.style.display = '';
 }
 
-
-
 // =====================================================================
 //  DOCUMENTS
 // =====================================================================
-
-const DOC_ICONS = {
-  tax_return: '📋',
-  w2: '📄',
-  '1099': '📄',
-  engagement_letter: '✍️',
-  organizer: '📝',
-  statement: '🏦',
-  other: '📎',
-};
-
+const DOC_ICONS = { tax_return: '📋', w2: '📄', '1099': '📄', engagement_letter: '✍️', organizer: '📝', statement: '🏦', other: '📎' };
 function docIcon(type) { return DOC_ICONS[type] || '📎'; }
-
 function fmtBytes(b) {
   if (!b) return '—';
   if (b < 1024) return b + ' B';
@@ -1413,14 +1280,10 @@ function fmtBytes(b) {
 
 function docCard(doc, showDeliver = true) {
   const icon = docIcon(doc.doc_type);
-  const deliveredBadge = doc.is_delivered
-    ? '<span class="badge badge-green" style="font-size:0.7rem;">Delivered</span>'
-    : '<span class="badge badge-muted" style="font-size:0.7rem;">Not Delivered</span>';
+  const deliveredBadge = doc.is_delivered ? '<span class="badge badge-green" style="font-size:0.7rem;">Delivered</span>' : '<span class="badge badge-muted" style="font-size:0.7rem;">Not Delivered</span>';
   const yearBadge = doc.year ? `<span class="badge badge-muted" style="font-size:0.7rem;">${esc(doc.year)}</span>` : '';
   const typeBadge = `<span class="badge badge-muted" style="font-size:0.7rem;">${esc(doc.doc_type||'other')}</span>`;
-  const deliverToggle = showDeliver
-    ? `<button class="btn btn-ghost btn-xs" style="font-size:0.72rem;" onclick="toggleDelivered(${doc.id}, ${!doc.is_delivered})">${doc.is_delivered ? 'Undeliver' : 'Deliver'}</button>`
-    : '';
+  const deliverToggle = showDeliver ? `<button class="btn btn-ghost btn-xs" style="font-size:0.72rem;" onclick="toggleDelivered(${doc.id}, ${!doc.is_delivered})">${doc.is_delivered ? 'Undeliver' : 'Deliver'}</button>` : '';
   return `
     <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.7rem 0;border-bottom:1px solid var(--border);">
       <span style="font-size:1.4rem;flex-shrink:0;">${icon}</span>
@@ -1443,22 +1306,18 @@ async function downloadDoc(docId) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
     window.open(data.url, '_blank');
-  } catch (e) {
-    toast('Download failed: ' + e.message, 'error');
-  }
+  } catch (e) { toast('Download failed: ' + e.message, 'error'); }
 }
 
 async function deleteDoc(docId) {
-  if (!confirm('Delete this document? This cannot be undone.')) return;
+  if (!await dlConfirm('Delete this document? This cannot be undone.', { danger: true, confirmLabel: 'Delete' })) return;
   try {
     const res = await apiFetch(`/api/documents/${docId}`, { method: 'DELETE' });
     if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
     toast('Document deleted');
     loadPersonDocuments();
     if (currentRelId) loadRelDocuments();
-  } catch (e) {
-    toast('Failed to delete: ' + e.message, 'error');
-  }
+  } catch (e) { toast('Failed to delete: ' + e.message, 'error'); }
 }
 
 async function toggleDelivered(docId, deliver) {
@@ -1473,12 +1332,9 @@ async function toggleDelivered(docId, deliver) {
     toast(deliver ? 'Marked as delivered' : 'Delivery revoked');
     loadPersonDocuments();
     if (currentRelId) loadRelDocuments();
-  } catch (e) {
-    toast('Failed: ' + e.message, 'error');
-  }
+  } catch (e) { toast('Failed: ' + e.message, 'error'); }
 }
 
-// Person Documents Tab
 let currentDocSubTab = 'personal';
 
 function switchDocSubTab(tab) {
@@ -1488,20 +1344,14 @@ function switchDocSubTab(tab) {
   const btnP = document.getElementById('pdoc-tab-personal');
   const btnC = document.getElementById('pdoc-tab-bycompany');
   if (tab === 'personal') {
-    personal.style.display = '';
-    byco.style.display = 'none';
-    btnP.style.background = 'var(--gold)';
-    btnP.style.color = '#000';
-    btnC.style.background = 'transparent';
-    btnC.style.color = 'var(--muted)';
+    personal.style.display = ''; byco.style.display = 'none';
+    btnP.style.background = 'var(--gold)'; btnP.style.color = '#000';
+    btnC.style.background = 'transparent'; btnC.style.color = 'var(--muted)';
     loadPersonDocsPersonal();
   } else {
-    personal.style.display = 'none';
-    byco.style.display = '';
-    btnP.style.background = 'transparent';
-    btnP.style.color = 'var(--muted)';
-    btnC.style.background = 'var(--gold)';
-    btnC.style.color = '#000';
+    personal.style.display = 'none'; byco.style.display = '';
+    btnP.style.background = 'transparent'; btnP.style.color = 'var(--muted)';
+    btnC.style.background = 'var(--gold)'; btnC.style.color = '#000';
     loadPersonDocsByCompany();
   }
 }
@@ -1518,14 +1368,9 @@ async function loadPersonDocsPersonal() {
   try {
     const res = await apiFetch(`/api/documents?owner_type=person&owner_id=${currentPersonId}`);
     const docs = await res.json();
-    if (!docs.length) {
-      c.innerHTML = '<div class="empty-state"><div class="empty-icon">📄</div><div>No personal documents yet.</div></div>';
-      return;
-    }
+    if (!docs.length) { c.innerHTML = '<div class="empty-state"><div style="font-size:2rem;opacity:0.5;">📄</div><div>No personal documents yet.</div></div>'; return; }
     c.innerHTML = docs.map(d => docCard(d)).join('');
-  } catch (e) {
-    c.innerHTML = '<div class="error-msg">Failed to load documents.</div>';
-  }
+  } catch (e) { c.innerHTML = '<div class="error-msg">Failed to load documents.</div>'; }
 }
 
 async function loadPersonDocsByCompany() {
@@ -1533,14 +1378,10 @@ async function loadPersonDocsByCompany() {
   const c = document.getElementById('pdoc-bycompany-content');
   c.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
   try {
-    // Get companies this person has access to
     const pRes = await apiFetch(`/api/people/${currentPersonId}`);
     const p = await pRes.json();
     const companies = p.company_access || p.companies || [];
-    if (!companies.length) {
-      c.innerHTML = '<div class="empty-state"><div class="empty-icon">🏢</div><div>No company access.</div></div>';
-      return;
-    }
+    if (!companies.length) { c.innerHTML = '<div class="empty-state"><div style="font-size:2rem;opacity:0.5;">🏢</div><div>No company access.</div></div>'; return; }
     let html = '';
     for (const co of companies) {
       const coId = co.company_id || co.id;
@@ -1549,53 +1390,36 @@ async function loadPersonDocsByCompany() {
         const docsRes = await apiFetch(`/api/documents?owner_type=company&owner_id=${coId}`);
         const docs = await docsRes.json();
         html += `<div style="margin-bottom:1rem;"><div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.5rem;">${esc(coName)}</div>`;
-        if (!docs.length) {
-          html += '<div style="color:var(--muted);font-size:0.83rem;padding:0.5rem 0;">No documents.</div>';
-        } else {
-          html += docs.map(d => docCard(d)).join('');
-        }
+        html += !docs.length ? '<div style="color:var(--muted);font-size:0.83rem;padding:0.5rem 0;">No documents.</div>' : docs.map(d => docCard(d)).join('');
         html += '</div>';
       } catch (e) {}
     }
     c.innerHTML = html || '<div class="empty-state">No documents found.</div>';
-  } catch (e) {
-    c.innerHTML = '<div class="error-msg">Failed to load documents.</div>';
-  }
+  } catch (e) { c.innerHTML = '<div class="error-msg">Failed to load documents.</div>'; }
 }
 
-// Relationship Documents Tab
 async function loadRelDocuments() {
   if (!currentRelId) return;
   const c = document.getElementById('rel-docs-content');
   c.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
   try {
-    // Get people + companies in this relationship
     const [peopleRes, companiesRes] = await Promise.all([
       apiFetch(`/api/relationships/${currentRelId}/people`),
       apiFetch(`/api/relationships/${currentRelId}/companies`),
     ]);
     const people = await peopleRes.json();
     const companies = await companiesRes.json();
-
     let html = '';
-
-    // Personal docs for each person
     for (const p of people) {
       const pName = `${p.first_name} ${p.last_name}`.trim();
       try {
         const docsRes = await apiFetch(`/api/documents?owner_type=person&owner_id=${p.id}`);
         const docs = await docsRes.json();
         html += `<div style="margin-bottom:1rem;"><div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.5rem;">👤 ${esc(pName)}</div>`;
-        if (!docs.length) {
-          html += '<div style="color:var(--muted);font-size:0.83rem;padding:0.5rem 0;">No documents.</div>';
-        } else {
-          html += docs.map(d => docCard(d)).join('');
-        }
+        html += !docs.length ? '<div style="color:var(--muted);font-size:0.83rem;padding:0.5rem 0;">No documents.</div>' : docs.map(d => docCard(d)).join('');
         html += '</div>';
       } catch (e) {}
     }
-
-    // Company docs
     for (const co of companies) {
       const coId = co.id || co.company_id;
       const coName = co.display_name || co.company_name || co.name || 'Unknown';
@@ -1603,22 +1427,15 @@ async function loadRelDocuments() {
         const docsRes = await apiFetch(`/api/documents?owner_type=company&owner_id=${coId}`);
         const docs = await docsRes.json();
         html += `<div style="margin-bottom:1rem;"><div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.5rem;">🏢 ${esc(coName)}</div>`;
-        if (!docs.length) {
-          html += '<div style="color:var(--muted);font-size:0.83rem;padding:0.5rem 0;">No documents.</div>';
-        } else {
-          html += docs.map(d => docCard(d)).join('');
-        }
+        html += !docs.length ? '<div style="color:var(--muted);font-size:0.83rem;padding:0.5rem 0;">No documents.</div>' : docs.map(d => docCard(d)).join('');
         html += '</div>';
       } catch (e) {}
     }
-
-    c.innerHTML = html || '<div class="empty-state"><div class="empty-icon">📄</div><div>No documents in this relationship.</div></div>';
-  } catch (e) {
-    c.innerHTML = '<div class="error-msg">Failed to load documents.</div>';
-  }
+    c.innerHTML = html || '<div class="empty-state"><div style="font-size:2rem;opacity:0.5;">📄</div><div>No documents in this relationship.</div></div>';
+  } catch (e) { c.innerHTML = '<div class="error-msg">Failed to load documents.</div>'; }
 }
 
-// ── Upload Modal ──────────────────────────────────────────────────────
+// ── Upload Modal ──
 let uploadOwnerType = null;
 let uploadOwnerId = null;
 let uploadFile = null;
@@ -1640,38 +1457,23 @@ function openUploadModal(ownerType, ownerId) {
   openModal('upload-modal');
 }
 
-function uploadDragOver(e) {
-  e.preventDefault();
-  document.getElementById('upload-dropzone').style.borderColor = 'var(--gold)';
-}
-
-function uploadDragLeave(e) {
-  document.getElementById('upload-dropzone').style.borderColor = 'var(--border)';
-}
-
+function uploadDragOver(e) { e.preventDefault(); document.getElementById('upload-dropzone').style.borderColor = 'var(--gold)'; }
+function uploadDragLeave(e) { document.getElementById('upload-dropzone').style.borderColor = 'var(--border)'; }
 function uploadDrop(e) {
   e.preventDefault();
   document.getElementById('upload-dropzone').style.borderColor = 'var(--border)';
   const file = e.dataTransfer.files[0];
   if (file) setUploadFile(file);
 }
-
-function uploadFileSelected(input) {
-  const file = input.files[0];
-  if (file) setUploadFile(file);
-}
-
+function uploadFileSelected(input) { const file = input.files[0]; if (file) setUploadFile(file); }
 function setUploadFile(file) {
   uploadFile = file;
   document.getElementById('upload-dropzone-text').style.display = 'none';
   const nameEl = document.getElementById('upload-file-name');
   nameEl.textContent = `📎 ${file.name}  (${fmtBytes(file.size)})`;
   nameEl.style.display = '';
-  // Auto-fill display name from filename
   const displayName = document.getElementById('upload-display-name');
-  if (!displayName.value) {
-    displayName.value = file.name.replace(/\.[^.]+$/, '');
-  }
+  if (!displayName.value) { displayName.value = file.name.replace(/\.[^.]+$/, ''); }
 }
 
 async function submitUpload() {
@@ -1682,14 +1484,12 @@ async function submitUpload() {
   }
   document.getElementById('upload-form-error').style.display = 'none';
   document.getElementById('upload-submit-btn').disabled = true;
-
   const progressWrap = document.getElementById('upload-progress-wrap');
   const progressBar = document.getElementById('upload-progress-bar');
   const progressLabel = document.getElementById('upload-progress-label');
   progressWrap.style.display = '';
   progressBar.style.width = '20%';
   progressLabel.textContent = 'Uploading…';
-
   const formData = new FormData();
   formData.append('file', uploadFile);
   formData.append('owner_type', uploadOwnerType);
@@ -1697,7 +1497,6 @@ async function submitUpload() {
   formData.append('year', document.getElementById('upload-year').value.trim());
   formData.append('doc_type', document.getElementById('upload-doc-type').value);
   formData.append('display_name', document.getElementById('upload-display-name').value.trim() || uploadFile.name);
-
   try {
     const token = localStorage.getItem('dl_token');
     const res = await fetch('/api/documents/upload', {
@@ -1708,7 +1507,6 @@ async function submitUpload() {
     progressBar.style.width = '90%';
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Upload failed');
-
     progressBar.style.width = '100%';
     progressLabel.textContent = 'Done!';
     setTimeout(() => {
@@ -1724,5 +1522,6 @@ async function submitUpload() {
     progressWrap.style.display = 'none';
   }
 }
-
 </script>
+
+<%- include('partials/shell-close') %>

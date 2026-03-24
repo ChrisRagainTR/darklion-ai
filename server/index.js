@@ -198,8 +198,8 @@ app.get('/dashboard.html', (req, res) => res.redirect('/dashboard'));
 app.get('/theme-preview', (req, res) => res.sendFile(path.join(publicDir, 'theme-preview.html')));
 // Team page — redirect to dashboard team section for now
 app.get('/team', (req, res) => res.sendFile(path.join(publicDir, 'team.html')));
-// Redirect /crm and /crm?tab=X to specific list pages
-app.get('/crm', (req, res) => res.sendFile(path.join(publicDir, 'crm.html')));
+// CRM pages — EJS shell
+app.get('/crm', (req, res) => res.render('crm', { title: 'CRM', activeNav: 'relationships' }));
 app.get('/crm.html', (req, res) => res.redirect('/crm'));
 app.get('/crm/relationships', (req, res) => res.redirect('/crm?tab=relationships'));
 app.get('/crm/people', (req, res) => res.redirect('/crm?tab=people'));
