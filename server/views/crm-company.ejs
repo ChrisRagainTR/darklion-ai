@@ -1419,7 +1419,7 @@
       const res = await apiFetch(`/api/documents/${id}/url`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');
-      if (data.url) window.location.href = data.url;
+      if (data.url) window.open(data.url, '_blank');
     } catch(e) { toast('Download failed: ' + e.message, 'error'); }
     if (btn) { btn.disabled = false; btn.textContent = '⬇'; }
   }
