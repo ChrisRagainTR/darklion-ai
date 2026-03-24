@@ -951,7 +951,7 @@
       const res = await apiFetch('/api/documents/' + id + '/url');
       const data = await res.json();
       // window.location.href works from async on iOS — only window.open() is blocked
-      if (data.url) window.location.href = data.url;
+      if (data.url) window.open(data.url, '_blank');
     } catch(e) { toast('Failed to open document', 'error'); }
     if (btn) { btn.disabled = false; btn.textContent = '⬇'; }
   }
@@ -964,13 +964,14 @@
 
   async function deleteDoc(id, e) {
     if (e) e.stopPropagation();
-    if (!await window.dlConfirm('Delete this document? This cannot be undone.', {title:'Delete Document', confirmLabel:'Delete', danger:true, icon:'🗑️'})) return;
+    if (!confirm('Delete this document? This cannot be undone.')) return;
     try {
       const res = await apiFetch(`/api/documents/${id}`, { method: 'DELETE' });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
       toast('Document deleted');
       reloadDocs();
-    } catch(e) { toast(e.message, 'error'); }
+    } catch(e) { toast('Delete failed: ' + e.message, 'error'); }
   }
 
   let _moveDocId = null;
@@ -983,10 +984,11 @@
     document.getElementById('move-doc-section').value = currentSection || 'firm_uploaded';
     document.getElementById('move-doc-category').value = currentCategory || 'tax';
     modal.classList.remove('hidden');
+    modal.classList.add('open');
   }
   function closeMoveDocModal() {
     const modal = document.getElementById('move-doc-modal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) { modal.classList.add('hidden'); modal.classList.remove('open'); }
     _moveDocId = null;
   }
   async function submitMoveDoc() {
