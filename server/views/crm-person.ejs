@@ -1212,8 +1212,13 @@
     document.getElementById('ef-spouse-search').value = '';
   }
 
+  // Move edit modal to document.body on init so it's outside .main stacking context
+  (function() {
+    const m = document.getElementById('edit-modal');
+    if (m && m.parentElement !== document.body) document.body.appendChild(m);
+  })();
+
   function openEditModal() {
-    // Show modal FIRST (synchronously) — iOS Safari loses user gesture context after any await
     if (!personData) { toast('Person data not loaded yet', 'error'); return; }
     document.getElementById('ef-fname').value = personData.first_name || '';
     document.getElementById('ef-lname').value = personData.last_name || '';
@@ -1227,7 +1232,6 @@
     const m = document.getElementById('edit-modal');
     m.classList.remove('hidden');
     m.style.display = 'flex';
-    // Load spouse options async AFTER modal is visible
     efSpouseLoadPeople().catch(() => {});
   }
   function closeModal() {
