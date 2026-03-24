@@ -88,6 +88,35 @@
 
     @media (max-width: 480px) { .nav-user { display: none; } }
 
+    /* ── Mobile view toggle ── */
+    .mobile-toggle {
+      display: none;
+      background: rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .mobile-toggle button {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.3rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .mobile-toggle button.active {
+      background: var(--gold);
+      color: var(--navy);
+    }
+    @media (max-width: 600px) {
+      .mobile-toggle { display: flex; }
+      .tab-bar { display: none; }
+    }
+
     .btn-logout {
       background: transparent;
       border: 1px solid var(--border);
@@ -818,6 +847,12 @@
       <img src="/sentinel-favicon.png" alt="" style="width:28px;height:28px;object-fit:contain;flex-shrink:0;">
       <span class="nav-logo-text">Sentinel Wealth &amp; Tax</span>
     </a>
+    <!-- Mobile segment toggle (hidden on desktop) -->
+    <div class="mobile-toggle" id="mobileToggle">
+      <button id="toggle-messages" onclick="mobileToggleTo('messages', this)">💬 Messages</button>
+      <button id="toggle-docs" onclick="mobileToggleTo('documents', this)">📁 Documents</button>
+    </div>
+
     <div class="nav-right">
       <span class="nav-user" id="navUser"></span>
       <button class="btn-logout" id="logoutBtn">Sign Out</button>
@@ -1096,6 +1131,30 @@
         if (tab === 'organizers' && _stanford === null) loadOrganizers();
         if (tab === 'messages') initChat();
         if (tab === 'review-sign') loadTaxDeliveries();
+      });
+    });
+
+    // ── Mobile toggle (Messages / Documents) ──────────────
+    window.mobileToggleTo = function(tab, btn) {
+      // Trigger the real tab switch
+      const tabBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+      if (tabBtn) tabBtn.click();
+      // Update toggle button states
+      document.querySelectorAll('#mobileToggle button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+
+    // Keep mobile toggle in sync when tabs switch via other means
+    const _origTabClick = document.querySelectorAll('.tab-btn');
+    _origTabClick.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        const msgBtn = document.getElementById('toggle-messages');
+        const docBtn = document.getElementById('toggle-docs');
+        if (msgBtn && docBtn) {
+          msgBtn.classList.toggle('active', tab === 'messages');
+          docBtn.classList.toggle('active', tab === 'documents');
+        }
       });
     });
 
