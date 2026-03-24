@@ -262,7 +262,7 @@ router.get('/messages', async (req, res) => {
   try {
     // Get all active staff for the firm (include pending invites — show all team members)
     const { rows: staffRows } = await pool.query(
-      `SELECT id, COALESCE(display_name, name, email) as name, email, avatar_url
+      `SELECT id, COALESCE(display_name, name, email) as name, email, avatar_url, credentials
        FROM firm_users
        WHERE firm_id = $1 AND archived_at IS NULL
        ORDER BY name`,
@@ -297,6 +297,7 @@ router.get('/messages', async (req, res) => {
         name: s.name,
         email: s.email,
         avatar_url,
+        credentials: s.credentials || '',
         threadId: thread ? thread.id : null,
         lastMessageAt: thread ? thread.last_message_at : null,
         lastPreview: thread && thread.last_body ? thread.last_body.slice(0, 80) : '',
