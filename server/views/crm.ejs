@@ -657,7 +657,8 @@ async function loadRelPeople() {
   c.innerHTML = `<div class="loading-state"><div class="loading-spinner"></div></div>`;
   try {
     const res = await apiFetch(`/api/relationships/${currentRelId}/people`);
-    const people = await res.json();
+    const rawPeople = await res.json();
+    const people = rawPeople.map(p => ({ ...p, portal_status: p.portal_enabled ? 'enabled' : (p.portal_invite_token ? 'invited' : 'none') }));
     if (!people.length) { c.innerHTML = `<div class="empty-state"><div style="font-size:2rem;opacity:0.5;">👤</div><div>No people yet.</div></div>`; return; }
     c.innerHTML = people.map(p => `
       <div class="person-item">
@@ -781,7 +782,10 @@ async function deleteRelationship(id) {
 async function loadPeople() {
   try {
     const res = await apiFetch('/api/people');
-    allPeople = await res.json();
+    allPeople = (await res.json()).map(p => ({
+      ...p,
+      portal_status: p.portal_enabled ? 'enabled' : (p.portal_invite_token ? 'invited' : 'none')
+    }));
     renderPeople(allPeople);
   } catch(e) {
     document.getElementById('people-list-container').innerHTML = `<div class="error-msg">Failed to load people.</div>`;
