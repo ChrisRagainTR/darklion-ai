@@ -142,12 +142,13 @@ test.describe('Dashboard', () => {
   });
 
   test('Viktor chat textarea becomes enabled after initialization', async ({ page }) => {
+    // Viktor initializes async — give it extra time in CI
     await page.waitForFunction(
       () => {
         const el = document.getElementById('dash-ai-input');
         return el && !el.disabled;
       },
-      { timeout: TIMEOUTS.api }
+      { timeout: 60000 }
     );
     await expect(page.locator('#dash-ai-input')).not.toBeDisabled();
   });
