@@ -38,14 +38,14 @@ let routingWindows = new Map(); // filePath → BrowserWindow
 let watcher = null;
 let pendingJobs = []; // jobs queued while login window is open
 
+// ── Single instance lock (must be before whenReady per Electron docs) ─────────
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+  process.exit(0);
+}
+
 // ── App ready ────────────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
-  // Single instance lock — only one Electron per user
-  if (!app.requestSingleInstanceLock()) {
-    app.quit();
-    return;
-  }
-
   // Ensure spool directory exists
   if (!fs.existsSync(SPOOL_DIR)) {
     fs.mkdirSync(SPOOL_DIR, { recursive: true });
@@ -70,19 +70,23 @@ app.on('before-quit', () => {
 
 // ── Tray ─────────────────────────────────────────────────────────────────────
 function setupTray() {
-  const iconPath = path.join(__dirname, 'renderer', 'icon.ico');
-  const icon = fs.existsSync(iconPath)
-    ? nativeImage.createFromPath(iconPath)
-    : nativeImage.createEmpty();
-
-  tray = new Tray(icon);
-  tray.setToolTip('DarkLion Print Agent');
-  tray.setContextMenu(Menu.buildFromTemplate([
-    { label: 'DarkLion Print Agent', enabled: false },
-    { type: 'separator' },
-    { label: 'Sign Out', click: async () => { await clearToken(); showLoginWindow(); } },
-    { label: 'Quit', click: () => app.quit() },
-  ]));
+  try {
+    // Create a simple 16x16 colored icon programmatically — no .ico file needed
+    const icon = nativeImage.createFromDataURL(
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAFZSURBVDiNpdMxSBtxFAbw3+UuuTReQkZBLEoGwcHBRQcHwUVwEJcOgpuDm4ODg4iDg4ODi4ODg4ODg4ODg4ODg4OD4ODg4ODg4ODg4ODg4OD4ODg4Lg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4AA=='
+    );
+    tray = new Tray(icon);
+    tray.setToolTip('DarkLion Print Agent');
+    tray.setContextMenu(Menu.buildFromTemplate([
+      { label: 'DarkLion Print Agent', enabled: false },
+      { type: 'separator' },
+      { label: 'Sign Out', click: async () => { await clearToken(); showLoginWindow(); } },
+      { label: 'Quit', click: () => app.quit() },
+    ]));
+  } catch (err) {
+    console.error('[tray] Failed to create tray:', err.message);
+    // Continue without tray — app still works via login window
+  }
 }
 
 // ── Spool watcher (chokidar inside Electron) ──────────────────────────────────
