@@ -749,7 +749,7 @@
             <button class="btn btn-gold btn-sm" onclick="coCommSendReply()">Send Reply</button>
             <button class="btn btn-outline btn-sm" onclick="coCommSendAsSms()">📱 Send as Text</button>
             <button class="btn-attach" onclick="document.getElementById('comm-co-attach-input').click()">📎 Attach</button>
-            <button class="btn btn-outline btn-sm" onclick="coCommResolve()">✅ Resolve</button>
+            <button class="btn btn-outline btn-sm" onclick="coCommArchive()">Archive</button>
           </div>
         </div>
       </div>
@@ -3496,10 +3496,11 @@
     } catch(e) { toast('Failed to send reply: ' + e.message, 'error'); }
   }
 
-  async function coCommResolve() {
+  async function coCommArchive() {
     if (!commCoActiveThreadId) return;
-    await apiFetch(`/api/messages/${commCoActiveThreadId}/status`, { method:'PUT', body: JSON.stringify({ status: 'resolved' }) });
+    await apiFetch(`/api/messages/${commCoActiveThreadId}/archive`, { method: 'PUT' });
     coCommShowEmpty();
+    commCoActiveThreadId = null;
     await loadCoThreads();
   }
 

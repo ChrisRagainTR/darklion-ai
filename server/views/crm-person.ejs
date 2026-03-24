@@ -431,7 +431,7 @@
             <button class="btn btn-gold btn-sm" id="comm-send-reply-btn" onclick="commSendReply()">Send Reply</button>
             <button class="btn btn-outline btn-sm" id="comm-send-sms-btn" onclick="commSendAsSms()">📱 Send as Text</button>
             <button class="btn-attach" onclick="document.getElementById('comm-attach-input').click()">📎 Attach</button>
-            <button class="btn btn-outline btn-sm" onclick="commResolve()">✅ Resolve</button>
+            <button class="btn btn-outline btn-sm" onclick="commArchive()">Archive</button>
           </div>
         </div>
       </div>
@@ -2178,10 +2178,11 @@
     } catch(e) { console.error('[comm] sendReply error:', e); toast('Failed to send reply: ' + e.message, 'error'); }
   }
 
-  async function commResolve() {
+  async function commArchive() {
     if (!commActiveThreadId) return;
-    await apiFetch(`/api/messages/${commActiveThreadId}/status`, { method: 'PUT', body: JSON.stringify({ status: 'resolved' }) });
+    await apiFetch(`/api/messages/${commActiveThreadId}/archive`, { method: 'PUT' });
     commShowEmpty();
+    commActiveThreadId = null;
     await loadThreads();
   }
 
