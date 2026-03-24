@@ -888,7 +888,7 @@
               ? `<span class="doc-badge doc-badge-viewed">✓ Delivered</span>`
               : `<span class="doc-badge doc-badge-client">✓ Uploaded</span>`;
             const _dispName = (doc.display_name || 'Document').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-            y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(_dispName)}</div><div class="doc-badges">${statusBadge}${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}${doc.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(doc.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'})}</span>` : ''}</div></div><div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;"><button class="btn-dl" data-docid="${doc.id}">⬇</button><button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${doc.id},${JSON.stringify(doc.folder_section||'firm_uploaded')},${JSON.stringify(doc.folder_category||'tax')},event,${JSON.stringify(doc.year||'')})" title="Move">↕</button><button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${doc.id},event)" title="Delete">🗑</button></div></div>`;
+            y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(_dispName)}</div><div class="doc-badges">${statusBadge}${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}${doc.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(doc.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'})}</span>` : ''}</div></div><div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;"><button class="btn-dl" data-docid="${doc.id}">⬇</button><button class="btn btn-ghost btn-xs btn-move" onclick="toggleMoveRow(${doc.id},'${doc.folder_section||'firm_uploaded'}','${doc.folder_category||'other'}','${doc.year||''}')" title="Move">↕</button><button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${doc.id},event)" title="Delete">🗑</button></div></div>`;
           });
         }
         y += `</div></div>`; // close cat-folder-body + cat-folder
@@ -962,72 +962,80 @@
     loadDocs();
   }
 
+  // ── DELETE: single click, no modal, no popup ──
   async function deleteDoc(id, e) {
     if (e) e.stopPropagation();
-    const btn = e && e.target;
-    // Double-tap confirm: first click turns button red, second click deletes
-    if (btn && btn.dataset.confirm !== '1') {
-      btn.dataset.confirm = '1';
-      const orig = btn.textContent;
-      btn.textContent = 'Sure?';
-      btn.style.background = 'var(--red)';
-      btn.style.color = '#fff';
-      btn.style.border = 'none';
-      setTimeout(() => {
-        if (btn.dataset.confirm === '1') {
-          btn.dataset.confirm = '';
-          btn.textContent = orig;
-          btn.style.background = '';
-          btn.style.color = '';
-          btn.style.border = '';
-        }
-      }, 3000);
-      return;
-    }
-    // Second click — execute delete
-    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    if (!confirm('Delete this document?')) return;
     try {
       const res = await apiFetch(`/api/documents/${id}`, { method: 'DELETE' });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Server error ' + res.status);
-      toast('Document deleted');
-      // Remove from in-memory array and re-render immediately (no flicker)
+      if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Error ' + res.status); }
       docsData = docsData.filter(d => d.id !== id);
       renderDocs();
-      // Also clear the cache so next tab switch fetches fresh
-      const docsEl = document.getElementById('docs-content');
-      if (docsEl) delete docsEl.dataset.loaded;
-    } catch(err) { toast('Delete failed: ' + err.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = '🗑'; btn.dataset.confirm = ''; btn.style = ''; } }
+    } catch(err) { alert('Delete failed: ' + err.message); }
   }
 
-  let _moveDocId = null;
-  function openMoveDocModal(id, currentSection, currentCategory, e, currentYear) {
-    if (e) e.stopPropagation();
-    _moveDocId = id;
-    const modal = document.getElementById('move-doc-modal');
-    if (!modal) return;
-    document.getElementById('move-doc-year').value = currentYear || String(new Date().getFullYear() - 1);
-    document.getElementById('move-doc-section').value = currentSection || 'firm_uploaded';
-    document.getElementById('move-doc-category').value = currentCategory || 'tax';
-    modal.classList.remove('hidden');
+  // ── MOVE: inline dropdowns on the row, auto-save on change ──
+  function toggleMoveRow(id, section, category, year) {
+    // Close any open move rows first
+    document.querySelectorAll('.doc-move-row').forEach(r => {
+      if (r.dataset.docid != id) { r.style.display = 'none'; r.closest('.doc-row').querySelector('.btn-move').textContent = '↕'; }
+    });
+    const existing = document.querySelector(`.doc-move-row[data-docid="${id}"]`);
+    if (existing && existing.style.display !== 'none') {
+      existing.style.display = 'none';
+      existing.closest('.doc-row').querySelector('.btn-move').textContent = '↕';
+      return;
+    }
+    if (existing) {
+      existing.style.display = '';
+      existing.closest('.doc-row').querySelector('.btn-move').textContent = '✕';
+      return;
+    }
+    // Build inline move row
+    const docRow = document.querySelector(`.doc-row[data-docid="${id}"]`);
+    if (!docRow) return;
+    const row = document.createElement('div');
+    row.className = 'doc-move-row';
+    row.dataset.docid = id;
+    row.style.cssText = 'display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;padding:0.4rem 1.1rem 0.5rem;background:rgba(201,168,76,0.05);border-top:1px solid rgba(201,168,76,0.15);';
+    const years = [];
+    for (let y = new Date().getFullYear(); y >= 2018; y--) years.push(y);
+    row.innerHTML = `
+      <span style="font-size:0.72rem;color:var(--muted);font-weight:600;">Move to:</span>
+      <select data-field="year" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.25rem 0.5rem;border-radius:5px;font-size:0.78rem;">
+        ${years.map(y => `<option value="${y}"${String(y)===String(year)?'  selected':''}>${y}</option>`).join('')}
+      </select>
+      <select data-field="section" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.25rem 0.5rem;border-radius:5px;font-size:0.78rem;">
+        <option value="firm_uploaded"${section==='firm_uploaded'?' selected':''}>Delivered by Advisor</option>
+        <option value="client_uploaded"${section==='client_uploaded'?' selected':''}>Client Uploaded</option>
+      </select>
+      <select data-field="category" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.25rem 0.5rem;border-radius:5px;font-size:0.78rem;">
+        <option value="tax"${category==='tax'?' selected':''}>Tax</option>
+        <option value="other"${category==='other'?' selected':''}>Other</option>
+      </select>
+      <button onclick="saveMoveRow(${id}, this)" style="background:var(--gold);color:var(--navy);border:none;border-radius:5px;padding:0.25rem 0.65rem;font-size:0.78rem;font-weight:700;cursor:pointer;">Save</button>
+      <span class="move-status" style="font-size:0.72rem;color:var(--green);display:none;">✓ Saved</span>`;
+    docRow.insertAdjacentElement('afterend', row);
+    docRow.querySelector('.btn-move').textContent = '✕';
   }
-  function closeMoveDocModal() {
-    const modal = document.getElementById('move-doc-modal');
-    if (modal) modal.classList.add('hidden');
-    _moveDocId = null;
-  }
-  async function submitMoveDoc() {
-    if (!_moveDocId) return;
-    const year = document.getElementById('move-doc-year').value;
-    const section = document.getElementById('move-doc-section').value;
-    const category = document.getElementById('move-doc-category').value;
+
+  async function saveMoveRow(id, btn) {
+    const row = btn.closest('.doc-move-row');
+    const year = row.querySelector('[data-field="year"]').value;
+    const section = row.querySelector('[data-field="section"]').value;
+    const category = row.querySelector('[data-field="category"]').value;
+    btn.disabled = true; btn.textContent = '…';
     try {
-      const res = await apiFetch(`/api/documents/${_moveDocId}`, { method: 'PUT', body: JSON.stringify({ year, folder_section: section, folder_category: category }) });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
-      toast('Document moved');
-      closeMoveDocModal();
-      reloadDocs();
-    } catch(e) { toast(e.message, 'error'); }
+      const res = await apiFetch(`/api/documents/${id}`, { method: 'PUT', body: JSON.stringify({ year, folder_section: section, folder_category: category }) });
+      if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Error ' + res.status); }
+      // Update in-memory doc
+      const doc = docsData.find(d => d.id === id);
+      if (doc) { doc.year = year; doc.folder_section = section; doc.folder_category = category; }
+      row.style.display = 'none';
+      const docRow = document.querySelector(`.doc-row[data-docid="${id}"]`);
+      if (docRow) docRow.querySelector('.btn-move').textContent = '↕';
+      renderDocs();
+    } catch(err) { alert('Move failed: ' + err.message); btn.disabled = false; btn.textContent = 'Save'; }
   }
 
   // ── Upload modal wiring ──
@@ -2258,39 +2266,6 @@
       <button class="btn btn-outline btn-sm" id="tsm-reanalyze-btn" onclick="retrySummary(_tsmPendingDeliveryId)" style="margin-right:auto;">↺ Re-analyze</button>
       <button class="btn btn-outline btn-sm" onclick="closeTaxSummary()">Close</button>
       <button class="btn btn-gold" id="tsm-send-btn" onclick="confirmAndSendDelivery()" style="display:none;">Send to Client →</button>
-    </div>
-  </div>
-</div>
-
-<!-- Move Document Modal -->
-<div class="modal-overlay hidden" id="move-doc-modal" onclick="closeMoveDocModal()">
-  <div class="modal" onclick="event.stopPropagation()" style="max-width:380px;">
-    <h2>Move Document</h2>
-    <div class="form-group">
-      <label>Tax Year</label>
-      <select id="move-doc-year" class="form-control">
-        <% for (let y = new Date().getFullYear(); y >= new Date().getFullYear() - 8; y--) { %>
-          <option value="<%= y %>"><%= y %></option>
-        <% } %>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Section</label>
-      <select id="move-doc-section" class="form-control">
-        <option value="firm_uploaded">Delivered by Advisor</option>
-        <option value="client_uploaded">Client Uploaded</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Category</label>
-      <select id="move-doc-category" class="form-control">
-        <option value="tax">Tax</option>
-        <option value="other">Other</option>
-      </select>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeMoveDocModal()">Cancel</button>
-      <button class="btn-submit" onclick="submitMoveDoc()">Move</button>
     </div>
   </div>
 </div>
