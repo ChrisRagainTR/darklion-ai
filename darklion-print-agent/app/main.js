@@ -24,25 +24,6 @@ const os = require('os');
 
 const { storeToken, getToken, clearToken, isTokenExpired } = require('./auth');
 
-// ── Resolve app root correctly in both dev and packaged modes ─────────────────
-// In packaged app, __dirname is inside the .asar — use app.getAppPath() instead
-function appRoot() {
-  return app.isPackaged ? path.dirname(app.getPath('exe')) : __dirname;
-}
-function rendererPath(file) {
-  // Works both in dev (renderer/ next to main.js) and packaged (resources/app/renderer/)
-  const candidates = [
-    path.join(__dirname, 'renderer', file),
-    path.join(process.resourcesPath || '', 'app', 'renderer', file),
-    path.join(app.getAppPath(), 'renderer', file),
-  ];
-  for (const p of candidates) {
-    if (fs.existsSync(p)) return p;
-  }
-  // Fallback — best guess
-  return path.join(__dirname, 'renderer', file);
-}
-
 // ── Config ───────────────────────────────────────────────────────────────────
 const BASE_DIR = path.join(
   process.env.PROGRAMDATA || 'C:\\ProgramData',
@@ -172,16 +153,14 @@ function showLoginWindow() {
     maximizable: false,
     title: 'DarkLion — Sign In',
     webPreferences: {
-      preload: path.join(app.getAppPath(), 'preload.js'),
+      preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
 
   loginWindow.setMenu(null);
-  const loginFile = rendererPath('login.html');
-  console.log('[main] Loading login from:', loginFile);
-  loginWindow.loadFile(loginFile);
+  loginWindow.loadFile(path.join(__dirname, 'renderer', 'login.html'));
   loginWindow.webContents.openDevTools({ mode: 'detach' }); // DEBUG
   loginWindow.on('closed', () => { loginWindow = null; });
 }
@@ -204,14 +183,14 @@ function showRoutingWindow(filePath) {
     title: 'Route to DarkLion',
     alwaysOnTop: true,
     webPreferences: {
-      preload: path.join(app.getAppPath(), 'preload.js'),
+      preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
 
   win.setMenu(null);
-  win.loadFile(rendererPath('index.html'));
+  win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   routingWindows.set(filePath, win);
 
   win.webContents.on('did-finish-load', () => {
