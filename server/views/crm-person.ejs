@@ -1214,7 +1214,7 @@
 
   async function openEditModal() {
     try {
-      if (!personData) return;
+      if (!personData) { toast('Person data not loaded yet — try again in a moment', 'error'); return; }
       document.getElementById('ef-fname').value = personData.first_name || '';
       document.getElementById('ef-lname').value = personData.last_name || '';
       document.getElementById('ef-email').value = personData.email || '';
@@ -1228,13 +1228,20 @@
         document.getElementById('ef-spouse-search').value = '';
       }
       await efSpouseLoadPeople().catch(() => {});
-      document.getElementById('edit-modal').classList.remove('hidden');
+      // Use same .open pattern as company page — most reliable with shell CSS
+      const m = document.getElementById('edit-modal');
+      m.classList.remove('hidden');
+      m.style.display = 'flex';
     } catch(e) {
       console.error('openEditModal error:', e);
       toast('Could not open edit form: ' + e.message, 'error');
     }
   }
-  function closeModal() { document.getElementById('edit-modal').classList.add('hidden'); }
+  function closeModal() {
+    const m = document.getElementById('edit-modal');
+    m.classList.add('hidden');
+    m.style.display = '';
+  }
 
   async function submitEdit() {
     const btn = document.getElementById('ef-submit');
