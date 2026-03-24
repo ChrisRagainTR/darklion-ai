@@ -744,8 +744,10 @@
           </div>
           <div class="attach-chips" id="comm-co-attach-chips"></div>
           <input type="file" id="comm-co-attach-input" multiple style="display:none;" onchange="handleCoCommAttach(this.files)">
+          <input type="checkbox" id="comm-co-sms-toggle" style="display:none;">
           <div class="reply-box-actions">
             <button class="btn btn-gold btn-sm" onclick="coCommSendReply()">Send Reply</button>
+            <button class="btn btn-outline btn-sm" onclick="coCommSendAsSms()">📱 Send as Text</button>
             <button class="btn-attach" onclick="document.getElementById('comm-co-attach-input').click()">📎 Attach</button>
             <button class="btn btn-outline btn-sm" onclick="coCommResolve()">✅ Resolve</button>
           </div>
@@ -3464,15 +3466,24 @@
     }
   }
 
+  async function coCommSendAsSms() {
+    const toggle = document.getElementById('comm-co-sms-toggle');
+    if (toggle) toggle.checked = true;
+    await coCommSendReply();
+    if (toggle) toggle.checked = false;
+  }
+
   async function coCommSendReply() {
     const body = document.getElementById('comm-co-reply-body').value.trim();
     if (!commCoActiveThreadId) { toast('No thread selected', 'error'); return; }
     if (!body && coCommAttachFiles.length === 0) return;
     const isInternal = document.getElementById('comm-co-internal-toggle').checked;
+    const isSms = document.getElementById('comm-co-sms-toggle')?.checked;
     try {
       const fd = new FormData();
       fd.append('body', body);
       fd.append('is_internal', isInternal ? 'true' : 'false');
+      if (isSms) fd.append('send_sms', 'true');
       coCommAttachFiles.forEach(f => fd.append('files', f));
       const replyRes = await apiFetch(`/api/messages/${commCoActiveThreadId}/reply`, { method: 'POST', body: fd });
       if (!replyRes.ok) { const d = await replyRes.json().catch(()=>({})); throw new Error(d.error || `Server error ${replyRes.status}`); }

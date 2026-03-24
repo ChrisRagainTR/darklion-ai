@@ -397,9 +397,6 @@
     <div class="crm-thread-list">
       <div class="crm-thread-list-header">
         <h3>Messages</h3>
-        <div style="display:flex;gap:0.4rem;align-items:center;">
-          <button class="btn btn-outline btn-sm" onclick="openSmsModal()" title="Send SMS text message">📱 Text</button>
-        </div>
       </div>
       <div class="crm-thread-list-inner" id="comm-threads">
         <div class="loading-state"><div class="loading-spinner"></div></div>
@@ -421,7 +418,7 @@
         <div class="reply-box" id="comm-reply-box" style="display:none;">
           <div class="reply-box-controls">
             <input type="checkbox" id="comm-internal-toggle" style="display:none;">
-            <label id="comm-sms-toggle-wrap" style="display:none;"><input type="checkbox" id="comm-sms-toggle"> 📱 Send as Text</label>
+            <input type="checkbox" id="comm-sms-toggle" style="display:none;">
             <div style="flex:1;"></div>
           </div>
           <div style="position:relative;">
@@ -432,6 +429,7 @@
           <input type="file" id="comm-attach-input" multiple style="display:none;" onchange="handleCommAttach(this.files)">
           <div class="reply-box-actions">
             <button class="btn btn-gold btn-sm" id="comm-send-reply-btn" onclick="commSendReply()">Send Reply</button>
+            <button class="btn btn-outline btn-sm" id="comm-send-sms-btn" onclick="commSendAsSms()">📱 Send as Text</button>
             <button class="btn-attach" onclick="document.getElementById('comm-attach-input').click()">📎 Attach</button>
             <button class="btn btn-outline btn-sm" onclick="commResolve()">✅ Resolve</button>
           </div>
@@ -2121,6 +2119,13 @@
       if (btn) btn.textContent = 'Send Reply';
     }
   });
+
+  async function commSendAsSms() {
+    const toggle = document.getElementById('comm-sms-toggle');
+    if (toggle) toggle.checked = true;
+    await commSendReply();
+    if (toggle) toggle.checked = false;
+  }
 
   async function commSendReply() {
     const body = document.getElementById('comm-reply-body').value.trim();
