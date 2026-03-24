@@ -2984,36 +2984,47 @@
       }
       const session = await sessionRes.json();
 
-      // If session has existing messages, render them
-      // (messages may come back as a string from Postgres JSON column)
+      // Parse messages (Postgres may return JSON as string)
       let sessionMsgs = session.messages;
       if (typeof sessionMsgs === 'string') { try { sessionMsgs = JSON.parse(sessionMsgs); } catch(_) { sessionMsgs = []; } }
-      if (sessionMsgs && sessionMsgs.length > 0) {
+      sessionMsgs = sessionMsgs || [];
+
+      // Render existing messages immediately so UI isn't blank
+      if (sessionMsgs.length > 0) {
         renderViktorMessages(sessionMsgs);
         setViktorStatus('Online', true);
         enableViktorInput();
-        return;
       }
 
-      // No messages yet — kick off briefing in background, don't block UI
-      setViktorStatus('Preparing briefing…', false);
-      messagesEl.innerHTML = '<div class="dash-ai-bubble agent" id="viktor-briefing-placeholder">Good morning! I\'m Viktor, your AI advisor assistant. Your morning briefing is being prepared — it\'ll appear here in a moment.<br><br>You can start chatting now if you like.</div>';
-      enableViktorInput();
+      // Always check if briefing was generated today — if not, generate it in background
+      // This handles: new sessions, sessions with only chat history, and sessions missing the briefing
+      if (!session.briefing_generated) {
+        if (sessionMsgs.length === 0) {
+          // No messages at all — show placeholder while briefing generates
+          setViktorStatus('Preparing briefing…', false);
+          messagesEl.innerHTML = '<div class="dash-ai-bubble agent" id="viktor-briefing-placeholder">Good morning! I\'m Viktor, your AI advisor assistant. Your daily briefing is being prepared — it\'ll appear in a moment.<br><br>You can start chatting now if you like.</div>';
+          enableViktorInput();
+        }
 
-      // Fire briefing generation in background (don't await — takes 5-15s)
-      apiFetch('/api/viktor-chat/briefing', { method: 'POST', body: '{}' }).then(async (briefingRes) => {
-        if (!briefingRes.ok) { setViktorStatus('Online', true); return; }
-        const { messages: bMessages } = await briefingRes.json();
-        if (bMessages && bMessages.length > 0) {
-          // Only replace placeholder if user hasn't sent messages yet
-          const currentMsgs = messagesEl.querySelectorAll('.dash-ai-bubble');
-          const hasUserMsg = Array.from(currentMsgs).some(el => el.classList.contains('user'));
-          if (!hasUserMsg) {
+        // Fire briefing in background
+        apiFetch('/api/viktor-chat/briefing', { method: 'POST', body: '{}' }).then(async (briefingRes) => {
+          if (!briefingRes.ok) { setViktorStatus('Online', true); return; }
+          const data = await briefingRes.json();
+          let bMessages = data.messages;
+          if (typeof bMessages === 'string') { try { bMessages = JSON.parse(bMessages); } catch(_) { bMessages = []; } }
+          if (bMessages && bMessages.length > 0) {
             renderViktorMessages(bMessages);
           }
+          setViktorStatus('Online', true);
+        }).catch(() => { setViktorStatus('Online', true); });
+      } else {
+        // Briefing already generated and messages rendered above
+        if (sessionMsgs.length === 0) {
+          messagesEl.innerHTML = '<div class="dash-ai-bubble agent">Good morning! How can I help you today?</div>';
         }
         setViktorStatus('Online', true);
-      }).catch(() => { setViktorStatus('Online', true); });
+        enableViktorInput();
+      }
     } catch(e) {
       console.error('Viktor init error:', e);
       setViktorStatus('Offline', false);
