@@ -1,22 +1,16 @@
 'use strict';
 
-/**
- * main.js — Electron main process.
- * Manages: login window, tray icon, WebDAV server, drive mount/unmount, auto-start.
- */
-
 const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, shell } = require('electron');
 const path = require('path');
 
-// ─── Single instance lock ─────────────────────────────────────────────────────
-// MUST be called before app.whenReady()
+// Must be before app.whenReady()
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
   process.exit(0);
 }
 
-// ─── Lazy imports (avoids issues before app ready) ────────────────────────────
+// Lazy imports
 let auth, apiModule, webdavServer, drive;
 
 function loadModules() {
@@ -26,62 +20,31 @@ function loadModules() {
   drive = require('./drive');
 }
 
-// ─── State ────────────────────────────────────────────────────────────────────
+// State
 let tray = null;
 let loginWindow = null;
 let isConnected = false;
 let currentToken = null;
 
-// ─── Tray icon (hardcoded base64 PNG — 16x16 gold circle on dark background) ──
-function createTrayIcon(connected) {
-  // Minimal 16x16 PNG — gold circle on dark navy background
-  // Generated offline; no external dependencies or buffer math
-  const GOLD_ICON_B64 =
-    'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAAX0lEQVQ4y2NgGAWkAkYGBob/DAwM/6mggZGBgeE/FTQwMjAw/KeCBkYGBob/VNDAyMDA8J8KGhgZGBj+U0EDIwMDw38qaGBkYGD4TwUNjAwMDP+poIGRgYHhPxU0AAArcBPd3kHETwAAAABJRU5ErkJggg==';
-  const GREY_ICON_B64 =
-    'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAAVUlEQVQ4y2NgGAWkAkYGBob/DAwM/6mggZGBgeE/FTQwMjAw/KeCBkYGBob/VNDAyMDA8J8KGhgZGBj+U0EDIwMDw38qaGBkYGD4TwUNjAwMDP+poIHRAAArcBPd3p4r0gAAAABJRU5ErkJggg==';
+// Valid 16x16 PNGs generated with Node zlib
+const GOLD_ICON_B64 = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAANElEQVR4nGPgF1f5TwlmGJwGnFzhgxUTZQAuzbgMYSBFMzZDRg2gtgEURyNVEtLgyAukYACSBsiYUYvh7QAAAABJRU5ErkJggg==';
+const GREY_ICON_B64 = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAANElEQVR4nGPgF1f5TwlmGJwGpKSkYMVEGYBLMy5DGEjRjM2QUQOobQDF0UiVhDQ48gIpGAAJd5bAmYtGRwAAAABJRU5ErkJggg==';
 
+function createTrayIcon(connected) {
   try {
     const b64 = connected ? GOLD_ICON_B64 : GREY_ICON_B64;
     const img = nativeImage.createFromBuffer(Buffer.from(b64, 'base64'));
     if (!img.isEmpty()) return img;
-  } catch (e) { /* fall through */ }
-
-  // Ultimate fallback: empty image
+  } catch (e) {
+    // ignore
+  }
   return nativeImage.createEmpty();
 }
 
-/**
- * Build a minimal PNG from raw RGBA pixels (no external deps).
- * Uses zlib (built into Node) for DEFLATE compression.
- */
-function buildPNG(width, height, pixels) {
-  const zlib = require('zlib');
-
-  // Build raw image data (filter byte 0x00 before each row)
-  const rawRows = [];
-  for (let y = 0; y < height; y++) {
-    const row = Buffer.alloc(1 + width * 4);
-    row[0] = 0; // filter type: None
-    for (let x = 0; x < width; x++) {
-      const src = (y * width + x) * 4;
-      row.copy(row, 1 + x * 4, src, src); // noop copy placeholder
-      row[1 + x * 4 + 0] = pixels[src + 0];
-      row[1 + x * 4 + 1] = pixels[src + 1];
-      row[1 + x * 4 + 2] = pixels[src + 2];
-      row[1 + x * 4 + 3] = pixels[src + 3];
-    }
-    rawRows.push(row);
-  }
-  const rawData = Buffer.concat(rawRows);
-  const compressed = zlib.deflateSync(rawData);
-
-  function crc32(buf) {
-// ─── Tray menu ────────────────────────────────────────────────────────────────
 function buildTrayMenu() {
   const statusLabel = isConnected
-    ? 'DarkLion Drive (L:) ✓ Connected'
-    : 'DarkLion Drive — Not Connected';
+    ? 'DarkLion Drive (L:)  Connected'
+    : 'DarkLion Drive -- Not Connected';
 
   return Menu.buildFromTemplate([
     { label: statusLabel, enabled: false },
@@ -89,24 +52,24 @@ function buildTrayMenu() {
     {
       label: 'Open Drive',
       enabled: isConnected,
-      click: () => { if (drive) drive.openDrive(); },
+      click: function() { if (drive) drive.openDrive(); }
     },
     { type: 'separator' },
     {
       label: 'Log Out',
-      click: async () => {
+      click: async function() {
         await disconnectDrive();
         if (auth) auth.clearAuth();
         showLoginWindow();
-      },
+      }
     },
     {
       label: 'Quit',
-      click: async () => {
+      click: async function() {
         await disconnectDrive();
         app.quit();
-      },
-    },
+      }
+    }
   ]);
 }
 
@@ -114,45 +77,42 @@ function updateTray() {
   if (!tray) return;
   tray.setImage(createTrayIcon(isConnected));
   tray.setContextMenu(buildTrayMenu());
-  tray.setToolTip(isConnected ? 'DarkLion Drive — Connected' : 'DarkLion Drive — Disconnected');
+  tray.setToolTip(isConnected ? 'DarkLion Drive -- Connected' : 'DarkLion Drive -- Disconnected');
 }
 
-// ─── Login window ─────────────────────────────────────────────────────────────
 function showLoginWindow() {
   if (loginWindow && !loginWindow.isDestroyed()) {
     loginWindow.focus();
     return;
   }
 
-  const appPath = app.getAppPath();
+  var appPath = app.getAppPath();
   loginWindow = new BrowserWindow({
     width: 420,
     height: 520,
     resizable: false,
     frame: true,
-    title: 'DarkLion Drive — Login',
+    title: 'DarkLion Drive -- Login',
     backgroundColor: '#0f1724',
     webPreferences: {
       preload: path.join(appPath, 'app', 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false,
-    },
+      nodeIntegration: false
+    }
   });
 
   loginWindow.loadFile(path.join(appPath, 'app', 'renderer', 'login.html'));
   loginWindow.setMenuBarVisibility(false);
 
-  loginWindow.on('closed', () => {
+  loginWindow.on('closed', function() {
     loginWindow = null;
   });
 }
 
-// ─── Connect / disconnect ─────────────────────────────────────────────────────
 async function connectDrive(token) {
   try {
     console.log('[Main] Starting WebDAV server...');
-    await webdavServer.startServer(() => {
-      // Called when token is rejected — show login
+    await webdavServer.startServer(function() {
       console.log('[Main] Token expired, showing login');
       isConnected = false;
       currentToken = null;
@@ -194,15 +154,14 @@ async function disconnectDrive() {
   updateTray();
 }
 
-// ─── IPC handlers ─────────────────────────────────────────────────────────────
-ipcMain.handle('login', async (event, { email, password }) => {
+ipcMain.handle('login', async function(event, creds) {
   try {
-    const result = await apiModule.login(email, password);
-    const { token, firm } = result;
+    var result = await apiModule.login(creds.email, creds.password);
+    var token = result.token;
+    var firm = result.firm;
 
-    auth.saveAuth(token, email, firm?.name || '');
+    auth.saveAuth(token, creds.email, (firm && firm.name) || '');
 
-    // Close login window
     if (loginWindow && !loginWindow.isDestroyed()) {
       loginWindow.close();
     }
@@ -215,22 +174,19 @@ ipcMain.handle('login', async (event, { email, password }) => {
   }
 });
 
-ipcMain.handle('get-version', () => {
+ipcMain.handle('get-version', function() {
   return app.getVersion();
 });
 
-// ─── App lifecycle ────────────────────────────────────────────────────────────
-app.whenReady().then(async () => {
+app.whenReady().then(async function() {
   loadModules();
 
-  // Auto-start on Windows login
   app.setLoginItemSettings({ openAtLogin: true });
 
-  // Create tray
   tray = new Tray(createTrayIcon(false));
   tray.setToolTip('DarkLion Drive');
   tray.setContextMenu(buildTrayMenu());
-  tray.on('double-click', () => {
+  tray.on('double-click', function() {
     if (isConnected) {
       drive.openDrive();
     } else {
@@ -238,8 +194,7 @@ app.whenReady().then(async () => {
     }
   });
 
-  // Try auto-login with stored credentials
-  const stored = auth.loadAuth();
+  var stored = auth.loadAuth();
   if (stored && stored.token) {
     console.log('[Main] Found stored token, attempting auto-connect...');
     try {
@@ -255,24 +210,22 @@ app.whenReady().then(async () => {
   }
 });
 
-app.on('second-instance', () => {
+app.on('second-instance', function() {
   if (loginWindow && !loginWindow.isDestroyed()) {
     loginWindow.focus();
   }
 });
 
-app.on('window-all-closed', (e) => {
-  // Prevent quit when all windows close — keep tray alive
+app.on('window-all-closed', function(e) {
   e.preventDefault();
 });
 
-app.on('before-quit', async () => {
+app.on('before-quit', async function() {
   console.log('[Main] App quitting, cleaning up...');
   await disconnectDrive();
 });
 
-app.on('will-quit', async (e) => {
-  // Extra safety net — ensure drive is unmounted
+app.on('will-quit', async function(e) {
   if (isConnected) {
     e.preventDefault();
     await disconnectDrive();
