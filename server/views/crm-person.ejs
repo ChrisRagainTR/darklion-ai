@@ -49,10 +49,10 @@
   .doc-badge-client { background: rgba(99,102,241,0.12); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.25); }
   .btn-dl { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; border-radius: 6px; padding: 0.3rem 0.65rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; flex-shrink: 0; white-space: nowrap; }
   @media (max-width: 600px) {
-    .doc-name { white-space: normal; word-break: break-word; font-size: 0.82rem; }
+    .doc-name { white-space: normal; overflow-wrap: break-word; word-break: break-word; font-size: 0.82rem; }
     .doc-badges { flex-wrap: wrap; }
     .btn-dl { font-size: 0.72rem; padding: 0.25rem 0.5rem; }
-    .doc-row { gap: 0.5rem; padding: 0.55rem 0.75rem; }
+    .doc-row { gap: 0.5rem; padding: 0.55rem 0.75rem; align-items: flex-start; }
   }
   .btn-dl:hover { border-color: var(--gold); color: var(--gold); }
   .btn-dl:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -878,7 +878,8 @@
             const statusBadge = sectionKey === 'firm_uploaded'
               ? `<span class="doc-badge doc-badge-viewed">✓ Delivered</span>`
               : `<span class="doc-badge doc-badge-client">✓ Uploaded</span>`;
-            y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(doc.display_name || 'Document')}</div><div class="doc-badges">${statusBadge}${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}${doc.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(doc.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'})}</span>` : ''}</div></div><div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;"><button class="btn-dl" data-docid="${doc.id}">⬇</button><button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${doc.id},${JSON.stringify(doc.folder_section||'firm_uploaded')},${JSON.stringify(doc.folder_category||'tax')},event,${JSON.stringify(doc.year||'')})" title="Move">↕</button><button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${doc.id},event)" title="Delete">🗑</button></div></div>`;
+            const _dispName = (doc.display_name || 'Document').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+            y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(_dispName)}</div><div class="doc-badges">${statusBadge}${doc.size_bytes ? `<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>` : ''}${doc.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(doc.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'})}</span>` : ''}</div></div><div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;"><button class="btn-dl" data-docid="${doc.id}">⬇</button><button class="btn btn-ghost btn-xs" onclick="openMoveDocModal(${doc.id},${JSON.stringify(doc.folder_section||'firm_uploaded')},${JSON.stringify(doc.folder_category||'tax')},event,${JSON.stringify(doc.year||'')})" title="Move">↕</button><button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${doc.id},event)" title="Delete">🗑</button></div></div>`;
           });
         }
         y += `</div></div>`; // close cat-folder-body + cat-folder

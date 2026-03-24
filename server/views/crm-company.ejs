@@ -1255,7 +1255,7 @@
                   : files.map(f => `<div class="doc-row" data-docid="${f.id}">
                       ${docTypeBadge(f.mime_type, f.display_name)}
                       <div class="doc-info">
-                        <div class="doc-name doc-name-link" data-docid="${f.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc(f.display_name||'Untitled')}</div>
+                        <div class="doc-name doc-name-link" data-docid="${f.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc((f.display_name||'Untitled').replace(/_/g,' ').trim())}</div>
                         <div class="doc-badges">
                           ${statusBadge}
                           ${f.size_bytes ? `<span class="doc-badge doc-badge-type">${formatBytes(f.size_bytes)}</span>` : ''}
