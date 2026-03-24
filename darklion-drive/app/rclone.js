@@ -83,14 +83,8 @@ function doMount(token) {
       } catch(e) { /* ignore */ }
     }
 
-    // Create fresh mount point directory
-    try {
-      if (!fs.existsSync(MOUNT_DIR)) {
-        fs.mkdirSync(MOUNT_DIR, { recursive: true });
-      }
-    } catch(e) {
-      return reject(new Error('Cannot create mount directory: ' + e.message));
-    }
+    // DO NOT create the directory — rclone on Windows requires the mountpoint to NOT exist
+    // It will create the directory itself when mounting
 
     // Write rclone config to temp file
     var configPath = path.join(os.tmpdir(), 'darklion-rclone.conf');
