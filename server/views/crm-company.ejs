@@ -1266,10 +1266,26 @@
                           ${f.size_bytes ? `<span class="doc-badge doc-badge-type">${formatBytes(f.size_bytes)}</span>` : ''}
                           ${f.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(f.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'})}</span>` : ''}
                         </div>
+                        <div id="move-panel-${f.id}" style="display:none;margin-top:0.4rem;padding:0.4rem;background:rgba(201,168,76,0.06);border-radius:5px;">
+                          <span style="font-size:0.72rem;color:var(--muted);margin-right:0.3rem;">Move to:</span>
+                          <select id="mv-year-${f.id}" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.2rem 0.4rem;border-radius:4px;font-size:0.75rem;margin-right:0.3rem;">
+                            ${(() => { const yr = new Date().getFullYear(); let opts = ''; for(let y2=yr;y2>=2018;y2--) opts+=`<option value="${y2}"${String(f.year||'')==String(y2)?' selected':''}>${y2}</option>`; return opts; })()}
+                          </select>
+                          <select id="mv-sec-${f.id}" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.2rem 0.4rem;border-radius:4px;font-size:0.75rem;margin-right:0.3rem;">
+                            <option value="firm_uploaded"${(f.folder_section||'firm_uploaded')==='firm_uploaded'?' selected':''}>Advisor</option>
+                            <option value="client_uploaded"${f.folder_section==='client_uploaded'?' selected':''}>Client</option>
+                          </select>
+                          <select id="mv-cat-${f.id}" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.2rem 0.4rem;border-radius:4px;font-size:0.75rem;margin-right:0.3rem;">
+                            <option value="tax"${(f.folder_category||'tax')==='tax'?' selected':''}>Tax</option>
+                            <option value="other"${(f.folder_category||'tax')==='other'?' selected':''}>Other</option>
+                          </select>
+                          <button onclick="saveDocMove(${f.id})" style="background:var(--gold);color:var(--navy);border:none;border-radius:4px;padding:0.2rem 0.55rem;font-size:0.75rem;font-weight:700;cursor:pointer;">Save</button>
+                          <button onclick="document.getElementById('move-panel-${f.id}').style.display='none'" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:0.2rem 0.45rem;font-size:0.75rem;cursor:pointer;margin-left:0.2rem;">✕</button>
+                        </div>
                       </div>
                       <div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;">
                         <button class="btn-dl" data-docid="${f.id}">⬇</button>
-                        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openMoveDocModal(${f.id},${JSON.stringify(f.folder_section||'firm_uploaded')},${JSON.stringify(f.folder_category||'tax')},null,${JSON.stringify(f.year||'')})" title="Move">↕</button>
+                        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();var p=document.getElementById('move-panel-${f.id}');p.style.display=p.style.display==='none'?'block':'none'" title="Move">↕</button>
                         <button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${f.id},event)" title="Delete">🗑</button>
                       </div>
                     </div>`).join('')}
@@ -1467,6 +1483,21 @@
     if (modal) modal.classList.remove('open');
     _moveDocId = null;
   }
+  async function saveDocMove(id) {
+    const year    = document.getElementById(`mv-year-${id}`).value;
+    const section = document.getElementById(`mv-sec-${id}`).value;
+    const category = document.getElementById(`mv-cat-${id}`).value;
+    try {
+      const res = await apiFetch(`/api/documents/${id}`, { method: 'PUT', body: JSON.stringify({ year, folder_section: section, folder_category: category }) });
+      if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Error ' + res.status); }
+      const doc = docsData.find(d => d.id === id);
+      if (doc) { doc.year = year; doc.folder_section = section; doc.folder_category = category; }
+      toast('Document moved');
+      document.getElementById(`move-panel-${id}`).style.display = 'none';
+      reloadDocs();
+    } catch(e) { toast('Move failed: ' + e.message, 'error'); }
+  }
+
   async function submitMoveDoc() {
     if (!_moveDocId) return;
     const year = document.getElementById('move-doc-year').value;
