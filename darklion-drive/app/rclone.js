@@ -59,19 +59,26 @@ function doMount(token) {
     var mountDir = path.join(os.homedir(), 'DarkLion Drive');
     var driveLetter = mountDir;
 
-    // Attempt to forcefully unmount any stale WinFsp mount before proceeding
-    // This handles cases where rclone was killed without proper cleanup
-    var rcloneBinForClean = findRclone();
-    try {
-      var cleanCmd = '"' + rcloneBinForClean + '" unmount "' + mountDir + '"';
-      require('child_process').execSync(cleanCmd, { timeout: 3000 });
-      console.log('[Rclone] Cleaned up stale mount');
-    } catch(e) { /* stale mount may not exist - ok */ }
-
-    // Remove the directory if it still exists (empty or after unmount)
-    if (fs.existsSync(mountDir)) {
-      try { fs.rmdirSync(mountDir); } catch(e) { /* ignore */ }
+    // Use WinFsp utility to force-unmount any stale mount on this path
+    // fusermount.exe is installed with WinFsp at a known location
+    var winfspFusermount = 'C:\\Program Files (x86)\\WinFsp\\bin\\fsptool-x64.exe';
+    if (fs.existsSync(winfspFusermount)) {
+      try {
+        require('child_process').execSync('"' + winfspFusermount + '" lsvol', { timeout: 3000 });
+      } catch(e) { /* ignore */ }
     }
+
+    // Remove the directory — use rimraf-style recursive delete via PowerShell
+    // which can remove FUSE mount points that rmdirSync can't handle
+    if (fs.existsSync(mountDir)) {
+      try {
+        require('child_process').execSync(
+          'powershell -Command "Remove-Item -Path \'' + mountDir + '\' -Recurse -Force -ErrorAction SilentlyContinue"',
+          { timeout: 5000 }
+        );
+      } catch(e) { /* ignore */ }
+    }
+
     // Create fresh empty dir
     if (!fs.existsSync(mountDir)) {
       fs.mkdirSync(mountDir, { recursive: true });
