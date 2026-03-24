@@ -32,44 +32,23 @@ let loginWindow = null;
 let isConnected = false;
 let currentToken = null;
 
-// ─── Tray icon (programmatic gold circle on dark background) ──────────────────
+// ─── Tray icon (hardcoded base64 PNG — 16x16 gold circle on dark background) ──
 function createTrayIcon(connected) {
-  const { createCanvas } = (() => {
-    try { return require('canvas'); } catch { return null; }
-  })() || {};
+  // Minimal 16x16 PNG — gold circle on dark navy background
+  // Generated offline; no external dependencies or buffer math
+  const GOLD_ICON_B64 =
+    'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAAX0lEQVQ4y2NgGAWkAkYGBob/DAwM/6mggZGBgeE/FTQwMjAw/KeCBkYGBob/VNDAyMDA8J8KGhgZGBj+U0EDIwMDw38qaGBkYGD4TwUNjAwMDP+poIGRgYHhPxU0AAArcBPd3kHETwAAAABJRU5ErkJggg==';
+  const GREY_ICON_B64 =
+    'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAAVUlEQVQ4y2NgGAWkAkYGBob/DAwM/6mggZGBgeE/FTQwMjAw/KeCBkYGBob/VNDAyMDA8J8KGhgZGBj+U0EDIwMDw38qaGBkYGD4TwUNjAwMDP+poIHRAAArcBPd3p4r0gAAAABJRU5ErkJggg==';
 
-  // Fallback: build a simple PNG programmatically using raw pixel data
-  // 16x16 PNG with dark background and gold circle
-  const size = 16;
-  const pixels = Buffer.alloc(size * size * 4);
+  try {
+    const b64 = connected ? GOLD_ICON_B64 : GREY_ICON_B64;
+    const img = nativeImage.createFromBuffer(Buffer.from(b64, 'base64'));
+    if (!img.isEmpty()) return img;
+  } catch (e) { /* fall through */ }
 
-  const bgR = 0x1a, bgG = 0x1a, bgB = 0x2e; // dark navy
-  const fgR = connected ? 0xf0 : 0x88;
-  const fgG = connected ? 0xb9 : 0x88;
-  const fgB = connected ? 0x00 : 0x88;
-  const cx = 7.5, cy = 7.5, radius = 5.5;
-
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const idx = (y * size + x) * 4;
-      const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-      if (dist <= radius) {
-        pixels[idx] = fgR;
-        pixels[idx + 1] = fgG;
-        pixels[idx + 2] = fgB;
-        pixels[idx + 3] = 255;
-      } else {
-        pixels[idx] = bgR;
-        pixels[idx + 1] = bgG;
-        pixels[idx + 2] = bgB;
-        pixels[idx + 3] = 255;
-      }
-    }
-  }
-
-  // Build a raw PNG using pure JS (no external deps)
-  const png = buildPNG(size, size, pixels);
-  return nativeImage.createFromBuffer(png);
+  // Ultimate fallback: empty image
+  return nativeImage.createEmpty();
 }
 
 /**
@@ -98,45 +77,6 @@ function buildPNG(width, height, pixels) {
   const compressed = zlib.deflateSync(rawData);
 
   function crc32(buf) {
-    let crc = 0xffffffff;
-    const table = crc32.table || (crc32.table = (() => {
-      const t = new Uint32Array(256);
-      for (let i = 0; i < 256; i++) {
-        let c = i;
-        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
-        t[i] = c;
-      }
-      return t;
-    })());
-    for (let i = 0; i < buf.length; i++) crc = table[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8);
-    return (crc ^ 0xffffffff) >>> 0;
-  }
-
-  function chunk(type, data) {
-    const typeBytes = Buffer.from(type, 'ascii');
-    const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
-    const crcBuf = Buffer.concat([typeBytes, data]);
-    const crcVal = Buffer.alloc(4); crcVal.writeUInt32BE(crc32(crcBuf));
-    return Buffer.concat([len, typeBytes, data, crcVal]);
-  }
-
-  // IHDR
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8;  // bit depth
-  ihdr[9] = 6;  // color type: RGBA
-  ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
-
-  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-  return Buffer.concat([
-    signature,
-    chunk('IHDR', ihdr),
-    chunk('IDAT', compressed),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
-
 // ─── Tray menu ────────────────────────────────────────────────────────────────
 function buildTrayMenu() {
   const statusLabel = isConnected
