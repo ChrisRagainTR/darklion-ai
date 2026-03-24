@@ -219,7 +219,8 @@
       <div id="typingIndicator" style="display:none;padding:0.3rem 1rem;font-size:0.78rem;color:var(--muted);font-style:italic;"></div>
       <div class="reply-box" id="replyBox">
         <div class="reply-box-controls">
-          <label><input type="checkbox" id="internalToggle"> 🔒 Internal note</label>
+          <!-- Internal note checkbox hidden — auto-set for shared threads, not needed for direct threads -->
+          <input type="checkbox" id="internalToggle" style="display:none;">
           <div style="flex:1;"></div>
         </div>
         <textarea id="replyBody" placeholder="Write a reply… (Shift+Enter to send)" rows="3"></textarea>
@@ -481,13 +482,11 @@ async function loadThread(threadId, silent = false) {
         <button class="btn btn-sm btn-danger" onclick="archiveCurrentThread()">${data.isParticipant ? 'Remove' : 'Archive'}</button>
       </div>
     `;
-    // Lock internal toggle for participants
+    // Auto-set internal for shared threads (checkbox is hidden but still drives is_internal on send)
     const internalToggle = document.getElementById('internalToggle');
     if (internalToggle) {
       internalToggle.checked = !!data.isParticipant;
       internalToggle.disabled = !!data.isParticipant;
-      internalToggle.parentElement.style.opacity = data.isParticipant ? '0.5' : '';
-      internalToggle.parentElement.title = data.isParticipant ? 'You can only send internal notes on shared threads' : '';
     }
 
     const msgs = data.messages || [];
