@@ -223,7 +223,7 @@
           <input type="checkbox" id="internalToggle" style="display:none;">
           <div style="flex:1;"></div>
         </div>
-        <textarea id="replyBody" placeholder="Write a reply… (Shift+Enter to send)" rows="3"></textarea>
+        <textarea id="replyBody" placeholder="Write a reply… (use @Name to loop in a colleague)" rows="3"></textarea>
         <div id="mention-picker" style="display:none;position:absolute;z-index:500;background:var(--charcoal);border:1px solid var(--gold);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);min-width:200px;max-height:220px;overflow-y:auto;"></div>
         <div class="attach-chips" id="attachChips"></div>
         <input type="file" id="attachFileInput" multiple style="display:none;" onchange="handleAttachFiles(this.files)">
@@ -231,7 +231,7 @@
           <button class="btn btn-gold btn-sm" onclick="sendReply()">Send Reply</button>
           <button class="btn btn-outline btn-sm" onclick="sendReplyAsSms()">📱 Send as Text</button>
           <button class="btn-attach" onclick="document.getElementById('attachFileInput').click()">📎 Attach</button>
-          <button class="btn btn-sm btn-danger" onclick="archiveCurrentThread()">Archive</button>
+          <button class="btn btn-outline btn-sm" onclick="archiveCurrentThread()">Archive</button>
         </div>
       </div>
     </div>
@@ -477,7 +477,7 @@ async function loadThread(threadId, silent = false) {
       </div>
       <div class="detail-header-controls">
         ${data.isParticipant ? `<span style="font-size:0.72rem;background:rgba(138,99,241,0.15);color:#a78bfa;border:1px solid rgba(138,99,241,0.3);border-radius:4px;padding:0.2rem 0.6rem;font-weight:600;">Shared thread — internal notes only</span>` : ''}
-        <button class="btn btn-sm btn-danger" onclick="archiveCurrentThread()">${data.isParticipant ? 'Remove' : 'Archive'}</button>
+        <button class="btn btn-sm btn-outline" onclick="archiveCurrentThread()">${data.isParticipant ? 'Remove' : 'Archive'}</button>
       </div>
     `;
     // Auto-set internal for shared threads (checkbox is hidden but still drives is_internal on send)
