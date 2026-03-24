@@ -161,6 +161,40 @@ router.post('/upload', (req, res, next) => {
   }
 });
 
+// ── GET /documents/:id/url ── (alias for download, returns JSON)
+router.get('/:id/url', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query(
+      'SELECT s3_key, s3_bucket FROM documents WHERE id = $1 AND firm_id = $2',
+      [parseInt(id), firmId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Document not found' });
+    const url = await getSignedDownloadUrl({ key: rows[0].s3_key, bucket: rows[0].s3_bucket });
+    res.json({ url });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to generate URL' });
+  }
+});
+
+// ── GET /documents/:id/open ── (302 redirect — iOS Safari safe)
+router.get('/:id/open', async (req, res) => {
+  const firmId = req.firm.id;
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query(
+      'SELECT s3_key, s3_bucket FROM documents WHERE id = $1 AND firm_id = $2',
+      [parseInt(id), firmId]
+    );
+    if (!rows[0]) return res.status(404).send('Document not found');
+    const url = await getSignedDownloadUrl({ key: rows[0].s3_key, bucket: rows[0].s3_bucket });
+    res.redirect(302, url);
+  } catch (err) {
+    res.status(500).send('Failed to open document');
+  }
+});
+
 // ── GET /documents/:id/download ─────────────────────────────────────
 router.get('/:id/download', async (req, res) => {
   const firmId = req.firm.id;

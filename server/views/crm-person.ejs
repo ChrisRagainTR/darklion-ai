@@ -942,18 +942,11 @@
   async function downloadDoc(id, btn) {
     if (btn) { btn.disabled = true; btn.textContent = '…'; }
     try {
-      const res = await apiFetch(`/api/documents/${id}/url`);
+      const res = await apiFetch('/api/documents/' + id + '/url');
       const data = await res.json();
-      if (data.url) {
-        const a = document.createElement('a');
-        a.href = data.url;
-        a.target = '_blank';
-        a.rel = 'noopener';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-    } catch(e) { toast('Failed to get download link', 'error'); }
+      // window.location.href works from async on iOS — only window.open() is blocked
+      if (data.url) window.location.href = data.url;
+    } catch(e) { toast('Failed to open document', 'error'); }
     if (btn) { btn.disabled = false; btn.textContent = '⬇'; }
   }
 
