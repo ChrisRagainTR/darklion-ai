@@ -358,6 +358,10 @@ async function loadInbox(showSpinner = false) {
     if (freshJson !== JSON.stringify(allThreads)) {
       allThreads = freshThreads;
       renderInbox();
+      // Auto-open first thread if none selected yet
+      if (!activeThreadId && freshThreads.length) {
+        loadThread(freshThreads[0].id);
+      }
     }
     // firmUsers loaded separately at init
   } catch(e) {
