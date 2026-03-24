@@ -72,8 +72,7 @@ function doMount(token) {
       '--dir-cache-time', '30s',
       '--poll-interval', '30s',
       '--attr-timeout', '1s',
-      '--log-level', 'ERROR',
-      '--network-mode'
+      '--log-level', 'ERROR'
     ];
 
     console.log('[Rclone] Starting rclone mount with binary:', rcloneBin);
@@ -182,9 +181,17 @@ function unmountDrive() {
 }
 
 function openDrive() {
-  exec('explorer.exe L:', function(err) {
-    if (err) console.warn('[Rclone] Could not open Explorer:', err.message);
-  });
+  // Use shell: true to open drive letter correctly
+  var shell = require('electron').shell;
+  if (shell) {
+    shell.openPath('L:\\').catch(function(e) {
+      console.warn('[Rclone] shell.openPath failed:', e);
+    });
+  } else {
+    exec('start explorer.exe L:', { shell: true }, function(err) {
+      if (err) console.warn('[Rclone] Could not open Explorer:', err.message);
+    });
+  }
 }
 
 function isRunning() {
