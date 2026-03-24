@@ -10,31 +10,22 @@ const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
 
-const KEYTAR_SERVICE = 'DarkLionPrintAgent';
-const KEYTAR_ACCOUNT = 'jwt';
-
-let keytar = null;
-try {
-  keytar = require('keytar');
-} catch (e) {
-  console.warn('[auth] keytar not available, using file fallback');
-}
-
-// Fallback file path (in app userData directory)
+// Store JWT in app userData directory (per-user, not shared)
+// userData on Windows = C:\Users\<username>\AppData\Roaming\darklion-print-agent\
+// This is user-private but not in the Windows Credential Manager.
+// Good enough for a 24h JWT — not a long-lived secret.
 function getTokenFilePath() {
   return path.join(app.getPath('userData'), 'auth.json');
 }
 
 /**
- * Store the JWT token securely.
+ * Store the JWT token.
  */
 async function storeToken(token) {
-  if (keytar) {
-    await keytar.setPassword(KEYTAR_SERVICE, KEYTAR_ACCOUNT, token);
-  } else {
-    const filePath = getTokenFilePath();
-    fs.writeFileSync(filePath, JSON.stringify({ token }), 'utf8');
-  }
+  const filePath = getTokenFilePath();
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify({ token }), 'utf8');
 }
 
 /**
@@ -42,31 +33,23 @@ async function storeToken(token) {
  * Returns null if not found.
  */
 async function getToken() {
-  if (keytar) {
-    return await keytar.getPassword(KEYTAR_SERVICE, KEYTAR_ACCOUNT);
-  } else {
-    const filePath = getTokenFilePath();
-    if (fs.existsSync(filePath)) {
-      try {
-        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        return data.token || null;
-      } catch (_) {}
-    }
-    return null;
+  const filePath = getTokenFilePath();
+  if (fs.existsSync(filePath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      return data.token || null;
+    } catch (_) {}
   }
+  return null;
 }
 
 /**
  * Clear the stored token (logout).
  */
 async function clearToken() {
-  if (keytar) {
-    await keytar.deletePassword(KEYTAR_SERVICE, KEYTAR_ACCOUNT);
-  } else {
-    const filePath = getTokenFilePath();
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+  const filePath = getTokenFilePath();
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
   }
 }
 

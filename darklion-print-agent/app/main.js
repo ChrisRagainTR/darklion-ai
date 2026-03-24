@@ -3,10 +3,11 @@
 /**
  * DarkLion Print Agent - Electron Main Process
  *
- * - Runs as a tray icon (invisible on startup)
- * - Connects to the named pipe server exposed by the Windows service
- * - When a new print job arrives, opens the routing window
- * - Registers this session in active-sessions.json so the service knows to notify us
+ * Simplified architecture: Electron handles everything.
+ * - Tray icon (invisible on startup)
+ * - Chokidar watches the spool folder directly (no separate Windows service)
+ * - When a new PDF lands, opens the routing window
+ * - JWT auth via Windows Credential Manager (keytar)
  */
 
 const {
@@ -16,11 +17,9 @@ const {
   Menu,
   ipcMain,
   nativeImage,
-  dialog,
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const net = require('net');
 const os = require('os');
 
 const { storeToken, getToken, clearToken, isTokenExpired } = require('./auth');
@@ -30,77 +29,47 @@ const BASE_DIR = path.join(
   process.env.PROGRAMDATA || 'C:\\ProgramData',
   'DarkLion'
 );
-const SESSIONS_FILE = path.join(BASE_DIR, 'active-sessions.json');
-const username = (process.env.USERNAME || os.userInfo().username || 'user').replace(/[^a-z0-9_-]/gi, '_');
-const PIPE_NAME = `\\\\.\\pipe\\darklion-print-${username}`;
+const SPOOL_DIR = path.join(BASE_DIR, 'Spool');
 
 // ── State ────────────────────────────────────────────────────────────────────
 let tray = null;
 let loginWindow = null;
 let routingWindows = new Map(); // filePath → BrowserWindow
-let pipeServer = null;
-let pendingJobs = []; // jobs queued while login is open
+let watcher = null;
+let pendingJobs = []; // jobs queued while login window is open
 
 // ── App ready ────────────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
-  // Single instance lock — only one Electron per user session
-  const gotLock = app.requestSingleInstanceLock();
-  if (!gotLock) {
+  // Single instance lock — only one Electron per user
+  if (!app.requestSingleInstanceLock()) {
     app.quit();
     return;
   }
 
-  // Register this user session so the service knows to notify us
-  registerSession();
+  // Ensure spool directory exists
+  if (!fs.existsSync(SPOOL_DIR)) {
+    fs.mkdirSync(SPOOL_DIR, { recursive: true });
+  }
 
-  // Set up tray icon
   setupTray();
-
-  // Start listening on named pipe for messages from the service
-  startPipeServer();
-
-  // Check auth state on startup
+  startWatcher();
   await checkAuth();
 });
 
-app.on('window-all-closed', () => {
-  // Don't quit when all windows are closed — stay in tray
+// Second instance launched — just focus existing
+app.on('second-instance', () => {
+  if (loginWindow && !loginWindow.isDestroyed()) loginWindow.focus();
 });
+
+// Don't quit when all windows are closed — stay in tray
+app.on('window-all-closed', () => {});
 
 app.on('before-quit', () => {
-  unregisterSession();
+  if (watcher) watcher.close();
 });
-
-// ── Session registration ─────────────────────────────────────────────────────
-function registerSession() {
-  try {
-    if (!fs.existsSync(BASE_DIR)) fs.mkdirSync(BASE_DIR, { recursive: true });
-    let data = { usernames: [] };
-    if (fs.existsSync(SESSIONS_FILE)) {
-      try { data = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8')); } catch (_) {}
-    }
-    if (!data.usernames) data.usernames = [];
-    if (!data.usernames.includes(username)) {
-      data.usernames.push(username);
-    }
-    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(data), 'utf8');
-  } catch (err) {
-    console.error('[main] Failed to register session:', err.message);
-  }
-}
-
-function unregisterSession() {
-  try {
-    if (!fs.existsSync(SESSIONS_FILE)) return;
-    const data = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8'));
-    data.usernames = (data.usernames || []).filter(u => u !== username);
-    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(data), 'utf8');
-  } catch (_) {}
-}
 
 // ── Tray ─────────────────────────────────────────────────────────────────────
 function setupTray() {
-  // Use a simple 16x16 PNG — the installer places icon.ico in the app dir
   const iconPath = path.join(__dirname, 'renderer', 'icon.ico');
   const icon = fs.existsSync(iconPath)
     ? nativeImage.createFromPath(iconPath)
@@ -108,88 +77,56 @@ function setupTray() {
 
   tray = new Tray(icon);
   tray.setToolTip('DarkLion Print Agent');
-
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'DarkLion Print Agent',
-      enabled: false,
-    },
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'DarkLion Print Agent', enabled: false },
     { type: 'separator' },
-    {
-      label: 'Sign Out',
-      click: async () => {
-        await clearToken();
-        showLoginWindow();
-      },
-    },
-    {
-      label: 'Quit',
-      click: () => {
-        app.quit();
-      },
-    },
-  ]);
-
-  tray.setContextMenu(contextMenu);
+    { label: 'Sign Out', click: async () => { await clearToken(); showLoginWindow(); } },
+    { label: 'Quit', click: () => app.quit() },
+  ]));
 }
 
-// ── Named pipe server ────────────────────────────────────────────────────────
-function startPipeServer() {
-  pipeServer = net.createServer((socket) => {
-    let buffer = '';
+// ── Spool watcher (chokidar inside Electron) ──────────────────────────────────
+function startWatcher() {
+  const chokidar = require('chokidar');
 
-    socket.on('data', (data) => {
-      buffer += data.toString();
-      const lines = buffer.split('\n');
-      buffer = lines.pop(); // last partial line stays in buffer
-
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const msg = JSON.parse(line);
-          handleServiceMessage(msg);
-        } catch (e) {
-          console.error('[main] Bad IPC message:', line);
-        }
-      }
-    });
-
-    socket.on('error', (err) => {
-      console.log('[main] Pipe socket error:', err.message);
-    });
+  watcher = chokidar.watch(SPOOL_DIR, {
+    awaitWriteFinish: { stabilityThreshold: 1500, pollInterval: 200 },
+    ignoreInitial: true,
+    persistent: true,
+    depth: 0,
   });
 
-  pipeServer.on('error', (err) => {
-    console.error('[main] Pipe server error:', err.message);
-    // Retry after 5s
-    setTimeout(startPipeServer, 5000);
+  watcher.on('add', async (filePath) => {
+    if (path.extname(filePath).toLowerCase() !== '.pdf') return;
+
+    // Small extra delay to ensure Ghostscript has fully closed the file
+    await sleep(500);
+
+    try {
+      const stat = fs.statSync(filePath);
+      if (stat.size < 100) return; // skip empty/corrupt files
+    } catch (_) { return; }
+
+    console.log('[watcher] New PDF:', filePath);
+    handleNewPrintJob(filePath);
   });
 
-  pipeServer.listen(PIPE_NAME, () => {
-    console.log('[main] Listening on pipe:', PIPE_NAME);
-  });
+  watcher.on('error', (err) => console.error('[watcher] Error:', err.message));
+  console.log('[watcher] Watching:', SPOOL_DIR);
 }
 
-// ── Handle message from service ───────────────────────────────────────────────
-async function handleServiceMessage(msg) {
-  if (msg.event !== 'new-print') return;
-
-  const { filePath, jobName } = msg;
-  console.log('[main] New print job:', filePath);
-
-  // Check auth before showing routing window
+// ── Handle new print job ──────────────────────────────────────────────────────
+async function handleNewPrintJob(filePath) {
   const token = await getToken();
   if (!token || isTokenExpired(token)) {
-    // Queue the job and show login
-    pendingJobs.push({ filePath, jobName });
+    pendingJobs.push(filePath);
     showLoginWindow();
     return;
   }
-
-  showRoutingWindow(filePath, jobName);
+  showRoutingWindow(filePath);
 }
 
-// ── Login window ─────────────────────────────────────────────────────────────
+// ── Auth ──────────────────────────────────────────────────────────────────────
 async function checkAuth() {
   const token = await getToken();
   if (!token || isTokenExpired(token)) {
@@ -197,6 +134,7 @@ async function checkAuth() {
   }
 }
 
+// ── Login window ──────────────────────────────────────────────────────────────
 function showLoginWindow() {
   if (loginWindow && !loginWindow.isDestroyed()) {
     loginWindow.focus();
@@ -209,7 +147,7 @@ function showLoginWindow() {
     resizable: false,
     minimizable: false,
     maximizable: false,
-    title: 'DarkLion - Sign In',
+    title: 'DarkLion — Sign In',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -219,22 +157,17 @@ function showLoginWindow() {
 
   loginWindow.setMenu(null);
   loginWindow.loadFile(path.join(__dirname, 'renderer', 'login.html'));
-
-  loginWindow.on('closed', () => {
-    loginWindow = null;
-  });
+  loginWindow.on('closed', () => { loginWindow = null; });
 }
 
 // ── Routing window ────────────────────────────────────────────────────────────
-function showRoutingWindow(filePath, jobName) {
-  // Don't open duplicate windows for the same file
+function showRoutingWindow(filePath) {
   if (routingWindows.has(filePath)) {
     const existing = routingWindows.get(filePath);
-    if (!existing.isDestroyed()) {
-      existing.focus();
-      return;
-    }
+    if (!existing.isDestroyed()) { existing.focus(); return; }
   }
+
+  const jobName = cleanJobName(path.basename(filePath, '.pdf'));
 
   const win = new BrowserWindow({
     width: 440,
@@ -243,7 +176,7 @@ function showRoutingWindow(filePath, jobName) {
     minimizable: false,
     maximizable: false,
     title: 'Route to DarkLion',
-    alwaysOnTop: true,   // show above Drake, Excel, etc.
+    alwaysOnTop: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -253,103 +186,72 @@ function showRoutingWindow(filePath, jobName) {
 
   win.setMenu(null);
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
-
   routingWindows.set(filePath, win);
 
   win.webContents.on('did-finish-load', () => {
-    win.webContents.send('job-ready', {
-      filePath,
-      jobName: cleanJobName(jobName),
-    });
+    win.webContents.send('job-ready', { filePath, jobName });
   });
 
   win.on('closed', () => {
     routingWindows.delete(filePath);
-    // Clean up the spool file if user closed without uploading
-    // (they had a chance to upload — if they cancelled, delete the file)
-    try {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    } catch (_) {}
+    // Clean up spool file if user closed without uploading
+    try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
   });
 }
 
-/**
- * Clean up a job name derived from the spool filename.
- * e.g. "20250324_091523_job" → "Document" or extract meaningful part
- */
 function cleanJobName(raw) {
   if (!raw) return 'Document';
-  // Strip timestamp prefix like 20250324_091523_
-  const cleaned = raw.replace(/^\d{8}_\d{6}_/, '');
-  return cleaned || 'Document';
+  return raw.replace(/^\d{8}_\d{6}_/, '') || 'Document';
 }
 
-// ── IPC handlers (renderer → main) ───────────────────────────────────────────
+// ── IPC handlers ──────────────────────────────────────────────────────────────
 
-// Renderer wants to search clients
 ipcMain.handle('search', async (event, query) => {
   const token = await getToken();
   if (!token) throw new Error('Not authenticated');
-  const { search } = require('./api');
-  return search(query, token);
+  return require('./api').search(query, token);
 });
 
-// Renderer wants to upload a document
-ipcMain.handle('upload', async (event, { filePath, ownerType, ownerId, year, folderSection, folderCategory, displayName }) => {
+ipcMain.handle('upload', async (event, params) => {
   const token = await getToken();
   if (!token) throw new Error('Not authenticated');
-  const { uploadDocument } = require('./api');
-  return uploadDocument({ filePath, token, ownerType, ownerId, year, folderSection, folderCategory, displayName });
+  return require('./api').uploadDocument({ ...params, token });
 });
 
-// Renderer confirms upload — close the window and delete spool file
 ipcMain.on('upload-complete', (event, { filePath }) => {
   const win = BrowserWindow.fromWebContents(event.sender);
-  if (win && !win.isDestroyed()) {
-    win.destroy();
-  }
+  if (win && !win.isDestroyed()) win.destroy();
   routingWindows.delete(filePath);
-  // Delete the spool file after successful upload
-  try {
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-  } catch (_) {}
+  try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
 });
 
-// Renderer cancelled — just close and clean up
 ipcMain.on('cancel', (event, { filePath }) => {
   const win = BrowserWindow.fromWebContents(event.sender);
-  if (win && !win.isDestroyed()) {
-    win.destroy();
-  }
+  if (win && !win.isDestroyed()) win.destroy();
 });
 
-// Login form submitted
 ipcMain.handle('login', async (event, { email, password }) => {
-  const { login } = require('./api');
-  const result = await login(email, password);
+  const result = await require('./api').login(email, password);
   await storeToken(result.token);
   return result;
 });
 
-// Login succeeded — close login window, open any pending jobs
-ipcMain.on('login-success', async (event) => {
+ipcMain.on('login-success', async () => {
   if (loginWindow && !loginWindow.isDestroyed()) {
     loginWindow.destroy();
     loginWindow = null;
   }
-
-  // Open routing windows for any queued jobs
   const jobs = [...pendingJobs];
   pendingJobs = [];
-  for (const job of jobs) {
-    showRoutingWindow(job.filePath, job.jobName);
-  }
+  for (const fp of jobs) showRoutingWindow(fp);
 });
 
-// Renderer requests logout
 ipcMain.on('logout', async () => {
   await clearToken();
   showLoginWindow();
 });
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}

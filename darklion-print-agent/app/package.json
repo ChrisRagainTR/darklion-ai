@@ -1,38 +1,75 @@
 {
   "name": "darklion-print-agent",
   "version": "1.0.0",
-  "description": "DarkLion Print Agent - routes print jobs to DarkLion",
+  "description": "DarkLion Print Agent — routes print jobs to DarkLion document management",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win --x64",
-    "pack": "electron-builder --dir"
+    "build:win": "electron-builder --win --x64",
+    "build:dir": "electron-builder --dir --x64"
   },
   "dependencies": {
-    "electron-updater": "^6.1.0",
+    "chokidar": "^3.6.0",
     "form-data": "^4.0.0",
-    "keytar": "^7.9.0",
     "node-fetch": "^2.7.0"
   },
   "devDependencies": {
-    "electron": "^28.0.0",
-    "electron-builder": "^24.0.0"
+    "electron": "^28.3.0",
+    "electron-builder": "^24.13.0"
   },
   "build": {
     "appId": "ai.darklion.printagent",
     "productName": "DarkLion Print Agent",
+    "copyright": "Copyright © 2025 DarkLion AI",
     "directories": {
-      "output": "../dist"
+      "output": "../dist",
+      "buildResources": "renderer"
     },
+    "files": [
+      "**/*",
+      "!node_modules/.cache",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "../installer/printer-setup.ps1",
+        "to": "installer/printer-setup.ps1"
+      },
+      {
+        "from": "../installer/printer-remove.ps1",
+        "to": "installer/printer-remove.ps1"
+      },
+      {
+        "from": "../installer/redmon64.dll",
+        "to": "installer/redmon64.dll",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../shared",
+        "to": "shared"
+      }
+    ],
     "win": {
-      "target": "nsis",
-      "icon": "renderer/icon.ico"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "renderer/icon.ico",
+      "artifactName": "DarkLionPrintAgent_Setup_${version}.exe"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": false,
       "installerIcon": "renderer/icon.ico",
-      "uninstallerIcon": "renderer/icon.ico"
+      "uninstallerIcon": "renderer/icon.ico",
+      "installerHeaderIcon": "renderer/icon.ico",
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": false,
+      "runAfterFinish": true,
+      "include": "../installer/nsis-extra.nsh"
     }
   }
 }
