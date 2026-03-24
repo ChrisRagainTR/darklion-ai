@@ -395,7 +395,7 @@ let _webdavFullToken = null;
 async function loadWebdavToken() {
   const el = document.getElementById('webdav-token-display');
   try {
-    const res = await apiFetch('/firms/webdav-token');
+    const res = await apiFetch('/webdav-token');
     const data = await res.json();
     if (data.hasToken) {
       el.textContent = data.tokenPreview;
@@ -412,7 +412,7 @@ async function generateWebdavToken() {
   const el = document.getElementById('webdav-token-display');
   el.textContent = 'Generating...';
   try {
-    const res = await apiFetch('/firms/webdav-token', { method: 'POST' });
+    const res = await apiFetch('/webdav-token', { method: 'POST' });
     const data = await res.json();
     _webdavFullToken = data.token;
     el.textContent = data.token;
