@@ -157,6 +157,7 @@ function showLoginWindow() {
 
   loginWindow.setMenu(null);
   loginWindow.loadFile(path.join(__dirname, 'renderer', 'login.html'));
+  loginWindow.webContents.openDevTools({ mode: 'detach' }); // DEBUG — remove after fixing
   loginWindow.on('closed', () => { loginWindow = null; });
 }
 
