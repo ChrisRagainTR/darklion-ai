@@ -1916,8 +1916,18 @@
         if (!res.ok) throw new Error(`Staff list error ${res.status}`);
         _staffList = await res.json();
         if (!Array.isArray(_staffList)) _staffList = [];
+        // Sort: unread first, then by most recent message, then alphabetical
+        _staffList.sort((a, b) => {
+          const aUnread = parseInt(a.unreadCount || 0);
+          const bUnread = parseInt(b.unreadCount || 0);
+          if (bUnread !== aUnread) return bUnread - aUnread;
+          const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+          const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+          if (bTime !== aTime) return bTime - aTime;
+          return (a.name || '').localeCompare(b.name || '');
+        });
         renderStaffList();
-        // Auto-select first staff member
+        // Auto-select: unread first, then most recent thread, then first in list
         if (_staffList.length > 0 && _selectedStaffId === null) {
           selectStaffMember(_staffList[0]);
         }
