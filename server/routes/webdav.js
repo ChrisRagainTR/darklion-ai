@@ -51,7 +51,7 @@ async function authenticateBasic(req) {
     const { rows } = await pool.query(
       `SELECT fu.id, fu.firm_id, fu.password_hash
        FROM firm_users fu
-       WHERE fu.email = $1 AND fu.accepted_at IS NOT NULL
+       WHERE fu.email = $1 AND fu.archived_at IS NULL
        LIMIT 1`,
       [email]
     );
