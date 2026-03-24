@@ -45,9 +45,9 @@ if (!app.requestSingleInstanceLock()) {
 
 // ── App ready ────────────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
-  // Ensure spool directory exists
-  if (!fs.existsSync(SPOOL_DIR)) {
-    fs.mkdirSync(SPOOL_DIR, { recursive: true });
+  // Ensure base dir exists
+  if (!fs.existsSync(BASE_DIR)) {
+    fs.mkdirSync(BASE_DIR, { recursive: true });
   }
 
   setupTray();
@@ -60,8 +60,10 @@ app.on('second-instance', () => {
   if (loginWindow && !loginWindow.isDestroyed()) loginWindow.focus();
 });
 
-// Don't quit when all windows are closed — stay in tray
-app.on('window-all-closed', () => {});
+// CRITICAL: Don't quit when all windows are closed — stay in tray
+app.on('window-all-closed', (e) => {
+  // Prevent default quit behavior — we live in the tray
+});
 
 app.on('before-quit', () => {
   stopPrintServer();
@@ -70,21 +72,25 @@ app.on('before-quit', () => {
 // ── Tray ─────────────────────────────────────────────────────────────────────
 function setupTray() {
   try {
-    // Create a simple 16x16 colored icon programmatically — no .ico file needed
+    // 16x16 gold square icon — inline so no external file needed
     const icon = nativeImage.createFromDataURL(
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAFZSURBVDiNpdMxSBtxFAbw3+UuuTReQkZBLEoGwcHBRQcHwUVwEJcOgpuDm4ODg4iDg4ODi4ODg4ODg4ODg4ODg4OD4ODg4ODg4ODg4ODg4OD4ODg4Lg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4AA=='
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAI0lEQVQ4T2NkIAIwEqmHgXoNRg0YNYDRAAaQmkFqBpEAAFZaAAFr+e7PAAAAAElFTkSuQmCC'
     );
     tray = new Tray(icon);
-    tray.setToolTip('DarkLion Print Agent');
-    tray.setContextMenu(Menu.buildFromTemplate([
+    tray.setToolTip('DarkLion Print Agent — Running');
+    const menu = Menu.buildFromTemplate([
       { label: 'DarkLion Print Agent', enabled: false },
+      { label: 'Status: Running', enabled: false },
       { type: 'separator' },
       { label: 'Sign Out', click: async () => { await clearToken(); showLoginWindow(); } },
+      { type: 'separator' },
       { label: 'Quit', click: () => app.quit() },
-    ]));
+    ]);
+    tray.setContextMenu(menu);
+    console.log('[main] Tray created successfully');
   } catch (err) {
     console.error('[tray] Failed to create tray:', err.message);
-    // Continue without tray — app still works via login window
+    // Don't quit — keep app alive even without tray
   }
 }
 
