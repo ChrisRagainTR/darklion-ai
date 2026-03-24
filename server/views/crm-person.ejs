@@ -964,14 +964,35 @@
 
   async function deleteDoc(id, e) {
     if (e) e.stopPropagation();
-    if (!confirm('Delete this document? This cannot be undone.')) return;
+    const btn = e && e.target;
+    // Double-tap confirm: first click turns button red, second click deletes
+    if (btn && btn.dataset.confirm !== '1') {
+      btn.dataset.confirm = '1';
+      const orig = btn.textContent;
+      btn.textContent = 'Sure?';
+      btn.style.background = 'var(--red)';
+      btn.style.color = '#fff';
+      btn.style.border = 'none';
+      setTimeout(() => {
+        if (btn.dataset.confirm === '1') {
+          btn.dataset.confirm = '';
+          btn.textContent = orig;
+          btn.style.background = '';
+          btn.style.color = '';
+          btn.style.border = '';
+        }
+      }, 3000);
+      return;
+    }
+    // Second click — execute delete
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
     try {
       const res = await apiFetch(`/api/documents/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Server error ' + res.status);
       toast('Document deleted');
       reloadDocs();
-    } catch(e) { toast('Delete failed: ' + e.message, 'error'); }
+    } catch(err) { toast('Delete failed: ' + err.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = '🗑'; btn.dataset.confirm = ''; btn.style = ''; } }
   }
 
   let _moveDocId = null;
@@ -983,12 +1004,11 @@
     document.getElementById('move-doc-year').value = currentYear || String(new Date().getFullYear() - 1);
     document.getElementById('move-doc-section').value = currentSection || 'firm_uploaded';
     document.getElementById('move-doc-category').value = currentCategory || 'tax';
-    modal.classList.remove('hidden');
     modal.classList.add('open');
   }
   function closeMoveDocModal() {
     const modal = document.getElementById('move-doc-modal');
-    if (modal) { modal.classList.add('hidden'); modal.classList.remove('open'); }
+    if (modal) modal.classList.remove('open');
     _moveDocId = null;
   }
   async function submitMoveDoc() {
@@ -2238,7 +2258,7 @@
 </div>
 
 <!-- Move Document Modal -->
-<div class="modal-overlay hidden" id="move-doc-modal" onclick="closeMoveDocModal()">
+<div class="modal-overlay" id="move-doc-modal" onclick="closeMoveDocModal()">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:380px;">
     <h2>Move Document</h2>
     <div class="form-group">
