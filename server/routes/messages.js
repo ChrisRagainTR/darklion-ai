@@ -413,7 +413,7 @@ router.delete('/message/:messageId', async (req, res) => {
     );
     if (!rows[0]) return res.status(404).json({ error: 'Message not found or not yours' });
 
-    await pool.query('DELETE FROM message_docs WHERE message_id = $1', [messageId]);
+    await pool.query('DELETE FROM message_attachments WHERE message_id = $1', [messageId]);
     await pool.query('DELETE FROM message_mentions WHERE message_id = $1', [messageId]);
     await pool.query('DELETE FROM messages WHERE id = $1', [messageId]);
 
