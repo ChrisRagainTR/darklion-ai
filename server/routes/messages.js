@@ -236,6 +236,70 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ── POST /messages/person/:personId/summary — AI digest of last 30 days ──────
+router.post('/person/:personId/summary', async (req, res) => {
+  const firmId = req.firm.id;
+  const personId = parseInt(req.params.personId);
+  try {
+    const { rows: personRows } = await pool.query(
+      'SELECT first_name, last_name FROM people WHERE id = $1 AND firm_id = $2', [personId, firmId]
+    );
+    if (!personRows[0]) return res.status(404).json({ error: 'Person not found' });
+    const person = personRows[0];
+
+    // Pull last 30 days of non-internal messages (both directions)
+    const { rows: msgs } = await pool.query(`
+      SELECT m.body, m.sender_type, m.created_at,
+             CASE WHEN m.sender_type='staff' THEN COALESCE(fu.display_name, fu.name, 'Staff') ELSE $3 END AS sender_name
+      FROM messages m
+      JOIN message_threads mt ON mt.id = m.thread_id
+      LEFT JOIN firm_users fu ON fu.id = m.sender_id AND m.sender_type = 'staff'
+      WHERE mt.person_id = $1 AND mt.firm_id = $2
+        AND m.is_internal = false
+        AND m.created_at > NOW() - INTERVAL '30 days'
+        AND m.body IS NOT NULL AND m.body != ''
+      ORDER BY m.created_at ASC
+      LIMIT 100
+    `, [personId, firmId, `${person.first_name} ${person.last_name}`]);
+
+    if (!msgs.length) return res.json({ summary: null, message: 'No messages in the last 30 days.' });
+
+    const transcript = msgs.map(m =>
+      `[${new Date(m.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric'})} - ${m.sender_name}]: ${m.body.slice(0, 500)}`
+    ).join('\n');
+
+    const Anthropic = require('@anthropic-ai/sdk');
+    const claudeClient = new Anthropic();
+    const response = await claudeClient.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      messages: [{
+        role: 'user',
+        content: `You are summarizing recent client communication for an advisor before a meeting or call.
+
+Client: ${person.first_name} ${person.last_name}
+
+Last 30 days of messages:
+${transcript}
+
+Write a concise, structured summary with these sections (only include sections that have content):
+**Recent Topics** — key subjects discussed
+**Action Items** — anything promised, requested, or outstanding  
+**Documents** — any documents mentioned, sent, or requested
+**Client Mood/Concerns** — any worries, questions, or tone worth noting
+
+Be brief and actionable. No fluff.`
+      }]
+    });
+
+    const summary = response.content[0]?.text || 'Unable to generate summary.';
+    res.json({ summary, messageCount: msgs.length, generatedAt: new Date().toISOString() });
+  } catch (err) {
+    console.error('[POST /messages/person/:personId/summary] error:', err);
+    res.status(500).json({ error: 'Failed to generate summary' });
+  }
+});
+
 // ── GET /messages/person/:personId ───────────────────────────────────────────
 router.get('/person/:personId', async (req, res) => {
   const firmId = req.firm.id;

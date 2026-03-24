@@ -270,10 +270,13 @@
 
     /* Layout */
     #tab-communication .crm-inbox-wrap { display:flex; flex:1; min-height:0; overflow:hidden; }
-    #tab-communication .crm-thread-list { width:300px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
-    #tab-communication .crm-thread-list-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
-    #tab-communication .crm-thread-list-header h3 { font-size:0.9rem; font-weight:700; color:var(--text); margin:0; }
-    #tab-communication .crm-thread-list-inner { flex:1; overflow-y:auto; }
+    /* AI Summary panel */
+    #tab-communication .comm-summary-panel { width:320px; flex-shrink:0; border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; background:var(--card); }
+    #tab-communication .comm-summary-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    #tab-communication .comm-summary-header h3 { font-size:0.85rem; font-weight:700; color:var(--text); margin:0; }
+    #tab-communication .comm-summary-body { flex:1; overflow-y:auto; padding:1rem; font-size:0.82rem; line-height:1.6; color:var(--muted); }
+    #tab-communication .comm-summary-body strong { color:var(--gold); display:block; margin-top:0.75rem; margin-bottom:0.2rem; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; }
+    #tab-communication .comm-summary-body strong:first-child { margin-top:0; }
     /* Thread cards — same as team inbox */
     #tab-communication .thread-card { padding:0.85rem 1rem; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; transition:background 0.12s; }
     #tab-communication .thread-card:hover { background:rgba(255,255,255,0.03); }
@@ -393,16 +396,7 @@
 
 <div id="tab-communication" class="tab-content" style="padding:0;overflow:hidden;">
   <div class="crm-inbox-wrap">
-    <!-- Left: thread list for this person -->
-    <div class="crm-thread-list">
-      <div class="crm-thread-list-header">
-        <h3>Messages</h3>
-      </div>
-      <div class="crm-thread-list-inner" id="comm-threads">
-        <div class="loading-state"><div class="loading-spinner"></div></div>
-      </div>
-    </div>
-    <!-- Right: same as team inbox detail panel -->
+    <!-- Center: chat panel -->
     <div class="crm-detail-panel">
       <!-- Empty state -->
       <!-- Thread view — always in DOM so scroll dimensions work -->
@@ -472,7 +466,17 @@
       </div>
     </div>
   </div>
-</div>
+    <!-- AI Summary panel -->
+    <div class="comm-summary-panel">
+      <div class="comm-summary-header">
+        <h3>🤖 30-Day Summary</h3>
+        <button class="btn btn-ghost btn-xs" id="comm-summary-refresh-btn" onclick="loadCommSummary(true)">↺ Refresh</button>
+      </div>
+      <div class="comm-summary-body" id="comm-summary-body">
+        <div style="color:var(--muted);font-style:italic;font-size:0.8rem;">Click Refresh to generate an AI summary of the last 30 days of conversation.</div>
+      </div>
+    </div>
+  </div>
 
 <div id="tab-organizers" class="tab-content">
   <div style="max-width:700px;">
@@ -1854,8 +1858,44 @@
     if (commPersonId === pid) return; // already initialized for this person
     commPersonId = pid;
     commActiveThreadId = null;
+    _commSummaryLoaded = false;
     commShowEmpty();
     loadThreads();
+    // Auto-generate summary on first open
+    loadCommSummary(false);
+  }
+
+  // ── AI Summary ──────────────────────────────────────────────────────────────
+  let _commSummaryLoaded = false;
+  async function loadCommSummary(force = false) {
+    if (!commPersonId) return;
+    const body = document.getElementById('comm-summary-body');
+    const btn = document.getElementById('comm-summary-refresh-btn');
+    if (!body) return;
+    body.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;color:var(--muted);"><div class="loading-spinner" style="width:16px;height:16px;border-width:2px;"></div> Generating summary…</div>';
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try {
+      const res = await apiFetch(`/api/messages/person/${commPersonId}/summary`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      _commSummaryLoaded = true;
+      if (!data.summary) {
+        body.innerHTML = `<div style="color:var(--muted);font-style:italic;">${data.message || 'No messages in the last 30 days.'}</div>`;
+      } else {
+        // Format markdown-style bold headers
+        const html = data.summary
+          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+          .replace(/\n/g, '<br>');
+        body.innerHTML = `<div>${html}</div>
+          <div style="margin-top:1rem;font-size:0.72rem;color:var(--muted);border-top:1px solid var(--border);padding-top:0.5rem;">
+            Based on ${data.messageCount} message${data.messageCount !== 1 ? 's' : ''} · ${new Date(data.generatedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}
+          </div>`;
+      }
+    } catch(e) {
+      body.innerHTML = `<div style="color:var(--red);font-size:0.8rem;">Failed: ${e.message}</div>`;
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '↺ Refresh'; }
+    }
   }
 
   function commShowEmpty() {
@@ -1954,34 +1994,20 @@
   }
 
   async function loadThreads() {
-    const el = document.getElementById('comm-threads');
-    if (!el) return;
-    if (!commPersonId) { el.innerHTML = '<div style="color:var(--muted);padding:1rem;font-size:0.84rem;">No person ID.</div>'; return; }
-    el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    if (!commPersonId) return;
     try {
       const res = await apiFetch(`/api/messages/person/${commPersonId}`);
-      if (!res.ok) { const err = await res.json().catch(()=>({})); throw new Error(err.error || `HTTP ${res.status}`); }
+      if (!res.ok) return;
       const threads = await res.json();
-      if (!threads.length) {
-        el.innerHTML = '<div style="color:var(--muted);font-size:0.84rem;padding:1.5rem 1rem;text-align:center;">No messages yet.</div>';
-        return;
+      if (threads.length && !commActiveThreadId) {
+        // Auto-open the most recent thread (no list panel — always single thread view)
+        await loadThread(threads[0].id);
+      } else if (!threads.length) {
+        commShowEmpty();
+        document.getElementById('comm-no-thread').innerHTML = '<div class="nts-icon">💬</div><div style="color:var(--muted);">No messages yet.</div>';
       }
-      el.innerHTML = threads.map(t => {
-        const statusLabel = t.status === 'resolved' ? 'Resolved' : 'Active';
-        const statusColor = t.status === 'resolved' ? '#4caf50' : '#c9a84c';
-        return `<div class="thread-card" id="comm-item-${t.id}" onclick="loadThread(${t.id})">
-          <div class="thread-card-name">${esc(t.subject || '(no subject)')}${t.unreadCount > 0 ? ` <span style="background:var(--gold);color:var(--navy);border-radius:10px;padding:0.05rem 0.35rem;font-size:0.65rem;font-weight:700;margin-left:0.3rem;">${t.unreadCount}</span>` : ''}</div>
-          <div class="thread-card-preview">${esc(t.lastPreview || '')}</div>
-          <div class="thread-card-meta">
-            <span style="background:${statusColor};color:#fff;font-size:0.65rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:3px;text-transform:uppercase;">${statusLabel}</span>
-            <span>${relTime(t.lastMessageAt)}</span>
-            ${t.unreadCount > 0 ? '<span class="unread-dot"></span>' : ''}
-          </div>
-        </div>`;
-      }).join('');
     } catch(e) {
       console.error('[comm] loadThreads error:', e);
-      el.innerHTML = `<div style="color:#e55;font-size:0.84rem;padding:1rem;">Failed to load messages: ${e.message}</div>`;
     }
   }
 
