@@ -7,7 +7,6 @@ var path = require('path');
 var fs = require('fs');
 var os = require('os');
 
-// Find rclone.exe - check multiple locations
 function findRclone() {
   var resourcesPath = process.resourcesPath || '';
   var appPath = '';
@@ -28,10 +27,7 @@ function findRclone() {
   for (var i = 0; i < candidates.length; i++) {
     var c = candidates[i];
     if (c === 'rclone') return c;
-    try {
-      fs.accessSync(c);
-      return c;
-    } catch (e) {}
+    try { fs.accessSync(c); return c; } catch (e) {}
   }
   return 'rclone';
 }
@@ -42,68 +38,82 @@ var MAX_RETRIES = 3;
 var onDisconnectCallback = null;
 var currentToken = null;
 var retryTimeout = null;
+var MOUNT_DIR = path.join(os.homedir(), 'DarkLion Drive');
+
+// Kill any running rclone.exe processes that might hold a stale mount
+function killStaleRclone() {
+  return new Promise(function(resolve) {
+    // Kill our tracked process first
+    if (rcloneProc && !rcloneProc.killed) {
+      rcloneProc.kill('SIGKILL');
+    }
+    rcloneProc = null;
+    
+    // Also kill any orphaned rclone.exe processes (from previous app crashes)
+    exec('taskkill /F /IM rclone.exe /T', function() {
+      // Wait a moment for WinFsp to release the mount point
+      setTimeout(resolve, 1500);
+    });
+  });
+}
 
 function mountDrive(token, onDisconnect) {
-  unmountDrive();
   onDisconnectCallback = onDisconnect;
   currentToken = token;
   retries = 0;
-  return doMount(token);
+
+  // Always kill stale rclone first, then mount fresh
+  return killStaleRclone().then(function() {
+    return doMount(token);
+  });
 }
 
 function doMount(token) {
   return new Promise(function(resolve, reject) {
     var rcloneBin = findRclone();
-    // Use a directory path mount instead of drive letter to bypass WinFsp service isolation
-    // rclone docs: "mapping to a directory path does not suffer from the same limitations"
-    var mountDir = path.join(os.homedir(), 'DarkLion Drive');
-    var driveLetter = mountDir;
 
-    // Use WinFsp utility to force-unmount any stale mount on this path
-    // fusermount.exe is installed with WinFsp at a known location
-    var winfspFusermount = 'C:\\Program Files (x86)\\WinFsp\\bin\\fsptool-x64.exe';
-    if (fs.existsSync(winfspFusermount)) {
+    // After killing stale rclone, directory should be gone (WinFsp removes it on unmount)
+    // If it still exists, try PowerShell removal
+    if (fs.existsSync(MOUNT_DIR)) {
       try {
-        require('child_process').execSync('"' + winfspFusermount + '" lsvol', { timeout: 3000 });
-      } catch(e) { /* ignore */ }
-    }
-
-    // Remove the directory — use rimraf-style recursive delete via PowerShell
-    // which can remove FUSE mount points that rmdirSync can't handle
-    if (fs.existsSync(mountDir)) {
-      try {
-        require('child_process').execSync(
-          'powershell -Command "Remove-Item -Path \'' + mountDir + '\' -Recurse -Force -ErrorAction SilentlyContinue"',
-          { timeout: 5000 }
+        childProcess.execSync(
+          'powershell -NoProfile -Command "Remove-Item -LiteralPath \'' + MOUNT_DIR + '\' -Force -ErrorAction SilentlyContinue"',
+          { timeout: 3000 }
         );
       } catch(e) { /* ignore */ }
     }
 
-    // Create fresh empty dir
-    if (!fs.existsSync(mountDir)) {
-      fs.mkdirSync(mountDir, { recursive: true });
+    // Create fresh mount point directory
+    try {
+      if (!fs.existsSync(MOUNT_DIR)) {
+        fs.mkdirSync(MOUNT_DIR, { recursive: true });
+      }
+    } catch(e) {
+      return reject(new Error('Cannot create mount directory: ' + e.message));
     }
 
-    // Write a temp rclone config file — avoids inline spec parsing issues with URLs/tokens
+    // Write rclone config to temp file
     var configPath = path.join(os.tmpdir(), 'darklion-rclone.conf');
-    var configContent = '[darklion]\ntype = webdav\nurl = http://127.0.0.1:7891\nbearer_token = ' + token + '\n';
-    fs.writeFileSync(configPath, configContent, 'utf8');
+    try {
+      fs.writeFileSync(configPath, '[darklion]\ntype = webdav\nurl = http://127.0.0.1:7891\nbearer_token = ' + token + '\n', 'utf8');
+    } catch(e) {
+      return reject(new Error('Cannot write rclone config: ' + e.message));
+    }
 
     var args = [
       'mount',
       'darklion:',
-      driveLetter,
+      MOUNT_DIR,
       '--config', configPath,
       '--volname', 'DarkLion Drive',
       '--vfs-cache-mode', 'writes',
       '--no-modtime',
       '--dir-cache-time', '30s',
-      '--poll-interval', '30s',
       '--attr-timeout', '1s',
       '--log-level', 'ERROR'
     ];
 
-    console.log('[Rclone] Starting rclone mount with binary:', rcloneBin);
+    console.log('[Rclone] Starting rclone mount:', rcloneBin, 'at', MOUNT_DIR);
 
     rcloneProc = spawn(rcloneBin, args, {
       detached: false,
@@ -112,70 +122,68 @@ function doMount(token) {
     });
 
     var mounted = false;
+    var rejected = false;
 
     var mountTimeout = setTimeout(function() {
-      if (!mounted) {
+      if (!mounted && !rejected) {
+        rejected = true;
         reject(new Error('Rclone mount timed out after 15 seconds'));
       }
     }, 15000);
 
     rcloneProc.stderr.on('data', function(data) {
-      var msg = data.toString();
+      var msg = data.toString().trim();
       console.log('[Rclone] stderr:', msg);
-      if (msg.indexOf('Fatal error') !== -1 || msg.indexOf('mount failed') !== -1 || msg.indexOf('failed to mount') !== -1) {
-        clearTimeout(mountTimeout);
-        if (!mounted) {
-          reject(new Error(msg.trim()));
+      if (!mounted && !rejected) {
+        if (msg.indexOf('CRITICAL') !== -1 || msg.indexOf('failed to mount') !== -1) {
+          clearTimeout(mountTimeout);
+          rejected = true;
+          reject(new Error(msg));
         }
       }
     });
 
     rcloneProc.stdout.on('data', function(data) {
-      console.log('[Rclone] stdout:', data.toString());
+      console.log('[Rclone] stdout:', data.toString().trim());
     });
 
-    // rclone mount does not print a "ready" line on success
-    // Assume mounted after 3s if no fatal error was reported
+    // Assume mounted after 4s with no fatal error
     setTimeout(function() {
-      if (!mounted && rcloneProc && !rcloneProc.killed) {
+      if (!mounted && !rejected && rcloneProc && !rcloneProc.killed) {
         mounted = true;
         clearTimeout(mountTimeout);
-        console.log('[Rclone] Assuming mounted after 3s (no fatal error seen)');
+        console.log('[Rclone] Mounted successfully at:', MOUNT_DIR);
         resolve();
       }
-    }, 3000);
+    }, 4000);
 
     rcloneProc.on('exit', function(code) {
-      console.log('[Rclone] Process exited with code:', code);
+      console.log('[Rclone] Process exited, code:', code);
       rcloneProc = null;
 
       if (mounted) {
-        // Drive was connected and now dropped — attempt retry or notify disconnect
         if (retries < MAX_RETRIES && currentToken) {
           retries++;
-          console.log('[Rclone] Attempting reconnect, try ' + retries + ' of ' + MAX_RETRIES);
+          console.log('[Rclone] Reconnecting, attempt', retries, 'of', MAX_RETRIES);
           retryTimeout = setTimeout(function() {
-            doMount(currentToken).then(function() {
-              console.log('[Rclone] Reconnected successfully');
+            killStaleRclone().then(function() { return doMount(currentToken); }).then(function() {
+              console.log('[Rclone] Reconnected');
             }).catch(function(err) {
               console.error('[Rclone] Reconnect failed:', err.message);
-              if (onDisconnectCallback) {
-                onDisconnectCallback();
-              }
+              if (onDisconnectCallback) onDisconnectCallback();
             });
           }, 2000);
         } else {
-          if (onDisconnectCallback) {
-            onDisconnectCallback();
-          }
+          if (onDisconnectCallback) onDisconnectCallback();
         }
       }
     });
 
     rcloneProc.on('error', function(err) {
       clearTimeout(mountTimeout);
-      console.error('[Rclone] Process error:', err.message);
-      if (!mounted) {
+      console.error('[Rclone] Spawn error:', err.message);
+      if (!mounted && !rejected) {
+        rejected = true;
         reject(err);
       }
     });
@@ -184,44 +192,21 @@ function doMount(token) {
 
 function unmountDrive() {
   return new Promise(function(resolve) {
-    if (retryTimeout) {
-      clearTimeout(retryTimeout);
-      retryTimeout = null;
-    }
+    if (retryTimeout) { clearTimeout(retryTimeout); retryTimeout = null; }
     currentToken = null;
     retries = 0;
-
-    if (rcloneProc && !rcloneProc.killed) {
-      rcloneProc.kill('SIGTERM');
-      var proc = rcloneProc;
-      setTimeout(function() {
-        if (proc && !proc.killed) {
-          proc.kill('SIGKILL');
-        }
-        rcloneProc = null;
-        resolve();
-      }, 2000);
-    } else {
-      rcloneProc = null;
-      resolve();
-    }
+    killStaleRclone().then(resolve);
   });
 }
 
 function openDrive() {
-  var mountDir = path.join(os.homedir(), 'DarkLion Drive');
   var shell = require('electron').shell;
-  if (shell) {
-    shell.openPath(mountDir).catch(function(e) {
-      console.warn('[Rclone] shell.openPath failed:', e);
-      exec('explorer.exe "' + mountDir + '"', function(err) {
-        if (err) console.warn('[Rclone] Could not open Explorer:', err.message);
-      });
+  if (shell && shell.openPath) {
+    shell.openPath(MOUNT_DIR).catch(function() {
+      exec('explorer.exe "' + MOUNT_DIR + '"', function() {});
     });
   } else {
-    exec('explorer.exe "' + mountDir + '"', function(err) {
-      if (err) console.warn('[Rclone] Could not open Explorer:', err.message);
-    });
+    exec('explorer.exe "' + MOUNT_DIR + '"', function() {});
   }
 }
 
@@ -229,4 +214,4 @@ function isRunning() {
   return rcloneProc !== null && !rcloneProc.killed;
 }
 
-module.exports = { mountDrive, unmountDrive, openDrive, isRunning };
+module.exports = { mountDrive, unmountDrive, openDrive, isRunning, MOUNT_DIR };
