@@ -1409,12 +1409,15 @@
     window.closeUploadModal = function() { modal.classList.remove('open'); };
   })();
 
-  async function downloadDoc(id) {
+  async function downloadDoc(id, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
     try {
       const res = await apiFetch(`/api/documents/${id}/url`);
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
       if (data.url) window.location.href = data.url;
-    } catch(e) { toast('Failed to get download link', 'error'); }
+    } catch(e) { toast('Download failed: ' + e.message, 'error'); }
+    if (btn) { btn.disabled = false; btn.textContent = '⬇'; }
   }
 
   function reloadDocs() {
@@ -1443,11 +1446,11 @@
     document.getElementById('move-doc-year').value = currentYear || String(new Date().getFullYear() - 1);
     document.getElementById('move-doc-section').value = currentSection || 'firm_uploaded';
     document.getElementById('move-doc-category').value = currentCategory || 'tax';
-    modal.classList.remove('hidden');
+    modal.classList.add('open');
   }
   function closeMoveDocModal() {
     const modal = document.getElementById('move-doc-modal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) modal.classList.remove('open');
     _moveDocId = null;
   }
   async function submitMoveDoc() {
@@ -1646,7 +1649,7 @@
     const body = document.getElementById('tsm-body');
     const footer = document.getElementById('tsm-footer');
     const sendBtn = document.getElementById('tsm-send-btn');
-    modal.classList.remove('hidden');
+    modal.classList.add('open');
     body.innerHTML = '<div class="tsm-processing"><div class="tsm-spinner"></div><div>Loading summary…</div></div>';
     footer.style.display = 'none';
     if (sendAfter) sendBtn.style.display = ''; else sendBtn.style.display = 'none';
@@ -3568,7 +3571,7 @@
 </div>
 
 <!-- Move Document Modal -->
-<div class="modal-overlay hidden" id="move-doc-modal" onclick="closeMoveDocModal()">
+<div class="modal-overlay" id="move-doc-modal" onclick="closeMoveDocModal()">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:380px;">
     <h2>Move Document</h2>
     <div class="form-group">
