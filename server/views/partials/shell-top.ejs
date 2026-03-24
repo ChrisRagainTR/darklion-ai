@@ -156,6 +156,36 @@
       :root { --sidebar-w: 56px; }
       .nav-item span, .nav-section { display: none; }
     }
+    /* Mobile nav toggle */
+    .mobile-nav-toggle {
+      display: none;
+      background: rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .mobile-nav-toggle a {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.28rem 0.75rem;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .mobile-nav-toggle a.active {
+      background: var(--gold);
+      color: var(--navy);
+    }
+
     @media (max-width: 600px) {
       :root { --sidebar-w: 0px; }
       .sidebar { display: none; }
@@ -165,6 +195,7 @@
       .header-user { padding: 0.3rem; }
       .top-header { padding: 0 1rem; }
       .header-logo .logo-name { font-size: 1rem; }
+      .mobile-nav-toggle { display: flex; }
     }
 
   </style>
@@ -184,6 +215,12 @@
       <div class="logo-name">Dark<span>Lion</span></div>
     </a>
     <% } %>
+    <!-- Mobile toggle — Messages / Files (visible only on small screens) -->
+    <nav class="mobile-nav-toggle">
+      <a href="/messages" class="<%= activeNav==='messages'?'active':'' %>">💬 Messages</a>
+      <a href="/crm/relationships" class="<%= ['relationships','people','companies'].includes(activeNav)?'active':'' %>">👥 CRM</a>
+    </nav>
+
     <div class="header-divider"></div>
     <div class="header-search-wrap">
       <span class="header-search-icon">🔍</span>
