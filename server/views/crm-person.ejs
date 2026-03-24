@@ -1802,9 +1802,12 @@
       const picker = getOrCreatePicker();
       const rect = ta.getBoundingClientRect();
       picker.style.left = rect.left + 'px';
-      picker.style.top = (rect.top - picker.offsetHeight - 4) + 'px';
-      // After display, reposition if out of viewport
-      if (parseFloat(picker.style.top) < 8) picker.style.top = (rect.bottom + 4) + 'px';
+      picker.style.width = rect.width + 'px';
+      // Always above — use rAF so picker height is known after render
+      requestAnimationFrame(() => {
+        const ph = picker.offsetHeight;
+        picker.style.top = Math.max(8, rect.top - ph - 6) + 'px';
+      });
     }
     function insertMention(name) {
       const ta = getTA(); if (!ta) return;

@@ -3357,11 +3357,13 @@
       }).join('');
       const rect = ta.getBoundingClientRect();
       picker.style.left = rect.left + 'px';
-      picker.style.top = (rect.top - 4) + 'px'; // will reposition after display
+      picker.style.width = rect.width + 'px';
       picker.style.display = 'block';
-      // Reposition above or below textarea
-      const ph = picker.offsetHeight;
-      picker.style.top = rect.top - ph - 4 < 8 ? (rect.bottom + 4) + 'px' : (rect.top - ph - 4) + 'px';
+      // Always above
+      requestAnimationFrame(() => {
+        const ph = picker.offsetHeight;
+        picker.style.top = Math.max(8, rect.top - ph - 6) + 'px';
+      });
       picker.querySelectorAll('.co-mention-item').forEach(item => {
         item.addEventListener('mouseenter', () => item.style.background = 'rgba(201,168,76,0.1)');
         item.addEventListener('mouseleave', () => item.style.background = '');

@@ -870,7 +870,17 @@ window.loadThread = async (threadId, silent = false) => {
       </div>`;
     }).join('');
 
+    // Position above the textarea, anchored to its bottom edge via fixed coords
+    const taRect = textarea.getBoundingClientRect();
+    picker.style.position = 'fixed';
+    picker.style.left = taRect.left + 'px';
+    picker.style.width = taRect.width + 'px';
     picker.style.display = 'block';
+    // Place above — after display so we know picker height
+    requestAnimationFrame(() => {
+      const ph = picker.offsetHeight;
+      picker.style.top = (taRect.top - ph - 6) + 'px';
+    });
 
     picker.querySelectorAll('.mention-item').forEach(item => {
       item.addEventListener('mouseenter', () => item.style.background = 'rgba(201,168,76,0.1)');
