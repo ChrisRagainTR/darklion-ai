@@ -229,6 +229,7 @@
         <input type="file" id="attachFileInput" multiple style="display:none;" onchange="handleAttachFiles(this.files)">
         <div class="reply-box-actions">
           <button class="btn btn-gold btn-sm" onclick="sendReply()">Send Reply</button>
+          <button class="btn btn-outline btn-sm" onclick="sendReplyAsSms()">📱 Send as Text</button>
           <button class="btn-attach" onclick="document.getElementById('attachFileInput').click()">📎 Attach</button>
           <button class="btn btn-sm btn-danger" onclick="archiveCurrentThread()">Archive</button>
         </div>
@@ -595,6 +596,31 @@ async function sendReply() {
     await loadInbox();
   } catch(e) { alert('Failed to send reply'); }
 }
+async function sendReplyAsSms() {
+  if (!activeThreadId) return;
+  const body = document.getElementById('replyBody').value.trim();
+  if (!body) { alert('Write a message first'); return; }
+  const thread = allThreads.find(t => t.id === activeThreadId);
+  const personId = thread?.person?.id;
+  if (!personId) { alert('No person linked to this thread'); return; }
+  try {
+    // Send SMS
+    const smsRes = await apiFetch('/api/messages/sms', { method: 'POST', body: JSON.stringify({ person_id: personId, body }) });
+    const smsData = await smsRes.json();
+    if (!smsRes.ok) throw new Error(smsData.error || 'SMS failed');
+    // Also save as a reply in the thread so it shows in conversation history
+    const fd = new FormData();
+    fd.append('body', `📱 [Sent as text] ${body}`);
+    fd.append('is_internal', 'false');
+    await apiFetch(`/api/messages/${activeThreadId}/reply`, { method: 'POST', body: fd });
+    document.getElementById('replyBody').value = '';
+    attachedFiles = []; renderAttachChips();
+    await loadThread(activeThreadId, true);
+    await loadInbox();
+    window.toast && window.toast('Text message sent');
+  } catch(e) { alert('Failed to send text: ' + e.message); }
+}
+
 let _justSent = false;
 
 // ── NEW CONVERSATION MODAL ─────────────────────────────────────────────────
