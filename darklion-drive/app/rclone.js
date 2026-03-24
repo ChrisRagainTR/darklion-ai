@@ -5,6 +5,7 @@ var spawn = childProcess.spawn;
 var exec = childProcess.exec;
 var path = require('path');
 var fs = require('fs');
+var os = require('os');
 
 // Find rclone.exe - check multiple locations
 function findRclone() {
