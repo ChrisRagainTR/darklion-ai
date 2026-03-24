@@ -39,7 +39,8 @@
           "arch": ["x64"]
         }
       ],
-      "artifactName": "DarkLionPrintAgent_Setup_${version}.exe"
+      "artifactName": "DarkLionPrintAgent_Setup_${version}.exe",
+      "icon": "icon.ico"
     },
     "nsis": {
       "oneClick": false,
