@@ -48,6 +48,12 @@
   .doc-badge-viewed { background: rgba(62,207,142,0.1); color: var(--green); border: 1px solid rgba(62,207,142,0.25); }
   .doc-badge-client { background: rgba(99,102,241,0.12); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.25); }
   .btn-dl { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; border-radius: 6px; padding: 0.3rem 0.65rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; flex-shrink: 0; white-space: nowrap; }
+  @media (max-width: 600px) {
+    .doc-name { white-space: normal; word-break: break-word; font-size: 0.82rem; }
+    .doc-badges { flex-wrap: wrap; }
+    .btn-dl { font-size: 0.72rem; padding: 0.25rem 0.5rem; }
+    .doc-row { gap: 0.5rem; padding: 0.55rem 0.75rem; }
+  }
   .btn-dl:hover { border-color: var(--gold); color: var(--gold); }
   .btn-dl:disabled { opacity: 0.5; cursor: not-allowed; }
 

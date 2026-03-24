@@ -191,12 +191,12 @@
       :root { --sidebar-w: 0px; }
       .sidebar { display: none; }
       .header-search-wrap, .header-divider { display: none; }
-      /* Trim header — logo left, avatar only on right */
       .user-info, .user-caret { display: none; }
-      .header-user { padding: 0.3rem; }
-      .top-header { padding: 0 1rem; }
+      .header-user { padding: 0.3rem; flex-shrink: 0; }
+      .top-header { padding: 0 0.75rem; justify-content: space-between; }
+      .header-logo { width: auto; flex-shrink: 0; padding: 0; }
       .header-logo .logo-name { display: none; }
-      .mobile-nav-toggle { display: flex; }
+      .mobile-nav-toggle { display: flex; flex: 1; margin: 0 0.75rem; }
     }
 
   </style>

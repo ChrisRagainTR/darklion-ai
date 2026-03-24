@@ -231,6 +231,13 @@
   .doc-badge-type { background: rgba(138,143,168,0.12); color: var(--muted); border: 1px solid rgba(138,143,168,0.2); }
   .doc-badge-viewed { background: rgba(62,207,142,0.1); color: var(--green); border: 1px solid rgba(62,207,142,0.25); }
   .btn-dl { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; border-radius: 6px; padding: 0.3rem 0.65rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; flex-shrink: 0; white-space: nowrap; }
+  @media (max-width: 600px) {
+    .doc-name { white-space: normal; word-break: break-word; font-size: 0.82rem; }
+    .doc-badges { flex-wrap: wrap; }
+    .btn-dl { font-size: 0.72rem; padding: 0.25rem 0.5rem; }
+    .doc-row { gap: 0.5rem; padding: 0.55rem 0.75rem; }
+    .docs-layout { grid-template-columns: 1fr; }
+  }
   .btn-dl:hover { border-color: var(--gold); color: var(--gold); }
   .cat-empty-msg { color: var(--muted); font-size: 0.82rem; font-style: italic; padding: 0.4rem 1.1rem; }
 </style>
