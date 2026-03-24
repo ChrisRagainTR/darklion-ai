@@ -358,10 +358,7 @@ async function loadInbox(showSpinner = false) {
       allThreads = freshThreads;
       renderInbox();
     }
-    if (!firmUsers.length) {
-      const usersRes = await apiFetch('/firms/team').catch(() => ({ json: () => [] }));
-      try { firmUsers = await usersRes.json(); } catch(e) { firmUsers = []; }
-    }
+    // firmUsers loaded separately at init
   } catch(e) {
     if (showSpinner) {
       document.getElementById('inboxList').innerHTML = '<div style="color:var(--muted);padding:1rem;font-size:0.85rem;">Failed to load inbox.</div>';
@@ -805,6 +802,9 @@ document.getElementById('replyBody').addEventListener('keydown', function(e) {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
 }
+
+// Load firm users for @mention picker immediately
+apiFetch('/firms/team').then(r => r.json()).then(users => { firmUsers = users || []; }).catch(() => {});
 
 // Show empty state immediately — no spinner on initial load
 document.getElementById('inboxList').innerHTML = '<div style="color:var(--muted);padding:1.5rem 1rem;font-size:0.85rem;">No threads. Use "+ New" to start a conversation.</div>';
