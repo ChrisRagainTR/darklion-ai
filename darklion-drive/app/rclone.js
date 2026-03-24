@@ -57,6 +57,11 @@ function doMount(token) {
     // Use a directory path mount instead of drive letter to bypass WinFsp service isolation
     // rclone docs: "mapping to a directory path does not suffer from the same limitations"
     var mountDir = path.join(os.homedir(), 'DarkLion Drive');
+    // Remove existing dir if it exists (leftover from previous mount)
+    if (fs.existsSync(mountDir)) {
+      try { fs.rmdirSync(mountDir); } catch(e) { /* ignore if not empty */ }
+    }
+    // Create fresh empty dir for mount point
     if (!fs.existsSync(mountDir)) {
       fs.mkdirSync(mountDir, { recursive: true });
     }
