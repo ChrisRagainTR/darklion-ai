@@ -169,17 +169,17 @@
       background: none;
       border: none;
       color: var(--muted);
-      font-size: 0.78rem;
-      font-weight: 600;
-      padding: 0.28rem 0.75rem;
+      font-size: 1.2rem;
+      padding: 0.35rem 0.9rem;
       border-radius: 7px;
       cursor: pointer;
       transition: all 0.15s;
-      white-space: nowrap;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
-      gap: 0.3rem;
+      justify-content: center;
+      min-width: 44px;
+      min-height: 36px;
     }
     .mobile-nav-toggle a.active {
       background: var(--gold);
@@ -215,10 +215,10 @@
       <div class="logo-name">Dark<span>Lion</span></div>
     </a>
     <% } %>
-    <!-- Mobile toggle — Messages / Files (visible only on small screens) -->
+    <!-- Mobile toggle — Messages / Docs (visible only on small screens) -->
     <nav class="mobile-nav-toggle">
-      <a href="/messages" class="<%= activeNav==='messages'?'active':'' %>">💬 Messages</a>
-      <a href="/crm/relationships" class="<%= ['relationships','people','companies'].includes(activeNav)?'active':'' %>">👥 CRM</a>
+      <a href="/messages" class="<%= activeNav==='messages'?'active':'' %>">💬</a>
+      <a href="/documents" class="<%= activeNav==='documents'?'active':'' %>">📁</a>
     </nav>
 
     <div class="header-divider"></div>
