@@ -1,0 +1,4136 @@
+{
+  "config": {
+    "configFile": "/Users/argus/.openclaw/workspace/darklion-ai/playwright.config.js",
+    "rootDir": "/Users/argus/.openclaw/workspace/darklion-ai/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": "/Users/argus/.openclaw/workspace/darklion-ai/tests/global-setup.cjs",
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/argus/.openclaw/workspace/darklion-ai/tests/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/argus/.openclaw/workspace/darklion-ai/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.spec.js"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "tests/report",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "tests/results/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.2",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "api-health.spec.js",
+      "file": "api-health.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "API Health — /health endpoint",
+          "file": "api-health.spec.js",
+          "line": 31,
+          "column": 6,
+          "specs": [
+            {
+              "title": "GET /health returns HTTP 200",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4108697a93b4bba3c4a4-8e8f929fbd87103de810",
+              "file": "api-health.spec.js",
+              "line": 32,
+              "column": 3
+            },
+            {
+              "title": "GET /health response body is non-empty",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4108697a93b4bba3c4a4-b735e00e514ffc76a88a",
+              "file": "api-health.spec.js",
+              "line": 37,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "API Health — /api/search",
+          "file": "api-health.spec.js",
+          "line": 46,
+          "column": 6,
+          "specs": [
+            {
+              "title": "GET /api/search?q=test returns HTTP 200 with a valid token",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4108697a93b4bba3c4a4-bbd97eebcd42f0e0189a",
+              "file": "api-health.spec.js",
+              "line": 49,
+              "column": 3
+            },
+            {
+              "title": "GET /api/search?q=test returns application/json content-type",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4108697a93b4bba3c4a4-c898843d9793eac46a60",
+              "file": "api-health.spec.js",
+              "line": 61,
+              "column": 3
+            },
+            {
+              "title": "GET /api/search?q=test returns a JSON array or object",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4108697a93b4bba3c4a4-eeaf5cbebff6cc2af156",
+              "file": "api-health.spec.js",
+              "line": 74,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "API Health — /api/dashboard/intel",
+          "file": "api-health.spec.js",
+          "line": 91,
+          "column": 6,
+          "specs": [
+            {
+              "title": "GET /api/dashboard/intel returns HTTP 200 when authenticated",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4108697a93b4bba3c4a4-5e46c2624c3d22e6e480",
+              "file": "api-health.spec.js",
+              "line": 94,
+              "column": 3
+            },
+            {
+              "title": "GET /api/dashboard/intel response contains \"counts\" key",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4108697a93b4bba3c4a4-a34d80fd57997bafbdf0",
+              "file": "api-health.spec.js",
+              "line": 107,
+              "column": 3
+            },
+            {
+              "title": "GET /api/dashboard/intel counts object has relationships and companies keys",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4108697a93b4bba3c4a4-9f6a1a2468c2c4a29f7e",
+              "file": "api-health.spec.js",
+              "line": 121,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "API Health — authentication enforcement",
+          "file": "api-health.spec.js",
+          "line": 139,
+          "column": 6,
+          "specs": [
+            {
+              "title": "GET /api/dashboard/intel without Authorization returns 401",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4108697a93b4bba3c4a4-fd9f1929dd446f08a797",
+              "file": "api-health.spec.js",
+              "line": 143,
+              "column": 3
+            },
+            {
+              "title": "GET /api/relationships without Authorization returns 401",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4108697a93b4bba3c4a4-44955ae112608454aa4b",
+              "file": "api-health.spec.js",
+              "line": 148,
+              "column": 3
+            },
+            {
+              "title": "GET /api/people without Authorization returns 401",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4108697a93b4bba3c4a4-a12872885535d48c82aa",
+              "file": "api-health.spec.js",
+              "line": 153,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth.spec.js",
+      "file": "auth.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Authentication — login / logout",
+          "file": "auth.spec.js",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "login page renders the sign-in form with email, password, and submit button",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-0eaad5b6bbf096778788",
+              "file": "auth.spec.js",
+              "line": 15,
+              "column": 3
+            },
+            {
+              "title": "successful login stores dl_token in localStorage and redirects away from /login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-e34915fcfdfb4c90dd19",
+              "file": "auth.spec.js",
+              "line": 24,
+              "column": 3
+            },
+            {
+              "title": "wrong credentials shows an error message or stays on /login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-2018b65bbb246246ce39",
+              "file": "auth.spec.js",
+              "line": 42,
+              "column": 3
+            },
+            {
+              "title": "visiting /dashboard without a token redirects to /login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-de185f02d421c0ac3e52",
+              "file": "auth.spec.js",
+              "line": 56,
+              "column": 3
+            },
+            {
+              "title": "visiting /crm without a token redirects to /login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-e5b6db8bc47cdb722fee",
+              "file": "auth.spec.js",
+              "line": 64,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Authentication — logout",
+          "file": "auth.spec.js",
+          "line": 74,
+          "column": 6,
+          "specs": [
+            {
+              "title": "logout clears the token and redirects to /login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-1426c2ebb5b6cd6085e7",
+              "file": "auth.spec.js",
+              "line": 77,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "crm-company.spec.js",
+      "file": "crm-company.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "CRM — Company detail page",
+          "file": "crm-company.spec.js",
+          "line": 29,
+          "column": 6,
+          "specs": [
+            {
+              "title": "company detail page shows entity header back link",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3cb8c2df844eb7309f7c-2000896948c53d8569e2",
+              "file": "crm-company.spec.js",
+              "line": 32,
+              "column": 3
+            },
+            {
+              "title": "company entity name is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3cb8c2df844eb7309f7c-96cf26022f530f53ebfc",
+              "file": "crm-company.spec.js",
+              "line": 38,
+              "column": 3
+            },
+            {
+              "title": "company detail page shows a tab/subtab bar",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3cb8c2df844eb7309f7c-c1e760499ad8e9bcf89d",
+              "file": "crm-company.spec.js",
+              "line": 48,
+              "column": 3
+            },
+            {
+              "title": "the first subtab is active by default",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3cb8c2df844eb7309f7c-2cb4bb91d9c084edc3c8",
+              "file": "crm-company.spec.js",
+              "line": 55,
+              "column": 3
+            },
+            {
+              "title": "clicking the Docs / Documents subtab switches content",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3cb8c2df844eb7309f7c-1a109f15457e78f45fe1",
+              "file": "crm-company.spec.js",
+              "line": 62,
+              "column": 3
+            },
+            {
+              "title": "clicking the Tax subtab switches content",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3cb8c2df844eb7309f7c-684a14f596d0eff513e5",
+              "file": "crm-company.spec.js",
+              "line": 71,
+              "column": 3
+            },
+            {
+              "title": "Edit button is present in the entity header",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3cb8c2df844eb7309f7c-44dcd02f5b10b615771a",
+              "file": "crm-company.spec.js",
+              "line": 82,
+              "column": 3
+            },
+            {
+              "title": "clicking Edit opens a modal with company form fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3cb8c2df844eb7309f7c-6180084c1023e346332a",
+              "file": "crm-company.spec.js",
+              "line": 88,
+              "column": 3
+            },
+            {
+              "title": "Docs tab: Upload button is present",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3cb8c2df844eb7309f7c-b8f73fdf3fd0ebb1e186",
+              "file": "crm-company.spec.js",
+              "line": 98,
+              "column": 3
+            },
+            {
+              "title": "Docs tab: content area loads (year folders, doc rows, or empty state)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3cb8c2df844eb7309f7c-6e084492f3cbdc3c7eaf",
+              "file": "crm-company.spec.js",
+              "line": 107,
+              "column": 3
+            },
+            {
+              "title": "Docs tab: when doc rows exist, they have a Download button (.btn-dl)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3cb8c2df844eb7309f7c-7e29185deca060808848",
+              "file": "crm-company.spec.js",
+              "line": 122,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "crm-person.spec.js",
+      "file": "crm-person.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "CRM — Person detail page",
+          "file": "crm-person.spec.js",
+          "line": 28,
+          "column": 6,
+          "specs": [
+            {
+              "title": "person detail page shows entity header with back link \"← People\"",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-0f754ed308b5d53d7fc6",
+              "file": "crm-person.spec.js",
+              "line": 31,
+              "column": 3
+            },
+            {
+              "title": "person entity name heading is visible and non-empty",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-4f1968786dc1644a22c9",
+              "file": "crm-person.spec.js",
+              "line": 37,
+              "column": 3
+            },
+            {
+              "title": "Edit button is visible in the entity header actions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-a99ba513e64fa402977c",
+              "file": "crm-person.spec.js",
+              "line": 46,
+              "column": 3
+            },
+            {
+              "title": "tab bar renders all 7 expected tabs: Overview, Docs, Tax, Communication, Organizers, Workflow, Notes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-295b578c439c80e206c6",
+              "file": "crm-person.spec.js",
+              "line": 54,
+              "column": 3
+            },
+            {
+              "title": "\"Overview\" tab is active and #tab-overview has the active class by default",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-81f7d906a508021524ae",
+              "file": "crm-person.spec.js",
+              "line": 66,
+              "column": 3
+            },
+            {
+              "title": "clicking \"Docs\" tab switches active tab to #tab-docs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-d3a65da9efb0dfe3d64f",
+              "file": "crm-person.spec.js",
+              "line": 73,
+              "column": 3
+            },
+            {
+              "title": "clicking \"Tax\" tab switches active tab to #tab-tax",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-b48a105853dbdec2328d",
+              "file": "crm-person.spec.js",
+              "line": 81,
+              "column": 3
+            },
+            {
+              "title": "clicking \"Communication\" tab switches active tab",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-87a8efc2e0f4aa0bc7fb",
+              "file": "crm-person.spec.js",
+              "line": 88,
+              "column": 3
+            },
+            {
+              "title": "clicking \"Notes\" tab switches active tab to #tab-notes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-0ce11a33a332a3a0ce90",
+              "file": "crm-person.spec.js",
+              "line": 95,
+              "column": 3
+            },
+            {
+              "title": "clicking Edit opens the edit modal (modal-overlay visible)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-0ba67682a74049a7b524",
+              "file": "crm-person.spec.js",
+              "line": 104,
+              "column": 3
+            },
+            {
+              "title": "Edit modal contains First Name input (#person-form-fname)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-e0373b7575914889a354",
+              "file": "crm-person.spec.js",
+              "line": 111,
+              "column": 3
+            },
+            {
+              "title": "Edit modal contains Last Name input (#person-form-lname)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-1bf3a466b3b8769584cd",
+              "file": "crm-person.spec.js",
+              "line": 118,
+              "column": 3
+            },
+            {
+              "title": "Edit modal Cancel button closes the modal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-acfff460510bf76ac8dc",
+              "file": "crm-person.spec.js",
+              "line": 125,
+              "column": 3
+            },
+            {
+              "title": "Docs tab: \"↑ Upload Document\" button is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-b292ff9b30b1aaac31aa",
+              "file": "crm-person.spec.js",
+              "line": 138,
+              "column": 3
+            },
+            {
+              "title": "Docs tab: clicking Upload button opens the upload modal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-d647ddd573479bfb0d5f",
+              "file": "crm-person.spec.js",
+              "line": 147,
+              "column": 3
+            },
+            {
+              "title": "Docs tab: upload modal contains the file-drop zone (.file-drop)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-af02db2e65fd4aeea979",
+              "file": "crm-person.spec.js",
+              "line": 155,
+              "column": 3
+            },
+            {
+              "title": "Docs tab: upload modal has Tax Year select (#upload-year) and Category select (#upload-doc-type)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-5ded25a7d15e95cd1eca",
+              "file": "crm-person.spec.js",
+              "line": 163,
+              "column": 3
+            },
+            {
+              "title": "Docs tab: upload modal has an Upload submit button that is initially disabled (no file selected)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-2bc913ee20acac7f1cb9",
+              "file": "crm-person.spec.js",
+              "line": 172,
+              "column": 3
+            },
+            {
+              "title": "Docs tab: document content area renders after loading (year folders, doc rows, or empty state)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-d48e77250f63a90246e9",
+              "file": "crm-person.spec.js",
+              "line": 183,
+              "column": 3
+            },
+            {
+              "title": "Docs tab: when doc rows exist, each has a Download button (.btn-dl)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-8fe3a4ccbd420d07cf08",
+              "file": "crm-person.spec.js",
+              "line": 194,
+              "column": 3
+            },
+            {
+              "title": "Overview tab: #overview-portal-panel renders after data loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-8df84a556f9e48d55623",
+              "file": "crm-person.spec.js",
+              "line": 210,
+              "column": 3
+            },
+            {
+              "title": "Overview tab: internal notes textarea (#notes-ta) is present",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d8a204f70d53b3aaa90-f90a88839f228ab08113",
+              "file": "crm-person.spec.js",
+              "line": 218,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "crm-relationship.spec.js",
+      "file": "crm-relationship.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "CRM — Relationship detail page",
+          "file": "crm-relationship.spec.js",
+          "line": 25,
+          "column": 6,
+          "specs": [
+            {
+              "title": "relationship detail page loads and shows the entity header",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-c5cb7a9ea402e113356e",
+              "file": "crm-relationship.spec.js",
+              "line": 28,
+              "column": 3
+            },
+            {
+              "title": "entity back link \"← Relationships\" is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-2810dcc8b2673027b535",
+              "file": "crm-relationship.spec.js",
+              "line": 34,
+              "column": 3
+            },
+            {
+              "title": "relationship name heading is visible and non-empty",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-6ec08f314611e2b8fb61",
+              "file": "crm-relationship.spec.js",
+              "line": 41,
+              "column": 3
+            },
+            {
+              "title": "entity badges (service tier / billing status) are rendered",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-c14799af1835144e3441",
+              "file": "crm-relationship.spec.js",
+              "line": 49,
+              "column": 3
+            },
+            {
+              "title": "tab bar is visible with at least \"Overview\" and \"People\" tabs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-a0f5eabf874263351756",
+              "file": "crm-relationship.spec.js",
+              "line": 57,
+              "column": 3
+            },
+            {
+              "title": "\"Overview\" tab is active by default",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-2d251acfc0ce4a169140",
+              "file": "crm-relationship.spec.js",
+              "line": 65,
+              "column": 3
+            },
+            {
+              "title": "clicking \"People\" tab shows people content and marks the tab active",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-97916af2f930cd51b189",
+              "file": "crm-relationship.spec.js",
+              "line": 73,
+              "column": 3
+            },
+            {
+              "title": "clicking \"Companies\" tab marks it active",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-bce850d0a89ecd44ff8f",
+              "file": "crm-relationship.spec.js",
+              "line": 82,
+              "column": 3
+            },
+            {
+              "title": "clicking \"Documents\" tab marks it active",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-1d80e5b834e70c7154cf",
+              "file": "crm-relationship.spec.js",
+              "line": 91,
+              "column": 3
+            },
+            {
+              "title": "clicking \"Notes\" tab marks it active",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-c7b0281742fad7c4552c",
+              "file": "crm-relationship.spec.js",
+              "line": 100,
+              "column": 3
+            },
+            {
+              "title": "Edit button is visible in entity actions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-d928bab084e9518a17ed",
+              "file": "crm-relationship.spec.js",
+              "line": 111,
+              "column": 3
+            },
+            {
+              "title": "clicking Edit opens a modal with the relationship Name field",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-3214034da952acbc326c",
+              "file": "crm-relationship.spec.js",
+              "line": 119,
+              "column": 3
+            },
+            {
+              "title": "Edit modal has Service Tier and Billing Status selects",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-85dad2a26377c86d8d46",
+              "file": "crm-relationship.spec.js",
+              "line": 130,
+              "column": 3
+            },
+            {
+              "title": "Overview tab content renders the overview panels",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-74c3819ba9c7a5f523e9",
+              "file": "crm-relationship.spec.js",
+              "line": 139,
+              "column": 3
+            },
+            {
+              "title": "Overview tab shows at least one data panel or placeholder (not stuck loading)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2e18779423309f68ec0c-58095b624fb417d50299",
+              "file": "crm-relationship.spec.js",
+              "line": 148,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "crm.spec.js",
+      "file": "crm.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "CRM list page",
+          "file": "crm.spec.js",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "CRM page loads and renders the page tab bar",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-5e22881364399af48407",
+              "file": "crm.spec.js",
+              "line": 19,
+              "column": 3
+            },
+            {
+              "title": "\"👥 Relationships\" tab is active by default and content is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-507d42fa3a26084ea5dc",
+              "file": "crm.spec.js",
+              "line": 25,
+              "column": 3
+            },
+            {
+              "title": "clicking \"👤 People\" tab shows People content and hides Relationships",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-34518df2f76d94f99251",
+              "file": "crm.spec.js",
+              "line": 33,
+              "column": 3
+            },
+            {
+              "title": "clicking \"🏢 Companies\" tab shows Companies content and hides Relationships",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-7d88b5e20b1873b37849",
+              "file": "crm.spec.js",
+              "line": 40,
+              "column": 3
+            },
+            {
+              "title": "Relationships tab loads data — shows a table or empty-state (not stuck loading)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-4ef1135ca536f04c65df",
+              "file": "crm.spec.js",
+              "line": 49,
+              "column": 3
+            },
+            {
+              "title": "Relationships table columns include \"Name\", \"Service Tier\", \"Billing\" when data exists",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-962d6097fdffb310885c",
+              "file": "crm.spec.js",
+              "line": 56,
+              "column": 3
+            },
+            {
+              "title": "Relationships \"Filter…\" search input is visible and accepts text",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-fd01c914bb9e80bf1c95",
+              "file": "crm.spec.js",
+              "line": 70,
+              "column": 3
+            },
+            {
+              "title": "People \"Filter…\" search input is visible after switching to People tab",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-c341cc6f3fda030d44f6",
+              "file": "crm.spec.js",
+              "line": 77,
+              "column": 3
+            },
+            {
+              "title": "Companies \"Filter…\" search input is visible after switching to Companies tab",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-f20a431bd6eab5f0c1f9",
+              "file": "crm.spec.js",
+              "line": 82,
+              "column": 3
+            },
+            {
+              "title": "\"+ New Relationship\" button is visible on the Relationships section",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-00f473be91ddad472f54",
+              "file": "crm.spec.js",
+              "line": 89,
+              "column": 3
+            },
+            {
+              "title": "\"+ New Relationship\" button opens the New Relationship modal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-b16ad4911e353098ccab",
+              "file": "crm.spec.js",
+              "line": 93,
+              "column": 3
+            },
+            {
+              "title": "\"+ New Person\" button is visible after switching to People tab",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-77c8b12e0f69a751c08f",
+              "file": "crm.spec.js",
+              "line": 99,
+              "column": 3
+            },
+            {
+              "title": "clicking a relationship table row navigates to /crm/relationship/:id",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-9ed13b2fd7c21cce22f4",
+              "file": "crm.spec.js",
+              "line": 106,
+              "column": 3
+            },
+            {
+              "title": "clicking a person table row navigates to /crm/person/:id",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-7442d5a4c0e8da6b5d2a",
+              "file": "crm.spec.js",
+              "line": 121,
+              "column": 3
+            },
+            {
+              "title": "clicking a company table row navigates to /crm/company/:id",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "95dcca9d8518b48e1350-5d62b961abd2e90c30b0",
+              "file": "crm.spec.js",
+              "line": 137,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "dashboard.spec.js",
+      "file": "dashboard.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Dashboard",
+          "file": "dashboard.spec.js",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "dashboard page loads without errors and renders the top header",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-7e0b2dca86d27a148055",
+              "file": "dashboard.spec.js",
+              "line": 18,
+              "column": 3
+            },
+            {
+              "title": "dashboard page renders the sidebar navigation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-4fd0004f76dfb8673675",
+              "file": "dashboard.spec.js",
+              "line": 22,
+              "column": 3
+            },
+            {
+              "title": "dashboard overview wrapper is rendered",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-0ef69074fe5f556977f1",
+              "file": "dashboard.spec.js",
+              "line": 26,
+              "column": 3
+            },
+            {
+              "title": "stat bar renders all 5 stat cards (Relationships, Companies, Open Messages, Monthly Revenue, Open Proposals)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-fbd974d2f897c84aee7c",
+              "file": "dashboard.spec.js",
+              "line": 32,
+              "column": 3
+            },
+            {
+              "title": "Relationships stat card label is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-d256862ff7908bbb12ef",
+              "file": "dashboard.spec.js",
+              "line": 38,
+              "column": 3
+            },
+            {
+              "title": "Open Messages stat card label is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-dd5a040ee3f62e2f7cb1",
+              "file": "dashboard.spec.js",
+              "line": 44,
+              "column": 3
+            },
+            {
+              "title": "Open Proposals stat card label is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-528c1231728d945f278a",
+              "file": "dashboard.spec.js",
+              "line": 50,
+              "column": 3
+            },
+            {
+              "title": "stat card values load from the API (not stuck at \"—\")",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-60b5b409114d50450958",
+              "file": "dashboard.spec.js",
+              "line": 56,
+              "column": 3
+            },
+            {
+              "title": "\"📄 Unsigned Returns\" intel card is present",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-e8255a002b59bbdd159c",
+              "file": "dashboard.spec.js",
+              "line": 72,
+              "column": 3
+            },
+            {
+              "title": "\"💬 No Reply 48h+\" intel card is present",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-887d333ac478413f6161",
+              "file": "dashboard.spec.js",
+              "line": 78,
+              "column": 3
+            },
+            {
+              "title": "\"🎂 Birthdays This Month\" intel card is present",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-32771cf0c0ee6b858e47",
+              "file": "dashboard.spec.js",
+              "line": 84,
+              "column": 3
+            },
+            {
+              "title": "\"📋 Unsigned Proposals\" intel card is present",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-34b9aad67623f7fc20f3",
+              "file": "dashboard.spec.js",
+              "line": 90,
+              "column": 3
+            },
+            {
+              "title": "\"🔒 Portal Inactive\" intel card is present",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-7a7d12d8b307a1714cb6",
+              "file": "dashboard.spec.js",
+              "line": 96,
+              "column": 3
+            },
+            {
+              "title": "Viktor AI right column panel is rendered",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-610d3dd3425de2f06305",
+              "file": "dashboard.spec.js",
+              "line": 104,
+              "column": 3
+            },
+            {
+              "title": "Viktor AI header shows \"Agent AI\" text",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-8d159300baf3b25fb556",
+              "file": "dashboard.spec.js",
+              "line": 108,
+              "column": 3
+            },
+            {
+              "title": "Viktor status indicator is visible in the header",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-94cd787eb07c3d1c6a9e",
+              "file": "dashboard.spec.js",
+              "line": 114,
+              "column": 3
+            },
+            {
+              "title": "Viktor status transitions from \"Connecting…\" to a ready state within 20s",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-ac98fbe221350ac9aa3e",
+              "file": "dashboard.spec.js",
+              "line": 118,
+              "column": 3
+            },
+            {
+              "title": "Viktor chat message list is present",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-aeb40869f5a595a9f3c0",
+              "file": "dashboard.spec.js",
+              "line": 132,
+              "column": 3
+            },
+            {
+              "title": "Viktor chat shows at least one message bubble after initialization",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-636af701df4332e20cb9",
+              "file": "dashboard.spec.js",
+              "line": 136,
+              "column": 3
+            },
+            {
+              "title": "Viktor chat textarea becomes enabled after initialization",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-d211e424856f9b4f3a42",
+              "file": "dashboard.spec.js",
+              "line": 144,
+              "column": 3
+            },
+            {
+              "title": "Viktor Send button is present",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-6db7c961d2a7e436a4f4",
+              "file": "dashboard.spec.js",
+              "line": 155,
+              "column": 3
+            },
+            {
+              "title": "Proposals chart canvas element is rendered",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-9c49bc39e04981ffe214",
+              "file": "dashboard.spec.js",
+              "line": 161,
+              "column": 3
+            },
+            {
+              "title": "Client Mix doughnut chart canvas is rendered",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a1bb41a2bd6df77ed2f7-6438c9d70bb7423e69f4",
+              "file": "dashboard.spec.js",
+              "line": 165,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "documents.spec.js",
+      "file": "documents.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Documents — firm-level library",
+          "file": "documents.spec.js",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "/documents page loads without redirecting to /login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6a5e959622d2fd9deae-72b7ddf07887e52e25cc",
+              "file": "documents.spec.js",
+              "line": 18,
+              "column": 3
+            },
+            {
+              "title": "/documents page renders the top header (.top-header)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6a5e959622d2fd9deae-a48a6331f9f026ebc7df",
+              "file": "documents.spec.js",
+              "line": 23,
+              "column": 3
+            },
+            {
+              "title": "/documents page renders the sidebar (.sidebar)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6a5e959622d2fd9deae-81f7f15135128396f1ca",
+              "file": "documents.spec.js",
+              "line": 27,
+              "column": 3
+            },
+            {
+              "title": "document list area renders after loading (not stuck on spinner)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6a5e959622d2fd9deae-5193e471d5fb5875c8fd",
+              "file": "documents.spec.js",
+              "line": 33,
+              "column": 3
+            },
+            {
+              "title": "page shows document rows or a meaningful empty-state (not an error page)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6a5e959622d2fd9deae-0b17abbff931cb543315",
+              "file": "documents.spec.js",
+              "line": 46,
+              "column": 3
+            },
+            {
+              "title": "when doc rows exist, the first row shows a doc name (.doc-name)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6a5e959622d2fd9deae-fab43d0630aba8cc19ea",
+              "file": "documents.spec.js",
+              "line": 61,
+              "column": 3
+            },
+            {
+              "title": "when doc rows exist, download buttons (.btn-dl) are present",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6a5e959622d2fd9deae-ec84c01199e1a3290717",
+              "file": "documents.spec.js",
+              "line": 68,
+              "column": 3
+            },
+            {
+              "title": "when doc rows exist, year badges are shown",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6a5e959622d2fd9deae-38ed2de6312daa108c04",
+              "file": "documents.spec.js",
+              "line": 75,
+              "column": 3
+            },
+            {
+              "title": "an Upload button or link is present on the page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6a5e959622d2fd9deae-be1e7719beb23b99f416",
+              "file": "documents.spec.js",
+              "line": 88,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "messages.spec.js",
+      "file": "messages.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Messages — Inbox",
+          "file": "messages.spec.js",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "messages page loads and shows the inbox panel",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-4b39003641c1bb87424a",
+              "file": "messages.spec.js",
+              "line": 19,
+              "column": 3
+            },
+            {
+              "title": "inbox header is visible with a non-empty heading",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-39b170eff97456b9d597",
+              "file": "messages.spec.js",
+              "line": 23,
+              "column": 3
+            },
+            {
+              "title": "inbox search input (.inbox-search) is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-029c967acce05b760bf9",
+              "file": "messages.spec.js",
+              "line": 30,
+              "column": 3
+            },
+            {
+              "title": "detail panel area (.detail-panel) is rendered",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-9e51213165c045aa8bdf",
+              "file": "messages.spec.js",
+              "line": 34,
+              "column": 3
+            },
+            {
+              "title": "inbox thread list (.inbox-list) is rendered",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-b515ceb1c48e57f32267",
+              "file": "messages.spec.js",
+              "line": 40,
+              "column": 3
+            },
+            {
+              "title": "inbox list shows thread cards or an empty / no-thread placeholder after loading",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-4327d9a59b7fbf666bae",
+              "file": "messages.spec.js",
+              "line": 44,
+              "column": 3
+            },
+            {
+              "title": "each thread card shows a client name (.thread-card-name) and subject (.thread-card-subject)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-7ac4f69eb530e9d4d8c6",
+              "file": "messages.spec.js",
+              "line": 54,
+              "column": 3
+            },
+            {
+              "title": "clicking a thread card activates it (.thread-card.active) and shows the detail header",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-2f20f9e6f54eb0d3e06b",
+              "file": "messages.spec.js",
+              "line": 64,
+              "column": 3
+            },
+            {
+              "title": "clicking a thread shows the person name in .detail-header-person",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-ac003018158c492217a5",
+              "file": "messages.spec.js",
+              "line": 72,
+              "column": 3
+            },
+            {
+              "title": "clicking a thread renders the message list (.detail-messages)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-677c07f8b3f69c02d7b5",
+              "file": "messages.spec.js",
+              "line": 81,
+              "column": 3
+            },
+            {
+              "title": "reply box (.reply-box) is rendered when a thread is open",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-1112fd50cbfe1c192bb2",
+              "file": "messages.spec.js",
+              "line": 91,
+              "column": 3
+            },
+            {
+              "title": "reply box contains a textarea for composing a message",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-a5690f64be353def1d57",
+              "file": "messages.spec.js",
+              "line": 98,
+              "column": 3
+            },
+            {
+              "title": "reply textarea accepts typed text",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-2c8559a061a45b554f7e",
+              "file": "messages.spec.js",
+              "line": 105,
+              "column": 3
+            },
+            {
+              "title": "Send button (.btn-gold in .reply-box-actions) is visible and enabled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-b19568fea366bf60e9b0",
+              "file": "messages.spec.js",
+              "line": 115,
+              "column": 3
+            },
+            {
+              "title": "internal note toggle checkbox is present in .reply-box-controls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-ac4095c84900a48deed3",
+              "file": "messages.spec.js",
+              "line": 126,
+              "column": 3
+            },
+            {
+              "title": "AI summary panel is rendered on the right side",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "af2aaa2c0f09e6088eca-24d614d3f1eb8416e956",
+              "file": "messages.spec.js",
+              "line": 150,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "pipelines.spec.js",
+      "file": "pipelines.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Pipelines — list view",
+          "file": "pipelines.spec.js",
+          "line": 25,
+          "column": 6,
+          "specs": [
+            {
+              "title": "pipelines page loads and shows the \"Pipelines\" heading",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-fe0a91273f648c56bbeb",
+              "file": "pipelines.spec.js",
+              "line": 30,
+              "column": 3
+            },
+            {
+              "title": "\"+ New Pipeline\" button is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-a9e0d7178aa4bb2694c3",
+              "file": "pipelines.spec.js",
+              "line": 34,
+              "column": 3
+            },
+            {
+              "title": "\"📦 View Archived\" toggle button is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-945635fe1114ce88ffa8",
+              "file": "pipelines.spec.js",
+              "line": 38,
+              "column": 3
+            },
+            {
+              "title": "pipeline table renders with \"Name\", \"Type\", \"Stages\", \"Active Jobs\" column headers",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-1076ccf968d913c9bcb1",
+              "file": "pipelines.spec.js",
+              "line": 42,
+              "column": 3
+            },
+            {
+              "title": "pipeline table body loads (pipeline rows or empty message)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-0fcae8cc2f9641039e9f",
+              "file": "pipelines.spec.js",
+              "line": 50,
+              "column": 3
+            },
+            {
+              "title": "clicking \"+ New Pipeline\" opens the New Pipeline modal with Name field",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-cfdd441c19aef334bb0d",
+              "file": "pipelines.spec.js",
+              "line": 56,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Pipelines — kanban board view",
+          "file": "pipelines.spec.js",
+          "line": 63,
+          "column": 6,
+          "specs": [
+            {
+              "title": "clicking a pipeline name opens the kanban board view",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-12c5aa286e8286186cb7",
+              "file": "pipelines.spec.js",
+              "line": 64,
+              "column": 3
+            },
+            {
+              "title": "kanban board hides the list view (#view-list) when a board is shown",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-ea3ed20992bd6212dd60",
+              "file": "pipelines.spec.js",
+              "line": 71,
+              "column": 3
+            },
+            {
+              "title": "kanban board shows at least one column (.kanban-col) with a column name (.col-name)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-9c1eaea788f7770d9d18",
+              "file": "pipelines.spec.js",
+              "line": 77,
+              "column": 3
+            },
+            {
+              "title": "each kanban column has a card count badge (.col-count)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-14739e51c85cea9edcdf",
+              "file": "pipelines.spec.js",
+              "line": 85,
+              "column": 3
+            },
+            {
+              "title": "board bar shows \"+ Add Job\" and \"⚙ Edit Stages\" buttons",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-b7635125ba25a16559e8",
+              "file": "pipelines.spec.js",
+              "line": 92,
+              "column": 3
+            },
+            {
+              "title": "board bar back button returns to the list view",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-5b6bc5a5d6b8160783f1",
+              "file": "pipelines.spec.js",
+              "line": 99,
+              "column": 3
+            },
+            {
+              "title": "clicking a job card opens the job detail panel with a title",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-faafb83b1c6a1c8ddaf1",
+              "file": "pipelines.spec.js",
+              "line": 106,
+              "column": 3
+            },
+            {
+              "title": "job panel close button dismisses the panel",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-d851fb288603aab34526",
+              "file": "pipelines.spec.js",
+              "line": 119,
+              "column": 3
+            },
+            {
+              "title": "drag a job card from column 0 to column 1 and verify it moved",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d1f30efba754e9fa7436-62f402ec8ddcf50f9339",
+              "file": "pipelines.spec.js",
+              "line": 133,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "portal.spec.js",
+      "file": "portal.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Client Portal — login page",
+          "file": "portal.spec.js",
+          "line": 13,
+          "column": 6,
+          "specs": [
+            {
+              "title": "portal login page loads with body content (not a blank error page)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a59c075e2277509753eb-82c24849559264fb5ba3",
+              "file": "portal.spec.js",
+              "line": 21,
+              "column": 3
+            },
+            {
+              "title": "portal URL contains \"/portal\" (not redirected to staff /login)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a59c075e2277509753eb-296b470f4c801b6d631a",
+              "file": "portal.spec.js",
+              "line": 26,
+              "column": 3
+            },
+            {
+              "title": "portal login page shows an email input",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a59c075e2277509753eb-5ffafcdeb3b4c6990c0b",
+              "file": "portal.spec.js",
+              "line": 31,
+              "column": 3
+            },
+            {
+              "title": "portal login page shows a password or access-code input",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a59c075e2277509753eb-46dd222a0a2c365423e3",
+              "file": "portal.spec.js",
+              "line": 37,
+              "column": 3
+            },
+            {
+              "title": "portal login page shows a submit / login button",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a59c075e2277509753eb-b5133ff48160dc6dd797",
+              "file": "portal.spec.js",
+              "line": 47,
+              "column": 3
+            },
+            {
+              "title": "portal login page shows a branding logo or firm name",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a59c075e2277509753eb-a836e8ee63f4c902964f",
+              "file": "portal.spec.js",
+              "line": 57,
+              "column": 3
+            },
+            {
+              "title": "entering wrong credentials shows an error or stays on /portal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a59c075e2277509753eb-1518b9e224c2d78c93b3",
+              "file": "portal.spec.js",
+              "line": 64,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "proposals.spec.js",
+      "file": "proposals.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Proposals",
+          "file": "proposals.spec.js",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "proposals page loads and shows \"Proposals\" heading in .page-top h1",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-6a8a4a6acd3d5139edeb",
+              "file": "proposals.spec.js",
+              "line": 19,
+              "column": 3
+            },
+            {
+              "title": "\"+ New Proposal\" button is visible (a.btn-gold href=\"/proposals/new\")",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-537b2f7fbdaf415f48b1",
+              "file": "proposals.spec.js",
+              "line": 23,
+              "column": 3
+            },
+            {
+              "title": "stats row (#stats-row) renders 4 stat cards",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-20ea592781673103ffe9",
+              "file": "proposals.spec.js",
+              "line": 31,
+              "column": 3
+            },
+            {
+              "title": "\"Total\" stat card label is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-5951095f220fa5e2017d",
+              "file": "proposals.spec.js",
+              "line": 35,
+              "column": 3
+            },
+            {
+              "title": "\"Sent\" stat card label is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-2fd4b38492d54eeca58d",
+              "file": "proposals.spec.js",
+              "line": 39,
+              "column": 3
+            },
+            {
+              "title": "\"Accepted / Signed\" stat card label is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-2d9f6cd3582c3bca63e5",
+              "file": "proposals.spec.js",
+              "line": 43,
+              "column": 3
+            },
+            {
+              "title": "\"Signed MRR\" stat card renders with gold value (#stat-mrr)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-59f9a704e306824ba353",
+              "file": "proposals.spec.js",
+              "line": 47,
+              "column": 3
+            },
+            {
+              "title": "filter tab bar renders with All, Draft, Sent, Viewed, Accepted, Signed tabs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-779907713b3f2a9ce49c",
+              "file": "proposals.spec.js",
+              "line": 53,
+              "column": 3
+            },
+            {
+              "title": "\"All\" filter tab is active by default",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-39f656a1ffb08fac6020",
+              "file": "proposals.spec.js",
+              "line": 62,
+              "column": 3
+            },
+            {
+              "title": "clicking the \"Draft\" tab activates it",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-b6949b3c80796c7e980f",
+              "file": "proposals.spec.js",
+              "line": 68,
+              "column": 3
+            },
+            {
+              "title": "clicking the \"Signed\" tab activates it",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-693598fee189a58891d0",
+              "file": "proposals.spec.js",
+              "line": 75,
+              "column": 3
+            },
+            {
+              "title": "#proposals-list container is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-398376509db042f910f9",
+              "file": "proposals.spec.js",
+              "line": 84,
+              "column": 3
+            },
+            {
+              "title": "proposals list finishes loading and shows cards or empty state",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-71acd2fd3fea71ab3388",
+              "file": "proposals.spec.js",
+              "line": 88,
+              "column": 3
+            },
+            {
+              "title": "when proposal cards exist, each shows a client name (.proposal-client)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-510f22c82ac6baa496c2",
+              "file": "proposals.spec.js",
+              "line": 102,
+              "column": 3
+            },
+            {
+              "title": "when proposal cards exist, status badge is shown (.badge-draft/.badge-sent/etc)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-1c0929e573dae5781891",
+              "file": "proposals.spec.js",
+              "line": 112,
+              "column": 3
+            },
+            {
+              "title": "navigating to /proposals/new loads the new proposal creation page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "45cf2a819853825b46d0-b21a43f136eb3887adb2",
+              "file": "proposals.spec.js",
+              "line": 125,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "settings.spec.js",
+      "file": "settings.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Settings page",
+          "file": "settings.spec.js",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "settings page loads without redirecting to /login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-e0bf6013f98999bb4c63",
+              "file": "settings.spec.js",
+              "line": 19,
+              "column": 3
+            },
+            {
+              "title": "settings page shows the \"⚙️ Settings\" heading in h1",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-2980f3dcf4960c0a4f94",
+              "file": "settings.spec.js",
+              "line": 24,
+              "column": 3
+            },
+            {
+              "title": "settings page renders the top header and sidebar",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-e45ff841cbefb38a348e",
+              "file": "settings.spec.js",
+              "line": 28,
+              "column": 3
+            },
+            {
+              "title": "settings tab bar (.settings-tabs) is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-b1925941321b8abe0202",
+              "file": "settings.spec.js",
+              "line": 35,
+              "column": 3
+            },
+            {
+              "title": "\"🎨 Firm Branding\" tab button is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-f7405ae2cc5a5a063686",
+              "file": "settings.spec.js",
+              "line": 39,
+              "column": 3
+            },
+            {
+              "title": "\"🌐 Custom Domains\" tab button is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-75b75fd1a9d139572235",
+              "file": "settings.spec.js",
+              "line": 45,
+              "column": 3
+            },
+            {
+              "title": "\"🔑 API Keys\" tab button is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-2b8a8b28bc7600b5a24e",
+              "file": "settings.spec.js",
+              "line": 51,
+              "column": 3
+            },
+            {
+              "title": "\"Firm Branding\" tab is active by default",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-bcb09d3de8f114c8db46",
+              "file": "settings.spec.js",
+              "line": 59,
+              "column": 3
+            },
+            {
+              "title": "#tab-branding panel is visible by default",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-49433164b5f9f6081710",
+              "file": "settings.spec.js",
+              "line": 65,
+              "column": 3
+            },
+            {
+              "title": "Branding tab: logo preview area is visible (#logo-preview)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-81611ca039a44e247b4f",
+              "file": "settings.spec.js",
+              "line": 72,
+              "column": 3
+            },
+            {
+              "title": "Branding tab: Display Name input (#b-display-name) is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-9d04e38131ad1b3e9e3a",
+              "file": "settings.spec.js",
+              "line": 76,
+              "column": 3
+            },
+            {
+              "title": "Branding tab: Tagline input (#b-tagline) is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-24fd3424db93cc695afc",
+              "file": "settings.spec.js",
+              "line": 80,
+              "column": 3
+            },
+            {
+              "title": "Branding tab: Contact Email input (#b-contact-email) is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-020b992ea87c027df3bc",
+              "file": "settings.spec.js",
+              "line": 84,
+              "column": 3
+            },
+            {
+              "title": "Branding tab: Brand Color picker (#b-color-picker) is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-b34f9ce544a9859cbf60",
+              "file": "settings.spec.js",
+              "line": 88,
+              "column": 3
+            },
+            {
+              "title": "Branding tab: \"Save Branding\" button is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-c2b388c9175b1652b47a",
+              "file": "settings.spec.js",
+              "line": 92,
+              "column": 3
+            },
+            {
+              "title": "clicking \"Custom Domains\" tab activates #tab-domains panel",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-ee54bab63bdbd69a8689",
+              "file": "settings.spec.js",
+              "line": 98,
+              "column": 3
+            },
+            {
+              "title": "Domains tab: new domain input (#new-domain-input) is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-5f2a81426ecf624ba954",
+              "file": "settings.spec.js",
+              "line": 104,
+              "column": 3
+            },
+            {
+              "title": "Domains tab: \"+ Add Domain\" button is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-2e496b3aeb630df583aa",
+              "file": "settings.spec.js",
+              "line": 109,
+              "column": 3
+            },
+            {
+              "title": "Domains tab: setup instructions section (.instructions) is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-91cca208b3e7894617fb",
+              "file": "settings.spec.js",
+              "line": 114,
+              "column": 3
+            },
+            {
+              "title": "clicking \"API Keys\" tab activates #tab-api-keys panel",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-9bbabf91be838079d986",
+              "file": "settings.spec.js",
+              "line": 121,
+              "column": 3
+            },
+            {
+              "title": "API Keys tab: \"🔑 API Keys\" section heading is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-bd946db03c583f55bfa2",
+              "file": "settings.spec.js",
+              "line": 127,
+              "column": 3
+            },
+            {
+              "title": "API Keys tab: \"+ Generate New Key\" button is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-ff850f1708840ec9c107",
+              "file": "settings.spec.js",
+              "line": 134,
+              "column": 3
+            },
+            {
+              "title": "API Keys tab: #api-tokens-list container is visible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-2758265d2d9abc4ed79e",
+              "file": "settings.spec.js",
+              "line": 141,
+              "column": 3
+            },
+            {
+              "title": "API Keys tab: clicking \"+ Generate New Key\" opens the new token modal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "90e6e24ee78bd89d0a34-54882b29f5dbd2bbaf30",
+              "file": "settings.spec.js",
+              "line": 146,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-03-24T20:51:12.385Z",
+    "duration": 48.49000000000001,
+    "expected": 0,
+    "skipped": 190,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
