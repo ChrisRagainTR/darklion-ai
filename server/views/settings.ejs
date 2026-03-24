@@ -36,13 +36,80 @@
   <h1 style="font-size:1.35rem;font-weight:800;margin-bottom:1.5rem;">⚙️ Settings</h1>
 
   <div class="settings-tabs">
-    <button class="settings-tab-btn active" onclick="switchTab('domains')">🌐 Custom Domains</button>
+    <button class="settings-tab-btn active" onclick="switchTab('branding')">🎨 Firm Branding</button>
+    <button class="settings-tab-btn" onclick="switchTab('domains')">🌐 Custom Domains</button>
     <button class="settings-tab-btn" onclick="switchTab('api-keys')">🔑 API Keys</button>
   </div>
 
+  <!-- ============ FIRM BRANDING ============ -->
+  <div class="settings-tab-panel active" id="tab-branding">
+    <div class="settings-section">
+      <h2>🎨 Firm Branding</h2>
+      <p>Customize how your firm appears in the client portal, proposals, and emails.</p>
+
+      <!-- Logo -->
+      <div style="margin-bottom:2rem;">
+        <div style="font-size:0.82rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Firm Logo</div>
+        <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+          <div id="logo-preview" style="width:120px;height:60px;background:var(--charcoal);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+            <span style="color:var(--muted);font-size:0.75rem;">No logo</span>
+          </div>
+          <div>
+            <label class="btn btn-outline" style="cursor:pointer;display:inline-block;">
+              📁 Choose Logo
+              <input type="file" id="logo-input" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none;" onchange="uploadLogo(this)">
+            </label>
+            <div style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem;">PNG, JPG, WebP or SVG. Recommended: 400×200px or wider, transparent background.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Firm info form -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+        <div>
+          <label class="form-label">Display Name</label>
+          <input type="text" class="form-control" id="b-display-name" placeholder="Sentinel Wealth & Tax">
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem;">Shown in portal and proposals instead of your account name.</div>
+        </div>
+        <div>
+          <label class="form-label">Tagline</label>
+          <input type="text" class="form-control" id="b-tagline" placeholder="Retirement planning for life's next chapter">
+        </div>
+        <div>
+          <label class="form-label">Contact Email</label>
+          <input type="email" class="form-control" id="b-contact-email" placeholder="hello@sentinelwealth.co">
+        </div>
+        <div>
+          <label class="form-label">Phone</label>
+          <input type="tel" class="form-control" id="b-phone" placeholder="(239) 555-0100">
+        </div>
+        <div>
+          <label class="form-label">Website</label>
+          <input type="url" class="form-control" id="b-website" placeholder="https://sentinelwealth.co">
+        </div>
+        <div>
+          <label class="form-label">Brand Color</label>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <input type="color" id="b-color-picker" value="#C9A84C" style="width:42px;height:38px;padding:2px;background:var(--charcoal);border:1px solid var(--border);border-radius:6px;cursor:pointer;">
+            <input type="text" class="form-control" id="b-primary-color" placeholder="#C9A84C" maxlength="7" style="flex:1;" oninput="syncColorPicker(this.value)">
+          </div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem;">Used for portal buttons and accents.</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:1.5rem;">
+        <label class="form-label">Address</label>
+        <textarea class="form-control" id="b-address" rows="2" placeholder="1234 Tamiami Trail N, Suite 200&#10;Naples, FL 34102"></textarea>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem;">Shown on proposals and tax letters.</div>
+      </div>
+
+      <button class="btn btn-gold" onclick="saveBranding()">Save Branding</button>
+    </div>
+  </div><!-- end tab-branding -->
+
   <!-- ============ CUSTOM DOMAINS ============ -->
-  <div class="settings-tab-panel active" id="tab-domains">
-  <div class="settings-section">
+  <div class="settings-tab-panel" id="tab-domains">
+    <div class="settings-section">
     <h2>🌐 Custom Domains</h2>
     <p>Let clients access proposals and the portal via your own domain (e.g. <code>my.sentineltax.co</code>) instead of darklion.ai.</p>
 
@@ -269,13 +336,95 @@ async function deleteDomain(id, domain) {
 
 // Settings tab switching
 function switchTab(tab) {
-  document.querySelectorAll('.settings-tab-btn').forEach((btn, i) => {
+  document.querySelectorAll('.settings-tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.getAttribute('onclick').includes(`'${tab}'`));
   });
   document.querySelectorAll('.settings-tab-panel').forEach(panel => {
     panel.classList.toggle('active', panel.id === `tab-${tab}`);
   });
   if (tab === 'api-keys') loadApiTokens();
+  if (tab === 'branding') loadBranding();
+}
+
+// ==================== BRANDING ====================
+async function loadBranding() {
+  const res = await apiFetch('/branding');
+  if (!res || !res.ok) return;
+  const b = await res.json();
+
+  if (b.display_name) document.getElementById('b-display-name').value = b.display_name;
+  if (b.tagline)       document.getElementById('b-tagline').value = b.tagline;
+  if (b.contact_email) document.getElementById('b-contact-email').value = b.contact_email;
+  if (b.phone)         document.getElementById('b-phone').value = b.phone;
+  if (b.website)       document.getElementById('b-website').value = b.website;
+  if (b.address)       document.getElementById('b-address').value = b.address;
+  if (b.primary_color) {
+    document.getElementById('b-primary-color').value = b.primary_color;
+    document.getElementById('b-color-picker').value = b.primary_color;
+  }
+  if (b.logo_url) {
+    const preview = document.getElementById('logo-preview');
+    preview.innerHTML = `<img src="${b.logo_url}" style="max-width:100%;max-height:100%;object-fit:contain;">`;
+  }
+}
+
+function syncColorPicker(hex) {
+  if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+    document.getElementById('b-color-picker').value = hex;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const picker = document.getElementById('b-color-picker');
+  if (picker) picker.addEventListener('input', () => {
+    document.getElementById('b-primary-color').value = picker.value;
+  });
+});
+
+async function uploadLogo(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const form = new FormData();
+  form.append('logo', file);
+
+  const t = localStorage.getItem('dl_token');
+  const res = await fetch('/firms/branding/logo', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + t },
+    body: form,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    return toast(err.error || 'Logo upload failed', true);
+  }
+
+  const data = await res.json();
+  const preview = document.getElementById('logo-preview');
+  preview.innerHTML = `<img src="${data.logo_url}" style="max-width:100%;max-height:100%;object-fit:contain;">`;
+  toast('Logo uploaded ✓');
+}
+
+async function saveBranding() {
+  const body = {
+    display_name:  document.getElementById('b-display-name').value.trim(),
+    tagline:       document.getElementById('b-tagline').value.trim(),
+    contact_email: document.getElementById('b-contact-email').value.trim(),
+    phone:         document.getElementById('b-phone').value.trim(),
+    website:       document.getElementById('b-website').value.trim(),
+    address:       document.getElementById('b-address').value.trim(),
+    primary_color: document.getElementById('b-primary-color').value.trim() || '#C9A84C',
+  };
+
+  const res = await apiFetch('/branding', { method: 'PUT', body: JSON.stringify(body) });
+  if (!res) return;
+  if (res.ok) {
+    toast('Branding saved ✓');
+  } else {
+    const err = await res.json().catch(() => ({}));
+    toast(err.error || 'Failed to save', true);
+  }
 }
 
 // ==================== API TOKENS ====================
@@ -356,8 +505,8 @@ async function revokeToken(id) {
   else { const err = await res.json(); toast(err.error || 'Failed to revoke key', true); }
 }
 
-// Init
-loadDomains();
+// Init — branding is default tab
+loadBranding();
 </script>
 
 <%- include('partials/shell-close') %>

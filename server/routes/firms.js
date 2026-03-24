@@ -775,5 +775,97 @@ router.get('/staff', async (req, res) => {
   }
 });
 
+// ── GET /firms/branding — get firm branding settings ─────────────────────────
+router.get('/branding', requireFirm, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT name, display_name, logo_url, primary_color, tagline,
+              contact_email, phone, website, address
+       FROM firms WHERE id = $1`,
+      [req.firm.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Firm not found' });
+
+    // Resolve logo URL to signed S3 URL if it's an S3 key
+    const branding = rows[0];
+    if (branding.logo_url && !branding.logo_url.startsWith('http')) {
+      try {
+        const { getSignedDownloadUrl } = require('../services/s3');
+        branding.logo_url = await getSignedDownloadUrl({
+          key: branding.logo_url,
+          bucket: process.env.AWS_S3_BUCKET || 'darklion-s3'
+        });
+      } catch (_) {}
+    }
+
+    res.json(branding);
+  } catch (err) {
+    console.error('GET /firms/branding error:', err);
+    res.status(500).json({ error: 'Failed to fetch branding' });
+  }
+});
+
+// ── PUT /firms/branding — update firm branding settings ──────────────────────
+router.put('/branding', requireFirm, async (req, res) => {
+  try {
+    const firmId = req.firm.id;
+    const { display_name, primary_color, tagline, contact_email, phone, website, address } = req.body;
+
+    const sets = [];
+    const params = [];
+
+    if (display_name !== undefined)   { params.push(display_name);   sets.push(`display_name = $${params.length}`); }
+    if (primary_color !== undefined)  { params.push(primary_color);  sets.push(`primary_color = $${params.length}`); }
+    if (tagline !== undefined)        { params.push(tagline);        sets.push(`tagline = $${params.length}`); }
+    if (contact_email !== undefined)  { params.push(contact_email);  sets.push(`contact_email = $${params.length}`); }
+    if (phone !== undefined)          { params.push(phone);          sets.push(`phone = $${params.length}`); }
+    if (website !== undefined)        { params.push(website);        sets.push(`website = $${params.length}`); }
+    if (address !== undefined)        { params.push(address);        sets.push(`address = $${params.length}`); }
+
+    if (!sets.length) return res.status(400).json({ error: 'Nothing to update' });
+
+    params.push(firmId);
+    const { rows } = await pool.query(
+      `UPDATE firms SET ${sets.join(', ')} WHERE id = $${params.length}
+       RETURNING name, display_name, logo_url, primary_color, tagline,
+                 contact_email, phone, website, address`,
+      params
+    );
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('PUT /firms/branding error:', err);
+    res.status(500).json({ error: 'Failed to update branding' });
+  }
+});
+
+// ── POST /firms/branding/logo — upload firm logo ─────────────────────────────
+router.post('/branding/logo', requireFirm, upload.single('logo'), async (req, res) => {
+  try {
+    const firmId = req.firm.id;
+    if (!req.file) return res.status(400).json({ error: 'No image file provided' });
+
+    const mime = req.file.mimetype;
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'].includes(mime)) {
+      return res.status(400).json({ error: 'Logo must be JPG, PNG, WebP, or SVG' });
+    }
+
+    const extMap = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/svg+xml': 'svg' };
+    const ext = extMap[mime] || 'png';
+    const key = `logos/${firmId}/logo.${ext}`;
+    const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
+
+    const { uploadFile, getSignedDownloadUrl } = require('../services/s3');
+    await uploadFile({ buffer: req.file.buffer, key, mimeType: mime, bucket });
+    await pool.query('UPDATE firms SET logo_url = $1 WHERE id = $2', [key, firmId]);
+
+    const signedUrl = await getSignedDownloadUrl({ key, bucket });
+    res.json({ ok: true, logo_url: signedUrl });
+  } catch (err) {
+    console.error('POST /firms/branding/logo error:', err);
+    res.status(500).json({ error: 'Logo upload failed: ' + err.message });
+  }
+});
+
 module.exports = router;
 module.exports.auditLog = auditLog;
