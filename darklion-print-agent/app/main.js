@@ -134,7 +134,7 @@ function showLoginWindow() {
     },
   });
   loginWindow.setMenu(null);
-  loginWindow.loadFile('login.html');
+  loginWindow.loadFile(path.join(__dirname, 'login.html'));
   loginWindow.on('closed', () => { loginWindow = null; });
 }
 
@@ -163,7 +163,7 @@ function showRoutingWindow(filePath) {
   });
 
   win.setMenu(null);
-  win.loadFile('index.html');
+  win.loadFile(path.join(__dirname, 'index.html'));
   routingWindows.set(filePath, win);
 
   win.webContents.on('did-finish-load', () => {
