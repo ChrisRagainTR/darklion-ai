@@ -55,13 +55,16 @@ function doMount(token) {
     var rcloneBin = findRclone();
     var driveLetter = 'L:';
 
-    // Use bearer_token for auth - avoids password escaping issues with JWT tokens
-    var remoteSpec = ':webdav,url=http://127.0.0.1:7891,bearer_token=' + token + ':';
+    // Write a temp rclone config file — avoids inline spec parsing issues with URLs/tokens
+    var configPath = path.join(os.tmpdir(), 'darklion-rclone.conf');
+    var configContent = '[darklion]\ntype = webdav\nurl = http://127.0.0.1:7891\nbearer_token = ' + token + '\n';
+    fs.writeFileSync(configPath, configContent, 'utf8');
 
     var args = [
       'mount',
-      remoteSpec,
+      'darklion:',
       driveLetter,
+      '--config', configPath,
       '--volname', 'DarkLion Drive',
       '--vfs-cache-mode', 'writes',
       '--no-modtime',
