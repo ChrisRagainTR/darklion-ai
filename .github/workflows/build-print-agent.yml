@@ -15,11 +15,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: ''
+      - name: Verify Node.js
+        shell: powershell
+        run: node --version; npm --version
 
       - name: Download Redmon64.dll
         shell: powershell
