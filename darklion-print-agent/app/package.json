@@ -40,11 +40,6 @@
         "to": "installer/printer-remove.ps1"
       },
       {
-        "from": "../installer/redmon64.dll",
-        "to": "installer/redmon64.dll",
-        "filter": ["**/*"]
-      },
-      {
         "from": "../shared",
         "to": "shared"
       }
@@ -56,16 +51,14 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "renderer/icon.ico",
-      "artifactName": "DarkLionPrintAgent_Setup_${version}.exe"
+      "artifactName": "DarkLionPrintAgent_Setup_${version}.exe",
+      "signingHashAlgorithms": null,
+      "sign": null
     },
     "nsis": {
       "oneClick": false,
       "allowElevation": true,
       "allowToChangeInstallationDirectory": false,
-      "installerIcon": "renderer/icon.ico",
-      "uninstallerIcon": "renderer/icon.ico",
-      "installerHeaderIcon": "renderer/icon.ico",
       "createDesktopShortcut": false,
       "createStartMenuShortcut": false,
       "runAfterFinish": true,
