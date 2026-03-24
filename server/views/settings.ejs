@@ -39,6 +39,7 @@
     <button class="settings-tab-btn active" onclick="switchTab('branding')">🎨 Firm Branding</button>
     <button class="settings-tab-btn" onclick="switchTab('domains')">🌐 Custom Domains</button>
     <button class="settings-tab-btn" onclick="switchTab('api-keys')">🔑 API Keys</button>
+    <button class="settings-tab-btn" onclick="switchTab('webdav'); loadWebdavToken()">💾 Drive Access</button>
   </div>
 
   <!-- ============ FIRM BRANDING ============ -->
@@ -150,6 +151,48 @@
       </div>
     </div>
   </div><!-- end tab-api-keys -->
+
+  <!-- ============ DRIVE ACCESS ============ -->
+  <div class="settings-tab-panel" id="tab-webdav">
+    <div class="settings-section">
+      <h2>💾 DarkLion Drive Access</h2>
+      <p style="color:var(--muted);margin-bottom:1.5rem;">Mount DarkLion as a network drive on your Windows or Mac computer. Generate a personal access token below — you'll use it as your password when setting up the drive. The token never expires and stays logged in.</p>
+
+      <div style="background:var(--charcoal);border:1px solid var(--border);border-radius:10px;padding:1.5rem;margin-bottom:1.5rem;">
+        <div style="font-weight:700;margin-bottom:0.75rem;">Your Drive Token</div>
+        <div id="webdav-token-display" style="font-family:monospace;font-size:0.9rem;color:var(--gold);background:rgba(0,0,0,0.3);padding:0.6rem 1rem;border-radius:6px;margin-bottom:1rem;min-height:2.2rem;word-break:break-all;">Loading...</div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <button class="btn btn-gold" onclick="generateWebdavToken()">🔄 Generate New Token</button>
+          <button class="btn" id="webdav-copy-btn" onclick="copyWebdavToken()" style="display:none;">📋 Copy Token</button>
+        </div>
+        <div id="webdav-token-warning" style="display:none;margin-top:0.75rem;font-size:0.8rem;color:#e74c3c;">⚠️ Copy this token now — it won't be shown again in full.</div>
+      </div>
+
+      <div style="background:var(--charcoal);border:1px solid var(--border);border-radius:10px;padding:1.5rem;">
+        <div style="font-weight:700;margin-bottom:1rem;">Setup Instructions</div>
+        <div style="margin-bottom:1rem;">
+          <div style="font-weight:600;color:var(--gold);margin-bottom:0.4rem;">🪟 Windows</div>
+          <ol style="color:var(--muted);font-size:0.875rem;line-height:1.8;margin:0;padding-left:1.25rem;">
+            <li>Open File Explorer → right-click <strong>This PC</strong> → <strong>Map network drive</strong></li>
+            <li>Choose a drive letter (e.g. <strong>Z:</strong>)</li>
+            <li>Folder: <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.4rem;border-radius:4px;">https://darklion.sentineltax.co/webdav</code></li>
+            <li>Check <strong>"Reconnect at sign-in"</strong></li>
+            <li>Check <strong>"Connect using different credentials"</strong></li>
+            <li>Username: your email address &nbsp;|&nbsp; Password: your drive token above</li>
+          </ol>
+        </div>
+        <div>
+          <div style="font-weight:600;color:var(--gold);margin-bottom:0.4rem;">🍎 Mac</div>
+          <ol style="color:var(--muted);font-size:0.875rem;line-height:1.8;margin:0;padding-left:1.25rem;">
+            <li>Finder → <strong>Go</strong> menu → <strong>Connect to Server</strong> (⌘K)</li>
+            <li>Server address: <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.4rem;border-radius:4px;">https://darklion.sentineltax.co/webdav</code></li>
+            <li>Click <strong>Connect</strong> → enter your email and drive token</li>
+            <li>Check <strong>"Remember this password"</strong> in Keychain</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div><!-- end tab-webdav -->
 
 </div>
 
@@ -344,6 +387,48 @@ function switchTab(tab) {
   });
   if (tab === 'api-keys') loadApiTokens();
   if (tab === 'branding') loadBranding();
+}
+
+// ==================== WEBDAV TOKEN ====================
+let _webdavFullToken = null;
+
+async function loadWebdavToken() {
+  const el = document.getElementById('webdav-token-display');
+  try {
+    const res = await apiFetch('/firms/webdav-token');
+    const data = await res.json();
+    if (data.hasToken) {
+      el.textContent = data.tokenPreview;
+      document.getElementById('webdav-copy-btn').style.display = 'none';
+    } else {
+      el.textContent = 'No token yet — generate one below.';
+      el.style.color = 'var(--muted)';
+    }
+  } catch(e) { el.textContent = 'Could not load token status.'; }
+}
+
+async function generateWebdavToken() {
+  if (!confirm('Generate a new drive token? Your old token will stop working immediately.')) return;
+  const el = document.getElementById('webdav-token-display');
+  el.textContent = 'Generating...';
+  try {
+    const res = await apiFetch('/firms/webdav-token', { method: 'POST' });
+    const data = await res.json();
+    _webdavFullToken = data.token;
+    el.textContent = data.token;
+    el.style.color = 'var(--gold)';
+    document.getElementById('webdav-copy-btn').style.display = '';
+    document.getElementById('webdav-token-warning').style.display = '';
+  } catch(e) { el.textContent = 'Failed to generate token. Try again.'; }
+}
+
+function copyWebdavToken() {
+  if (!_webdavFullToken) return;
+  navigator.clipboard.writeText(_webdavFullToken).then(() => {
+    const btn = document.getElementById('webdav-copy-btn');
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => { btn.textContent = '📋 Copy Token'; }, 2000);
+  });
 }
 
 // ==================== BRANDING ====================

@@ -867,5 +867,36 @@ router.post('/branding/logo', requireFirm, upload.single('logo'), async (req, re
   }
 });
 
+// --- POST /firms/webdav-token --- generate or regenerate personal WebDAV token
+router.post('/webdav-token', requireFirm, async (req, res) => {
+  const userId = req.firm.userId;
+  if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  const crypto = require('crypto');
+  const token = 'wdv_' + crypto.randomBytes(24).toString('hex');
+
+  try {
+    await pool.query('UPDATE firm_users SET webdav_token = $1 WHERE id = $2', [token, userId]);
+    res.json({ token });
+  } catch (err) {
+    console.error('POST /firms/webdav-token error:', err);
+    res.status(500).json({ error: 'Failed to generate token' });
+  }
+});
+
+// --- GET /firms/webdav-token --- get current token (masked)
+router.get('/webdav-token', requireFirm, async (req, res) => {
+  const userId = req.firm.userId;
+  if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  try {
+    const { rows } = await pool.query('SELECT webdav_token FROM firm_users WHERE id = $1', [userId]);
+    const token = rows[0]?.webdav_token;
+    res.json({ hasToken: !!token, tokenPreview: token ? token.slice(0, 12) + '...' : null });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
 module.exports = router;
 module.exports.auditLog = auditLog;
