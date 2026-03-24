@@ -95,6 +95,15 @@
     .msg-bubble.internal { background: rgba(255,200,0,0.1); border: 1px dashed var(--gold); color: var(--text); }
     .msg-meta { font-size: 0.68rem; color: var(--muted); margin-top: 0.15rem; }
     .msg-internal-label { font-size: 0.62rem; color: var(--gold); margin-bottom: 0.15rem; }
+    .msg-delete-btn {
+      display: none; background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 0.7rem; padding: 0 0.25rem; margin-left: 0.35rem;
+      line-height: 1; opacity: 0.6; transition: opacity 0.15s, color 0.15s;
+    }
+    .msg-delete-btn:hover { opacity: 1; color: #e74c3c; }
+    .msg-delete-btn.confirm { color: #e74c3c; opacity: 1; font-weight: 700; }
+    .msg-bubble-wrap.staff:hover .msg-delete-btn { display: inline-block; }
+    .msg-bubble-row { display: flex; align-items: center; justify-content: flex-end; }
 
     .no-thread-selected {
       flex: 1; display: flex; align-items: center; justify-content: center;
@@ -582,9 +591,11 @@ async function loadThread(threadId, silent = false) {
           const bubbleClass = m.isInternal ? 'internal' : side;
           const attachmentsHtml = (m.attachments||[]).length > 0
             ? `<div class="msg-attachments">${m.attachments.map(a => `<a class="attachment-chip" href="#" onclick="downloadAttachment(${a.documentId});return false;">📎 ${esc(a.displayName)}</a>`).join('')}</div>` : '';
+          const canDeleteAppended = m.senderType === 'staff' && m.senderId === _myUserId;
+          const deleteBtnAppended = canDeleteAppended ? `<button class="msg-delete-btn" data-msg-id="${m.id}" title="Delete message" onclick="deleteMessage(${m.id}, this)">✕</button>` : '';
           msgContainer.insertAdjacentHTML('beforeend', `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
             ${m.isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
-            <div class="msg-bubble ${bubbleClass}">${m.body ? esc(m.body).replace(/\n/g,'<br>') : ''}${attachmentsHtml}</div>
+            <div class="msg-bubble-row"><div class="msg-bubble ${bubbleClass}">${m.body ? esc(m.body).replace(/\n/g,'<br>') : ''}${attachmentsHtml}</div>${deleteBtnAppended}</div>
             <div class="msg-meta">${esc(m.senderName||'')} · ${relTime(m.createdAt)}</div>
           </div>`);
           appended = true;
@@ -600,9 +611,11 @@ async function loadThread(threadId, silent = false) {
               const size = a.sizeBytes ? ' <span class="att-size">(' + formatBytes(a.sizeBytes) + ')</span>' : '';
               return `<a class="attachment-chip" href="#" onclick="downloadAttachment(${a.documentId});return false;">📎 ${esc(a.displayName)}${size}</a>`;
             }).join('')}</div>` : '';
+        const canDelete = m.senderType === 'staff' && m.senderId === _myUserId;
+        const deleteBtn = canDelete ? `<button class="msg-delete-btn" data-msg-id="${m.id}" title="Delete message" onclick="deleteMessage(${m.id}, this)">✕</button>` : '';
         return `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
           ${m.isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
-          <div class="msg-bubble ${bubbleClass}">${m.body ? esc(m.body).replace(/\n/g,'<br>') : ''}${attachmentsHtml}</div>
+          <div class="msg-bubble-row"><div class="msg-bubble ${bubbleClass}">${m.body ? esc(m.body).replace(/\n/g,'<br>') : ''}${attachmentsHtml}</div>${deleteBtn}</div>
           <div class="msg-meta">${esc(m.senderName || '')} · ${relTime(m.createdAt)}</div>
         </div>`;
       }).join('');
@@ -646,6 +659,24 @@ function formatBytes(b) {
   if (b < 1024) return b + ' B';
   if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
   return (b/1048576).toFixed(1) + ' MB';
+}
+
+async function deleteMessage(messageId, btn) {
+  if (!btn.classList.contains('confirm')) {
+    btn.classList.add('confirm');
+    btn.textContent = 'Delete?';
+    setTimeout(() => { if (btn.classList.contains('confirm')) { btn.classList.remove('confirm'); btn.textContent = '✕'; } }, 3000);
+    return;
+  }
+  try {
+    const res = await apiFetch(`/api/messages/message/${messageId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed');
+    // Remove the bubble from the DOM
+    const wrap = document.querySelector(`.msg-bubble-wrap[data-msg-id="${messageId}"]`);
+    if (wrap) wrap.remove();
+  } catch(e) {
+    alert('Could not delete message. Please try again.');
+  }
 }
 
 async function downloadAttachment(documentId) {
