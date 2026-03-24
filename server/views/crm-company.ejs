@@ -1446,11 +1446,21 @@
     if (e) e.stopPropagation();
     _moveDocId = id;
     const modal = document.getElementById('move-doc-modal');
-    if (!modal) return;
-    document.getElementById('move-doc-year').value = currentYear || String(new Date().getFullYear() - 1);
-    document.getElementById('move-doc-section').value = currentSection || 'firm_uploaded';
-    document.getElementById('move-doc-category').value = currentCategory || 'tax';
+    if (!modal) { console.error('move-doc-modal not found in DOM'); return; }
+    const yearEl    = document.getElementById('move-doc-year');
+    const sectionEl = document.getElementById('move-doc-section');
+    const catEl     = document.getElementById('move-doc-category');
+    if (!yearEl || !sectionEl || !catEl) { console.error('move-doc-modal fields missing'); return; }
+    yearEl.value    = currentYear    || String(new Date().getFullYear() - 1);
+    sectionEl.value = currentSection || 'firm_uploaded';
+    catEl.value     = currentCategory || 'tax';
+    modal.style.display = 'flex'; // force-show regardless of class
     modal.classList.add('open');
+  }
+  function closeMoveDocModal() {
+    const modal = document.getElementById('move-doc-modal');
+    if (modal) { modal.classList.remove('open'); modal.style.display = ''; }
+    _moveDocId = null;
   }
   function closeMoveDocModal() {
     const modal = document.getElementById('move-doc-modal');

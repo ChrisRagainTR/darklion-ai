@@ -1213,30 +1213,28 @@
   }
 
   async function openEditModal() {
-    if (!personData) return;
-    document.getElementById('ef-fname').value = personData.first_name || '';
-    document.getElementById('ef-lname').value = personData.last_name || '';
-    document.getElementById('ef-email').value = personData.email || '';
-    document.getElementById('ef-phone').value = personData.phone || '';
-    document.getElementById('ef-dob').value = personData.date_of_birth || '';
-    document.getElementById('ef-filing').value = personData.filing_status || '';
-    // Spouse
-    document.getElementById('ef-spouse-id').value = personData.spouse_id || '';
-    if (personData.spouse) {
-      document.getElementById('ef-spouse-search').value = `${personData.spouse.first_name||''} ${personData.spouse.last_name||''}`.trim();
-    } else {
-      document.getElementById('ef-spouse-search').value = '';
+    try {
+      if (!personData) return;
+      document.getElementById('ef-fname').value = personData.first_name || '';
+      document.getElementById('ef-lname').value = personData.last_name || '';
+      document.getElementById('ef-email').value = personData.email || '';
+      document.getElementById('ef-phone').value = personData.phone || '';
+      document.getElementById('ef-dob').value = personData.date_of_birth || '';
+      document.getElementById('ef-filing').value = personData.filing_status || '';
+      document.getElementById('ef-spouse-id').value = personData.spouse_id || '';
+      if (personData.spouse) {
+        document.getElementById('ef-spouse-search').value = `${personData.spouse.first_name||''} ${personData.spouse.last_name||''}`.trim();
+      } else {
+        document.getElementById('ef-spouse-search').value = '';
+      }
+      await efSpouseLoadPeople().catch(() => {});
+      document.getElementById('edit-modal').classList.remove('hidden');
+    } catch(e) {
+      console.error('openEditModal error:', e);
+      toast('Could not open edit form: ' + e.message, 'error');
     }
-    await efSpouseLoadPeople();
-    const m = document.getElementById('edit-modal');
-    m.classList.remove('hidden');
-    m.classList.add('open');
   }
-  function closeModal() {
-    const m = document.getElementById('edit-modal');
-    m.classList.add('hidden');
-    m.classList.remove('open');
-  }
+  function closeModal() { document.getElementById('edit-modal').classList.add('hidden'); }
 
   async function submitEdit() {
     const btn = document.getElementById('ef-submit');
