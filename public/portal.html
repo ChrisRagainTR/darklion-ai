@@ -1202,6 +1202,15 @@
           }
         } catch (e) { /* silent */ }
 
+        // Load firm team for welcome card
+        try {
+          const ftRes = await fetch('/portal/firm-team', { headers: { 'Authorization': `Bearer ${localStorage.getItem('portalToken')}` } });
+          if (ftRes.ok) {
+            _firmTeam = await ftRes.json();
+            if (!Array.isArray(_firmTeam)) _firmTeam = [];
+          }
+        } catch(e) { _firmTeam = []; }
+
         renderOverview();
         renderDocuments();
         buildCompanyTabs();
