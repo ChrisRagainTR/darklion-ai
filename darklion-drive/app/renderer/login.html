@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'unsafe-inline'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data: file:" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DarkLion Drive — Connect</title>
   <style>
@@ -173,9 +173,9 @@
 <body>
   <div class="container">
     <div class="logo">
-      <div class="logo-icon">🦁</div>
+      <img src="../icon.ico" width="64" height="64" style="border-radius:12px;margin-bottom:4px;" onerror="this.style.display='none'" />
       <div class="logo-title">DarkLion Drive</div>
-      <div class="logo-subtitle">Secure document access as drive L:</div>
+      <div class="logo-subtitle">Secure document access for your firm</div>
     </div>
 
     <form id="loginForm" autocomplete="on">
