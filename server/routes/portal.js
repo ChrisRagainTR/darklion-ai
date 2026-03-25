@@ -8,6 +8,7 @@ const { embedSignature } = require('../services/sign-pdf');
 const { classifyMessage } = require('../services/claude');
 const { sendEmail, sendPortalNotification } = require('../services/email');
 const { advancePipelineJob } = require('./tax-delivery');
+const { fireTrigger } = require('../services/pipelineTriggers');
 // Lazy require to avoid circular dependency
 function cancelPendingNotification(personId) {
   try { require('./messages').cancelPendingNotification(personId); } catch(e) { /* non-fatal */ }
@@ -645,6 +646,12 @@ router.post('/messages/send', upload.array('files', 8), async (req, res) => {
       });
     }
 
+    // Fire smart pipeline trigger (non-blocking)
+    fireTrigger(firmId, 'portal_message_received', personId, {
+      thread_id: threadId,
+      message_id: messageId,
+    }).catch(e => console.error('[portal] fireTrigger portal_message_received non-fatal:', e));
+
     res.json({ ok: true, threadId });
   } catch (err) {
     if (err.code === '42P01') {
@@ -1033,6 +1040,18 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
         } catch (emailErr) {
           console.error('[portal] sign complete email error:', emailErr);
         }
+
+        // Fire smart pipeline trigger for all signers (non-blocking)
+        const { rows: allSignerIds } = await pool.query(
+          'SELECT person_id FROM tax_delivery_signers WHERE delivery_id = $1',
+          [id]
+        );
+        for (const s of allSignerIds) {
+          fireTrigger(d.firm_id, 'tax_return_signed', s.person_id, {
+            delivery_id: id,
+            tax_year: d.tax_year,
+          }).catch(e => console.error('[portal] fireTrigger tax_return_signed non-fatal:', e));
+        }
       }
     }
 
@@ -1092,6 +1111,12 @@ router.post('/upload', (req, res, next) => {
       [firmId, personId, docType, displayName,
        req.file.mimetype, req.file.size, key, bucket, safeYear, docType]
     );
+
+    // Fire smart pipeline trigger (non-blocking)
+    fireTrigger(firmId, 'document_uploaded_by_client', personId, {
+      document_id: rows[0].id,
+      filename: displayName,
+    }).catch(e => console.error('[portal] fireTrigger document_uploaded_by_client non-fatal:', e));
 
     res.json({ ok: true, document: rows[0] });
   } catch (err) {

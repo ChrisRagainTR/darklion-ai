@@ -170,7 +170,7 @@
       <label style="font-size:0.8rem;color:var(--muted);">Year:</label>
       <select class="year-sel" id="year-sel" onchange="onYearChange(this.value)"></select>
       <button class="btn btn-gold btn-sm" onclick="openAddJobModal()" style="font-size:0.78rem;">+ Add Job</button>
-      <button class="btn btn-outline btn-sm" onclick="openEditStagesModal()" style="font-size:0.78rem;">⚙ Edit Stages</button>
+      <a class="btn btn-outline btn-sm" id="settings-link" href="/pipelines" style="font-size:0.78rem;text-decoration:none;">⚙️ Settings</a>
     </div>
   </div>
   <div id="kanban-wrap" class="kanban-wrap">
@@ -234,15 +234,32 @@
 
 <!-- ═══════════════ EDIT STAGES MODAL ═══════════════ -->
 <div class="modal-overlay" id="edit-stages-modal">
-  <div class="modal-box" style="max-width:520px;">
-    <h2>Edit Stages</h2>
-    <div id="stages-list" style="margin-bottom:1rem;"></div>
-    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
-      <input type="text" id="new-stage-name" placeholder="New stage name" style="flex:1;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.45rem 0.65rem;border-radius:6px;font-size:0.85rem;outline:none;" />
-      <button class="btn btn-gold btn-sm" onclick="addStage()">Add</button>
+  <div class="modal-box" style="max-width:92vw;width:1100px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <h2 style="margin:0;">Edit Stages</h2>
+      <button class="btn btn-outline btn-sm" onclick="closeModal('edit-stages-modal')">Done</button>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeModal('edit-stages-modal')">Done</button>
+
+    <!-- Two-column layout -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
+
+      <!-- LEFT: Stage list + add -->
+      <div>
+        <div style="font-size:0.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Stages</div>
+        <div id="stages-list" style="margin-bottom:0.75rem;"></div>
+        <div style="display:flex;gap:0.5rem;">
+          <input type="text" id="new-stage-name" placeholder="New stage name" style="flex:1;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.45rem 0.65rem;border-radius:6px;font-size:0.85rem;outline:none;" />
+          <button class="btn btn-gold btn-sm" onclick="addStage()">Add</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: Smart Stages -->
+      <div id="smart-stages-section">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">⚡ Triggers <span style="font-weight:400;font-size:0.7rem;color:var(--muted);text-transform:none;letter-spacing:0;">(move card here when…)</span></div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.75rem;">Assign triggers to stages. When the event fires, the card auto-moves.</div>
+        <div id="smart-stages-list" style="max-height:60vh;overflow-y:auto;"><div style="color:var(--muted);font-size:0.82rem;">Open a pipeline to configure.</div></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -367,6 +384,7 @@
       return api('POST', '/templates/' + templateId + '/ensure-instance', { year: currentYear });
     }).then(function(inst) {
       currentInstanceId = inst.id;
+      var sl = document.getElementById('settings-link'); if (sl) sl.href = '/pipelines/' + inst.id + '/settings';
       return loadBoard();
     }).catch(function(e) {
       document.getElementById('kanban-wrap').innerHTML = '<div class="board-empty"><p style="color:var(--red)">Error: ' + esc(e.message) + '</p></div>';
@@ -378,13 +396,22 @@
     document.getElementById('kanban-wrap').innerHTML = '<div class="board-empty"><p>Loading…</p></div>';
     api('POST', '/templates/' + currentTemplateId + '/ensure-instance', { year: currentYear }).then(function(inst) {
       currentInstanceId = inst.id;
+      var sl = document.getElementById('settings-link'); if (sl) sl.href = '/pipelines/' + inst.id + '/settings';
       return loadBoard();
     }).catch(function(e) { window.toast('Failed to load year: ' + e.message, 'error'); });
   };
 
   function loadBoard() {
-    return api('GET', '/instances/' + currentInstanceId).then(function(data) {
-      instanceData = data;
+    return Promise.all([
+      api('GET', '/instances/' + currentInstanceId),
+      fetch('/api/pipeline-triggers/stage-config/' + currentInstanceId, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      }).then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; }),
+    ]).then(function(results) {
+      instanceData = results[0];
+      var configs = results[1];
+      smartStageConfigs = {};
+      configs.forEach(function(c) { if (!smartStageConfigs[c.stage_id]) smartStageConfigs[c.stage_id] = []; smartStageConfigs[c.stage_id].push({ configId: c.id, triggerKey: c.trigger_key }); });
       renderKanban();
     });
   }
@@ -395,7 +422,8 @@
     var jobs = instanceData.jobs || [];
 
     if (!stages.length) {
-      wrap.innerHTML = '<div class="board-empty"><p>No stages yet.</p><p><button class="btn btn-gold btn-sm" style="margin-top:0.5rem;" onclick="openEditStagesModal()">+ Add Stages</button></p></div>';
+      var settingsUrl = currentInstanceId ? '/pipelines/' + currentInstanceId + '/settings' : '/pipelines';
+      wrap.innerHTML = '<div class="board-empty"><p>No stages yet.</p><p><a class="btn btn-gold btn-sm" style="margin-top:0.5rem;text-decoration:none;" href="' + settingsUrl + '">⚙️ Add Stages</a></p></div>';
       return;
     }
 
@@ -411,12 +439,18 @@
     stages.forEach(function(stage) {
       var stageJobs = byStage[stage.id] || [];
       var color = stage.color || 'var(--gold)';
+      var smartBadge = (smartStageConfigs[stage.id] && smartStageConfigs[stage.id].length)
+        ? '<span title="Smart stage: auto-moves cards here" style="font-size:0.78rem;opacity:0.8;margin-left:0.3rem;cursor:default;">⚡</span>'
+        : '';
+      var terminalBadge = stage.is_terminal
+        ? '<span title="Terminal stage: cards are archived and completion recorded when reaching here" style="font-size:0.78rem;margin-left:0.3rem;cursor:default;">🏁</span>'
+        : '';
       html += '<div class="kanban-col" data-stage-id="' + stage.id + '"' +
         ' ondragover="event.preventDefault();this.classList.add(\'drag-over\')"' +
         ' ondragleave="this.classList.remove(\'drag-over\')"' +
         ' ondrop="handleDrop(event,' + stage.id + ')">' +
         '<div class="col-head">' +
-          '<div class="col-name" style="color:' + color + '">' + esc(stage.name) + '</div>' +
+          '<div class="col-name" style="color:' + color + '">' + esc(stage.name) + smartBadge + terminalBadge + '</div>' +
           '<span class="col-count">' + stageJobs.length + '</span>' +
         '</div>' +
         '<div class="col-cards" id="cards-' + stage.id + '">';
@@ -672,8 +706,6 @@
           (h.note ? '<br><em>' + esc(h.note) + '</em>' : '') + '</div></div>';
       }).join('') : '<p style="color:var(--muted);font-size:0.8rem;">No history yet.</p>';
 
-      var dueVal = job.due_date ? job.due_date.split('T')[0] : '';
-
       qs('#panel-body').innerHTML =
         '<div class="panel-field"><label>Client</label>' +
           '<a class="panel-entity-link" href="' + entityUrl(job.entity_type, job.entity_id) + '" target="_blank">' + esc(job.entity_name || '#' + job.entity_id) + '</a>' +
@@ -687,13 +719,8 @@
           '<option value="under_extension"' + (job.job_status==='under_extension' ? ' selected' : '') + '>🔵 Under Extension</option>' +
           '<option value="on_hold"' + (job.job_status==='on_hold' ? ' selected' : '') + '>⚫ On Hold</option>' +
         '</select></div>' +
-        '<div class="panel-field"><label>Priority</label><select id="pf-priority" onchange="panelSave(' + jobId + ')">' +
-          '<option value="normal"' + (job.priority==='normal' ? ' selected' : '') + '>Normal</option>' +
-          '<option value="high"' + (job.priority==='high' ? ' selected' : '') + '>High</option>' +
-          '<option value="urgent"' + (job.priority==='urgent' ? ' selected' : '') + '>Urgent</option>' +
-        '</select></div>' +
         '<div class="panel-field"><label>Assigned To</label><select id="pf-assigned" onchange="panelSave(' + jobId + ')">' + teamOpts + '</select></div>' +
-        '<div class="panel-field"><label>Due Date</label><input type="date" id="pf-due" value="' + dueVal + '" onchange="panelSave(' + jobId + ')" /></div>' +
+        '<div class="panel-field"><label>Notes</label><textarea id="pf-notes" rows="10" onblur="panelSave(' + jobId + ')" style="width:100%;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.5rem 0.65rem;border-radius:6px;font-size:0.84rem;resize:vertical;min-height:160px;outline:none;font-family:inherit;line-height:1.5;">' + esc(job.notes || '') + '</textarea></div>' +
         '<div class="section-label">Updates</div>' +
         '<div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">' +
           '<input type="text" id="pf-update-input" placeholder="Add an update…" style="flex:1;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.45rem 0.65rem;border-radius:6px;font-size:0.85rem;outline:none;" onkeydown="if(event.key===\'Enter\')postUpdate(' + jobId + ')" />' +
@@ -718,12 +745,10 @@
   };
 
   window.panelSave = function(jobId) {
-    var priority = document.getElementById('pf-priority') ? document.getElementById('pf-priority').value : null;
     var assigned = document.getElementById('pf-assigned') ? document.getElementById('pf-assigned').value : null;
-    var due = document.getElementById('pf-due') ? document.getElementById('pf-due').value : null;
-    var notes = null; // notes replaced by updates feed
+    var notes = document.getElementById('pf-notes') ? document.getElementById('pf-notes').value : null;
     var status = document.getElementById('pf-status') ? document.getElementById('pf-status').value : 'active';
-    api('PUT', '/jobs/' + jobId, { priority: priority, assigned_to: assigned || null, due_date: due || null, notes: notes, job_status: status })
+    api('PUT', '/jobs/' + jobId, { assigned_to: assigned || null, notes: notes, job_status: status })
       .then(function() { return loadBoard(); })
       .catch(function(err) { console.error('Panel save error:', err); });
   };
@@ -743,22 +768,42 @@
   // ── EDIT STAGES ───────────────────────────────────
   window.openEditStagesModal = function() {
     if (!currentTemplateId) return;
+    // Load smart stages config alongside stages
+    if (currentInstanceId) {
+      api('GET', '/templates/' + currentTemplateId).then(function(tmpl) {
+        loadSmartStages(tmpl.stages || []);
+      }).catch(function() {});
+    }
     renderStagesList();
     openModal('edit-stages-modal');
   };
 
   window.openEditStagesForTemplate = function(templateId) {
     currentTemplateId = templateId;
+    smartStageConfigs = {};
     renderStagesList();
     openModal('edit-stages-modal');
   };
+
+  // Smart stages state
+  var availableTriggers = [];
+  var smartStageConfigs = {}; // stageId -> [{ configId, triggerKey }]
+  var currentSmartStages = []; // cached stages for re-render after add/remove
 
   function renderStagesList() {
     api('GET', '/templates/' + currentTemplateId).then(function(tmpl) {
       var stages = tmpl.stages || [];
       var html = stages.length ? stages.map(function(s, i) {
+        var hasTrigger = !!(smartStageConfigs[s.id] && smartStageConfigs[s.id].length);
+        var triggerBadge = hasTrigger ? '<span title="Smart stage configured" style="font-size:0.85rem;margin-left:0.25rem;">⚡</span>' : '';
+        var terminalChecked = s.is_terminal ? ' checked' : '';
         return '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">' +
           '<input type="text" value="' + esc(s.name) + '" style="flex:1;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.6rem;border-radius:6px;font-size:0.85rem;outline:none;" onblur="renameStage(' + s.id + ',this.value)" />' +
+          '<label style="display:flex;align-items:center;gap:0.3rem;font-size:0.78rem;color:var(--muted);white-space:nowrap;cursor:pointer;" title="Archive card when it reaches this stage">' +
+            '<input type="checkbox"' + terminalChecked + ' onchange="toggleTerminalStage(' + s.id + ',this.checked)" style="cursor:pointer;" />' +
+            '🏁' +
+          '</label>' +
+          triggerBadge +
           '<button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:1rem;padding:0 0.3rem;" onclick="deleteStage(' + s.id + ')" title="Delete stage">✕</button>' +
         '</div>';
       }).join('') : '<p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.75rem;">No stages yet.</p>';
@@ -766,15 +811,127 @@
       // If board is showing, update it after stage changes
       if (currentInstanceId) {
         document.getElementById('stages-list').dataset.needsReload = '1';
+        renderSmartStages(stages);
+      } else {
+        document.getElementById('smart-stages-list').innerHTML = '<div style="color:var(--muted);font-size:0.82rem;">Open a pipeline to configure smart stages.</div>';
       }
     }).catch(function(e) { window.toast('Failed to load stages: ' + e.message, 'error'); });
   }
+
+  function loadSmartStages(stages) {
+    if (!currentInstanceId) return;
+    if (stages) currentSmartStages = stages; // cache for re-renders
+    // Load available triggers + existing configs in parallel
+    Promise.all([
+      fetch('/api/pipeline-triggers', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r) { return r.ok ? r.json() : []; }),
+      fetch('/api/pipeline-triggers/stage-config/' + currentInstanceId, { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r) { return r.ok ? r.json() : []; })
+    ]).then(function(results) {
+      availableTriggers = results[0];
+      var configs = results[1];
+      smartStageConfigs = {};
+      configs.forEach(function(c) { if (!smartStageConfigs[c.stage_id]) smartStageConfigs[c.stage_id] = []; smartStageConfigs[c.stage_id].push({ configId: c.id, triggerKey: c.trigger_key }); });
+      renderSmartStages(currentSmartStages);
+    }).catch(function(e) { console.error('loadSmartStages error:', e); });
+  }
+
+  function renderSmartStages(stages) {
+    if (!currentInstanceId || !stages || !stages.length) {
+      document.getElementById('smart-stages-list').innerHTML = stages && stages.length
+        ? '<div style="color:var(--muted);font-size:0.82rem;">Open a pipeline to configure smart stages.</div>'
+        : '<div style="color:var(--muted);font-size:0.82rem;">Add stages first.</div>';
+      return;
+    }
+    // Group triggers by category for the add dropdown
+    var byCategory = {};
+    availableTriggers.forEach(function(t) {
+      if (!byCategory[t.category]) byCategory[t.category] = [];
+      byCategory[t.category].push(t);
+    });
+
+    var html = '';
+    stages.forEach(function(s) {
+      var cfgs = smartStageConfigs[s.id] || [];
+      // Chips for existing triggers
+      var chips = cfgs.map(function(c) {
+        var label = (availableTriggers.find(function(t) { return t.key === c.triggerKey; }) || {}).label || c.triggerKey;
+        return '<span style="display:inline-flex;align-items:center;gap:0.3rem;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.3);border-radius:12px;padding:0.15rem 0.5rem;font-size:0.75rem;color:var(--gold);">' +
+          '⚡ ' + esc(label) +
+          '<button onclick="removeSmartStage(' + c.configId + ',' + s.id + ')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;padding:0;line-height:1;" title="Remove">×</button>' +
+          '</span>';
+      }).join(' ');
+
+      // Add trigger dropdown (only show triggers not already configured)
+      var usedKeys = cfgs.map(function(c) { return c.triggerKey; });
+      var addOpts = '<option value="">+ Add trigger…</option>';
+      Object.keys(byCategory).sort().forEach(function(cat) {
+        var catOpts = byCategory[cat].filter(function(t) { return usedKeys.indexOf(t.key) === -1; });
+        if (!catOpts.length) return;
+        addOpts += '<optgroup label="' + esc(cat) + '">';
+        catOpts.forEach(function(t) { addOpts += '<option value="' + esc(t.key) + '">' + esc(t.label) + '</option>'; });
+        addOpts += '</optgroup>';
+      });
+      var addSelect = cfgs.length >= 2
+        ? '<span style="font-size:0.72rem;color:var(--muted);font-style:italic;">Max 2 triggers per stage</span>'
+        : '<select onchange="addSmartStage(' + s.id + ', this)" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.25rem 0.4rem;border-radius:6px;font-size:0.75rem;outline:none;">' + addOpts + '</select>';
+
+      html += '<div style="padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05);">' +
+        '<div style="font-weight:600;font-size:0.82rem;margin-bottom:0.35rem;">' + esc(s.name) + '</div>' +
+        '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:0.35rem;">' +
+        chips + addSelect +
+        '</div></div>';
+    });
+    document.getElementById('smart-stages-list').innerHTML = html || '<div style="color:var(--muted);font-size:0.82rem;">No stages found.</div>';
+  }
+
+  window.addSmartStage = function(stageId, selectEl) {
+    var triggerKey = selectEl.value;
+    if (!triggerKey || !currentInstanceId) { selectEl.value = ''; return; }
+    fetch('/api/pipeline-triggers/stage-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ pipeline_instance_id: currentInstanceId, stage_id: stageId, trigger_key: triggerKey })
+    }).then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error || 'Failed'); }); })
+    .then(function(cfg) {
+      if (!smartStageConfigs[stageId]) smartStageConfigs[stageId] = [];
+      smartStageConfigs[stageId].push({ configId: cfg.id, triggerKey: cfg.trigger_key });
+      window.toast('⚡ Trigger added');
+      loadSmartStages(); // re-render
+    }).catch(function(e) { window.toast('Failed: ' + e.message, 'error'); selectEl.value = ''; });
+  };
+
+  window.removeSmartStage = function(configId, stageId) {
+    fetch('/api/pipeline-triggers/stage-config/' + configId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(function() {
+      if (smartStageConfigs[stageId]) {
+        smartStageConfigs[stageId] = smartStageConfigs[stageId].filter(function(c) { return c.configId !== configId; });
+        if (!smartStageConfigs[stageId].length) delete smartStageConfigs[stageId];
+      }
+      window.toast('Trigger removed');
+      loadSmartStages();
+    }).catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+
 
   window.renameStage = function(stageId, name) {
     if (!name.trim()) return;
     api('PUT', '/templates/' + currentTemplateId + '/stages/' + stageId, { name: name.trim() })
       .then(function() { if (currentInstanceId) loadBoard(); })
       .catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  window.toggleTerminalStage = function(stageId, isTerminal) {
+    fetch('/api/pipelines/stages/' + stageId + '/terminal', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ is_terminal: isTerminal })
+    }).then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Failed'); });
+      window.toast(isTerminal ? '🏁 Stage marked as terminal' : 'Terminal removed');
+      if (currentInstanceId) loadBoard();
+    }).catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
   };
 
   window.deleteStage = async function(stageId) {

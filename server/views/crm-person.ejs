@@ -496,9 +496,38 @@
 
 <div id="tab-workflow" class="tab-content">
   <div style="max-width:860px;padding:1.5rem 2rem;">
-    <div style="font-size:1.05rem;font-weight:700;margin-bottom:1.25rem;">Active Pipelines</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div style="font-size:1.05rem;font-weight:700;">Active Pipelines</div>
+      <button class="btn btn-outline btn-sm" onclick="openFireTriggerModal()" style="font-size:0.78rem;">⚡ Fire Trigger</button>
+    </div>
     <div id="workflow-loading" style="color:var(--muted);padding:2rem 0;">Loading…</div>
     <div id="workflow-list" style="display:none;"></div>
+
+    <!-- Pipeline History -->
+    <div style="margin-top:2rem;">
+      <div style="font-size:1.05rem;font-weight:700;margin-bottom:1rem;">📋 Pipeline History</div>
+      <div id="pipeline-history-loading" style="color:var(--muted);font-size:0.85rem;">Loading…</div>
+      <div id="pipeline-history-list" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ⚡ Fire Trigger Modal -->
+<div class="modal-overlay hidden" id="fire-trigger-modal">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:440px;">
+    <h2 style="margin-bottom:0.25rem;">⚡ Fire Trigger</h2>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1.25rem;">Manually fire a trigger to move this person's pipeline card(s) to the configured stage.</p>
+    <div class="form-group">
+      <label>Trigger</label>
+      <select class="form-control" id="ft-trigger-select">
+        <option value="">— Loading triggers… —</option>
+      </select>
+    </div>
+    <div id="ft-result" style="display:none;margin:0.75rem 0;padding:0.75rem 1rem;border-radius:8px;font-size:0.85rem;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeFireTriggerModal()">Cancel</button>
+      <button class="btn btn-gold" id="ft-submit" onclick="submitFireTrigger()">Fire ⚡</button>
+    </div>
   </div>
 </div>
 
@@ -648,7 +677,138 @@
         </div>`;
       }).join('');
     } catch(e) { loading.textContent = 'Failed to load pipelines: ' + e.message; }
+
+    // Load pipeline history
+    loadPipelineHistory();
   }
+
+  async function loadPipelineHistory() {
+    const loading = document.getElementById('pipeline-history-loading');
+    const list = document.getElementById('pipeline-history-list');
+    if (!loading || !list) return;
+    loading.style.display = ''; list.style.display = 'none';
+    try {
+      const res = await apiFetch(`/api/pipelines/completions?entity_type=person&entity_id=${personId}`);
+      const data = await res.json();
+      loading.style.display = 'none'; list.style.display = '';
+      const completions = data.completions || [];
+      const activeJobs = data.active_jobs || [];
+      if (!completions.length && !activeJobs.length) {
+        list.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">No pipeline history yet.</div>';
+        return;
+      }
+      const rows = [];
+      completions.forEach(c => {
+        const yr = c.tax_year ? ` ${c.tax_year}` : '';
+        const date = new Date(c.completed_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+        rows.push(`<div style="display:flex;align-items:center;gap:0.75rem;padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span style="font-size:1rem;">✅</span>
+          <span style="flex:1;font-size:0.88rem;font-weight:600;">${esc(c.pipeline_name)}${yr}</span>
+          <span style="font-size:0.78rem;color:var(--muted);">completed ${date}</span>
+        </div>`);
+      });
+      activeJobs.forEach(j => {
+        const yr = j.tax_year ? ` ${j.tax_year}` : '';
+        const stage = j.current_stage_name ? ` → ${j.current_stage_name}` : '';
+        rows.push(`<div style="display:flex;align-items:center;gap:0.75rem;padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span style="font-size:1rem;">🔄</span>
+          <span style="flex:1;font-size:0.88rem;font-weight:600;">${esc(j.pipeline_name)}${yr}</span>
+          <span style="font-size:0.78rem;color:var(--muted);">in progress${esc(stage)}</span>
+        </div>`);
+      });
+      list.innerHTML = rows.join('') || '<div style="color:var(--muted);font-size:0.85rem;">No pipeline history yet.</div>';
+    } catch(e) { loading.textContent = 'Failed to load pipeline history.'; }
+  }
+
+  // ── Fire Trigger Modal ────────────────────────────────
+  let availableTriggers = [];
+
+  async function openFireTriggerModal() {
+    const modal = document.getElementById('fire-trigger-modal');
+    const select = document.getElementById('ft-trigger-select');
+    const result = document.getElementById('ft-result');
+    result.style.display = 'none';
+    modal.classList.remove('hidden');
+
+    if (!availableTriggers.length) {
+      try {
+        const res = await apiFetch('/api/pipeline-triggers');
+        availableTriggers = await res.json();
+        // Group by category
+        const byCategory = {};
+        availableTriggers.forEach(t => {
+          if (!byCategory[t.category]) byCategory[t.category] = [];
+          byCategory[t.category].push(t);
+        });
+        let html = '<option value="">— Select a trigger —</option>';
+        Object.keys(byCategory).sort().forEach(cat => {
+          html += `<optgroup label="${esc(cat)}">`;
+          byCategory[cat].forEach(t => {
+            html += `<option value="${esc(t.key)}">${esc(t.label)}</option>`;
+          });
+          html += '</optgroup>';
+        });
+        select.innerHTML = html;
+      } catch(e) {
+        select.innerHTML = '<option value="">Failed to load triggers</option>';
+      }
+    }
+  }
+
+  function closeFireTriggerModal() {
+    document.getElementById('fire-trigger-modal').classList.add('hidden');
+    document.getElementById('ft-result').style.display = 'none';
+    document.getElementById('ft-trigger-select').value = '';
+  }
+
+  async function submitFireTrigger() {
+    const key = document.getElementById('ft-trigger-select').value;
+    const result = document.getElementById('ft-result');
+    const btn = document.getElementById('ft-submit');
+    if (!key) { toast('Select a trigger first', 'error'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Firing…';
+    result.style.display = 'none';
+
+    try {
+      const res = await apiFetch('/api/pipeline-triggers/fire', {
+        method: 'POST',
+        body: JSON.stringify({ trigger_key: key, person_id: parseInt(personId) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
+      if (data.moved && data.moved.length) {
+        const lines = data.moved.map(m =>
+          `<div style="margin-bottom:0.3rem;">📌 <strong>${esc(m.pipeline)}</strong>: ${m.from_stage ? esc(m.from_stage) + ' → ' : ''}${esc(m.to_stage)}</div>`
+        ).join('');
+        result.style.background = 'rgba(34,197,94,0.1)';
+        result.style.border = '1px solid rgba(34,197,94,0.3)';
+        result.style.color = 'var(--text)';
+        result.innerHTML = `<div style="font-weight:700;margin-bottom:0.5rem;">✅ Moved ${data.moved.length} card${data.moved.length !== 1 ? 's' : ''}:</div>${lines}`;
+        result.style.display = 'block';
+        // Refresh workflow list
+        loadWorkflow();
+      } else {
+        result.style.background = 'rgba(255,255,255,0.05)';
+        result.style.border = '1px solid var(--border)';
+        result.style.color = 'var(--muted)';
+        result.innerHTML = 'ℹ️ No cards moved — this person has no active pipeline jobs with a smart stage configured for this trigger.';
+        result.style.display = 'block';
+      }
+    } catch(e) {
+      result.style.background = 'rgba(239,68,68,0.1)';
+      result.style.border = '1px solid rgba(239,68,68,0.3)';
+      result.style.color = 'var(--red)';
+      result.innerHTML = '❌ ' + esc(e.message);
+      result.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Fire ⚡';
+    }
+  }
+  // ── End Fire Trigger Modal ────────────────────────
 
   async function loadPerson() {
     try {

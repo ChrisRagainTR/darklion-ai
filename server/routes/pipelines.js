@@ -715,6 +715,44 @@ router.post('/jobs/:jobId/move', async (req, res) => {
     const updated = rows[0];
     updated.entity_name = await resolveEntityName(updated);
 
+    // ── Terminal stage: archive job + record completion ────────────────────
+    if (newStage && newStage.is_terminal) {
+      try {
+        // Get firm_id and pipeline info
+        const { rows: instRows } = await pool.query(
+          `SELECT pi.firm_id, pi.name AS instance_name, pi.tax_year,
+                  pt.name AS template_name
+           FROM pipeline_instances pi
+           JOIN pipeline_templates pt ON pt.id = pi.template_id
+           WHERE pi.id = $1`,
+          [job.instance_id]
+        );
+        const inst = instRows[0];
+        if (inst) {
+          // Archive the job
+          await pool.query(
+            `UPDATE pipeline_jobs SET job_status = 'archived', updated_at = NOW() WHERE id = $1`,
+            [job.id]
+          );
+
+          // Record completion (for person or company entity type only)
+          if (job.entity_type === 'person' || job.entity_type === 'company') {
+            const taxYearInt = inst.tax_year ? parseInt(inst.tax_year) : null;
+            await pool.query(
+              `INSERT INTO pipeline_completions
+                 (firm_id, entity_type, entity_id, pipeline_instance_id, pipeline_name, tax_year, job_id)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              [inst.firm_id, job.entity_type, job.entity_id, job.instance_id,
+               inst.instance_name || inst.template_name, taxYearInt, job.id]
+            );
+          }
+          updated.job_status = 'archived';
+        }
+      } catch (termErr) {
+        console.error('[pipelines] terminal stage archival error (non-fatal):', termErr);
+      }
+    }
+
     // Auto-message if configured
     if (newStage && newStage.auto_message && newStage.auto_message.trim()) {
       try {
@@ -784,6 +822,137 @@ router.post('/jobs/:jobId/move', async (req, res) => {
   } catch (e) {
     console.error('POST /jobs/:jobId/move error:', e);
     res.status(500).json({ error: 'Failed to move job' });
+  }
+});
+
+// PUT /stages/:stageId/terminal — mark/unmark a stage as terminal
+router.put('/stages/:stageId/terminal', async (req, res) => {
+  try {
+    const { is_terminal = false } = req.body;
+    // Verify the stage belongs to a template owned by this firm
+    const { rows } = await pool.query(
+      `SELECT ps.id FROM pipeline_stages ps
+       JOIN pipeline_templates pt ON pt.id = ps.template_id
+       WHERE ps.id = $1 AND pt.firm_id = $2`,
+      [req.params.stageId, req.firm.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Stage not found' });
+    const { rows: updated } = await pool.query(
+      'UPDATE pipeline_stages SET is_terminal = $1 WHERE id = $2 RETURNING *',
+      [is_terminal, req.params.stageId]
+    );
+    res.json(updated[0]);
+  } catch (e) {
+    console.error('PUT /stages/:stageId/terminal error:', e);
+    res.status(500).json({ error: 'Failed to update stage' });
+  }
+});
+
+// GET /completions — pipeline completion history for an entity or relationship
+router.get('/completions', async (req, res) => {
+  try {
+    const firmId = req.firm.id;
+    const { entity_type, entity_id, relationship_id } = req.query;
+
+    if (relationship_id) {
+      // Get all people and companies in this relationship
+      const { rows: people } = await pool.query(
+        'SELECT id FROM people WHERE firm_id = $1 AND relationship_id = $2',
+        [firmId, parseInt(relationship_id)]
+      );
+      const { rows: companies } = await pool.query(
+        'SELECT id FROM companies WHERE firm_id = $1 AND relationship_id = $2',
+        [firmId, parseInt(relationship_id)]
+      );
+
+      const completions = [];
+      const activeJobs = [];
+
+      // Completions for all people
+      for (const p of people) {
+        const { rows } = await pool.query(
+          `SELECT pc.*, 'person' AS entity_type FROM pipeline_completions pc
+           WHERE pc.firm_id = $1 AND pc.entity_type = 'person' AND pc.entity_id = $2
+             AND pc.completed_at > NOW() - INTERVAL '2 years'
+           ORDER BY pc.completed_at DESC`,
+          [firmId, p.id]
+        );
+        completions.push(...rows);
+
+        const { rows: jobs } = await pool.query(
+          `SELECT pj.id, pj.entity_type, pj.entity_id,
+                  pt.name AS pipeline_name, pi.tax_year,
+                  ps.name AS current_stage_name
+           FROM pipeline_jobs pj
+           JOIN pipeline_instances pi ON pi.id = pj.instance_id
+           JOIN pipeline_templates pt ON pt.id = pi.template_id
+           LEFT JOIN pipeline_stages ps ON ps.id = pj.current_stage_id
+           WHERE pi.firm_id = $1 AND pj.entity_type = 'person' AND pj.entity_id = $2
+             AND pj.job_status NOT IN ('complete', 'archived')`,
+          [firmId, p.id]
+        );
+        activeJobs.push(...jobs);
+      }
+
+      // Completions for all companies
+      for (const c of companies) {
+        const { rows } = await pool.query(
+          `SELECT pc.*, 'company' AS entity_type FROM pipeline_completions pc
+           WHERE pc.firm_id = $1 AND pc.entity_type = 'company' AND pc.entity_id = $2
+             AND pc.completed_at > NOW() - INTERVAL '2 years'
+           ORDER BY pc.completed_at DESC`,
+          [firmId, c.id]
+        );
+        completions.push(...rows);
+
+        const { rows: jobs } = await pool.query(
+          `SELECT pj.id, pj.entity_type, pj.entity_id,
+                  pt.name AS pipeline_name, pi.tax_year,
+                  ps.name AS current_stage_name
+           FROM pipeline_jobs pj
+           JOIN pipeline_instances pi ON pi.id = pj.instance_id
+           JOIN pipeline_templates pt ON pt.id = pi.template_id
+           LEFT JOIN pipeline_stages ps ON ps.id = pj.current_stage_id
+           WHERE pi.firm_id = $1 AND pj.entity_type = 'company' AND pj.entity_id = $2
+             AND pj.job_status NOT IN ('complete', 'archived')`,
+          [firmId, c.id]
+        );
+        activeJobs.push(...jobs);
+      }
+
+      // Sort completions newest first
+      completions.sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
+      return res.json({ completions, active_jobs: activeJobs });
+    }
+
+    if (!entity_type || !entity_id) {
+      return res.status(400).json({ error: 'entity_type and entity_id (or relationship_id) required' });
+    }
+
+    const { rows: completions } = await pool.query(
+      `SELECT * FROM pipeline_completions
+       WHERE firm_id = $1 AND entity_type = $2 AND entity_id = $3
+       ORDER BY completed_at DESC`,
+      [firmId, entity_type, parseInt(entity_id)]
+    );
+
+    const { rows: activeJobs } = await pool.query(
+      `SELECT pj.id, pj.entity_type, pj.entity_id,
+              pt.name AS pipeline_name, pi.tax_year,
+              ps.name AS current_stage_name
+       FROM pipeline_jobs pj
+       JOIN pipeline_instances pi ON pi.id = pj.instance_id
+       JOIN pipeline_templates pt ON pt.id = pi.template_id
+       LEFT JOIN pipeline_stages ps ON ps.id = pj.current_stage_id
+       WHERE pi.firm_id = $1 AND pj.entity_type = $2 AND pj.entity_id = $3
+         AND pj.job_status NOT IN ('complete', 'archived')`,
+      [firmId, entity_type, parseInt(entity_id)]
+    );
+
+    res.json({ completions, active_jobs: activeJobs });
+  } catch (e) {
+    console.error('GET /completions error:', e);
+    res.status(500).json({ error: 'Failed to load completions' });
   }
 });
 
