@@ -325,7 +325,11 @@ function createApp(onUnauthorized) {
         case 'DELETE':
           return res.status(403).end(); // Read-only for safety
         case 'MKCOL':
-          return res.status(201).end(); // Virtual dirs — accept silently
+          // Only allow MKCOL at category level (Explorer sometimes creates temp dirs on upload)
+          // Block everything else so Explorer shows "no permission" at wrong levels
+          var mcolParsed = parsePath(req.path);
+          if (mcolParsed.level === 'category') return res.status(201).end();
+          return res.status(403).end();
         case 'LOCK':
           res.setHeader('Content-Type', 'application/xml; charset=utf-8');
           return res.status(200).end(`<?xml version="1.0" encoding="utf-8"?>
@@ -512,7 +516,9 @@ async function handleGet(req, res, token, headOnly) {
 
 async function handlePut(req, res, token) {
   const { level, parts } = parsePath(req.path);
-  if (level !== 'file') return res.status(409).end();
+  // Only accept files at the correct depth: relationship/entity/year/category/filename
+  // Return 403 (not 409) so Explorer shows "no permission" and blocks the drag
+  if (level !== 'file') return res.status(403).end();
 
   const [relName, entityName, year, category, filename] = parts;
 
