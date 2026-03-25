@@ -54,8 +54,9 @@ test.describe('CRM — Company detail page', () => {
   test('company detail page shows a tab/subtab bar', async ({ page }) => {
     const found = await getCompanyPage(page);
     if (!found) return test.skip(true, 'No companies in the system');
-    const bar = page.locator('.subtab-bar, .tab-bar');
-    await expect(bar).toBeVisible({ timeout: TIMEOUTS.element });
+    // Use tab-item presence instead of container visibility (sticky tab-bar can fail toBeVisible)
+    await page.waitForSelector('.tab-item', { timeout: TIMEOUTS.api });
+    expect(await page.locator('.tab-item').count()).toBeGreaterThan(0);
   });
 
   test('the first subtab is active by default', async ({ page }) => {

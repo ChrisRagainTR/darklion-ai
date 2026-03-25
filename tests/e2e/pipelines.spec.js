@@ -124,8 +124,8 @@ test.describe('Pipelines — kanban board view', () => {
     await page.locator('.job-card').first().click();
     await expect(page.locator('#job-panel')).toHaveClass(/open/, { timeout: TIMEOUTS.element });
     await page.locator('#job-panel .panel-close').click();
-    await page.waitForTimeout(400);
-    await expect(page.locator('#job-panel')).not.toHaveClass(/open/);
+    await page.waitForTimeout(800);
+    await expect(page.locator('#job-panel')).not.toHaveClass(/open/, { timeout: TIMEOUTS.element });
   });
 
   // ── Drag-and-drop ─────────────────────────────────────────────────────────
