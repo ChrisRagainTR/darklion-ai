@@ -184,6 +184,30 @@ router.post('/send', async (req, res) => {
         const lastName = (recipient.last_name || '').trim();
         const fullName = recipient.display_name || `${firstName} ${lastName}`.trim();
         const relationshipName = (recipient.relationship_name || '').trim();
+
+        // Build matched company names for {Company Names} tag
+        // Find pipeline_stage filters and look up companies in that pipeline for this person's relationship
+        let matchedCompanyNames = recipient.company_names || '';
+        try {
+          const pipelineFilter = (Array.isArray(filters) ? filters : []).find(f => f.type === 'pipeline_stage' && f.value);
+          if (pipelineFilter && recipient.relationship_id) {
+            const pipeId = Array.isArray(pipelineFilter.value) ? pipelineFilter.value[0] : pipelineFilter.value;
+            const stageIds = Array.isArray(pipelineFilter.value2)
+              ? pipelineFilter.value2.map(Number).filter(n => !isNaN(n))
+              : (pipelineFilter.value2 ? [parseInt(pipelineFilter.value2)].filter(n => !isNaN(n)) : []);
+            let matchQuery, matchParams;
+            if (stageIds.length) {
+              matchQuery = `SELECT c.company_name FROM companies c JOIN pipeline_jobs pj ON pj.entity_id = c.id AND pj.entity_type = 'company' WHERE pj.instance_id = $1 AND pj.current_stage_id = ANY($2::int[]) AND c.relationship_id = $3 ORDER BY c.company_name`;
+              matchParams = [pipeId, stageIds, recipient.relationship_id];
+            } else {
+              matchQuery = `SELECT c.company_name FROM companies c JOIN pipeline_jobs pj ON pj.entity_id = c.id AND pj.entity_type = 'company' WHERE pj.instance_id = $1 AND c.relationship_id = $2 ORDER BY c.company_name`;
+              matchParams = [pipeId, recipient.relationship_id];
+            }
+            const { rows: matchedCos } = await pool.query(matchQuery, matchParams);
+            if (matchedCos.length) matchedCompanyNames = matchedCos.map(r => r.company_name).join(', ');
+          }
+        } catch(e) { /* non-blocking */ }
+
         const personalizedMessage = message.trim()
           .replace(/\{First Name\}/gi, firstName)
           .replace(/\{Last Name\}/gi, lastName)
@@ -193,7 +217,10 @@ router.post('/send', async (req, res) => {
           .replace(/\{Relationship Name\}/gi, relationshipName)
           .replace(/\{relationship_name\}/gi, relationshipName)
           .replace(/\{Firm Name\}/gi, firmName)
-          .replace(/\{firm_name\}/gi, firmName);
+          .replace(/\{firm_name\}/gi, firmName)
+          .replace(/\{Company Names\}/gi, matchedCompanyNames)
+          .replace(/\{company_names\}/gi, matchedCompanyNames)
+          .replace(/\{Companies\}/gi, matchedCompanyNames);
 
         // Insert message
         await pool.query(
@@ -547,6 +574,7 @@ function buildAudienceQuery(firmId, filters = [], countOnly = false) {
       'person' AS entity_type,
       p.first_name,
       p.last_name,
+      p.relationship_id,
       (p.first_name || ' ' || p.last_name) AS display_name,
       p.email,
       r.name AS relationship_name,
