@@ -65,8 +65,30 @@ async function fireTrigger(firmId, triggerKey, personId, context = {}) {
         [cfg.pipeline_instance_id, personId]
       );
 
-      if (!jobRows[0]) continue;
-      const job = jobRows[0];
+      let job = jobRows[0];
+
+      // Auto-create a card if none exists for this person in this pipeline
+      if (!job) {
+        const { rows: newJobRows } = await pool.query(
+          `INSERT INTO pipeline_jobs (instance_id, entity_type, entity_id, current_stage_id, job_status)
+           VALUES ($1, 'person', $2, $3, 'active')
+           RETURNING id, current_stage_id`,
+          [cfg.pipeline_instance_id, personId, cfg.stage_id]
+        );
+        // Log the creation
+        await pool.query(
+          `INSERT INTO pipeline_job_history (job_id, from_stage_id, to_stage_id, moved_by, note)
+           VALUES ($1, NULL, $2, NULL, $3)`,
+          [newJobRows[0].id, cfg.stage_id, `Auto-created + placed: trigger "${triggerKey}"`]
+        );
+        moved.push({
+          pipeline: cfg.pipeline_name,
+          from_stage: null,
+          to_stage: cfg.stage_name,
+          created: true,
+        });
+        continue; // skip the move logic below — already in the right stage
+      }
 
       // Skip if already in the target stage
       if (job.current_stage_id === cfg.stage_id) continue;
