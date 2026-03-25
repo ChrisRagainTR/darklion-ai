@@ -389,7 +389,7 @@
         </div>
         <div class="form-group"><label>Title</label><input type="text" class="form-control" id="nd-title" placeholder="e.g. 2024 Individual Return"></div>
       </div>
-      <div class="form-group"><label>Intro Note (shown to client)</label><textarea class="form-control" id="nd-intro" rows="3" placeholder="Please review and sign your tax return…"></textarea></div>
+      <div class="form-group"><label>Message to Client <span style="font-weight:400;color:var(--muted);">(shown in the portal — edit as needed)</span></label><textarea class="form-control" id="nd-intro" rows="9" style="font-size:0.88rem;line-height:1.6;"></textarea></div>
       <div class="form-group"><label>Review Document (PDF for client to review)</label>
         <select class="form-control" id="nd-review-doc"><option value="">— Select document —</option></select>
       </div>
@@ -1635,6 +1635,11 @@
     }
     yearSel.value = String(cy - 1);
     document.getElementById('nd-title').value = String(cy - 1) + ' Tax Return Delivery';
+    const introEl = document.getElementById('nd-intro');
+    if (introEl && !introEl.value) {
+      const coName = (companyData && companyData.company_name) || 'your company';
+      introEl.value = 'Dear Client,\n\nThe ' + String(cy - 1) + ' tax return for ' + coName + ' has been prepared and is ready for your review. Please take a moment to carefully review all information for accuracy.\n\nOnce you have reviewed the return, you will have the opportunity to either approve it and provide your electronic signature, or request changes if anything needs to be corrected.\n\nIf you have any questions prior to signing, please don\'t hesitate to reach out to our office directly.\n\nThank you for trusting Sentinel Wealth & Tax with your tax preparation.';
+    }
 
     // Load all company docs
     try {

@@ -178,6 +178,46 @@ function scheduleAt10PM() {
       console.error('[scheduler] Daily summary job error:', e.message);
     }
 
+    // ── Archive pipeline jobs sitting in terminal stages ──────────────────
+    try {
+      const { rows: terminalJobs } = await pool.query(`
+        SELECT pj.id, pj.entity_type, pj.entity_id, pj.instance_id, pj.current_stage_id,
+               pi.firm_id, pi.name AS instance_name, pi.tax_year,
+               pt.name AS template_name
+        FROM pipeline_jobs pj
+        JOIN pipeline_stages ps ON ps.id = pj.current_stage_id
+        JOIN pipeline_instances pi ON pi.id = pj.instance_id
+        JOIN pipeline_templates pt ON pt.id = pi.template_id
+        WHERE ps.is_terminal = true
+          AND pj.job_status NOT IN ('archived', 'complete')
+      `);
+
+      let archived = 0;
+      for (const job of terminalJobs) {
+        try {
+          await pool.query(
+            `UPDATE pipeline_jobs SET job_status = 'archived', updated_at = NOW() WHERE id = $1`,
+            [job.id]
+          );
+          const taxYearInt = job.tax_year ? parseInt(job.tax_year) : null;
+          await pool.query(
+            `INSERT INTO pipeline_completions
+               (firm_id, entity_type, entity_id, pipeline_instance_id, pipeline_name, tax_year, job_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT DO NOTHING`,
+            [job.firm_id, job.entity_type, job.entity_id, job.instance_id,
+             job.instance_name || job.template_name, taxYearInt, job.id]
+          );
+          archived++;
+        } catch(e) {
+          console.error(`[scheduler] Archive job ${job.id} error:`, e.message);
+        }
+      }
+      if (archived > 0) console.log(`[scheduler] Archived ${archived} pipeline jobs in terminal stages`);
+    } catch(e) {
+      console.error('[scheduler] Pipeline archival job error:', e.message);
+    }
+
     // Schedule next run (tomorrow at 10 PM)
     scheduleAt10PM();
   }, msUntil);

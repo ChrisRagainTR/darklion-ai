@@ -455,7 +455,7 @@
         '</div>' +
         '<div class="col-cards" id="cards-' + stage.id + '">';
 
-      stageJobs.forEach(function(job) { html += renderCard(job); });
+      stageJobs.forEach(function(job) { html += renderCard(job, stage.is_terminal); });
       if (!stageJobs.length) { html += '<div class="drop-placeholder">Drop here</div>'; }
 
       html += '</div></div>';
@@ -478,7 +478,7 @@
     'relationship':{ label: 'Relationship', color: '#e91e8c' },  // hot pink
   };
 
-  function renderCard(job) {
+  function renderCard(job, isTerminal) {
     var name = esc(job.entity_name || '#' + job.entity_id);
     var updates = job.recent_updates || [];
     var due = job.due_date ? formatDate(job.due_date) : '';
@@ -504,8 +504,13 @@
       '</div>';
     }).join('') : '';
 
+    var terminalNote = isTerminal
+      ? '<div style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem;opacity:0.7;">🏁 Archiving tonight at 10 PM</div>'
+      : '';
+
     return '<div class="job-card" data-job-id="' + job.id + '" draggable="true" onclick="openPanel(' + job.id + ')"' + statusAttr + '>' +
       '<div class="job-name">' + pill + name + '</div>' +
+      terminalNote +
       updatesHtml +
       '<div class="job-meta" style="margin-top:0.35rem;">' +
         (due ? '<span class="job-due' + (overdue ? ' overdue' : '') + '">📅 ' + due + '</span>' : '') +

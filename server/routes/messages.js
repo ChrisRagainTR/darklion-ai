@@ -26,7 +26,7 @@ const _pendingNotifications = new Map();
  * - Cancels if client was active in portal in last 30 minutes
  * - Enforces 2-hour cooldown between notifications to same person
  */
-function scheduleClientNotification({ threadId, personId, toEmail, toName, firmName }) {
+function scheduleClientNotification({ threadId, personId, toEmail, toName, firmName, messagePreview }) {
   if (!toEmail) return;
 
   if (_pendingNotifications.has(personId)) {
@@ -67,11 +67,16 @@ function scheduleClientNotification({ threadId, personId, toEmail, toName, firmN
         return;
       }
 
+      // Build message preview — show first 300 chars, truncate cleanly
+      const preview = messagePreview
+        ? (messagePreview.length > 300 ? messagePreview.slice(0, 297).trimEnd() + '…' : messagePreview)
+        : 'You have a new message from your advisor.';
+
       await sendPortalNotification({
         to: toEmail,
         name: toName,
         firmName,
-        message: 'You have a new message from your advisor. Log in to view it.',
+        message: preview,
         portalUrl: APP_URL + '/portal',
       });
 
@@ -741,6 +746,7 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
         toEmail: thread.email,
         toName: `${thread.first_name} ${thread.last_name}`,
         firmName: thread.firm_name,
+        messagePreview: body ? body.trim() : null,
       });
     }
 
