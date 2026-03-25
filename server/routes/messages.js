@@ -446,7 +446,8 @@ router.get('/:threadId', async (req, res) => {
     const { rows: threadRows } = await pool.query(
       `SELECT mt.*, p.first_name, p.last_name, p.email,
               fu.name as staff_name, fu.display_name as staff_display_name,
-              (mt.staff_user_id != $3) as is_participant_check
+              (mt.staff_user_id != $3) as is_participant_check,
+              (SELECT COUNT(*) > 0 FROM messages m WHERE m.thread_id = mt.id AND m.message_type = 'task') as has_task_messages
        FROM message_threads mt
        JOIN people p ON p.id = mt.person_id
        LEFT JOIN firm_users fu ON fu.id = mt.staff_user_id
@@ -529,6 +530,7 @@ router.get('/:threadId', async (req, res) => {
       subject: thread.subject,
       status: thread.status,
       category: thread.category,
+      hasTaskMessages: thread.has_task_messages === true || thread.has_task_messages === 'true',
       staffUserId: thread.staff_user_id,
       isParticipant: thread.is_participant_check || false,
       staffName: thread.staff_display_name || thread.staff_name || null,

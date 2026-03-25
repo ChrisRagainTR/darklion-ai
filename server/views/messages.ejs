@@ -655,6 +655,11 @@ async function loadThread(threadId, silent = false) {
         <button class="btn btn-sm btn-outline" onclick="archiveCurrentThread()">${data.isParticipant ? 'Remove' : 'Archive'}</button>
       </div>
     `;
+    // Hide reply box for task threads — tasks are read-only notifications
+    const isTaskThread = data.category === 'internal' && data.hasTaskMessages;
+    const replyBoxEl = document.getElementById('replyBox');
+    if (replyBoxEl) replyBoxEl.style.display = isTaskThread ? 'none' : '';
+
     // Auto-set internal for shared threads (checkbox is hidden but still drives is_internal on send)
     const internalToggle = document.getElementById('internalToggle');
     if (internalToggle) {
