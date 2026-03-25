@@ -121,11 +121,11 @@ router.put('/templates/:id', async (req, res) => {
     const tmpl = await getTemplate(req.firm.id, req.params.id);
     if (!tmpl) return res.status(404).json({ error: 'Template not found' });
 
-    const { name = tmpl.name, description = tmpl.description, entity_type = tmpl.entity_type } = req.body;
+    const { name = tmpl.name, description = tmpl.description, entity_type = tmpl.entity_type, default_year = tmpl.default_year } = req.body;
     const { rows } = await pool.query(
-      `UPDATE pipeline_templates SET name=$1, description=$2, entity_type=$3, updated_at=NOW()
-       WHERE id=$4 RETURNING *`,
-      [name, description, entity_type, tmpl.id]
+      `UPDATE pipeline_templates SET name=$1, description=$2, entity_type=$3, default_year=$4, updated_at=NOW()
+       WHERE id=$5 RETURNING *`,
+      [name, description, entity_type, default_year || null, tmpl.id]
     );
     res.json(rows[0]);
   } catch (e) {

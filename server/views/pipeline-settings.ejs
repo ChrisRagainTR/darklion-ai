@@ -222,6 +222,17 @@
     </div>
   </div>
 
+  <!-- ══ DEFAULT YEAR ══ -->
+  <div class="ps-section">
+    <div class="ps-section-title">📅 Default Year</div>
+    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+      <select id="default-year-sel" class="add-stage-input" style="max-width:140px;" onchange="saveDefaultYear(this.value)">
+        <option value="">No default</option>
+      </select>
+      <span style="font-size:0.78rem;color:var(--muted);">When you open this pipeline, it jumps straight to this year.</span>
+    </div>
+  </div>
+
   <!-- ══ STAGE GRID ══ -->
   <div class="ps-section">
     <div class="ps-section-title">🗂️ Stages</div>
@@ -311,6 +322,18 @@
       if (instance.tax_year) nameParts.push(instance.tax_year);
       document.getElementById('ps-pipeline-name').textContent = nameParts.join(' · ');
       document.title = nameParts.join(' · ') + ' Settings — DarkLion';
+
+      // Populate default year selector (current year ± 3)
+      var defaultYear = (instance.template && instance.template.default_year) || '';
+      var yearSel = document.getElementById('default-year-sel');
+      var thisYear = new Date().getFullYear();
+      for (var y = thisYear - 2; y <= thisYear + 3; y++) {
+        var opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        if (String(y) === String(defaultYear)) opt.selected = true;
+        yearSel.appendChild(opt);
+      }
 
       // Parse trigger configs
       smartStageConfigs = {};
@@ -545,6 +568,13 @@
         renderAutomationTable();
         window.toast && window.toast('Stage added');
       })
+      .catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  // ── DEFAULT YEAR ──
+  window.saveDefaultYear = function(year) {
+    apiPipelines('PUT', '/templates/' + templateId, { default_year: year || null })
+      .then(function() { window.toast && window.toast(year ? '📅 Default year set to ' + year : 'Default year cleared'); })
       .catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
   };
 

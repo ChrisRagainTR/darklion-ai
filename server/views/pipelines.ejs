@@ -377,9 +377,15 @@
     }
     sel.innerHTML = opts;
 
-    // Get template name
+    // Get template name + default year
     api('GET', '/templates/' + templateId).then(function(tmpl) {
       document.getElementById('board-title').textContent = tmpl.name;
+      // Use template's default year if set
+      if (tmpl.default_year) {
+        currentYear = parseInt(tmpl.default_year);
+        var sel = document.getElementById('year-sel');
+        if (sel) sel.value = currentYear;
+      }
       // Ensure instance for current year
       return api('POST', '/templates/' + templateId + '/ensure-instance', { year: currentYear });
     }).then(function(inst) {
