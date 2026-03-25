@@ -444,12 +444,14 @@ router.get('/:threadId', async (req, res) => {
       try { const { rows: ur } = await pool.query('SELECT id FROM firm_users WHERE firm_id=$1 AND email=$2 LIMIT 1', [firmId, req.firm.email]); if (ur[0]) callerUserId = ur[0].id; } catch(e) {}
     }
     const { rows: threadRows } = await pool.query(
-      `SELECT mt.*, p.first_name, p.last_name, p.email,
+      `SELECT mt.*, p.first_name, p.last_name, p.email, p.phone, p.credentials,
+              r.name AS relationship_name,
               fu.name as staff_name, fu.display_name as staff_display_name,
               (mt.staff_user_id != $3) as is_participant_check,
               (SELECT COUNT(*) > 0 FROM messages m WHERE m.thread_id = mt.id AND m.message_type = 'task') as has_task_messages
        FROM message_threads mt
        JOIN people p ON p.id = mt.person_id
+       LEFT JOIN relationships r ON r.id = p.relationship_id
        LEFT JOIN firm_users fu ON fu.id = mt.staff_user_id
        WHERE mt.id = $1 AND mt.firm_id = $2`,
       [threadId, firmId, callerUserId || 0]
@@ -541,6 +543,9 @@ router.get('/:threadId', async (req, res) => {
         firstName: thread.first_name,
         lastName: thread.last_name,
         email: thread.email,
+        phone: thread.phone || null,
+        credentials: thread.credentials || null,
+        relationshipName: thread.relationship_name || null,
       },
       messages,
     });

@@ -655,12 +655,18 @@ async function loadThread(threadId, silent = false) {
     ` : `
       <div class="detail-header-left">
         <div class="detail-header-person">
-          <a href="/crm/person/${data.person?.id}">${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}</a>
+          <a href="/crm/person/${data.person?.id}" style="font-size:1.05rem;font-weight:700;color:var(--text);">
+            ${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}${data.person?.credentials ? `<span style="color:var(--gold);font-size:0.78rem;font-weight:400;margin-left:0.4rem;">${esc(data.person.credentials)}</span>` : ''}
+          </a>
         </div>
-        <div class="detail-header-subject">${esc(data.subject || '(no subject)')}${data.staffName ? ` · <span style="color:var(--gold);">${esc(data.staffName)}</span>` : ''}</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:0.1rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
+          ${data.person?.email ? `<span>${esc(data.person.email)}</span>` : ''}
+          ${data.person?.phone ? `<span style="color:var(--gold);">${esc(data.person.phone)}</span>` : ''}
+          ${data.person?.relationshipName ? `<span style="color:var(--muted);">· ${esc(data.person.relationshipName)}</span>` : ''}
+        </div>
       </div>
       <div class="detail-header-controls">
-        ${data.isParticipant ? `<span style="font-size:0.72rem;background:rgba(138,99,241,0.15);color:#a78bfa;border:1px solid rgba(138,99,241,0.3);border-radius:4px;padding:0.2rem 0.6rem;font-weight:600;">Shared thread — internal notes only</span>` : ''}
+        ${data.isParticipant ? `<span style="font-size:0.72rem;background:rgba(138,99,241,0.15);color:#a78bfa;border:1px solid rgba(138,99,241,0.3);border-radius:4px;padding:0.2rem 0.6rem;font-weight:600;">Shared</span>` : ''}
         <button class="btn btn-sm btn-outline" onclick="archiveCurrentThread()">${data.isParticipant ? 'Remove' : 'Archive'}</button>
       </div>
     `;
