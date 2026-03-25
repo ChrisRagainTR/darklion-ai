@@ -122,6 +122,10 @@ function showLoginWindow() {
   }
 
   var appPath = app.getAppPath();
+  // When built with directories.app=app, getAppPath() returns the app/ dir directly.
+  // In dev (npm start from root), it returns the project root, so we need app/ subdir.
+  // Detect by checking if preload.js exists at appPath directly.
+  var preloadBase = require('fs').existsSync(path.join(appPath, 'preload.js')) ? appPath : path.join(appPath, 'app');
 
   loginWindow = new BrowserWindow({
     width: 420,
@@ -131,13 +135,13 @@ function showLoginWindow() {
     title: 'DarkLion Drive -- Login',
     backgroundColor: '#0f1724',
     webPreferences: {
-      preload: path.join(appPath, 'app', 'preload.js'),
+      preload: path.join(preloadBase, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false
     }
   });
 
-  loginWindow.loadFile(path.join(appPath, 'app', 'renderer', 'login.html'));
+  loginWindow.loadFile(path.join(preloadBase, 'renderer', 'login.html'));
   loginWindow.setMenuBarVisibility(false);
 
   loginWindow.on('closed', function() {
