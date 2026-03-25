@@ -89,11 +89,11 @@ test.describe('Pipelines — kanban board view', () => {
     await expect(page.locator('.col-count').first()).toBeVisible({ timeout: TIMEOUTS.element });
   });
 
-  test('board bar shows "+ Add Job" and "⚙ Edit Stages" buttons', async ({ page }) => {
+  test('board bar shows "+ Add Job" button and "⚙️ Settings" link', async ({ page }) => {
     const found = await openFirstBoard(page);
     if (!found) return test.skip(true, 'No pipelines exist');
     await expect(page.locator('button:has-text("+ Add Job")')).toBeVisible({ timeout: TIMEOUTS.element });
-    await expect(page.locator('button:has-text("Edit Stages")')).toBeVisible({ timeout: TIMEOUTS.element });
+    await expect(page.locator('#settings-link, a:has-text("Settings")')).toBeVisible({ timeout: TIMEOUTS.element });
   });
 
   test('board bar back button returns to the list view', async ({ page }) => {
@@ -159,5 +159,75 @@ test.describe('Pipelines — kanban board view', () => {
     const countDecreased = newFirstColCount < initialCount;
 
     expect(cardInCol1 || countDecreased).toBeTruthy();
+  });
+});
+
+test.describe('Pipelines — settings page', () => {
+  test('⚙️ Settings link navigates to pipeline settings page', async ({ page }) => {
+    const found = await openFirstBoard(page);
+    if (!found) return test.skip(true, 'No pipelines exist');
+    const settingsLink = page.locator('#settings-link');
+    await expect(settingsLink).toBeVisible({ timeout: TIMEOUTS.element });
+    await settingsLink.click();
+    await page.waitForURL('**/pipelines/**/settings', { timeout: TIMEOUTS.navigation });
+    await expect(page).toHaveURL(/\/pipelines\/\d+\/settings/);
+  });
+
+  test('pipeline settings page shows Stages section', async ({ page }) => {
+    const found = await openFirstBoard(page);
+    if (!found) return test.skip(true, 'No pipelines exist');
+    await page.locator('#settings-link').click();
+    await page.waitForURL('**/pipelines/**/settings', { timeout: TIMEOUTS.navigation });
+    await expect(page.locator('.ps-section-title').filter({ hasText: 'Stages' })).toBeVisible({ timeout: TIMEOUTS.api });
+  });
+
+  test('pipeline settings page shows Automation section', async ({ page }) => {
+    const found = await openFirstBoard(page);
+    if (!found) return test.skip(true, 'No pipelines exist');
+    await page.locator('#settings-link').click();
+    await page.waitForURL('**/pipelines/**/settings', { timeout: TIMEOUTS.navigation });
+    await expect(page.locator('.ps-section-title').filter({ hasText: 'Automation' })).toBeVisible({ timeout: TIMEOUTS.api });
+  });
+
+  test('pipeline settings page shows stage cards in a grid', async ({ page }) => {
+    const found = await openFirstBoard(page);
+    if (!found) return test.skip(true, 'No pipelines exist');
+    await page.locator('#settings-link').click();
+    await page.waitForURL('**/pipelines/**/settings', { timeout: TIMEOUTS.navigation });
+    await page.waitForSelector('.stage-card', { timeout: TIMEOUTS.api }).catch(() => null);
+    const cards = page.locator('.stage-card');
+    const count = await cards.count();
+    expect(count).toBeGreaterThan(0);
+  });
+
+  test('last stage card shows 🏁 Final stage label', async ({ page }) => {
+    const found = await openFirstBoard(page);
+    if (!found) return test.skip(true, 'No pipelines exist');
+    await page.locator('#settings-link').click();
+    await page.waitForURL('**/pipelines/**/settings', { timeout: TIMEOUTS.navigation });
+    await page.waitForSelector('.stage-card', { timeout: TIMEOUTS.api }).catch(() => null);
+    await expect(page.locator('.stage-card').last().locator(':has-text("Final stage")')).toBeVisible({ timeout: TIMEOUTS.element });
+  });
+
+  test('Back to Pipeline link returns to kanban board (not pipeline list)', async ({ page }) => {
+    const found = await openFirstBoard(page);
+    if (!found) return test.skip(true, 'No pipelines exist');
+    const settingsLink = page.locator('#settings-link');
+    const href = await settingsLink.getAttribute('href');
+    await settingsLink.click();
+    await page.waitForURL('**/pipelines/**/settings', { timeout: TIMEOUTS.navigation });
+    await page.locator('#back-to-pipeline').click();
+    await page.waitForURL('**/pipelines**', { timeout: TIMEOUTS.navigation });
+    // Should contain ?instance= param and show the board
+    await expect(page.locator('#view-board')).toBeVisible({ timeout: TIMEOUTS.api });
+  });
+
+  test('automation cards render with trigger and action columns', async ({ page }) => {
+    const found = await openFirstBoard(page);
+    if (!found) return test.skip(true, 'No pipelines exist');
+    await page.locator('#settings-link').click();
+    await page.waitForURL('**/pipelines/**/settings', { timeout: TIMEOUTS.navigation });
+    await page.waitForSelector('#automation-list', { timeout: TIMEOUTS.api });
+    await expect(page.locator('#automation-list')).toBeVisible({ timeout: TIMEOUTS.element });
   });
 });

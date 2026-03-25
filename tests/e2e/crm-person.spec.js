@@ -102,6 +102,48 @@ test.describe('CRM — Person detail page', () => {
     if (!found) return test.skip(true, 'No people in the system');
     await page.locator('.tab-item').filter({ hasText: 'Notes' }).click();
     await expect(page.locator('.tab-item').filter({ hasText: 'Notes' })).toHaveClass(/active/);
+    await expect(page.locator('#tab-notes')).toHaveClass(/active/, { timeout: TIMEOUTS.element });
+  });
+
+  test('clicking "Organizers" tab switches active tab to #tab-organizers', async ({ page }) => {
+    const found = await getPersonPage(page);
+    if (!found) return test.skip(true, 'No people in the system');
+    await page.locator('.tab-item').filter({ hasText: 'Organizers' }).click();
+    await expect(page.locator('#tab-organizers')).toHaveClass(/active/, { timeout: TIMEOUTS.element });
+    await expect(page.locator('#tab-overview')).not.toHaveClass(/active/);
+  });
+
+  test('"Organizers" tab shows Stanford Tax Organizer card', async ({ page }) => {
+    const found = await getPersonPage(page);
+    if (!found) return test.skip(true, 'No people in the system');
+    await page.locator('.tab-item').filter({ hasText: 'Organizers' }).click();
+    await expect(page.locator('#tab-organizers .card-title')).toContainText('Stanford Tax Organizer', { timeout: TIMEOUTS.element });
+  });
+
+  test('clicking "Workflow" tab switches active tab to #tab-workflow', async ({ page }) => {
+    const found = await getPersonPage(page);
+    if (!found) return test.skip(true, 'No people in the system');
+    await page.locator('.tab-item').filter({ hasText: 'Workflow' }).click();
+    await expect(page.locator('#tab-workflow')).toHaveClass(/active/, { timeout: TIMEOUTS.element });
+    await expect(page.locator('#tab-overview')).not.toHaveClass(/active/);
+  });
+
+  test('"Workflow" tab shows Active Pipelines header or empty state', async ({ page }) => {
+    const found = await getPersonPage(page);
+    if (!found) return test.skip(true, 'No people in the system');
+    await page.locator('.tab-item').filter({ hasText: 'Workflow' }).click();
+    await expect(page.locator('#tab-workflow')).toHaveClass(/active/, { timeout: TIMEOUTS.element });
+    // Either shows pipeline cards or the empty state
+    const hasContent = await page.locator('#workflow-list, #workflow-loading').isVisible();
+    expect(hasContent).toBeTruthy();
+  });
+
+  test('"Notes" tab shows Internal Notes textarea', async ({ page }) => {
+    const found = await getPersonPage(page);
+    if (!found) return test.skip(true, 'No people in the system');
+    await page.locator('.tab-item').filter({ hasText: 'Notes' }).click();
+    await expect(page.locator('#tab-notes')).toHaveClass(/active/, { timeout: TIMEOUTS.element });
+    await expect(page.locator('#notes-ta-full')).toBeVisible({ timeout: TIMEOUTS.element });
   });
 
   // ── Edit modal ───────────────────────────────────────────────────────────
