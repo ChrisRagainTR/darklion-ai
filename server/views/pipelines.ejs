@@ -234,13 +234,26 @@
 
 <!-- ═══════════════ EDIT STAGES MODAL ═══════════════ -->
 <div class="modal-overlay" id="edit-stages-modal">
-  <div class="modal-box" style="max-width:520px;">
+  <div class="modal-box" style="max-width:560px;">
     <h2>Edit Stages</h2>
     <div id="stages-list" style="margin-bottom:1rem;"></div>
-    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+    <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
       <input type="text" id="new-stage-name" placeholder="New stage name" style="flex:1;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.45rem 0.65rem;border-radius:6px;font-size:0.85rem;outline:none;" />
       <button class="btn btn-gold btn-sm" onclick="addStage()">Add</button>
     </div>
+
+    <!-- ⚡ Smart Stages Section -->
+    <div id="smart-stages-section">
+      <div style="border-top:1px solid var(--border);padding-top:1rem;margin-bottom:0.75rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+          <span style="font-size:1rem;">⚡</span>
+          <span style="font-weight:700;font-size:0.92rem;">Smart Stages</span>
+        </div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.75rem;">Automatically move cards to a stage when a trigger fires (e.g. tax return deployed, proposal signed).</div>
+        <div id="smart-stages-list"><div style="color:var(--muted);font-size:0.82rem;">Open a pipeline to configure smart stages.</div></div>
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('edit-stages-modal')">Done</button>
     </div>
@@ -383,8 +396,16 @@
   };
 
   function loadBoard() {
-    return api('GET', '/instances/' + currentInstanceId).then(function(data) {
-      instanceData = data;
+    return Promise.all([
+      api('GET', '/instances/' + currentInstanceId),
+      fetch('/api/pipeline-triggers/stage-config/' + currentInstanceId, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      }).then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; }),
+    ]).then(function(results) {
+      instanceData = results[0];
+      var configs = results[1];
+      smartStageConfigs = {};
+      configs.forEach(function(c) { smartStageConfigs[c.stage_id] = { configId: c.id, triggerKey: c.trigger_key }; });
       renderKanban();
     });
   }
@@ -411,12 +432,15 @@
     stages.forEach(function(stage) {
       var stageJobs = byStage[stage.id] || [];
       var color = stage.color || 'var(--gold)';
+      var smartBadge = smartStageConfigs[stage.id]
+        ? '<span title="Smart stage: auto-moves cards here" style="font-size:0.78rem;opacity:0.8;margin-left:0.3rem;cursor:default;">⚡</span>'
+        : '';
       html += '<div class="kanban-col" data-stage-id="' + stage.id + '"' +
         ' ondragover="event.preventDefault();this.classList.add(\'drag-over\')"' +
         ' ondragleave="this.classList.remove(\'drag-over\')"' +
         ' ondrop="handleDrop(event,' + stage.id + ')">' +
         '<div class="col-head">' +
-          '<div class="col-name" style="color:' + color + '">' + esc(stage.name) + '</div>' +
+          '<div class="col-name" style="color:' + color + '">' + esc(stage.name) + smartBadge + '</div>' +
           '<span class="col-count">' + stageJobs.length + '</span>' +
         '</div>' +
         '<div class="col-cards" id="cards-' + stage.id + '">';
@@ -743,22 +767,36 @@
   // ── EDIT STAGES ───────────────────────────────────
   window.openEditStagesModal = function() {
     if (!currentTemplateId) return;
+    // Load smart stages config alongside stages
+    if (currentInstanceId) {
+      api('GET', '/templates/' + currentTemplateId).then(function(tmpl) {
+        loadSmartStages(tmpl.stages || []);
+      }).catch(function() {});
+    }
     renderStagesList();
     openModal('edit-stages-modal');
   };
 
   window.openEditStagesForTemplate = function(templateId) {
     currentTemplateId = templateId;
+    smartStageConfigs = {};
     renderStagesList();
     openModal('edit-stages-modal');
   };
+
+  // Smart stages state
+  var availableTriggers = [];
+  var smartStageConfigs = {}; // stageId -> { configId, triggerKey }
 
   function renderStagesList() {
     api('GET', '/templates/' + currentTemplateId).then(function(tmpl) {
       var stages = tmpl.stages || [];
       var html = stages.length ? stages.map(function(s, i) {
+        var hasTrigger = !!smartStageConfigs[s.id];
+        var triggerBadge = hasTrigger ? '<span title="Smart stage configured" style="font-size:0.85rem;margin-left:0.25rem;">⚡</span>' : '';
         return '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">' +
           '<input type="text" value="' + esc(s.name) + '" style="flex:1;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.6rem;border-radius:6px;font-size:0.85rem;outline:none;" onblur="renameStage(' + s.id + ',this.value)" />' +
+          triggerBadge +
           '<button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:1rem;padding:0 0.3rem;" onclick="deleteStage(' + s.id + ')" title="Delete stage">✕</button>' +
         '</div>';
       }).join('') : '<p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.75rem;">No stages yet.</p>';
@@ -766,9 +804,94 @@
       // If board is showing, update it after stage changes
       if (currentInstanceId) {
         document.getElementById('stages-list').dataset.needsReload = '1';
+        renderSmartStages(stages);
+      } else {
+        document.getElementById('smart-stages-list').innerHTML = '<div style="color:var(--muted);font-size:0.82rem;">Open a pipeline to configure smart stages.</div>';
       }
     }).catch(function(e) { window.toast('Failed to load stages: ' + e.message, 'error'); });
   }
+
+  function loadSmartStages(stages) {
+    if (!currentInstanceId) return;
+    // Load available triggers + existing configs in parallel
+    Promise.all([
+      fetch('/api/pipeline-triggers', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r) { return r.ok ? r.json() : []; }),
+      fetch('/api/pipeline-triggers/stage-config/' + currentInstanceId, { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r) { return r.ok ? r.json() : []; })
+    ]).then(function(results) {
+      availableTriggers = results[0];
+      var configs = results[1];
+      // Build lookup: stageId -> config
+      smartStageConfigs = {};
+      configs.forEach(function(c) { smartStageConfigs[c.stage_id] = { configId: c.id, triggerKey: c.trigger_key }; });
+      renderSmartStages(stages);
+    }).catch(function(e) { console.error('loadSmartStages error:', e); });
+  }
+
+  function renderSmartStages(stages) {
+    if (!currentInstanceId || !stages || !stages.length) {
+      document.getElementById('smart-stages-list').innerHTML = stages && stages.length
+        ? '<div style="color:var(--muted);font-size:0.82rem;">Open a pipeline to configure smart stages.</div>'
+        : '<div style="color:var(--muted);font-size:0.82rem;">Add stages first.</div>';
+      return;
+    }
+    var html = '<table style="width:100%;font-size:0.82rem;border-collapse:collapse;">';
+    html += '<tr><th style="text-align:left;color:var(--muted);font-weight:600;padding:0.25rem 0.4rem;">Stage</th><th style="text-align:left;color:var(--muted);font-weight:600;padding:0.25rem 0.4rem;">Triggered by</th></tr>';
+    stages.forEach(function(s) {
+      var cfg = smartStageConfigs[s.id];
+      var currentKey = cfg ? cfg.triggerKey : '';
+      var selectHtml = '<select onchange="saveSmartStage(' + s.id + ', this.value, ' + (cfg ? cfg.configId : 'null') + ')" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.3rem 0.5rem;border-radius:6px;font-size:0.78rem;outline:none;width:100%;">';
+      selectHtml += '<option value="">— None —</option>';
+      // Group by category
+      var byCategory = {};
+      availableTriggers.forEach(function(t) {
+        if (!byCategory[t.category]) byCategory[t.category] = [];
+        byCategory[t.category].push(t);
+      });
+      Object.keys(byCategory).sort().forEach(function(cat) {
+        selectHtml += '<optgroup label="' + esc(cat) + '">';
+        byCategory[cat].forEach(function(t) {
+          var sel = t.key === currentKey ? ' selected' : '';
+          selectHtml += '<option value="' + esc(t.key) + '"' + sel + '>' + esc(t.label) + '</option>';
+        });
+        selectHtml += '</optgroup>';
+      });
+      selectHtml += '</select>';
+      html += '<tr>' +
+        '<td style="padding:0.3rem 0.4rem;font-weight:600;white-space:nowrap;">' + esc(s.name) + '</td>' +
+        '<td style="padding:0.3rem 0.4rem;">' + selectHtml + '</td>' +
+        '</tr>';
+    });
+    html += '</table>';
+    document.getElementById('smart-stages-list').innerHTML = html;
+  }
+
+  window.saveSmartStage = function(stageId, triggerKey, existingConfigId) {
+    if (!currentInstanceId) return;
+    if (!triggerKey) {
+      // Remove config if exists
+      if (existingConfigId) {
+        fetch('/api/pipeline-triggers/stage-config/' + existingConfigId, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function() {
+          delete smartStageConfigs[stageId];
+          window.toast('Smart stage removed');
+          renderStagesList(); // refresh badges
+        }).catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+      }
+      return;
+    }
+    fetch('/api/pipeline-triggers/stage-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ pipeline_instance_id: currentInstanceId, stage_id: stageId, trigger_key: triggerKey })
+    }).then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error || 'Failed'); }); })
+    .then(function(cfg) {
+      smartStageConfigs[stageId] = { configId: cfg.id, triggerKey: cfg.trigger_key };
+      window.toast('⚡ Smart stage saved');
+      renderStagesList(); // refresh badges
+    }).catch(function(e) { window.toast('Failed: ' + e.message, 'error'); });
+  };
 
   window.renameStage = function(stageId, name) {
     if (!name.trim()) return;
