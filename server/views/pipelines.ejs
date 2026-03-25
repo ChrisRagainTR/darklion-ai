@@ -520,7 +520,7 @@
       : '';
 
     var invoiceBadge = job.billing_method === 'client_invoice'
-      ? '<span style="display:inline-block;margin-left:0.4rem;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.62rem;font-weight:700;color:#fff;background:rgba(74,158,255,0.75);letter-spacing:0.03em;vertical-align:middle;line-height:1.5;">INVOICE</span>'
+      ? '<span style="display:inline-block;margin-left:0.4rem;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.62rem;font-weight:700;color:#fff;background:var(--red);letter-spacing:0.03em;vertical-align:middle;line-height:1.5;">INVOICE</span>'
       : '';
 
     return '<div class="job-card" data-job-id="' + job.id + '" draggable="true" onclick="openPanel(' + job.id + ')"' + statusAttr + '>' +
