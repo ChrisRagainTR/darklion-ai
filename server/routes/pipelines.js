@@ -844,6 +844,7 @@ router.post('/jobs/:jobId/move', async (req, res) => {
             tax_year: instInfo.tax_year || '',
             stage_name: newStage ? newStage.name : '',
             triggered_by_user_id: req.firm.userId || null,
+            job_id: job.id,
           }
         ).catch(e => console.error('[actions] non-fatal:', e));
       }

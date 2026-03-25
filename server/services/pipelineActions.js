@@ -193,7 +193,7 @@ async function executeStageActions(firmId, stageId, pipelineInstanceId, entityTy
         await executePortalMessage(action, firmId, entityType, entityId, entityName, pipelineInstanceId, context);
         executed.push({ id: action.id, type: 'portal_message', ok: true });
       } else if (action.action_type === 'staff_task') {
-        await executeStaffTask(action, firmId, entityType, entityId, entityName, pipelineInstanceId, context);
+        await executeStaffTask(action, firmId, entityType, entityId, entityName, pipelineInstanceId, context, context.job_id || null);
         executed.push({ id: action.id, type: 'staff_task', ok: true });
       }
     } catch (err) {
@@ -259,7 +259,7 @@ async function executePortalMessage(action, firmId, entityType, entityId, entity
   }
 }
 
-async function executeStaffTask(action, firmId, entityType, entityId, entityName, pipelineInstanceId, context) {
+async function executeStaffTask(action, firmId, entityType, entityId, entityName, pipelineInstanceId, context, jobId) {
   const config = action.config || {};
   const taskNameTemplate = config.name || 'Staff Task';
   const assignees = Array.isArray(config.assignees) ? config.assignees : [];
@@ -277,7 +277,8 @@ async function executeStaffTask(action, firmId, entityType, entityId, entityName
   };
 
   const taskName = applyMergeTags(taskNameTemplate, tags);
-  const pipelineLink = `${APP_URL}/pipelines?instance=${pipelineInstanceId}`;
+  const jobSuffix = jobId ? `&job=${jobId}` : '';
+  const pipelineLink = `${APP_URL}/pipelines?instance=${pipelineInstanceId}${jobSuffix}`;
   const messageBody = `📋 ${taskName} — ${entityName}\n\n[View in Pipeline →](${pipelineLink})`;
 
   // Find a person to anchor the thread to (required by schema)

@@ -419,6 +419,11 @@
       smartStageConfigs = {};
       configs.forEach(function(c) { if (!smartStageConfigs[c.stage_id]) smartStageConfigs[c.stage_id] = []; smartStageConfigs[c.stage_id].push({ configId: c.id, triggerKey: c.trigger_key }); });
       renderKanban();
+      // Auto-open job panel if ?job=ID is in the URL
+      var jobParam = new URLSearchParams(window.location.search).get('job');
+      if (jobParam) {
+        setTimeout(function() { renderPanel(parseInt(jobParam)); }, 300);
+      }
     });
   }
 
