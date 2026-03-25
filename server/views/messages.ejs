@@ -480,16 +480,13 @@ function switchTab(tab) {
 }
 
 function updateTabCounts() {
-  const msgUnread = allThreads
-    .filter(t => !t.hasTaskMessages || t.category !== 'internal')
-    .reduce((sum, t) => sum + (t.unreadCount || 0), 0);
-  const taskUnread = allThreads
-    .filter(t => t.hasTaskMessages && t.category === 'internal')
-    .reduce((sum, t) => sum + (t.unreadCount || 0), 0);
+  // Show total thread count (not just unread) for each tab
+  const msgCount = allThreads.filter(t => !t.hasTaskMessages || t.category !== 'internal').length;
+  const taskCount = allThreads.filter(t => t.hasTaskMessages && t.category === 'internal').length;
   const msgEl = document.getElementById('tabCountMessages');
   const taskEl = document.getElementById('tabCountTasks');
-  if (msgEl) msgEl.textContent = msgUnread || 0;
-  if (taskEl) taskEl.textContent = taskUnread || 0;
+  if (msgEl) msgEl.textContent = msgCount;
+  if (taskEl) taskEl.textContent = taskCount;
 }
 
 function renderInbox() {
@@ -512,7 +509,10 @@ function renderInbox() {
   }
 
   document.getElementById('inboxList').innerHTML = threads.map(t => {
-    const name = esc((t.person?.firstName || '') + ' ' + (t.person?.lastName || ''));
+    // For task threads, show the subject (entity name) instead of the anchor person's name
+    const isTaskThread = t.hasTaskMessages && t.category === 'internal';
+    const personName = esc((t.person?.firstName || '') + ' ' + (t.person?.lastName || ''));
+    const name = isTaskThread ? esc(t.subject || 'Task') : personName;
     const sharedBadge = t.isParticipant
       ? `<span style="font-size:0.65rem;background:rgba(138,99,241,0.15);color:#a78bfa;border:1px solid rgba(138,99,241,0.3);border-radius:4px;padding:0.1rem 0.4rem;font-weight:600;">Shared${t.sharedByName ? ' by ' + esc(t.sharedByName.split(' ')[0]) : ''}</span>`
       : '';
@@ -525,7 +525,7 @@ function renderInbox() {
         <span>${name} ${sharedBadge}${taskBadge}</span>
         <span style="font-size:0.7rem;color:var(--muted);">${relTime(t.lastMessageAt)}</span>
       </div>
-      <div class="thread-card-subject">${esc(t.subject || '(no subject)')}</div>
+      ${!isTaskThread ? `<div class="thread-card-subject">${esc(t.subject || '(no subject)')}</div>` : ''}
       <div class="thread-card-preview">${esc(t.lastPreview || '')}</div>
       <div class="thread-card-meta">
         ${t.unreadCount > 0 ? `<span class="unread-count-badge">${t.unreadCount} new</span>` : ''}
