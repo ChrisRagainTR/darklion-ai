@@ -824,6 +824,88 @@ async function initDB() {
       UNIQUE(thread_id, firm_user_id)
     );
     CREATE INDEX IF NOT EXISTS idx_thread_participants_user ON thread_participants(firm_user_id, firm_id) WHERE archived_at IS NULL;
+
+    -- ===================== PIPELINE TRIGGERS & ACTIONS =====================
+
+    -- Named trigger types (seed rows)
+    CREATE TABLE IF NOT EXISTS pipeline_triggers (
+      key TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      category TEXT DEFAULT ''
+    );
+    INSERT INTO pipeline_triggers (key, label, category) VALUES
+      ('tax-return-sent',         'Tax Return Sent',            'tax'),
+      ('tax-return-approved',     'Tax Return Approved',        'tax'),
+      ('tax-return-signed',       'Tax Return Signed',          'tax'),
+      ('engagement-letter-sent',  'Engagement Letter Sent',     'engagement'),
+      ('engagement-letter-signed','Engagement Letter Signed',   'engagement'),
+      ('proposal-sent',           'Proposal Sent',              'proposals'),
+      ('proposal-accepted',       'Proposal Accepted',          'proposals'),
+      ('portal-first-login',      'Client First Portal Login',  'portal'),
+      ('portal-message-received', 'Client Sent a Message',      'portal')
+    ON CONFLICT (key) DO NOTHING;
+
+    -- Maps trigger keys → pipeline stages (max 2 per stage)
+    CREATE TABLE IF NOT EXISTS pipeline_stage_triggers (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER NOT NULL REFERENCES firms(id),
+      pipeline_instance_id INTEGER NOT NULL REFERENCES pipeline_instances(id),
+      stage_id INTEGER NOT NULL REFERENCES pipeline_stages(id),
+      trigger_key TEXT NOT NULL REFERENCES pipeline_triggers(key),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE (firm_id, pipeline_instance_id, trigger_key)
+    );
+
+    -- Audit log for fired triggers
+    CREATE TABLE IF NOT EXISTS pipeline_trigger_log (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER,
+      trigger_key TEXT,
+      person_id INTEGER,
+      pipeline_instance_id INTEGER,
+      from_stage_id INTEGER,
+      to_stage_id INTEGER,
+      job_id INTEGER,
+      fired_at TIMESTAMPTZ DEFAULT NOW(),
+      context JSONB
+    );
+
+    -- Actions that fire when a card enters a stage
+    CREATE TABLE IF NOT EXISTS pipeline_stage_actions (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER NOT NULL REFERENCES firms(id),
+      pipeline_instance_id INTEGER NOT NULL REFERENCES pipeline_instances(id),
+      stage_id INTEGER NOT NULL REFERENCES pipeline_stages(id),
+      action_type TEXT NOT NULL CHECK(action_type IN ('portal_message', 'staff_task')),
+      config JSONB DEFAULT '{}',
+      position INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    -- Pipeline completion history (terminal stage archival)
+    CREATE TABLE IF NOT EXISTS pipeline_completions (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER NOT NULL REFERENCES firms(id),
+      pipeline_instance_id INTEGER NOT NULL REFERENCES pipeline_instances(id),
+      stage_id INTEGER NOT NULL REFERENCES pipeline_stages(id),
+      job_id INTEGER REFERENCES pipeline_jobs(id),
+      entity_type TEXT DEFAULT 'person',
+      entity_id INTEGER,
+      completed_at TIMESTAMPTZ DEFAULT NOW(),
+      archived_at TIMESTAMPTZ
+    );
+
+    -- is_terminal flag on pipeline_stages
+    DO $$ BEGIN
+      ALTER TABLE pipeline_stages ADD COLUMN IF NOT EXISTS is_terminal BOOLEAN DEFAULT FALSE;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    -- default_year on pipeline_templates
+    DO $$ BEGIN
+      ALTER TABLE pipeline_templates ADD COLUMN IF NOT EXISTS default_year TEXT DEFAULT '';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
   `);
 }
 
