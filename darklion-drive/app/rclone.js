@@ -147,14 +147,17 @@ function doMount(token) {
         // Create a desktop shortcut pointing to the mounted folder
         var desktopPath = path.join(os.homedir(), 'Desktop');
         var shortcutPath = path.join(desktopPath, 'DarkLion Drive.lnk');
-        var psScript = [
+        // Write PS script to temp file to avoid shell quoting issues
+        var psFile = path.join(os.tmpdir(), 'darklion-shortcut.ps1');
+        var psContent = [
           '$ws = New-Object -ComObject WScript.Shell',
-          '$sc = $ws.CreateShortcut("' + shortcutPath.replace(/\\/g, '\\\\') + '")',
-          '$sc.TargetPath = "' + MOUNT_DIR.replace(/\\/g, '\\\\') + '"',
-          '$sc.Description = "DarkLion Drive"',
+          '$sc = $ws.CreateShortcut(\'' + shortcutPath.replace(/'/g, "''") + '\')',
+          '$sc.TargetPath = \'' + MOUNT_DIR.replace(/'/g, "''") + '\'',
+          '$sc.Description = \'DarkLion Drive\'',
           '$sc.Save()'
-        ].join('; ');
-        exec('powershell -NoProfile -Command "' + psScript + '"', function(err) {
+        ].join('\r\n');
+        try { fs.writeFileSync(psFile, psContent, 'utf8'); } catch(e) {}
+        exec('powershell -NoProfile -ExecutionPolicy Bypass -File "' + psFile + '"', function(err) {
           if (err) {
             console.warn('[Rclone] Desktop shortcut creation failed:', err.message);
           } else {
