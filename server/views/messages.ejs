@@ -643,7 +643,16 @@ async function loadThread(threadId, silent = false) {
       loadInboxSummary();
     }
 
-    document.getElementById('detailHeader').innerHTML = `
+    const _isTaskThread = data.category === 'internal' && data.hasTaskMessages;
+    document.getElementById('detailHeader').innerHTML = _isTaskThread ? `
+      <div class="detail-header-left">
+        <div class="detail-header-person" style="color:#60a5fa;">📋 Staff Task</div>
+        <div class="detail-header-subject">${esc(data.subject || 'Task')}</div>
+      </div>
+      <div class="detail-header-controls">
+        <button class="btn btn-sm btn-outline" onclick="archiveCurrentThread()">Archive</button>
+      </div>
+    ` : `
       <div class="detail-header-left">
         <div class="detail-header-person">
           <a href="/crm/person/${data.person?.id}">${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}</a>
