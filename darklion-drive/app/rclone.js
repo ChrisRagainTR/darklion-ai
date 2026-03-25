@@ -38,7 +38,6 @@ var MAX_RETRIES = 3;
 var onDisconnectCallback = null;
 var currentToken = null;
 var retryTimeout = null;
-var DRIVE_LETTER = 'O:';
 var MOUNT_DIR = path.join(os.homedir(), 'DarkLion Drive');
 
 // Kill any running rclone.exe processes that might hold a stale mount
@@ -145,18 +144,23 @@ function doMount(token) {
         clearTimeout(mountTimeout);
         console.log('[Rclone] Mounted successfully at:', MOUNT_DIR);
         console.log('[Rclone] Folder mounted at:', MOUNT_DIR);
-        // Map O: drive via net use directly against our local WebDAV server
-        // \\127.0.0.1@7891\DavWWWRoot is the standard Windows WebDAV UNC format for HTTP
-        exec('net use ' + DRIVE_LETTER + ' /delete /yes', function() {
-          exec('net use ' + DRIVE_LETTER + ' \\\\127.0.0.1@7891\\DavWWWRoot /persistent:no', function(err, stdout, stderr) {
-            if (err) {
-              console.warn('[Rclone] net use WebDAV mapping failed:', stderr || err.message);
-              // Drive letter won't show but folder still works at MOUNT_DIR
-            } else {
-              console.log('[Rclone] Drive letter O: mapped to WebDAV server');
-            }
-            resolve();
-          });
+        // Create a desktop shortcut pointing to the mounted folder
+        var desktopPath = path.join(os.homedir(), 'Desktop');
+        var shortcutPath = path.join(desktopPath, 'DarkLion Drive.lnk');
+        var psScript = [
+          '$ws = New-Object -ComObject WScript.Shell',
+          '$sc = $ws.CreateShortcut("' + shortcutPath.replace(/\\/g, '\\\\') + '")',
+          '$sc.TargetPath = "' + MOUNT_DIR.replace(/\\/g, '\\\\') + '"',
+          '$sc.Description = "DarkLion Drive"',
+          '$sc.Save()'
+        ].join('; ');
+        exec('powershell -NoProfile -Command "' + psScript + '"', function(err) {
+          if (err) {
+            console.warn('[Rclone] Desktop shortcut creation failed:', err.message);
+          } else {
+            console.log('[Rclone] Desktop shortcut created at:', shortcutPath);
+          }
+          resolve();
         });
       }
     }, 4000);
@@ -199,16 +203,19 @@ function unmountDrive() {
     if (retryTimeout) { clearTimeout(retryTimeout); retryTimeout = null; }
     currentToken = null;
     retries = 0;
-    exec('net use ' + DRIVE_LETTER + ' /delete /yes', function() {
-      killStaleRclone().then(resolve);
-    });
+    killStaleRclone().then(resolve);
   });
 }
 
 function openDrive() {
-  exec('explorer.exe ' + DRIVE_LETTER + '\\', function(err) {
-    if (err) exec('explorer.exe "' + MOUNT_DIR + '"', function() {});
-  });
+  var shell = require('electron').shell;
+  if (shell && shell.openPath) {
+    shell.openPath(MOUNT_DIR).catch(function() {
+      exec('explorer.exe "' + MOUNT_DIR + '"', function() {});
+    });
+  } else {
+    exec('explorer.exe "' + MOUNT_DIR + '"', function() {});
+  }
 }
 
 function isRunning() {

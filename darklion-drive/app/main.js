@@ -54,7 +54,7 @@ function createTrayIcon(connected) {
 
 function buildTrayMenu() {
   var statusLabel = isConnected
-    ? 'DarkLion Drive (O:)  Connected'
+    ? 'DarkLion Drive  ✓ Connected'
     : 'DarkLion Drive -- Not Connected';
 
   return Menu.buildFromTemplate([
