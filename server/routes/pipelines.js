@@ -777,6 +777,68 @@ router.delete('/jobs/:jobId', async (req, res) => {
 });
 
 // POST /jobs/:jobId/move
+// POST /jobs/:jobId/migrate-to-next-year — move a held card to Stage 1 of next year's instance
+router.post('/jobs/:jobId/migrate-to-next-year', async (req, res) => {
+  try {
+    const job = await getJob(req.firm.id, req.params.jobId);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+
+    // Verify current stage is hold_for_migration
+    const { rows: [stage] } = await pool.query(
+      'SELECT * FROM pipeline_stages WHERE id = $1', [job.current_stage_id]
+    );
+    if (!stage || !stage.hold_for_migration) {
+      return res.status(400).json({ error: 'Card is not held for migration' });
+    }
+
+    // Get current instance to find template + year
+    const { rows: [instance] } = await pool.query(
+      'SELECT * FROM pipeline_instances WHERE id = $1 AND firm_id = $2',
+      [job.instance_id, req.firm.id]
+    );
+    if (!instance) return res.status(404).json({ error: 'Pipeline instance not found' });
+
+    const currentYear = instance.tax_year ? parseInt(instance.tax_year) : null;
+    if (!currentYear) return res.status(400).json({ error: 'Current pipeline has no tax year — cannot determine next year' });
+
+    const nextYear = String(currentYear + 1);
+
+    // Find next year's instance of the same template
+    const { rows: [nextInstance] } = await pool.query(
+      'SELECT * FROM pipeline_instances WHERE template_id = $1 AND firm_id = $2 AND tax_year = $3',
+      [instance.template_id, req.firm.id, nextYear]
+    );
+    if (!nextInstance) {
+      return res.status(404).json({ error: `No ${nextYear} pipeline found. Create the ${nextYear} pipeline first using "Copy to Year."` });
+    }
+
+    // Get first stage of next instance's template
+    const { rows: [firstStage] } = await pool.query(
+      'SELECT * FROM pipeline_stages WHERE template_id = $1 ORDER BY position ASC, id ASC LIMIT 1',
+      [nextInstance.template_id]
+    );
+    if (!firstStage) return res.status(400).json({ error: 'Next year pipeline has no stages' });
+
+    // Move the card
+    await pool.query(
+      `UPDATE pipeline_jobs SET instance_id = $1, current_stage_id = $2, job_status = 'active', updated_at = NOW() WHERE id = $3`,
+      [nextInstance.id, firstStage.id, job.id]
+    );
+
+    // Log history
+    await pool.query(
+      `INSERT INTO pipeline_job_history (job_id, from_stage_id, to_stage_id, moved_by, note)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [job.id, job.current_stage_id, firstStage.id, req.firm.userId, `Migrated from ${currentYear} to ${nextYear}`]
+    );
+
+    res.json({ ok: true, new_tax_year: nextYear, new_instance_id: nextInstance.id });
+  } catch (e) {
+    console.error('POST /jobs/:jobId/migrate-to-next-year error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.post('/jobs/:jobId/move', async (req, res) => {
   try {
     const job = await getJob(req.firm.id, req.params.jobId);

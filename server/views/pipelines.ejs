@@ -731,7 +731,20 @@
           (h.note ? '<br><em>' + esc(h.note) + '</em>' : '') + '</div></div>';
       }).join('') : '<p style="color:var(--muted);font-size:0.8rem;">No history yet.</p>';
 
+      // Check if card is held for migration
+      var currentStage = stages.find(function(s) { return s.id == job.current_stage_id; });
+      var isHeld = currentStage && currentStage.is_terminal && currentStage.hold_for_migration;
+      var migrateBtn = isHeld
+        ? '<div style="margin-bottom:0.75rem;padding:0.75rem;background:rgba(74,144,217,0.08);border:1px solid rgba(74,144,217,0.25);border-radius:8px;">' +
+            '<div style="font-size:0.78rem;color:#4a90d9;font-weight:600;margin-bottom:0.4rem;">♻️ Card held for migration</div>' +
+            '<div style="font-size:0.76rem;color:var(--muted);margin-bottom:0.6rem;">Move this card to the same pipeline next year.</div>' +
+            '<button class="btn btn-sm" style="background:#4a90d9;color:#fff;border:none;" onclick="migrateCardToNextYear(' + jobId + ')">Move to Next Year →</button>' +
+            '<span id="migrate-msg-' + jobId + '" style="margin-left:0.5rem;font-size:0.76rem;"></span>' +
+          '</div>'
+        : '';
+
       qs('#panel-body').innerHTML =
+        migrateBtn +
         '<div class="panel-field"><label>Client</label>' +
           '<a class="panel-entity-link" href="' + entityUrl(job.entity_type, job.entity_id) + '" target="_blank">' + esc(job.entity_name || '#' + job.entity_id) + '</a>' +
         '</div>' +
@@ -781,6 +794,19 @@
   window.panelScheduleSave = function(jobId) {
     clearTimeout(panelSaveTimer);
     panelSaveTimer = setTimeout(function() { panelSave(jobId); }, 800);
+  };
+
+  window.migrateCardToNextYear = function(jobId) {
+    var msgEl = document.getElementById('migrate-msg-' + jobId);
+    if (msgEl) { msgEl.style.color = 'var(--muted)'; msgEl.textContent = 'Moving…'; }
+    api('POST', '/jobs/' + jobId + '/migrate-to-next-year', {})
+      .then(function(result) {
+        if (msgEl) { msgEl.style.color = 'var(--green)'; msgEl.textContent = '✓ Moved to ' + (result.new_tax_year || 'next year'); }
+        setTimeout(function() { closePanel(); loadBoard(); }, 1200);
+      })
+      .catch(function(e) {
+        if (msgEl) { msgEl.style.color = 'var(--red)'; msgEl.textContent = e.message; }
+      });
   };
 
   window.deleteJob = async function(jobId) {
