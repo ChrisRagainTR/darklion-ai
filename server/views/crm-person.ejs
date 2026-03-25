@@ -481,7 +481,7 @@
   </div>
 
 <div id="tab-organizers" class="tab-content">
-  <div style="max-width:700px;">
+  <div style="max-width:700px;padding:1.5rem;">
     <div class="card">
       <div class="card-title">Stanford Tax Organizer</div>
       <div id="org-stanford-link" style="margin-bottom:1rem;"></div>
@@ -492,7 +492,10 @@
         </div>
         <button class="btn btn-gold btn-sm" onclick="saveStanfordUrl()">Save</button>
       </div>
-      <div style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem;">Paste the client's Stanford Tax organizer link. It will also appear in their portal.</div>
+      <div style="display:flex;align-items:center;gap:1rem;margin-top:0.6rem;">
+        <div style="font-size:0.78rem;color:var(--muted);">Paste the client's Stanford Tax organizer link. It will also appear in their portal.</div>
+        <div class="save-indicator" id="org-save-msg" style="flex-shrink:0;"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -653,11 +656,18 @@
       const urlInput = document.getElementById('stanford-url-input');
       if (urlInput && personData) urlInput.value = personData.stanford_tax_url || '';
       const el = document.getElementById('org-stanford-link');
-      if (el && personData && personData.stanford_tax_url) {
-        el.innerHTML = `<a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
+      if (el) {
+        if (personData && personData.stanford_tax_url) {
+          el.innerHTML = `<a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
+        } else {
+          el.innerHTML = '';
+        }
       }
     }
-    if (name === 'notes' && personData) document.getElementById('notes-ta-full').value = personData.notes || '';
+    if (name === 'notes') {
+      const notesEl = document.getElementById('notes-ta-full');
+      if (notesEl) notesEl.value = (personData && personData.notes) || '';
+    }
     if (name === 'workflow') loadWorkflow();
   }
 
@@ -669,7 +679,14 @@
       const res = await apiFetch(`/api/pipelines/entity-jobs?entity_type=person&entity_id=${personId}`);
       const jobs = await res.json();
       loading.style.display = 'none'; list.style.display = '';
-      if (!jobs.length) { list.innerHTML = '<div style="color:var(--muted);">This person is not in any pipelines yet.</div>'; return; }
+      if (!jobs.length) {
+        list.innerHTML = `<div style="text-align:center;padding:2.5rem 1rem;color:var(--muted);">
+          <div style="font-size:2rem;margin-bottom:0.75rem;">📋</div>
+          <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.4rem;color:var(--text);">No active pipelines</div>
+          <div style="font-size:0.84rem;">Workflows will appear here once this client is added to a pipeline.</div>
+        </div>`;
+        return;
+      }
       list.innerHTML = jobs.map(j => {
         const stageColor = j.stage_color || 'var(--gold)';
         const yearBadge = j.tax_year ? `<span style="font-size:0.72rem;background:rgba(255,255,255,0.06);border-radius:4px;padding:0.1rem 0.45rem;margin-left:0.5rem;color:var(--muted);">${j.tax_year}</span>` : '';
@@ -861,6 +878,9 @@
 
   function renderOverview(p) {
     document.getElementById('notes-ta').value = p.notes || '';
+    // Also seed the full notes textarea in the Notes tab
+    const notesFullEl = document.getElementById('notes-ta-full');
+    if (notesFullEl) notesFullEl.value = p.notes || '';
 
     // ── LEFT COL: Contact Details ──
     const contactEl = document.getElementById('overview-contact-panel');
@@ -1356,14 +1376,15 @@
 
   async function saveStanfordUrl() {
     const url = document.getElementById('stanford-url-input').value.trim();
+    const msgEl = document.getElementById('org-save-msg');
     try {
       await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify({ stanford_tax_url: url }) });
       if (personData) personData.stanford_tax_url = url;
       const el = document.getElementById('org-stanford-link');
       if (el && url) el.innerHTML = `<a href="${esc(url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
       else if (el) el.innerHTML = '';
-      toast('Organizer URL saved');
-    } catch(e) { toast(e.message, 'error'); }
+      if (msgEl) { msgEl.textContent = '✓ Saved'; setTimeout(() => { msgEl.textContent = ''; }, 2500); }
+    } catch(e) { if (msgEl) { msgEl.style.color='var(--red)'; msgEl.textContent='Failed to save'; setTimeout(()=>{ msgEl.textContent=''; msgEl.style.color=''; }, 2500); } }
   }
 
   async function autoSaveNotes(val, force) {
