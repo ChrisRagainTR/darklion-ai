@@ -171,6 +171,7 @@
       <select class="year-sel" id="year-sel" onchange="onYearChange(this.value)"></select>
       <button class="btn btn-gold btn-sm" onclick="openAddJobModal()" style="font-size:0.78rem;">+ Add Job</button>
       <button class="btn btn-outline btn-sm" onclick="openEditStagesModal()" style="font-size:0.78rem;">⚙ Edit Stages</button>
+      <a class="btn btn-outline btn-sm" id="settings-link" href="/pipelines" style="font-size:0.78rem;text-decoration:none;">⚙️ Settings</a>
     </div>
   </div>
   <div id="kanban-wrap" class="kanban-wrap">
@@ -384,6 +385,7 @@
       return api('POST', '/templates/' + templateId + '/ensure-instance', { year: currentYear });
     }).then(function(inst) {
       currentInstanceId = inst.id;
+      var sl = document.getElementById('settings-link'); if (sl) sl.href = '/pipelines/' + inst.id + '/settings';
       return loadBoard();
     }).catch(function(e) {
       document.getElementById('kanban-wrap').innerHTML = '<div class="board-empty"><p style="color:var(--red)">Error: ' + esc(e.message) + '</p></div>';
@@ -395,6 +397,7 @@
     document.getElementById('kanban-wrap').innerHTML = '<div class="board-empty"><p>Loading…</p></div>';
     api('POST', '/templates/' + currentTemplateId + '/ensure-instance', { year: currentYear }).then(function(inst) {
       currentInstanceId = inst.id;
+      var sl = document.getElementById('settings-link'); if (sl) sl.href = '/pipelines/' + inst.id + '/settings';
       return loadBoard();
     }).catch(function(e) { window.toast('Failed to load year: ' + e.message, 'error'); });
   };

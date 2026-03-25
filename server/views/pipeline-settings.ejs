@@ -1,0 +1,516 @@
+<%- include('partials/shell-top', { title: title, activeNav: activeNav }) %>
+
+<style>
+  /* ── PAGE WRAPPER ── */
+  .ps-wrap { padding: 1.5rem 2rem; max-width: 1400px; }
+  .ps-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.75rem; flex-wrap: wrap; }
+  .ps-back { font-size: 0.82rem; color: var(--muted); text-decoration: none; padding: 0.3rem 0.5rem; border-radius: 5px; transition: color 0.15s; }
+  .ps-back:hover { color: var(--gold); }
+  .ps-title { font-size: 1.2rem; font-weight: 800; flex: 1; }
+  .ps-subtitle { font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; }
+
+  /* ── SECTION HEADERS ── */
+  .ps-section { margin-bottom: 2rem; }
+  .ps-section-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
+
+  /* ── STAGE GRID ── */
+  .stage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  @media (min-width: 1200px) {
+    .stage-grid { grid-template-columns: repeat(5, 1fr); }
+  }
+  .stage-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    position: relative;
+  }
+  .stage-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .stage-color-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--gold);
+  }
+  .stage-name-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 0.88rem;
+    font-weight: 600;
+    outline: none;
+    padding: 0.2rem 0.3rem;
+    border-radius: 4px;
+    transition: background 0.15s, border 0.15s;
+    min-width: 0;
+  }
+  .stage-name-input:hover { background: rgba(255,255,255,0.04); }
+  .stage-name-input:focus { background: var(--charcoal); border: 1px solid var(--gold); padding: 0.15rem 0.3rem; }
+  .stage-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .stage-action-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.3rem;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+    line-height: 1;
+  }
+  .stage-action-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+  .stage-action-btn.danger:hover { color: var(--red); background: rgba(245,101,101,0.08); }
+  .stage-terminal-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .stage-terminal-label input[type=checkbox] { cursor: pointer; accent-color: var(--gold); }
+  .stage-terminal-label.is-terminal { color: var(--gold); }
+
+  /* ── ADD STAGE ROW ── */
+  .add-stage-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-top: 0.25rem;
+  }
+  .add-stage-input {
+    flex: 1;
+    max-width: 280px;
+    background: var(--charcoal);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.45rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .add-stage-input:focus { border-color: var(--gold); }
+  .add-stage-input::placeholder { color: var(--muted); }
+
+  /* ── AUTOMATION TABLE ── */
+  .automation-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .automation-table th {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.65rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.1);
+  }
+  .automation-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: top;
+    font-size: 0.85rem;
+  }
+  .automation-table tbody tr:last-child td { border-bottom: none; }
+  .automation-table tbody tr:hover td { background: rgba(255,255,255,0.01); }
+  .at-stage-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    min-width: 120px;
+  }
+  .at-stage-color { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); margin-right: 0.4rem; vertical-align: middle; }
+
+  /* ── TRIGGER CHIPS ── */
+  .trigger-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+  }
+  .trigger-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(201,168,76,0.12);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 12px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    color: var(--gold);
+  }
+  .trigger-chip-remove {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 0;
+    line-height: 1;
+    margin-left: 0.1rem;
+  }
+  .trigger-chip-remove:hover { color: var(--red); }
+  .trigger-add-select {
+    background: var(--charcoal);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.2rem 0.4rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    outline: none;
+    cursor: pointer;
+  }
+  .trigger-add-select:focus { border-color: var(--gold); }
+
+  /* ── ACTIONS PLACEHOLDER ── */
+  .actions-coming-soon {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-style: italic;
+  }
+
+  /* ── LOADING / EMPTY ── */
+  .ps-loading { display: flex; align-items: center; gap: 0.75rem; color: var(--muted); padding: 2rem 0; font-size: 0.88rem; }
+  .ps-empty { color: var(--muted); font-size: 0.85rem; padding: 1rem 0; }
+</style>
+
+<div class="ps-wrap">
+  <!-- Header -->
+  <div class="ps-header">
+    <a class="ps-back" id="back-to-pipeline" href="/pipelines">← Back to Pipeline</a>
+    <span style="color:var(--border);">|</span>
+    <div>
+      <div class="ps-title" id="ps-pipeline-name"><span style="color:var(--muted);">Loading…</span></div>
+      <div class="ps-subtitle">Pipeline Settings</div>
+    </div>
+  </div>
+
+  <!-- ══ STAGE GRID ══ -->
+  <div class="ps-section">
+    <div class="ps-section-title">🗂️ Stages</div>
+    <div class="stage-grid" id="stage-grid">
+      <div class="ps-loading"><div class="loading-spinner"></div> Loading stages…</div>
+    </div>
+    <div class="add-stage-row">
+      <input type="text" id="new-stage-input" class="add-stage-input" placeholder="New stage name…" onkeydown="if(event.key==='Enter')addStage()" />
+      <button class="btn btn-gold btn-sm" onclick="addStage()">+ Add Stage</button>
+    </div>
+  </div>
+
+  <!-- ══ AUTOMATION TABLE ══ -->
+  <div class="ps-section">
+    <div class="ps-section-title">⚡ Automation</div>
+    <table class="automation-table">
+      <thead>
+        <tr>
+          <th style="width:160px;">Stage</th>
+          <th>⚡ Triggers <span style="font-weight:400;font-size:0.68rem;text-transform:none;letter-spacing:0;">(move card here when…)</span></th>
+          <th style="width:320px;">🎯 Actions <span style="font-weight:400;font-size:0.68rem;text-transform:none;letter-spacing:0;">(fire when card arrives)</span></th>
+        </tr>
+      </thead>
+      <tbody id="automation-tbody">
+        <tr><td colspan="3"><div class="ps-loading"><div class="loading-spinner"></div> Loading…</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var token = localStorage.getItem('dl_token');
+  if (!token) { window.location.replace('/login'); return; }
+
+  // Extract instanceId from URL: /pipelines/:instanceId/settings
+  var pathParts = window.location.pathname.split('/');
+  var instanceId = pathParts[2]; // /pipelines/{instanceId}/settings
+
+  var templateId = null;
+  var stages = [];
+  var availableTriggers = [];
+  var smartStageConfigs = {}; // stageId -> [{ configId, triggerKey }]
+
+  // ── Update "Back to Pipeline" link ──
+  document.getElementById('back-to-pipeline').href = '/pipelines'; // will deepen once we know instanceId
+
+  // ── Utility ──
+  function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+  function apiPipelines(method, path, body) {
+    var opts = { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    return fetch('/api/pipelines' + path, opts).then(function(r) {
+      if (r.status === 401) { localStorage.removeItem('dl_token'); window.location.replace('/login'); throw new Error('Unauthorized'); }
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Request failed'); });
+      return r.json();
+    });
+  }
+  function apiTriggers(method, path, body) {
+    var opts = { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    return fetch('/api/pipeline-triggers' + path, opts).then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Request failed'); });
+      return r.json();
+    });
+  }
+
+  // ── LOAD PAGE DATA ──
+  function loadAll() {
+    Promise.all([
+      apiPipelines('GET', '/instances/' + instanceId),
+      apiTriggers('GET', ''),
+      apiTriggers('GET', '/stage-config/' + instanceId)
+    ]).then(function(results) {
+      var instance = results[0];
+      availableTriggers = results[1] || [];
+      var configs = results[2] || [];
+
+      templateId = instance.template_id;
+      stages = instance.stages || [];
+
+      // Set page title
+      var tmplName = (instance.template && instance.template.name) || instance.name || 'Pipeline';
+      var nameParts = [tmplName];
+      if (instance.tax_year) nameParts.push(instance.tax_year);
+      document.getElementById('ps-pipeline-name').textContent = nameParts.join(' · ');
+      document.title = nameParts.join(' · ') + ' Settings — DarkLion';
+
+      // Parse trigger configs
+      smartStageConfigs = {};
+      configs.forEach(function(c) {
+        if (!smartStageConfigs[c.stage_id]) smartStageConfigs[c.stage_id] = [];
+        smartStageConfigs[c.stage_id].push({ configId: c.id, triggerKey: c.trigger_key });
+      });
+
+      renderStageGrid();
+      renderAutomationTable();
+    }).catch(function(e) {
+      document.getElementById('stage-grid').innerHTML = '<div class="ps-empty">Failed to load: ' + esc(e.message) + '</div>';
+      document.getElementById('automation-tbody').innerHTML = '<tr><td colspan="3"><div class="ps-empty">Failed to load.</div></td></tr>';
+    });
+  }
+
+  // ── STAGE GRID ──
+  function renderStageGrid() {
+    if (!stages.length) {
+      document.getElementById('stage-grid').innerHTML = '<div class="ps-empty">No stages yet. Add one below.</div>';
+      return;
+    }
+    var html = stages.map(function(s) {
+      var color = s.color || '#c9a84c';
+      var terminalClass = s.is_terminal ? ' is-terminal' : '';
+      var terminalChecked = s.is_terminal ? ' checked' : '';
+      return '<div class="stage-card" data-stage-id="' + s.id + '">' +
+        '<div class="stage-card-head">' +
+          '<span class="stage-color-dot" style="background:' + esc(color) + ';"></span>' +
+          '<input type="text" class="stage-name-input" value="' + esc(s.name) + '" ' +
+            'onblur="renameStage(' + s.id + ', this)" ' +
+            'onkeydown="if(event.key===\'Enter\')this.blur()" ' +
+            'title="Click to rename" />' +
+        '</div>' +
+        '<label class="stage-terminal-label' + terminalClass + '" title="Archive card when it reaches this stage">' +
+          '<input type="checkbox"' + terminalChecked + ' onchange="toggleTerminal(' + s.id + ', this.checked)" />' +
+          '🏁 Archive on arrival' +
+        '</label>' +
+        '<div class="stage-card-actions">' +
+          '<button class="stage-action-btn" onclick="focusRename(' + s.id + ')" title="Rename">✏️</button>' +
+          '<button class="stage-action-btn danger" onclick="deleteStage(' + s.id + ')" title="Delete stage">🗑️</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    document.getElementById('stage-grid').innerHTML = html;
+  }
+
+  // ── AUTOMATION TABLE ──
+  function renderAutomationTable() {
+    if (!stages.length) {
+      document.getElementById('automation-tbody').innerHTML = '<tr><td colspan="3"><div class="ps-empty">Add stages above to configure automation.</div></td></tr>';
+      return;
+    }
+
+    // Build grouped triggers for dropdowns
+    var byCategory = {};
+    availableTriggers.forEach(function(t) {
+      if (!byCategory[t.category]) byCategory[t.category] = [];
+      byCategory[t.category].push(t);
+    });
+
+    var rows = stages.map(function(s) {
+      var cfgs = smartStageConfigs[s.id] || [];
+      var color = s.color || '#c9a84c';
+
+      // Chips
+      var chips = cfgs.map(function(c) {
+        var label = (availableTriggers.find(function(t) { return t.key === c.triggerKey; }) || {}).label || c.triggerKey;
+        return '<span class="trigger-chip">' +
+          '⚡ ' + esc(label) +
+          '<button class="trigger-chip-remove" onclick="removeTrigger(' + c.configId + ',' + s.id + ')" title="Remove">×</button>' +
+          '</span>';
+      }).join('');
+
+      // Add dropdown (exclude already-used keys)
+      var usedKeys = cfgs.map(function(c) { return c.triggerKey; });
+      var addOpts = '<option value="">+ Add trigger…</option>';
+      Object.keys(byCategory).sort().forEach(function(cat) {
+        var catOpts = byCategory[cat].filter(function(t) { return usedKeys.indexOf(t.key) === -1; });
+        if (!catOpts.length) return;
+        addOpts += '<optgroup label="' + esc(cat) + '">';
+        catOpts.forEach(function(t) { addOpts += '<option value="' + esc(t.key) + '">' + esc(t.label) + '</option>'; });
+        addOpts += '</optgroup>';
+      });
+
+      return '<tr>' +
+        '<td class="at-stage-name"><span class="at-stage-color" style="background:' + esc(color) + ';"></span>' + esc(s.name) + '</td>' +
+        '<td>' +
+          '<div class="trigger-chips" id="chips-' + s.id + '">' +
+            chips +
+            '<select class="trigger-add-select" id="trigger-sel-' + s.id + '" onchange="addTrigger(' + s.id + ', this)">' + addOpts + '</select>' +
+          '</div>' +
+        '</td>' +
+        '<td>' +
+          '<div class="actions-coming-soon">🎯 Coming soon — actions will fire emails, messages, and tasks when a card arrives</div>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+
+    document.getElementById('automation-tbody').innerHTML = rows;
+  }
+
+  // ── STAGE ACTIONS ──
+  window.focusRename = function(stageId) {
+    var card = document.querySelector('[data-stage-id="' + stageId + '"]');
+    if (card) { var inp = card.querySelector('.stage-name-input'); if (inp) { inp.focus(); inp.select(); } }
+  };
+
+  window.renameStage = function(stageId, inputEl) {
+    var name = inputEl.value.trim();
+    if (!name) { inputEl.value = (stages.find(function(s) { return s.id === stageId; }) || {}).name || ''; return; }
+    var stage = stages.find(function(s) { return s.id === stageId; });
+    if (stage && stage.name === name) return; // no change
+    apiPipelines('PUT', '/templates/' + templateId + '/stages/' + stageId, { name: name })
+      .then(function() {
+        if (stage) stage.name = name;
+        // Update automation table row name
+        var td = document.querySelector('#automation-tbody tr td.at-stage-name');
+        // re-render table to reflect name change
+        renderAutomationTable();
+        window.toast && window.toast('Stage renamed');
+      })
+      .catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  window.toggleTerminal = function(stageId, isTerminal) {
+    fetch('/api/pipelines/stages/' + stageId + '/terminal', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ is_terminal: isTerminal })
+    }).then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Failed'); });
+      var stage = stages.find(function(s) { return s.id === stageId; });
+      if (stage) stage.is_terminal = isTerminal;
+      // Update label class
+      var card = document.querySelector('[data-stage-id="' + stageId + '"]');
+      if (card) {
+        var label = card.querySelector('.stage-terminal-label');
+        if (label) { if (isTerminal) label.classList.add('is-terminal'); else label.classList.remove('is-terminal'); }
+      }
+      window.toast && window.toast(isTerminal ? '🏁 Terminal stage set' : 'Terminal removed');
+    }).catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  window.deleteStage = async function(stageId) {
+    if (!await window.dlConfirm('Delete this stage? Jobs in this stage will be moved to the first stage.', { title: 'Delete Stage', confirmLabel: 'Delete', danger: true, icon: '⚠️' })) return;
+    apiPipelines('DELETE', '/templates/' + templateId + '/stages/' + stageId)
+      .then(function() {
+        stages = stages.filter(function(s) { return s.id !== stageId; });
+        if (smartStageConfigs[stageId]) delete smartStageConfigs[stageId];
+        renderStageGrid();
+        renderAutomationTable();
+        window.toast && window.toast('Stage deleted');
+      })
+      .catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  window.addStage = function() {
+    var input = document.getElementById('new-stage-input');
+    var name = input.value.trim();
+    if (!name) { input.focus(); return; }
+    apiPipelines('POST', '/templates/' + templateId + '/stages', { name: name, position: 999 })
+      .then(function(newStage) {
+        input.value = '';
+        stages.push(newStage);
+        renderStageGrid();
+        renderAutomationTable();
+        window.toast && window.toast('Stage added');
+      })
+      .catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  // ── TRIGGER ACTIONS ──
+  window.addTrigger = function(stageId, selectEl) {
+    var triggerKey = selectEl.value;
+    if (!triggerKey) return;
+    apiTriggers('POST', '/stage-config', { pipeline_instance_id: instanceId, stage_id: stageId, trigger_key: triggerKey })
+      .then(function(cfg) {
+        if (!smartStageConfigs[stageId]) smartStageConfigs[stageId] = [];
+        smartStageConfigs[stageId].push({ configId: cfg.id, triggerKey: cfg.trigger_key });
+        renderAutomationTable();
+        window.toast && window.toast('⚡ Trigger added');
+      })
+      .catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); selectEl.value = ''; });
+  };
+
+  window.removeTrigger = function(configId, stageId) {
+    apiTriggers('DELETE', '/stage-config/' + configId)
+      .then(function() {
+        if (smartStageConfigs[stageId]) {
+          smartStageConfigs[stageId] = smartStageConfigs[stageId].filter(function(c) { return c.configId !== configId; });
+          if (!smartStageConfigs[stageId].length) delete smartStageConfigs[stageId];
+        }
+        renderAutomationTable();
+        window.toast && window.toast('Trigger removed');
+      })
+      .catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  // ── INIT ──
+  if (!instanceId || instanceId === 'settings') {
+    document.getElementById('stage-grid').innerHTML = '<div class="ps-empty">Invalid pipeline URL.</div>';
+  } else {
+    loadAll();
+  }
+
+})();
+</script>
+
+<%- include('partials/shell-globals') %>
+<%- include('partials/shell-close') %>
