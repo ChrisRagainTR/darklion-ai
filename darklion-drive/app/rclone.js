@@ -39,7 +39,8 @@ var onDisconnectCallback = null;
 var currentToken = null;
 var retryTimeout = null;
 var DRIVE_LETTER = 'O:';
-var MOUNT_DIR = DRIVE_LETTER; // Mount directly to drive letter in fixed-disk mode (no --network-mode)
+var UNC_PATH = '\\\\darklion\\docs'; // --network-mode requires UNC path, not drive letter
+var MOUNT_DIR = UNC_PATH;
 
 // Kill any running rclone.exe processes that might hold a stale mount
 function killStaleRclone() {
@@ -135,8 +136,18 @@ function doMount(token) {
         mounted = true;
         clearTimeout(mountTimeout);
         console.log('[Rclone] Mounted successfully at:', MOUNT_DIR);
-        console.log('[Rclone] Mounted successfully at:', DRIVE_LETTER);
-        resolve();
+        console.log('[Rclone] UNC share mounted at:', UNC_PATH);
+        // Map UNC share to O: so it shows in Explorer This PC
+        exec('net use ' + DRIVE_LETTER + ' /delete /yes', function() {
+          exec('net use ' + DRIVE_LETTER + ' ' + UNC_PATH, function(err, stdout, stderr) {
+            if (err) {
+              console.warn('[Rclone] net use mapping failed:', stderr || err.message);
+            } else {
+              console.log('[Rclone] Drive letter mapped:', DRIVE_LETTER, '->', UNC_PATH);
+            }
+            resolve();
+          });
+        });
       }
     }, 4000);
 
@@ -178,12 +189,16 @@ function unmountDrive() {
     if (retryTimeout) { clearTimeout(retryTimeout); retryTimeout = null; }
     currentToken = null;
     retries = 0;
-    killStaleRclone().then(resolve);
+    exec('net use ' + DRIVE_LETTER + ' /delete /yes', function() {
+      killStaleRclone().then(resolve);
+    });
   });
 }
 
 function openDrive() {
-  exec('explorer.exe ' + DRIVE_LETTER + '\\', function() {});
+  exec('explorer.exe ' + DRIVE_LETTER + '\\', function(err) {
+    if (err) exec('explorer.exe ' + UNC_PATH, function() {});
+  });
 }
 
 function isRunning() {
