@@ -152,7 +152,7 @@ async function buildTree(token) {
       if (!name) continue;
       const docsRaw = await apiGet('/api/documents?owner_type=person&owner_id=' + p.id, token).catch(function() { return []; });
       const docs = Array.isArray(docsRaw) ? docsRaw : [];
-      entities.set(name, { id: p.id, type: 'person', docs: groupDocs(docs) });
+      entities.set(name, { id: p.id, type: 'person', docs: groupDocs(docs, 'person') });
     }
 
     for (const c of companies) {
@@ -160,7 +160,7 @@ async function buildTree(token) {
       if (!name) continue;
       const docsRaw = await apiGet('/api/documents?owner_type=company&owner_id=' + c.id, token).catch(function() { return []; });
       const docs = Array.isArray(docsRaw) ? docsRaw : [];
-      entities.set(name, { id: c.id, type: 'company', docs: groupDocs(docs) });
+      entities.set(name, { id: c.id, type: 'company', docs: groupDocs(docs, 'company') });
     }
 
     tree.set(safeName(rel.name), { id: rel.id, entities });
@@ -170,18 +170,44 @@ async function buildTree(token) {
   return tree;
 }
 
-function groupDocs(docs) {
+// Always show these years and categories — empty folders included so you can drag files in
+const SCAFFOLD_YEARS = [];
+(function() {
+  const currentYear = new Date().getFullYear();
+  for (let y = currentYear; y >= 2018; y--) SCAFFOLD_YEARS.push(String(y));
+})();
+
+const PERSON_CATS   = ['tax', 'other'];
+const COMPANY_CATS  = ['tax', 'bookkeeping', 'private', 'other'];
+
+function groupDocs(docs, entityType) {
   // Returns: Map<year, Map<category, doc[]>>
+  // Always scaffolds all years + relevant categories so empty folders appear
+  const cats = entityType === 'company' ? COMPANY_CATS : PERSON_CATS;
   const yearMap = new Map();
+
+  // Pre-populate scaffold
+  for (const yr of SCAFFOLD_YEARS) {
+    const catMap = new Map();
+    for (const cat of cats) catMap.set(cat, []);
+    yearMap.set(yr, catMap);
+  }
+
+  // Populate with actual docs
   for (const doc of (docs || [])) {
-    const year = doc.year || 'Unknown';
-    const cat = doc.folder_category || 'General';
+    const year = String(doc.year || 'Unknown');
+    const cat = doc.folder_category || 'other';
     if (cat === 'message_docs') continue; // hide internal docs
-    if (!yearMap.has(year)) yearMap.set(year, new Map());
+    if (!yearMap.has(year)) {
+      const catMap = new Map();
+      for (const c of cats) catMap.set(c, []);
+      yearMap.set(year, catMap);
+    }
     const catMap = yearMap.get(year);
     if (!catMap.has(cat)) catMap.set(cat, []);
     catMap.get(cat).push(doc);
   }
+
   return yearMap;
 }
 
