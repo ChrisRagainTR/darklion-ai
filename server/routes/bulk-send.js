@@ -201,6 +201,7 @@ router.post('/send', async (req, res) => {
             to: recipient.email,
             name: recipient.display_name,
             firmName,
+            firmId,
             message: 'You have a new message from your advisor. Log in to view it.',
             portalUrl: APP_URL + '/portal',
           }).catch(e => console.error('[bulk-send] notify error:', e.message));

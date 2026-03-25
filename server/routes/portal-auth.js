@@ -263,6 +263,7 @@ router.post('/forgot-password', async (req, res) => {
           to: person.email,
           name: `${person.first_name} ${person.last_name}`.trim(),
           firmName,
+          firmId: person.firm_id,
           resetUrl,
         });
       } catch (emailErr) {
@@ -417,6 +418,7 @@ router.post('/send-invite', requireFirm, async (req, res) => {
         to: person.email,
         name: `${person.first_name} ${person.last_name}`.trim(),
         firmName: person.firm_name,
+        firmId: person.firm_id,
         inviteUrl,
       });
     } catch (emailErr) {
