@@ -3,6 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const { fireTrigger } = require('../services/pipelineTriggers');
 
 // GET /:token — get proposal by public token
 router.get('/:token', async (req, res) => {
@@ -252,6 +253,27 @@ router.post('/:token/sign', async (req, res) => {
         `UPDATE proposals SET status = 'signed', updated_at = NOW() WHERE id = $1`,
         [prop[0].id]
       );
+
+      // Fire proposal_signed trigger for all people in this proposal's relationship (non-blocking)
+      try {
+        const { rows: relPeople } = await pool.query(
+          `SELECT p.id AS person_id, pr.firm_id
+           FROM proposals pr
+           JOIN relationships r ON r.id = pr.relationship_id
+           JOIN people p ON (p.relationship_id = r.id OR
+             p.id IN (SELECT person_id FROM person_company_access pca
+                      JOIN companies c ON c.id = pca.company_id
+                      WHERE c.relationship_id = r.id))
+           WHERE pr.id = $1`,
+          [prop[0].id]
+        );
+        for (const row of relPeople) {
+          fireTrigger(row.firm_id, 'proposal_signed', row.person_id, { proposal_id: prop[0].id })
+            .catch(e => console.error('[proposals-public] fireTrigger proposal_signed non-fatal:', e));
+        }
+      } catch (e) {
+        console.error('[proposals-public] proposal_signed trigger lookup non-fatal:', e);
+      }
     }
 
     res.json({ ok: true, complete: allDone });

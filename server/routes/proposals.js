@@ -4,6 +4,30 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const { pool } = require('../db');
+const { fireTrigger } = require('../services/pipelineTriggers');
+
+// Helper: fire trigger for all people in a proposal's relationship (non-blocking)
+async function fireProposalTrigger(firmId, triggerKey, proposalId, context = {}) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT p.id AS person_id
+       FROM proposals pr
+       JOIN relationships r ON r.id = pr.relationship_id
+       JOIN people p ON (p.relationship_id = r.id OR
+         p.id IN (SELECT person_id FROM person_company_access pca
+                  JOIN companies c ON c.id = pca.company_id
+                  WHERE c.relationship_id = r.id))
+       WHERE pr.id = $1 AND pr.firm_id = $2`,
+      [proposalId, firmId]
+    );
+    for (const row of rows) {
+      fireTrigger(firmId, triggerKey, row.person_id, { proposal_id: proposalId, ...context })
+        .catch(e => console.error(`[proposals] fireTrigger ${triggerKey} non-fatal:`, e));
+    }
+  } catch (e) {
+    console.error('[proposals] fireProposalTrigger non-fatal:', e);
+  }
+}
 
 // GET / — list proposals for firm
 router.get('/', async (req, res) => {
@@ -205,6 +229,12 @@ router.put('/:id([0-9]+)', async (req, res) => {
         id, firmId,
       ]
     );
+
+    // Fire proposal_sent trigger when status becomes 'sent' (non-blocking)
+    if (newStatus === 'sent' && rows[0].relationship_id) {
+      fireProposalTrigger(firmId, 'proposal_sent', parseInt(id), { status: newStatus });
+    }
+
     res.json(rows[0]);
   } catch (err) {
     console.error('PUT /proposals/:id error:', err);

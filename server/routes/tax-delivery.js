@@ -4,6 +4,7 @@ const { Router } = require('express');
 const { pool } = require('../db');
 const { getSignedDownloadUrl } = require('../services/s3');
 const { sendEmail, sendPortalNotification } = require('../services/email');
+const { fireTrigger } = require('../services/pipelineTriggers');
 
 const router = Router();
 
@@ -336,6 +337,14 @@ router.post('/:id/send', async (req, res) => {
       } catch (msgErr) {
         console.error('[tax-delivery] create message thread error:', msgErr);
       }
+    }
+
+    // Fire smart pipeline trigger for each signer (non-blocking)
+    for (const signer of signers) {
+      fireTrigger(firmId, 'tax_return_deployed', signer.person_id, {
+        delivery_id: id,
+        tax_year: delivery.tax_year,
+      }).catch(e => console.error('[tax-delivery] fireTrigger non-fatal:', e));
     }
 
     res.json({ ok: true });
