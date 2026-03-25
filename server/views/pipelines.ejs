@@ -435,12 +435,15 @@
       var smartBadge = (smartStageConfigs[stage.id] && smartStageConfigs[stage.id].length)
         ? '<span title="Smart stage: auto-moves cards here" style="font-size:0.78rem;opacity:0.8;margin-left:0.3rem;cursor:default;">⚡</span>'
         : '';
+      var terminalBadge = stage.is_terminal
+        ? '<span title="Terminal stage: cards are archived and completion recorded when reaching here" style="font-size:0.78rem;margin-left:0.3rem;cursor:default;">🏁</span>'
+        : '';
       html += '<div class="kanban-col" data-stage-id="' + stage.id + '"' +
         ' ondragover="event.preventDefault();this.classList.add(\'drag-over\')"' +
         ' ondragleave="this.classList.remove(\'drag-over\')"' +
         ' ondrop="handleDrop(event,' + stage.id + ')">' +
         '<div class="col-head">' +
-          '<div class="col-name" style="color:' + color + '">' + esc(stage.name) + smartBadge + '</div>' +
+          '<div class="col-name" style="color:' + color + '">' + esc(stage.name) + smartBadge + terminalBadge + '</div>' +
           '<span class="col-count">' + stageJobs.length + '</span>' +
         '</div>' +
         '<div class="col-cards" id="cards-' + stage.id + '">';

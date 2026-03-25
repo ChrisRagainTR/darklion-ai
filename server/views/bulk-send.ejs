@@ -584,6 +584,7 @@
           <hr class="filter-type-sep">
           <div class="filter-type-group-label">Pipeline</div>
           <div class="filter-type-option" data-type="pipeline_stage">🔁 Pipeline Stage</div>
+          <div class="filter-type-option" data-type="pipeline_completed">🏁 Pipeline Completed</div>
           <div class="filter-type-option" data-type="proposal_status">📝 Proposal Status</div>
         </div>
       </div>
@@ -712,7 +713,8 @@
 
   // ── State ─────────────────────────────────────────────────────────────────
   let filterData = {
-    relationships: [], pipelines: [], serviceTiers: [], billingStatuses: [],
+    relationships: [], pipelines: [], pipelineTemplates: [], completionYears: [],
+    serviceTiers: [], billingStatuses: [],
     templates: [], filingStatuses: [], entityTypes: [], companyStatuses: [],
   };
   let audienceRecipients = [];
@@ -737,8 +739,9 @@
     company_status:  { label: 'Company Status',    icon: '🔖' },
     has_documents:   { label: 'Has Documents',     icon: '📎' },
     portal_activity: { label: 'Portal Activity',   icon: '🟢' },
-    pipeline_stage:  { label: 'Pipeline Stage',    icon: '🔁' },
-    proposal_status: { label: 'Proposal Status',   icon: '📝' },
+    pipeline_stage:     { label: 'Pipeline Stage',     icon: '🔁' },
+    pipeline_completed: { label: 'Pipeline Completed', icon: '🏁' },
+    proposal_status:    { label: 'Proposal Status',    icon: '📝' },
   };
 
   // Labels for filter pills in the send summary
@@ -1014,6 +1017,30 @@
           </select>
           <select class="filter-select-inline" data-field="value2" style="flex:1;min-width:120px;" ${!stageOpts ? 'disabled' : ''}>
             <option value="">Any stage</option>${stageOpts}
+          </select>`;
+        break;
+      }
+      case 'pipeline_completed': {
+        // value = template id, value2 = tax year or 'any'
+        const tmplVal = Array.isArray(filter.value) ? (filter.value[0] || '') : (filter.value || '');
+        const tmplOpts = (filterData.pipelineTemplates || []).map(t =>
+          `<option value="${t.id}"${String(t.id) === String(tmplVal) ? ' selected' : ''}>${escHtml(t.name)}</option>`
+        ).join('');
+        // Build year options: 'any' + distinct years from data + last 5 years
+        const knownYears = filterData.completionYears || [];
+        const currentYear = new Date().getFullYear();
+        const yearSet = new Set([...knownYears, currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4]);
+        const sortedYears = [...yearSet].sort((a, b) => b - a);
+        const yearOpts = sortedYears.map(y =>
+          `<option value="${y}"${String(filter.value2) === String(y) ? ' selected' : ''}>${y}</option>`
+        ).join('');
+        controlsHTML = `${operatorBtn}
+          <select class="filter-select-inline" data-field="value" style="flex:1;min-width:140px;">
+            <option value="">Select pipeline…</option>${tmplOpts}
+          </select>
+          <select class="filter-select-inline" data-field="value2" style="flex:1;min-width:100px;">
+            <option value="any"${(!filter.value2 || filter.value2 === 'any') ? ' selected' : ''}>Any year</option>
+            ${yearOpts}
           </select>`;
         break;
       }

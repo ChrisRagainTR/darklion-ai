@@ -282,6 +282,11 @@
   <div id="workflow-content">
     <div class="loading-state"><div class="loading-spinner"></div><div>Loading pipelines…</div></div>
   </div>
+  <div style="max-width:860px;padding:0 1.5rem 1.5rem;">
+    <div style="font-size:1.05rem;font-weight:700;margin:2rem 0 1rem;">📋 Pipeline History</div>
+    <div id="pipeline-history-loading" style="color:var(--muted);font-size:0.85rem;">Loading…</div>
+    <div id="pipeline-history-list" style="display:none;"></div>
+  </div>
 </div>
 
 <!-- Tab: Notes -->
@@ -1160,6 +1165,47 @@
     } catch(e) {
       el.innerHTML = `<div style="color:var(--muted);padding:1rem;">Failed to load workflow data: ${esc(e.message)}</div>`;
     }
+
+    // Load pipeline history
+    loadPipelineHistory();
+  }
+
+  async function loadPipelineHistory() {
+    const loading = document.getElementById('pipeline-history-loading');
+    const list = document.getElementById('pipeline-history-list');
+    if (!loading || !list) return;
+    loading.style.display = ''; list.style.display = 'none';
+    try {
+      const res = await apiFetch(`/api/pipelines/completions?relationship_id=${relId}`);
+      const data = await res.json();
+      loading.style.display = 'none'; list.style.display = '';
+      const completions = data.completions || [];
+      const activeJobs = data.active_jobs || [];
+      if (!completions.length && !activeJobs.length) {
+        list.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">No pipeline history yet.</div>';
+        return;
+      }
+      const rows = [];
+      completions.forEach(c => {
+        const yr = c.tax_year ? ` ${c.tax_year}` : '';
+        const date = new Date(c.completed_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+        rows.push(`<div style="display:flex;align-items:center;gap:0.75rem;padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span style="font-size:1rem;">✅</span>
+          <span style="flex:1;font-size:0.88rem;font-weight:600;">${esc(c.pipeline_name)}${yr}</span>
+          <span style="font-size:0.78rem;color:var(--muted);">completed ${date}</span>
+        </div>`);
+      });
+      activeJobs.forEach(j => {
+        const yr = j.tax_year ? ` ${j.tax_year}` : '';
+        const stage = j.current_stage_name ? ` → ${j.current_stage_name}` : '';
+        rows.push(`<div style="display:flex;align-items:center;gap:0.75rem;padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span style="font-size:1rem;">🔄</span>
+          <span style="flex:1;font-size:0.88rem;font-weight:600;">${esc(j.pipeline_name)}${yr}</span>
+          <span style="font-size:0.78rem;color:var(--muted);">in progress${esc(stage)}</span>
+        </div>`);
+      });
+      list.innerHTML = rows.join('') || '<div style="color:var(--muted);font-size:0.85rem;">No pipeline history yet.</div>';
+    } catch(e) { loading.textContent = 'Failed to load pipeline history.'; }
   }
 
   // ── Notes ─────────────────────────────────────────────────────────

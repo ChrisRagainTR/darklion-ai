@@ -17,6 +17,14 @@
 
 const { pool } = require('../db');
 
+async function isTerminalStage(stageId) {
+  const { rows } = await pool.query(
+    'SELECT is_terminal FROM pipeline_stages WHERE id = $1',
+    [stageId]
+  );
+  return rows[0]?.is_terminal === true;
+}
+
 /**
  * @param {number} firmId
  * @param {string} triggerKey  e.g. 'tax_return_deployed'
@@ -31,7 +39,8 @@ async function fireTrigger(firmId, triggerKey, personId, context = {}) {
   const { rows: configs } = await pool.query(
     `SELECT pst.id, pst.pipeline_instance_id, pst.stage_id,
             pi.name AS pipeline_name,
-            ps.name AS stage_name
+            ps.name AS stage_name,
+            ps.is_terminal
      FROM pipeline_stage_triggers pst
      JOIN pipeline_instances pi ON pi.id = pst.pipeline_instance_id
      JOIN pipeline_stages ps ON ps.id = pst.stage_id
@@ -83,6 +92,37 @@ async function fireTrigger(firmId, triggerKey, personId, context = {}) {
         [firmId, triggerKey, personId, cfg.pipeline_instance_id,
          job.current_stage_id, cfg.stage_id, job.id, JSON.stringify(context)]
       );
+
+      // 6. Terminal stage check — archive job + record completion
+      try {
+        if (cfg.is_terminal || (await isTerminalStage(cfg.stage_id))) {
+          await pool.query(
+            `UPDATE pipeline_jobs SET job_status = 'archived', updated_at = NOW() WHERE id = $1`,
+            [job.id]
+          );
+          const { rows: instInfo } = await pool.query(
+            `SELECT pi.firm_id, pi.name AS instance_name, pi.tax_year,
+                    pt.name AS template_name
+             FROM pipeline_instances pi
+             JOIN pipeline_templates pt ON pt.id = pi.template_id
+             WHERE pi.id = $1`,
+            [cfg.pipeline_instance_id]
+          );
+          const inst = instInfo[0];
+          if (inst) {
+            const taxYearInt = inst.tax_year ? parseInt(inst.tax_year) : null;
+            await pool.query(
+              `INSERT INTO pipeline_completions
+                 (firm_id, entity_type, entity_id, pipeline_instance_id, pipeline_name, tax_year, job_id)
+               VALUES ($1, 'person', $2, $3, $4, $5, $6)`,
+              [firmId, personId, cfg.pipeline_instance_id,
+               inst.instance_name || inst.template_name, taxYearInt, job.id]
+            );
+          }
+        }
+      } catch (termErr) {
+        console.error(`[pipelineTriggers] terminal check error (non-fatal):`, termErr);
+      }
 
       moved.push({
         pipeline: cfg.pipeline_name,

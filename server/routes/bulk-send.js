@@ -55,9 +55,23 @@ router.get('/filters', async (req, res) => {
     const serviceTiers = [...new Set(relationships.rows.map(r => r.service_tier).filter(Boolean))].sort();
     const billingStatuses = [...new Set(relationships.rows.map(r => r.billing_status).filter(Boolean))].sort();
 
+    // Pipeline templates for completion filter
+    const pipelineTemplates = await pool.query(
+      `SELECT id, name FROM pipeline_templates WHERE firm_id = $1 AND status = 'active' ORDER BY name`,
+      [firmId]
+    );
+
+    // Distinct tax years from completions
+    const completionYears = await pool.query(
+      `SELECT DISTINCT tax_year FROM pipeline_completions WHERE firm_id = $1 AND tax_year IS NOT NULL ORDER BY tax_year DESC`,
+      [firmId]
+    );
+
     res.json({
       relationships: relationships.rows.map(r => ({ id: r.id, name: r.name })),
       pipelines: pipelines.rows,
+      pipelineTemplates: pipelineTemplates.rows,
+      completionYears: completionYears.rows.map(r => r.tax_year),
       serviceTiers,
       billingStatuses,
       templates: templates.rows,
@@ -445,6 +459,41 @@ function buildAudienceQuery(firmId, filters = [], countOnly = false) {
             AND d.firm_id = $1
         )`;
         conditions.push(negate ? `NOT (${cond})` : cond);
+        break;
+      }
+
+      case 'pipeline_completed': {
+        // val = pipeline template id (required), val2 = tax year (optional, 'any' or year number)
+        if (!val) break;
+        const templateId = parseInt(isArray ? val[0] : val);
+        if (isNaN(templateId)) break;
+        const yearVal = val2 && val2 !== 'any' ? parseInt(val2) : null;
+
+        if (yearVal) {
+          const cond = `EXISTS (
+            SELECT 1 FROM pipeline_completions pc
+            JOIN pipeline_instances pi ON pi.id = pc.pipeline_instance_id
+            WHERE pc.firm_id = $1
+              AND pc.entity_type = 'person'
+              AND pc.entity_id = p.id
+              AND pi.template_id = $${paramIdx++}
+              AND pc.tax_year = $${paramIdx++}
+          )`;
+          conditions.push(negate ? `NOT (${cond})` : cond);
+          params.push(templateId);
+          params.push(yearVal);
+        } else {
+          const cond = `EXISTS (
+            SELECT 1 FROM pipeline_completions pc
+            JOIN pipeline_instances pi ON pi.id = pc.pipeline_instance_id
+            WHERE pc.firm_id = $1
+              AND pc.entity_type = 'person'
+              AND pc.entity_id = p.id
+              AND pi.template_id = $${paramIdx++}
+          )`;
+          conditions.push(negate ? `NOT (${cond})` : cond);
+          params.push(templateId);
+        }
         break;
       }
 
