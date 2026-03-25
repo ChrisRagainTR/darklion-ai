@@ -53,6 +53,19 @@ jobs:
       - name: Create auth state directory
         run: mkdir -p tests/.auth
 
+      # ── Warm up dev instance ───────────────────────────────────────────────
+      # Railway dev environment sleeps after inactivity — wake it up before tests
+      - name: Warm up Railway dev instance
+        run: |
+          echo "Warming up $BASE_URL ..."
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BASE_URL/health" || echo "000")
+            echo "Attempt $i: $STATUS"
+            if [ "$STATUS" = "200" ]; then break; fi
+            sleep 5
+          done
+          echo "Warm-up complete"
+
       # ── Run tests ─────────────────────────────────────────────────────────
       # If tests fail the job exits with a non-zero code, blocking the PR merge.
       - name: Run Playwright E2E tests

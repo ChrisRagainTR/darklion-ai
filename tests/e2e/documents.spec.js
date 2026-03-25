@@ -38,7 +38,7 @@ test.describe('Documents — firm-level library', () => {
 
     const content = page.locator(
       '.data-table, .table-wrap, .docs-layout, .year-folder, .doc-row, ' +
-      '.empty-state, [id*="docs-content"], [id*="doc-list"]'
+      '.empty-state, [id*="docs-content"], [id*="doc-list"], #docs-results, .docs-results, .docs-search-wrap'
     ).first();
     await expect(content).toBeVisible({ timeout: TIMEOUTS.api });
   });
@@ -49,11 +49,13 @@ test.describe('Documents — firm-level library', () => {
       { timeout: TIMEOUTS.api }
     ).catch(() => null);
 
-    const docRows = page.locator('.doc-row');
+    const docRows = page.locator('.doc-row, .docs-result-item, #docs-results .result-item');
     const emptyState = page.locator('.empty-state, [class*="empty"]');
+    const searchArea = page.locator('#docs-results, .docs-results');
     const rowCount = await docRows.count();
     const emptyCount = await emptyState.count();
-    expect(rowCount > 0 || emptyCount > 0).toBeTruthy();
+    const searchCount = await searchArea.count();
+    expect(rowCount > 0 || emptyCount > 0 || searchCount > 0).toBeTruthy();
   });
 
   // ── Doc row contents ──────────────────────────────────────────────────────

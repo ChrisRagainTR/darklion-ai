@@ -12,7 +12,7 @@ test.use({ storageState: undefined });
 
 test.describe('Client Portal — login page', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE_URL}/portal/login`, {
+    await page.goto(`${BASE_URL}/client-login`, {
       waitUntil: 'domcontentloaded',
       timeout: TIMEOUTS.navigation,
     });
@@ -23,8 +23,8 @@ test.describe('Client Portal — login page', () => {
     expect(bodyText?.trim().length).toBeGreaterThan(10);
   });
 
-  test('portal URL contains "/portal" (not redirected to staff /login)', async ({ page }) => {
-    expect(page.url()).toContain('/portal');
+  test('portal URL contains "/client-login" or "/portal" (not redirected to staff /login)', async ({ page }) => {
+    expect(page.url().includes('/client-login') || page.url().includes('/portal')).toBeTruthy();
     expect(page.url()).not.toBe(`${BASE_URL}/login`);
   });
 
@@ -78,6 +78,6 @@ test.describe('Client Portal — login page', () => {
     // Should stay on the portal login or show an error
     const url = page.url();
     const errEl = await page.locator('.error, .error-msg, [class*="error"], [class*="alert"], [role="alert"]').count();
-    expect(url.includes('/portal') || errEl > 0).toBeTruthy();
+    expect(url.includes('/client-login') || url.includes('/portal') || errEl > 0).toBeTruthy();
   });
 });
