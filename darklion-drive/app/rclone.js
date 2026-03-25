@@ -39,8 +39,7 @@ var onDisconnectCallback = null;
 var currentToken = null;
 var retryTimeout = null;
 var DRIVE_LETTER = 'O:';
-var UNC_PATH = '\\\\darklion\\docs'; // --network-mode requires UNC path, not drive letter
-var MOUNT_DIR = UNC_PATH;
+var MOUNT_DIR = path.join(os.homedir(), 'DarkLion Drive');
 
 // Kill any running rclone.exe processes that might hold a stale mount
 function killStaleRclone() {
@@ -82,12 +81,21 @@ function doMount(token) {
       return reject(new Error('Cannot write rclone config: ' + e.message));
     }
 
+    // Clean up stale mount directory (rclone requires it to NOT exist)
+    if (fs.existsSync(MOUNT_DIR)) {
+      try {
+        childProcess.execSync(
+          'powershell -NoProfile -Command "Remove-Item -LiteralPath \'' + MOUNT_DIR + '\' -Force -ErrorAction SilentlyContinue"',
+          { timeout: 3000 }
+        );
+      } catch(e) { /* ignore */ }
+    }
+
     var args = [
       'mount',
       'darklion:',
       MOUNT_DIR,
       '--config', configPath,
-      '--network-mode',
       '--volname', 'DarkLion Drive',
       '--vfs-cache-mode', 'writes',
       '--no-modtime',
@@ -136,14 +144,16 @@ function doMount(token) {
         mounted = true;
         clearTimeout(mountTimeout);
         console.log('[Rclone] Mounted successfully at:', MOUNT_DIR);
-        console.log('[Rclone] UNC share mounted at:', UNC_PATH);
-        // Map UNC share to O: so it shows in Explorer This PC
+        console.log('[Rclone] Folder mounted at:', MOUNT_DIR);
+        // Map O: drive via net use directly against our local WebDAV server
+        // \\127.0.0.1@7891\DavWWWRoot is the standard Windows WebDAV UNC format for HTTP
         exec('net use ' + DRIVE_LETTER + ' /delete /yes', function() {
-          exec('net use ' + DRIVE_LETTER + ' ' + UNC_PATH, function(err, stdout, stderr) {
+          exec('net use ' + DRIVE_LETTER + ' \\\\127.0.0.1@7891\\DavWWWRoot /persistent:no', function(err, stdout, stderr) {
             if (err) {
-              console.warn('[Rclone] net use mapping failed:', stderr || err.message);
+              console.warn('[Rclone] net use WebDAV mapping failed:', stderr || err.message);
+              // Drive letter won't show but folder still works at MOUNT_DIR
             } else {
-              console.log('[Rclone] Drive letter mapped:', DRIVE_LETTER, '->', UNC_PATH);
+              console.log('[Rclone] Drive letter O: mapped to WebDAV server');
             }
             resolve();
           });
@@ -197,7 +207,7 @@ function unmountDrive() {
 
 function openDrive() {
   exec('explorer.exe ' + DRIVE_LETTER + '\\', function(err) {
-    if (err) exec('explorer.exe ' + UNC_PATH, function() {});
+    if (err) exec('explorer.exe "' + MOUNT_DIR + '"', function() {});
   });
 }
 
