@@ -14,8 +14,8 @@ module.exports = defineConfig({
   // Match only .spec.js files
   testMatch: '**/*.spec.js',
 
-  // Global timeout per test (30 s)
-  timeout: 30_000,
+  // Global timeout per test (60s in CI to handle Railway cold starts)
+  timeout: process.env.CI ? 60_000 : 30_000,
 
   // Expect timeout for assertions
   expect: {
@@ -65,11 +65,11 @@ module.exports = defineConfig({
       'Accept-Language': 'en-US,en;q=0.9',
     },
 
-    // Navigation timeout
-    navigationTimeout: 30_000,
+    // Navigation timeout (60s in CI)
+    navigationTimeout: process.env.CI ? 60_000 : 30_000,
 
     // Action timeout (clicks, fills, etc.)
-    actionTimeout: 15_000,
+    actionTimeout: process.env.CI ? 30_000 : 15_000,
   },
 
   projects: [
