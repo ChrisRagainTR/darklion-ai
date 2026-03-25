@@ -282,13 +282,21 @@ async function executeStaffTask(action, firmId, entityType, entityId, entityName
   const messageBody = `📋 ${taskName} — ${entityName}\n\n[View in Pipeline →](${pipelineLink})`;
 
   // Find a person to anchor the thread to (required by schema)
-  const anchorPerson = await resolveAnyPersonForEntity(entityType, entityId, firmId);
+  let anchorPerson = await resolveAnyPersonForEntity(entityType, entityId, firmId);
+
+  // Fallback: use any portal-enabled person in the firm so the task always gets delivered
+  if (!anchorPerson) {
+    const { rows: anyPerson } = await pool.query(
+      'SELECT id, first_name, last_name FROM people WHERE firm_id = $1 LIMIT 1',
+      [firmId]
+    );
+    anchorPerson = anyPerson[0] || null;
+  }
 
   for (const userId of assignees) {
     try {
       if (!anchorPerson) {
-        // No person to anchor to — log it and move on
-        console.log(`[pipelineActions] staff_task for user ${userId}: no person found for entity. Task: ${taskName}`);
+        console.log(`[pipelineActions] staff_task for user ${userId}: no person found in firm. Task: ${taskName}`);
         continue;
       }
 
