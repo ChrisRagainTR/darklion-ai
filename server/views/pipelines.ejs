@@ -789,7 +789,8 @@
 
   // Smart stages state
   var availableTriggers = [];
-  var smartStageConfigs = {}; // stageId -> { configId, triggerKey }
+  var smartStageConfigs = {}; // stageId -> [{ configId, triggerKey }]
+  var currentSmartStages = []; // cached stages for re-render after add/remove
 
   function renderStagesList() {
     api('GET', '/templates/' + currentTemplateId).then(function(tmpl) {
@@ -821,6 +822,7 @@
 
   function loadSmartStages(stages) {
     if (!currentInstanceId) return;
+    if (stages) currentSmartStages = stages; // cache for re-renders
     // Load available triggers + existing configs in parallel
     Promise.all([
       fetch('/api/pipeline-triggers', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r) { return r.ok ? r.json() : []; }),
@@ -828,10 +830,9 @@
     ]).then(function(results) {
       availableTriggers = results[0];
       var configs = results[1];
-      // Build lookup: stageId -> config
       smartStageConfigs = {};
       configs.forEach(function(c) { if (!smartStageConfigs[c.stage_id]) smartStageConfigs[c.stage_id] = []; smartStageConfigs[c.stage_id].push({ configId: c.id, triggerKey: c.trigger_key }); });
-      renderSmartStages(stages);
+      renderSmartStages(currentSmartStages);
     }).catch(function(e) { console.error('loadSmartStages error:', e); });
   }
 
