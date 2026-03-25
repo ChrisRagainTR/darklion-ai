@@ -96,7 +96,7 @@ function doMount(token) {
       MOUNT_DIR,
       '--config', configPath,
       '--volname', 'DarkLion Drive',
-      '--vfs-cache-mode', 'writes',
+      '--vfs-cache-mode', 'off',
       '--no-modtime',
       '--dir-cache-time', '30s',
       '--attr-timeout', '1s',
