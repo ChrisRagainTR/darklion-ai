@@ -425,24 +425,40 @@ function buildAudienceQuery(firmId, filters = [], countOnly = false) {
           : (val2 ? [parseInt(val2)].filter(n => !isNaN(n)) : []);
         let cond;
         if (!stageIds.length) {
-          // Any stage in this pipeline
-          cond = `EXISTS (
-            SELECT 1 FROM pipeline_jobs pj
-            WHERE pj.instance_id = $${paramIdx++}
-              AND pj.entity_type = 'person'
-              AND pj.entity_id = p.id
+          // Any stage — match people directly OR people in same relationship as a company in this pipeline
+          cond = `(
+            EXISTS (
+              SELECT 1 FROM pipeline_jobs pj
+              WHERE pj.instance_id = $${paramIdx++}
+                AND pj.entity_type = 'person'
+                AND pj.entity_id = p.id
+            )
+            OR EXISTS (
+              SELECT 1 FROM pipeline_jobs pj
+              JOIN companies c ON c.id = pj.entity_id AND pj.entity_type = 'company'
+              WHERE pj.instance_id = $${paramIdx++}
+                AND c.relationship_id = p.relationship_id
+            )
           )`;
-          params.push(pipeId);
+          params.push(pipeId, pipeId);
         } else {
-          cond = `EXISTS (
-            SELECT 1 FROM pipeline_jobs pj
-            WHERE pj.instance_id = $${paramIdx++}
-              AND pj.current_stage_id = ANY($${paramIdx++}::int[])
-              AND pj.entity_type = 'person'
-              AND pj.entity_id = p.id
+          cond = `(
+            EXISTS (
+              SELECT 1 FROM pipeline_jobs pj
+              WHERE pj.instance_id = $${paramIdx++}
+                AND pj.current_stage_id = ANY($${paramIdx++}::int[])
+                AND pj.entity_type = 'person'
+                AND pj.entity_id = p.id
+            )
+            OR EXISTS (
+              SELECT 1 FROM pipeline_jobs pj
+              JOIN companies c ON c.id = pj.entity_id AND pj.entity_type = 'company'
+              WHERE pj.instance_id = $${paramIdx++}
+                AND pj.current_stage_id = ANY($${paramIdx++}::int[])
+                AND c.relationship_id = p.relationship_id
+            )
           )`;
-          params.push(pipeId);
-          params.push(stageIds);
+          params.push(pipeId, stageIds, pipeId, stageIds);
         }
         conditions.push(negate ? `NOT (${cond})` : cond);
         break;
