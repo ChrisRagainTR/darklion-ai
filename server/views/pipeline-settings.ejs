@@ -457,10 +457,19 @@
       document.getElementById('stage-grid').innerHTML = '<div class="ps-empty">No stages yet. Add one below.</div>';
       return;
     }
+    var lastStageId = stages.length ? stages[stages.length - 1].id : null;
     var html = stages.map(function(s) {
       var color = s.color || '#c9a84c';
       var terminalClass = s.is_terminal ? ' is-terminal' : '';
       var terminalChecked = s.is_terminal ? ' checked' : '';
+      // Only show 🏁 checkbox on the last stage
+      var isLast = s.id === lastStageId;
+      var terminalHtml = isLast
+        ? '<label class="stage-terminal-label' + terminalClass + '" title="Archive card when it reaches this stage">' +
+            '<input type="checkbox"' + terminalChecked + ' onchange="toggleTerminal(' + s.id + ', this.checked)" />' +
+            '🏁 Archive on arrival' +
+          '</label>'
+        : (s.is_terminal ? '<div style="font-size:0.7rem;color:var(--muted);">🏁 Terminal</div>' : '');
       return '<div class="stage-card" data-stage-id="' + s.id + '" draggable="true">' +
         '<div class="stage-card-head">' +
           '<span class="stage-drag-handle" title="Drag to reorder" style="cursor:grab;color:var(--muted);font-size:0.85rem;flex-shrink:0;">⠿</span>' +
@@ -470,10 +479,7 @@
             'onkeydown="if(event.key===\'Enter\')this.blur()" ' +
             'title="Click to rename" />' +
         '</div>' +
-        '<label class="stage-terminal-label' + terminalClass + '" title="Archive card when it reaches this stage">' +
-          '<input type="checkbox"' + terminalChecked + ' onchange="toggleTerminal(' + s.id + ', this.checked)" />' +
-          '🏁 Archive on arrival' +
-        '</label>' +
+        terminalHtml +
         '<div class="stage-card-actions">' +
           '<button class="stage-action-btn" onclick="focusRename(' + s.id + ')" title="Rename">✏️</button>' +
           '<button class="stage-action-btn danger" onclick="deleteStage(' + s.id + ')" title="Delete stage">🗑️</button>' +

@@ -871,6 +871,17 @@ router.put('/stages/:stageId/terminal', async (req, res) => {
       [req.params.stageId, req.firm.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Stage not found' });
+
+    if (is_terminal) {
+      // Clear terminal from all other stages in the same template first
+      await pool.query(
+        `UPDATE pipeline_stages SET is_terminal = false
+         WHERE template_id = (SELECT template_id FROM pipeline_stages WHERE id = $1)
+           AND id != $1`,
+        [req.params.stageId]
+      );
+    }
+
     const { rows: updated } = await pool.query(
       'UPDATE pipeline_stages SET is_terminal = $1 WHERE id = $2 RETURNING *',
       [is_terminal, req.params.stageId]
