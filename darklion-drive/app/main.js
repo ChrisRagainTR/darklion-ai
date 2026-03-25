@@ -7,6 +7,7 @@ var ipcMain = electron.ipcMain;
 var Tray = electron.Tray;
 var Menu = electron.Menu;
 var nativeImage = electron.nativeImage;
+var powerMonitor = electron.powerMonitor;
 var path = require('path');
 
 // Single instance lock - MUST be before app.whenReady()
@@ -245,6 +246,45 @@ app.whenReady().then(function() {
   } else {
     showLoginWindow();
   }
+});
+
+// Reconnect drive after wake from sleep
+powerMonitor.on('resume', function() {
+  console.log('[Main] System resumed from sleep, checking drive...');
+  setTimeout(function() {
+    if (isConnected && currentToken) {
+      console.log('[Main] Reconnecting drive after wake...');
+      drive.unmountDrive().catch(function() {}).then(function() {
+        return connectDrive(currentToken);
+      }).then(function() {
+        console.log('[Main] Drive reconnected after wake');
+      }).catch(function(err) {
+        console.warn('[Main] Reconnect after wake failed:', err.message);
+        isConnected = false;
+        currentToken = null;
+        updateTray();
+        var stored2 = auth.loadAuth();
+        if (stored2 && stored2.token) {
+          connectDrive(stored2.token).catch(function() {
+            auth.clearAuth();
+            showLoginWindow();
+          });
+        } else {
+          showLoginWindow();
+        }
+      });
+    } else {
+      var stored2 = auth.loadAuth();
+      if (stored2 && stored2.token) {
+        console.log('[Main] Attempting auto-connect from stored token after wake...');
+        connectDrive(stored2.token).catch(function(err) {
+          console.warn('[Main] Wake auto-connect failed:', err.message);
+          auth.clearAuth();
+          showLoginWindow();
+        });
+      }
+    }
+  }, 2000); // short delay to let network come back up after wake
 });
 
 // Focus existing window if second instance launched
