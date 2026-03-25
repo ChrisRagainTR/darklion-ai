@@ -834,9 +834,9 @@ async function initDB() {
       category TEXT DEFAULT ''
     );
     INSERT INTO pipeline_triggers (key, label, category) VALUES
-      ('tax_return_deployed',         'Tax Return Deployed to Portal', 'tax'),
-      ('tax_return_signed',           'Client Signed Tax Return',      'tax'),
-      ('tax_return_approved',         'Tax Return Approved',           'tax'),
+      ('tax_return_deployed',         'Tax Return Sent to Client',     'tax'),
+      ('tax_return_signed',           'Tax Return Signed by Client',   'tax'),
+      ('tax_return_approved',         'Tax Return Approved by Staff',  'tax'),
       ('client_requested_changes',    'Client Requested Changes',      'tax'),
       ('engagement_letter_sent',      'Engagement Letter Sent',        'engagement'),
       ('engagement_letter_signed',    'Client Signed Engagement Letter','engagement'),
@@ -846,7 +846,7 @@ async function initDB() {
       ('portal_first_login',          'Client First Portal Login',     'portal'),
       ('portal_message_received',     'Client Sent a Portal Message',  'portal'),
       ('document_uploaded_by_client', 'Client Uploaded a Document',    'portal')
-    ON CONFLICT (key) DO NOTHING;
+    ON CONFLICT (key) DO UPDATE SET label = EXCLUDED.label;
 
     -- Maps trigger keys → pipeline stages (max 2 per stage)
     CREATE TABLE IF NOT EXISTS pipeline_stage_triggers (
