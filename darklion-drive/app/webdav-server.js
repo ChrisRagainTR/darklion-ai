@@ -340,6 +340,7 @@ function createApp(onUnauthorized) {
 async function handlePropfind(req, res, token) {
   const depth = req.headers['depth'] || '1';
   const { level, parts } = parsePath(req.path);
+  console.log('[WebDAV] PROPFIND path:', JSON.stringify(req.path), 'level:', level, 'parts:', JSON.stringify(parts), 'depth:', depth);
   const responses = [];
 
   if (level === 'root') {
