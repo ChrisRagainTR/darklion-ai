@@ -832,6 +832,7 @@ router.post('/jobs/:jobId/move', async (req, res) => {
         [job.instance_id]
       );
       const instInfo = instInfoRows[0];
+      console.log(`[pipelines] move job ${job.id} to stage ${stage_id}, instance ${job.instance_id}, instInfo found: ${!!instInfo}`);
       if (instInfo) {
         executeStageActions(
           instInfo.firm_id,
