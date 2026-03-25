@@ -170,7 +170,6 @@
       <label style="font-size:0.8rem;color:var(--muted);">Year:</label>
       <select class="year-sel" id="year-sel" onchange="onYearChange(this.value)"></select>
       <button class="btn btn-gold btn-sm" onclick="openAddJobModal()" style="font-size:0.78rem;">+ Add Job</button>
-      <button class="btn btn-outline btn-sm" onclick="openEditStagesModal()" style="font-size:0.78rem;">⚙ Edit Stages</button>
       <a class="btn btn-outline btn-sm" id="settings-link" href="/pipelines" style="font-size:0.78rem;text-decoration:none;">⚙️ Settings</a>
     </div>
   </div>
@@ -423,7 +422,8 @@
     var jobs = instanceData.jobs || [];
 
     if (!stages.length) {
-      wrap.innerHTML = '<div class="board-empty"><p>No stages yet.</p><p><button class="btn btn-gold btn-sm" style="margin-top:0.5rem;" onclick="openEditStagesModal()">+ Add Stages</button></p></div>';
+      var settingsUrl = currentInstanceId ? '/pipelines/' + currentInstanceId + '/settings' : '/pipelines';
+      wrap.innerHTML = '<div class="board-empty"><p>No stages yet.</p><p><a class="btn btn-gold btn-sm" style="margin-top:0.5rem;text-decoration:none;" href="' + settingsUrl + '">⚙️ Add Stages</a></p></div>';
       return;
     }
 
