@@ -63,12 +63,21 @@ var GREY_ICON_B64 = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAANElEQVR4nGP
 
 function createTrayIcon(connected) {
   try {
+    // Try to load the real lion icon from the app directory
+    var iconPath = path.join(__dirname, 'icon.ico');
+    if (require('fs').existsSync(iconPath)) {
+      var img = nativeImage.createFromPath(iconPath);
+      if (!img.isEmpty()) {
+        // Resize to appropriate tray size
+        return img.resize({ width: 16, height: 16 });
+      }
+    }
+  } catch (e) { /* fall through */ }
+  try {
     var b64 = connected ? GOLD_ICON_B64 : GREY_ICON_B64;
-    var img = nativeImage.createFromBuffer(Buffer.from(b64, 'base64'));
-    if (!img.isEmpty()) return img;
-  } catch (e) {
-    // fall through to empty
-  }
+    var img2 = nativeImage.createFromBuffer(Buffer.from(b64, 'base64'));
+    if (!img2.isEmpty()) return img2;
+  } catch (e) { /* fall through */ }
   return nativeImage.createEmpty();
 }
 
