@@ -556,6 +556,13 @@
       <div class="form-group"><label>Phone</label><input type="text" class="form-control" id="ef-phone"></div>
     </div>
     <div class="form-group"><label>Date of Birth</label><input type="date" class="form-control" id="ef-dob"></div>
+    <div class="form-group"><label>Billing Method</label>
+      <select class="form-control" id="ef-billing-method">
+        <option value="">— Select —</option>
+        <option value="monthly_billing">Monthly Billing</option>
+        <option value="client_invoice">Client Invoice</option>
+      </select>
+    </div>
     <div class="form-group"><label>Filing Status</label>
       <select class="form-control" id="ef-filing">
         <option value="">— Select —</option>
@@ -872,6 +879,7 @@
       <div class="info-row"><span class="info-label">Email</span><span class="info-val">${p.email ? `<a href="mailto:${esc(p.email)}" style="color:var(--gold);">${esc(p.email)}</a>` : '—'}</span></div>
       <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${fmtPhone(p.phone)}</span></div>
       <div class="info-row"><span class="info-label">Date of Birth</span><span class="info-val">${fmtDOB(p.date_of_birth)}</span></div>
+      ${p.billing_method ? `<div class="info-row"><span class="info-label">Billing Method</span><span class="info-val">${p.billing_method === 'monthly_billing' ? 'Monthly Billing' : p.billing_method === 'client_invoice' ? 'Client Invoice' : esc(p.billing_method)}</span></div>` : ''}
       ${p.relationship_name ? `<div class="info-row"><span class="info-label">Relationship</span><span class="info-val"><a href="#" style="color:var(--gold);">${esc(p.relationship_name)}</a></span></div>` : ''}`;
 
     // ── LEFT COL: Client Portal ──
@@ -1385,6 +1393,7 @@
     document.getElementById('ef-email').value = personData.email || '';
     document.getElementById('ef-phone').value = personData.phone || '';
     document.getElementById('ef-dob').value = personData.date_of_birth || '';
+    document.getElementById('ef-billing-method').value = personData.billing_method || '';
     document.getElementById('ef-filing').value = personData.filing_status || '';
     document.getElementById('ef-spouse-id').value = personData.spouse_id || '';
     document.getElementById('ef-spouse-search').value = personData.spouse
@@ -1412,6 +1421,7 @@
       email: document.getElementById('ef-email').value.trim(),
       phone: document.getElementById('ef-phone').value.trim(),
       date_of_birth: document.getElementById('ef-dob').value || null,
+      billing_method: document.getElementById('ef-billing-method').value || null,
       filing_status: document.getElementById('ef-filing').value,
       spouse_id: spouseIdRaw ? parseInt(spouseIdRaw) : null,
     };

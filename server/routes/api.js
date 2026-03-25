@@ -241,7 +241,7 @@ router.get('/companies/:id([0-9]+)', async (req, res) => {
 router.put('/companies/:id([0-9]+)', async (req, res) => {
   const firmId = req.firm?.id;
   const { id } = req.params;
-  const { company_name, entity_type, tax_year_end, stanford_tax_url, status, relationship_id, notes, bookkeeper_id, bookkeeping_service } = req.body;
+  const { company_name, entity_type, tax_year_end, stanford_tax_url, status, relationship_id, notes, bookkeeper_id, bookkeeping_service, billing_method } = req.body;
   try {
     const { rows: existing } = await pool.query(
       'SELECT id FROM companies WHERE id = $1 AND (firm_id = $2 OR firm_id IS NULL)',
@@ -259,9 +259,10 @@ router.put('/companies/:id([0-9]+)', async (req, res) => {
          relationship_id = COALESCE($6, relationship_id),
          notes = COALESCE($7, notes),
          bookkeeper_id = $10,
-         bookkeeping_service = $11
+         bookkeeping_service = $11,
+         billing_method = COALESCE($12, billing_method)
        WHERE id = $8 AND (firm_id = $9 OR firm_id IS NULL)
-       RETURNING id, company_name, entity_type, tax_year_end, stanford_tax_url, status, relationship_id, realm_id, notes, bookkeeper_id, bookkeeping_service`,
+       RETURNING id, company_name, entity_type, tax_year_end, stanford_tax_url, status, relationship_id, realm_id, notes, bookkeeper_id, bookkeeping_service, billing_method`,
       [
         company_name || null,
         entity_type || null,
@@ -274,6 +275,7 @@ router.put('/companies/:id([0-9]+)', async (req, res) => {
         firmId,
         bookkeeper_id !== undefined ? (bookkeeper_id || null) : undefined,
         bookkeeping_service !== undefined ? (bookkeeping_service || null) : undefined,
+        billing_method !== undefined ? (billing_method || null) : null,
       ]
     );
     res.json(rows[0]);

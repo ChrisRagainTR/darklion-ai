@@ -880,6 +880,13 @@
     <div class="form-group"><label>Status</label>
       <select class="form-control" id="ef-status"><option value="active">Active</option><option value="inactive">Inactive</option><option value="dissolved">Dissolved</option></select>
     </div>
+    <div class="form-group"><label>Billing Method</label>
+      <select class="form-control" id="ef-billing-method">
+        <option value="">— Select —</option>
+        <option value="monthly_billing">Monthly Billing</option>
+        <option value="client_invoice">Client Invoice</option>
+      </select>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
       <div class="form-group"><label>Bookkeeper</label>
         <select class="form-control" id="ef-bookkeeper"><option value="">— None —</option></select>
@@ -1084,6 +1091,10 @@
     detailsHtml += `<div class="info-row"><span class="info-label">Entity Type</span><span class="info-val">${esc(etLabel(c.entity_type) || '—')}</span></div>`;
     detailsHtml += `<div class="info-row"><span class="info-label">Status</span><span class="info-val">${esc(c.status || 'active')}</span></div>`;
     detailsHtml += `<div class="info-row"><span class="info-label">Tax Year End</span><span class="info-val">${esc(c.tax_year_end || '—')}</span></div>`;
+    if (c.billing_method) {
+      const bmLabel = c.billing_method === 'monthly_billing' ? 'Monthly Billing' : c.billing_method === 'client_invoice' ? 'Client Invoice' : c.billing_method;
+      detailsHtml += `<div class="info-row"><span class="info-label">Billing Method</span><span class="info-val">${esc(bmLabel)}</span></div>`;
+    }
     if (c.stanford_tax_url) {
       detailsHtml += `<div class="info-row"><span class="info-label">Stanford Tax</span><span class="info-val"><a href="${esc(c.stanford_tax_url)}" target="_blank" rel="noopener" style="color:var(--gold);">Open →</a></span></div>`;
     }
@@ -1990,6 +2001,7 @@
     document.getElementById('ef-tax-year-end').value = companyData.tax_year_end || '';
     document.getElementById('ef-stanford').value = companyData.stanford_tax_url || '';
     document.getElementById('ef-status').value = companyData.status || 'active';
+    document.getElementById('ef-billing-method').value = companyData.billing_method || '';
     document.getElementById('ef-bookkeeping-service').value = companyData.bookkeeping_service || 'none';
     document.getElementById('edit-modal').classList.add('open');
     // Load bookkeeper options async after modal is visible
@@ -2018,6 +2030,7 @@
       tax_year_end: document.getElementById('ef-tax-year-end').value.trim(),
       stanford_tax_url: document.getElementById('ef-stanford').value.trim(),
       status: document.getElementById('ef-status').value,
+      billing_method: document.getElementById('ef-billing-method').value || null,
       bookkeeper_id: document.getElementById('ef-bookkeeper').value || null,
       bookkeeping_service: document.getElementById('ef-bookkeeping-service').value || 'none',
     };

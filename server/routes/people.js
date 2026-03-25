@@ -167,6 +167,7 @@ router.put('/:id', async (req, res) => {
     stanford_tax_url,
     notes,
     date_of_birth,
+    billing_method,
   } = req.body;
 
   try {
@@ -201,6 +202,7 @@ router.put('/:id', async (req, res) => {
         stanford_tax_url = COALESCE($9, stanford_tax_url),
         notes = COALESCE($10, notes),
         date_of_birth_encrypted = CASE WHEN $11::TEXT IS NOT NULL THEN $11 ELSE date_of_birth_encrypted END,
+        billing_method = COALESCE($15, billing_method),
         updated_at = NOW()
       WHERE id = $12 AND firm_id = $13
       RETURNING *
@@ -219,6 +221,7 @@ router.put('/:id', async (req, res) => {
       id,
       firmId,
       spouse_id !== undefined,                        // $14: whether spouse_id was explicitly passed
+      billing_method !== undefined ? (billing_method || null) : null,  // $15
     ]);
 
     const updated = rows[0];

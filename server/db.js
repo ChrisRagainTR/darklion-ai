@@ -906,6 +906,16 @@ async function initDB() {
       ALTER TABLE pipeline_templates ADD COLUMN IF NOT EXISTS default_year TEXT DEFAULT '';
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
+
+    -- Billing method on people and companies
+    DO $$ BEGIN
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS billing_method TEXT DEFAULT NULL;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+    DO $$ BEGIN
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS billing_method TEXT DEFAULT NULL;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
   `);
 }
 
