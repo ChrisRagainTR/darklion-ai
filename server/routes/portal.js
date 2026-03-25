@@ -950,7 +950,7 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
       const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
       // Get delivery + person info
       const { rows: [delivInfo] } = await pool.query(
-        `SELECT td.signature_doc_id, td.tax_year, td.firm_id, f.name AS firm_name,
+        `SELECT td.signature_doc_id, td.tax_year, td.firm_id, td.company_id, f.name AS firm_name,
                 p.first_name, p.last_name, p.email AS person_email
          FROM tax_deliveries td
          JOIN firms f ON f.id = td.firm_id
@@ -977,13 +977,16 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
           // Store signed PDF as new document
           const signedKey = buildKey(delivInfo.firm_id, 'tax_signed', `signed_${Date.now()}.pdf`);
           await uploadFile({ buffer: signedPdf, key: signedKey, mimeType: 'application/pdf', bucket });
+          // For company deliveries, store signed doc on the company; otherwise on the person
+          const docOwnerType = delivInfo.company_id ? 'company' : 'person';
+          const docOwnerId = delivInfo.company_id || personId;
           const { rows: [newDoc] } = await pool.query(
             `INSERT INTO documents (firm_id, owner_type, owner_id, doc_type, display_name, mime_type,
                size_bytes, s3_key, s3_bucket, folder_section, folder_category, year, is_delivered, delivered_at)
-             VALUES ($1, 'person', $2, 'signed_return', $3, 'application/pdf', $4, $5, $6,
-                     'firm_uploaded', 'tax', $7, true, NOW())
+             VALUES ($1, $2, $3, 'signed_return', $4, 'application/pdf', $5, $6, $7,
+                     'firm_uploaded', 'tax', $8, true, NOW())
              RETURNING id`,
-            [delivInfo.firm_id, personId,
+            [delivInfo.firm_id, docOwnerType, docOwnerId,
              `${delivInfo.tax_year} Tax Return — Signed by ${delivInfo.first_name} ${delivInfo.last_name}.pdf`,
              signedPdf.length, signedKey, bucket, delivInfo.tax_year]
           );
