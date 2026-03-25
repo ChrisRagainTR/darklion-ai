@@ -1025,7 +1025,10 @@
         </div>`);
       });
       list.innerHTML = rows.join('') || '<div style="color:var(--muted);font-size:0.85rem;">No pipeline history yet.</div>';
-    } catch(e) { loading.textContent = 'Failed to load pipeline history.'; }
+    } catch(e) {
+      loading.style.display = 'none'; list.style.display = '';
+      list.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">No pipeline history yet.</div>';
+    }
   }
 
   function switchSubtab(name, el) {
@@ -1269,7 +1272,7 @@
       }
       panel.innerHTML = html;
     } catch(e) {
-      panel.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Pipeline History</div><div style="color:var(--muted);font-size:0.82rem;">Failed to load.</div>`;
+      panel.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Pipeline History</div><div style="color:var(--muted);font-size:0.82rem;font-style:italic;">No pipeline history yet.</div>`;
     }
   }
 
