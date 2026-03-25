@@ -278,7 +278,7 @@ async function executeStaffTask(action, firmId, entityType, entityId, entityName
 
   const taskName = applyMergeTags(taskNameTemplate, tags);
   const jobSuffix = jobId ? `&job=${jobId}` : '';
-  const pipelineLink = `${APP_URL}/pipelines?instance=${pipelineInstanceId}${jobSuffix}`;
+  const pipelineLink = `/pipelines?instance=${pipelineInstanceId}${jobSuffix}`;
   const messageBody = `📋 ${taskName} — ${entityName}\n\n[View in Pipeline →](${pipelineLink})`;
 
   // Find a person to anchor the thread to (required by schema)
