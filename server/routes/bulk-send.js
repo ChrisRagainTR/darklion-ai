@@ -102,6 +102,7 @@ router.post('/preview', async (req, res) => {
         name: r.display_name,
         email: r.email,
         relationship: r.relationship_name,
+        companies: r.company_names || null,
       })),
     });
   } catch (err) {
@@ -182,12 +183,17 @@ router.post('/send', async (req, res) => {
         const firstName = (recipient.first_name || '').trim() || (recipient.display_name || '').split(' ')[0] || 'there';
         const lastName = (recipient.last_name || '').trim();
         const fullName = recipient.display_name || `${firstName} ${lastName}`.trim();
+        const relationshipName = (recipient.relationship_name || '').trim();
         const personalizedMessage = message.trim()
           .replace(/\{First Name\}/gi, firstName)
           .replace(/\{Last Name\}/gi, lastName)
           .replace(/\{Full Name\}/gi, fullName)
           .replace(/\{first_name\}/gi, firstName)
-          .replace(/\{last_name\}/gi, lastName);
+          .replace(/\{last_name\}/gi, lastName)
+          .replace(/\{Relationship Name\}/gi, relationshipName)
+          .replace(/\{relationship_name\}/gi, relationshipName)
+          .replace(/\{Firm Name\}/gi, firmName)
+          .replace(/\{firm_name\}/gi, firmName);
 
         // Insert message
         await pool.query(
@@ -512,7 +518,9 @@ function buildAudienceQuery(firmId, filters = [], countOnly = false) {
       p.last_name,
       (p.first_name || ' ' || p.last_name) AS display_name,
       p.email,
-      r.name AS relationship_name
+      r.name AS relationship_name,
+      (SELECT string_agg(c.company_name, ', ' ORDER BY c.company_name)
+       FROM companies c WHERE c.relationship_id = r.id AND c.firm_id = p.firm_id) AS company_names
     FROM people p
     LEFT JOIN relationships r ON r.id = p.relationship_id
     WHERE ${whereClause}

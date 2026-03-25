@@ -626,6 +626,15 @@
     <div class="compose-section">
       <label>Message</label>
       <textarea class="compose-textarea" id="compose-body" placeholder="Write your message here…"></textarea>
+      <div style="margin-top:0.4rem;font-size:0.72rem;color:var(--muted);line-height:1.8;">
+        <strong style="color:var(--text);">Merge tags:</strong>
+        <span style="cursor:pointer;color:var(--gold);" onclick="insertMergeTag('{First Name}')">{First Name}</span> ·
+        <span style="cursor:pointer;color:var(--gold);" onclick="insertMergeTag('{Last Name}')">{Last Name}</span> ·
+        <span style="cursor:pointer;color:var(--gold);" onclick="insertMergeTag('{Full Name}')">{Full Name}</span> ·
+        <span style="cursor:pointer;color:var(--gold);" onclick="insertMergeTag('{Relationship Name}')">{Relationship Name}</span> ·
+        <span style="cursor:pointer;color:var(--gold);" onclick="insertMergeTag('{Firm Name}')">{Firm Name}</span>
+        <span style="color:var(--muted);"> — click to insert at cursor</span>
+      </div>
     </div>
 
     <div class="compose-section">
@@ -1228,9 +1237,23 @@
         <div class="recipient-name">${escHtml(r.name)}</div>
         <div class="recipient-email">${escHtml(r.email || '—')}</div>
         ${r.relationship ? `<div class="recipient-rel">· ${escHtml(r.relationship)}</div>` : ''}
+        ${r.companies ? `<div class="recipient-rel" style="color:var(--muted);">🏢 ${escHtml(r.companies)}</div>` : ''}
       </div>
     `).join('');
   }
+
+  // ── Merge tag insertion ───────────────────────────────────────────────────
+  window.insertMergeTag = function(tag) {
+    const el = document.getElementById('compose-body');
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const text = el.value;
+    el.value = text.slice(0, start) + tag + text.slice(end);
+    el.selectionStart = el.selectionEnd = start + tag.length;
+    el.focus();
+    updatePreview();
+  };
 
   // ── Compose step ──────────────────────────────────────────────────────────
   composeBody.addEventListener('input', updatePreview);
