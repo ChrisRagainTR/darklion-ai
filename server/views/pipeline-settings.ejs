@@ -334,16 +334,23 @@
   <!-- ══ AUTOMATION TABLE ══ -->
   <div class="ps-section">
     <div class="ps-section-title">⚡ Automation</div>
+    <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:var(--muted);line-height:1.6;">
+      <strong style="color:var(--gold);">How automation works:</strong>
+      A <strong style="color:var(--text);">Trigger</strong> is an event (like a tax return being delivered) that automatically moves a client's card into a Stage.
+      Once a card arrives in a Stage, that Stage's <strong style="color:var(--text);">Actions</strong> fire — such as sending a portal message or creating a staff task.
+    </div>
     <table class="automation-table">
       <thead>
         <tr>
-          <th style="width:160px;">Stage</th>
-          <th>⚡ Triggers <span style="font-weight:400;font-size:0.68rem;text-transform:none;letter-spacing:0;">(move card here when…)</span></th>
-          <th style="width:320px;">🎯 Actions <span style="font-weight:400;font-size:0.68rem;text-transform:none;letter-spacing:0;">(fire when card arrives)</span></th>
+          <th style="width:220px;text-align:center;">⚡ Triggers<br><span style="font-weight:400;font-size:0.65rem;text-transform:none;letter-spacing:0;color:var(--muted);">move card into the stage</span></th>
+          <th style="width:24px;padding:0;"></th>
+          <th style="width:160px;text-align:center;">Stage</th>
+          <th style="width:24px;padding:0;"></th>
+          <th style="text-align:center;">🎯 Actions<br><span style="font-weight:400;font-size:0.65rem;text-transform:none;letter-spacing:0;color:var(--muted);">fire when card arrives</span></th>
         </tr>
       </thead>
       <tbody id="automation-tbody">
-        <tr><td colspan="3"><div class="ps-loading"><div class="loading-spinner"></div> Loading…</div></td></tr>
+        <tr><td colspan="5"><div class="ps-loading"><div class="loading-spinner"></div> Loading…</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -447,7 +454,7 @@
       renderAutomationTable();
     }).catch(function(e) {
       document.getElementById('stage-grid').innerHTML = '<div class="ps-empty">Failed to load: ' + esc(e.message) + '</div>';
-      document.getElementById('automation-tbody').innerHTML = '<tr><td colspan="3"><div class="ps-empty">Failed to load.</div></td></tr>';
+      document.getElementById('automation-tbody').innerHTML = '<tr><td colspan="5"><div class="ps-empty">Failed to load.</div></td></tr>';
     });
   }
 
@@ -556,7 +563,7 @@
   // ── AUTOMATION TABLE ──
   function renderAutomationTable() {
     if (!stages.length) {
-      document.getElementById('automation-tbody').innerHTML = '<tr><td colspan="3"><div class="ps-empty">Add stages above to configure automation.</div></td></tr>';
+      document.getElementById('automation-tbody').innerHTML = '<tr><td colspan="5"><div class="ps-empty">Add stages above to configure automation.</div></td></tr>';
       return;
     }
 
@@ -592,14 +599,26 @@
       });
 
       return '<tr>' +
-        '<td class="at-stage-name"><span class="at-stage-color" style="background:' + esc(color) + ';"></span>' + esc(s.name) + '</td>' +
-        '<td>' +
-          '<div class="trigger-chips" id="chips-' + s.id + '">' +
+        '<td style="text-align:center;vertical-align:middle;">' +
+          '<div class="trigger-chips" id="chips-' + s.id + '" style="justify-content:center;">' +
             chips +
-            (cfgs.length >= 2 ? '<span style="font-size:0.72rem;color:var(--muted);font-style:italic;">Max 2 triggers</span>' : '<select class="trigger-add-select" id="trigger-sel-' + s.id + '" onchange="addTrigger(' + s.id + ', this)">' + addOpts + '</select>') +
+            (cfgs.length >= 2 ? '<span style="font-size:0.72rem;color:var(--muted);font-style:italic;">Max 2</span>' : '<select class="trigger-add-select" id="trigger-sel-' + s.id + '" onchange="addTrigger(' + s.id + ', this)">' + addOpts + '</select>') +
           '</div>' +
         '</td>' +
-        '<td id="actions-cell-' + s.id + '">' +
+        '<td style="text-align:center;vertical-align:middle;padding:0 4px;white-space:nowrap;">' +
+          '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">' +
+            '<span style="font-size:1.1rem;color:var(--gold);">→</span>' +
+          '</div>' +
+        '</td>' +
+        '<td style="text-align:center;vertical-align:middle;">' +
+          '<div class="at-stage-name" style="text-align:center;"><span class="at-stage-color" style="background:' + esc(color) + ';"></span>' + esc(s.name) + '</div>' +
+        '</td>' +
+        '<td style="text-align:center;vertical-align:middle;padding:0 4px;white-space:nowrap;">' +
+          '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">' +
+            '<span style="font-size:1.1rem;color:var(--gold);">→</span>' +
+          '</div>' +
+        '</td>' +
+        '<td id="actions-cell-' + s.id + '" style="text-align:center;vertical-align:middle;">' +
           renderActionsCell(s.id) +
         '</td>' +
       '</tr>';
