@@ -513,7 +513,7 @@
     <!-- Pipeline History -->
     <div style="margin-top:2rem;">
       <div style="font-size:1.05rem;font-weight:700;margin-bottom:1rem;">📋 Pipeline History</div>
-      <div id="pipeline-history-loading" style="color:var(--muted);font-size:0.85rem;">Loading…</div>
+      <div id="pipeline-history-loading" style="color:var(--muted);font-size:0.85rem;"></div>
       <div id="pipeline-history-list" style="display:none;"></div>
     </div>
   </div>
@@ -722,9 +722,9 @@
       const res = await apiFetch(`/api/pipelines/completions?entity_type=person&entity_id=${personId}`);
       if (!res.ok) throw new Error('API error');
       const data = await res.json();
-      loading.style.display = 'none'; list.style.display = '';
       const completions = data.completions || [];
       const activeJobs = data.active_jobs || [];
+      loading.style.display = 'none'; list.style.display = '';
       if (!completions.length && !activeJobs.length) {
         list.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">No pipeline history yet.</div>';
         return;
