@@ -348,7 +348,7 @@
       A <strong style="color:var(--text);">Trigger</strong> fires automatically (e.g. tax return sent) and moves a client's card into the Stage.
       Once the card lands, the Stage's <strong style="color:var(--text);">Actions</strong> run — like sending a portal message or creating a staff task.
     </div>
-    <div id="automation-list" style="display:flex;flex-direction:column;gap:0.75rem;">
+    <div id="automation-list" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
       <div class="ps-loading"><div class="loading-spinner"></div> Loading…</div>
     </div>
   </div>
@@ -562,7 +562,7 @@
   function renderAutomationTable() {
     var container = document.getElementById('automation-list');
     if (!stages.length) {
-      container.innerHTML = '<div class="ps-empty">Add stages above to configure automation.</div>';
+      container.innerHTML = '<div class="ps-empty" style="grid-column:1/-1;">Add stages above to configure automation.</div>';
       return;
     }
 
