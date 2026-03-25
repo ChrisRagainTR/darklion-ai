@@ -86,6 +86,7 @@ function doMount(token) {
       'darklion:',
       MOUNT_DIR,
       '--config', configPath,
+      '--network-mode',
       '--volname', 'DarkLion Drive',
       '--vfs-cache-mode', 'writes',
       '--no-modtime',
