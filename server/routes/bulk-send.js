@@ -12,7 +12,7 @@ const APP_URL = (process.env.APP_URL || 'https://darklion.ai').replace(/\/+$/, '
 router.get('/filters', async (req, res) => {
   const firmId = req.firm.id;
   try {
-    const [relationships, pipelines, templates] = await Promise.all([
+    const [relationships, pipelines, templates, filingStatuses, entityTypes, companyStatuses] = await Promise.all([
       pool.query(
         `SELECT id, name, service_tier, billing_status FROM relationships WHERE firm_id = $1 ORDER BY name`,
         [firmId]
@@ -31,6 +31,24 @@ router.get('/filters', async (req, res) => {
         `SELECT id, name, body FROM message_templates WHERE firm_id = $1 ORDER BY name`,
         [firmId]
       ),
+      pool.query(
+        `SELECT DISTINCT filing_status FROM people
+         WHERE firm_id = $1 AND filing_status IS NOT NULL AND filing_status != ''
+         ORDER BY filing_status`,
+        [firmId]
+      ),
+      pool.query(
+        `SELECT DISTINCT entity_type FROM companies
+         WHERE firm_id = $1 AND entity_type IS NOT NULL AND entity_type != ''
+         ORDER BY entity_type`,
+        [firmId]
+      ),
+      pool.query(
+        `SELECT DISTINCT status FROM companies
+         WHERE firm_id = $1 AND status IS NOT NULL AND status != ''
+         ORDER BY status`,
+        [firmId]
+      ),
     ]);
 
     // Unique service tiers and billing statuses
@@ -43,6 +61,9 @@ router.get('/filters', async (req, res) => {
       serviceTiers,
       billingStatuses,
       templates: templates.rows,
+      filingStatuses: filingStatuses.rows.map(r => r.filing_status),
+      entityTypes: entityTypes.rows.map(r => r.entity_type),
+      companyStatuses: companyStatuses.rows.map(r => r.status),
     });
   } catch (err) {
     console.error('[GET /api/bulk-send/filters] error:', err);
@@ -143,11 +164,22 @@ router.post('/send', async (req, res) => {
           threadId = newThread[0].id;
         }
 
+        // Substitute merge tags for this recipient
+        const firstName = (recipient.first_name || '').trim() || (recipient.display_name || '').split(' ')[0] || 'there';
+        const lastName = (recipient.last_name || '').trim();
+        const fullName = recipient.display_name || `${firstName} ${lastName}`.trim();
+        const personalizedMessage = message.trim()
+          .replace(/\{First Name\}/gi, firstName)
+          .replace(/\{Last Name\}/gi, lastName)
+          .replace(/\{Full Name\}/gi, fullName)
+          .replace(/\{first_name\}/gi, firstName)
+          .replace(/\{last_name\}/gi, lastName);
+
         // Insert message
         await pool.query(
           `INSERT INTO messages (thread_id, sender_type, sender_id, body, is_internal)
            VALUES ($1, 'staff', $2, $3, false)`,
-          [threadId, userId, message.trim()]
+          [threadId, userId, personalizedMessage]
         );
 
         // Update last_message_at
@@ -216,9 +248,6 @@ function buildAudienceQuery(firmId, filters = {}, countOnly = false) {
   const params = [firmId];
   let paramIdx = 2;
 
-  // Entity type filter (default: person only — companies don't have portal threads)
-  // We always query people since only they have portal accounts
-
   // Relationship filter
   if (filters.relationship_id) {
     conditions.push(`p.relationship_id = $${paramIdx++}`);
@@ -272,12 +301,58 @@ function buildAudienceQuery(firmId, filters = {}, countOnly = false) {
     params.push(filters.proposal_status);
   }
 
+  // Filing status filter (from people table)
+  if (filters.filing_status) {
+    conditions.push(`p.filing_status = $${paramIdx++}`);
+    params.push(filters.filing_status);
+  }
+
+  // Entity type filter (via company association)
+  if (filters.entity_type === 'individual') {
+    // People with no company associations
+    conditions.push(`NOT EXISTS (
+      SELECT 1 FROM person_company_access pca WHERE pca.person_id = p.id
+    )`);
+  } else if (filters.entity_type) {
+    // People associated with companies of this entity type
+    conditions.push(`EXISTS (
+      SELECT 1 FROM person_company_access pca
+      JOIN companies co ON co.id = pca.company_id
+      WHERE pca.person_id = p.id AND co.entity_type = $${paramIdx++}
+    )`);
+    params.push(filters.entity_type);
+  }
+
+  // Company status filter (via company association)
+  if (filters.company_status) {
+    conditions.push(`EXISTS (
+      SELECT 1 FROM person_company_access pca
+      JOIN companies co ON co.id = pca.company_id
+      WHERE pca.person_id = p.id
+        AND co.status = $${paramIdx++}
+        AND co.firm_id = $1
+    )`);
+    params.push(filters.company_status);
+  }
+
+  // Has documents filter
+  if (filters.has_documents === true || filters.has_documents === 'true') {
+    conditions.push(`EXISTS (
+      SELECT 1 FROM documents d
+      WHERE d.owner_type = 'person'
+        AND d.owner_id = p.id
+        AND d.firm_id = $1
+    )`);
+  }
+
   const whereClause = conditions.join(' AND ');
 
   const query = `
     SELECT
       p.id,
       'person' AS entity_type,
+      p.first_name,
+      p.last_name,
       (p.first_name || ' ' || p.last_name) AS display_name,
       p.email,
       r.name AS relationship_name
