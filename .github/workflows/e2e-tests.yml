@@ -1,0 +1,100 @@
+name: E2E Tests
+
+on:
+  # Run on every push to the dev branch
+  push:
+    branches:
+      - dev
+
+  # Run on every PR targeting main — blocks merge if tests fail
+  pull_request:
+    branches:
+      - main
+
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: Playwright E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      # Always run against the development environment
+      BASE_URL: https://darklion-ai-development.up.railway.app
+      # Credentials injected from GitHub Secrets
+      TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+      TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+      # Signal to Playwright that we're in CI
+      CI: true
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Node setup ────────────────────────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── Install dependencies ───────────────────────────────────────────────
+      - name: Install npm dependencies
+        run: npm ci
+
+      # ── Install Playwright browsers ────────────────────────────────────────
+      - name: Install Playwright Chromium browser
+        run: npx playwright install chromium --with-deps
+
+      # ── Create .auth directory ─────────────────────────────────────────────
+      - name: Create auth state directory
+        run: mkdir -p tests/.auth
+
+      # ── Warm up dev instance ───────────────────────────────────────────────
+      # Railway dev environment sleeps after inactivity — wake it up before tests
+      - name: Warm up Railway dev instance
+        run: |
+          echo "Warming up $BASE_URL ..."
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BASE_URL/health" || echo "000")
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Instance is up!"
+              # Hit the login page too to warm up the full app
+              curl -s -o /dev/null "$BASE_URL/login" || true
+              break
+            fi
+            sleep 8
+          done
+          echo "Warm-up complete"
+
+      # ── Run tests ─────────────────────────────────────────────────────────
+      # If tests fail the job exits with a non-zero code, blocking the PR merge.
+      - name: Run Playwright E2E tests
+        run: npx playwright test
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+
+      # ── Upload HTML report ─────────────────────────────────────────────────
+      - name: Upload Playwright HTML report
+        if: always()   # upload even if tests fail — useful for debugging
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: tests/report/
+          retention-days: 14
+
+      # ── Upload screenshots & videos on failure ─────────────────────────────
+      - name: Upload test failure artifacts (screenshots, videos, traces)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-artifacts
+          path: |
+            tests/results/
+          retention-days: 14

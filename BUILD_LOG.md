@@ -204,7 +204,7 @@ Relationship  →  the household/group (top-level billing unit)
 
 ---
 
-### ⏳ Phase 11 — Viktor Full Integration
+### ✅ Phase 11 — Viktor Full Integration (COMPLETE — 2026-03-23)
 **Plan:**
 - Viktor (the business AI agent) gets an `agent` role in `firm_users`
 - All existing API endpoints accessible with agent JWT
@@ -214,7 +214,7 @@ Relationship  →  the household/group (top-level billing unit)
 
 ---
 
-### ⏳ Phase 12+ — Gmail Connector (Google Workspace Domain-Wide Delegation)
+### ✅ Phase 12 — Gmail Connector (COMPLETE — 2026-03-23)
 **Plan:**
 - Use Google Workspace service account with domain-wide delegation (NOT per-user OAuth)
 - One-time admin setup: Google Cloud project → Gmail API → service account JSON key → Workspace Admin domain-wide delegation with `gmail.readonly` scope
@@ -310,7 +310,7 @@ All core phases complete and deployed. Remaining:
 
 ---
 
-### ⏳ Phase 14 — Engagement Tab
+### ✅ Phase 14 — Engagement Tab (COMPLETE — 2026-03-23)
 **Plan:**
 - New "Engagement" tab on the Relationship detail page (crm-relationship.html)
 - Simple upload/view for signed engagement letters — staff uploads PDFs as they come in
@@ -322,7 +322,7 @@ All core phases complete and deployed. Remaining:
 
 ---
 
-### ⏳ Phase 13 — Native AI Layer (Viktor Efficiency Infrastructure)
+### ✅ Phase 13 — Native AI Layer (COMPLETE — 2026-03-23)
 
 **Goal:** Make DarkLion smarter so Viktor spends time on judgment calls, not mechanical work.
 

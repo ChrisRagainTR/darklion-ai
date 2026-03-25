@@ -397,6 +397,33 @@ router.get('/attachments/:documentId/download', async (req, res) => {
   }
 });
 
+// ── DELETE /messages/message/:messageId ──────────────────────────────────────
+// Staff can delete their own messages only — must be before /:threadId wildcard
+router.delete('/message/:messageId', async (req, res) => {
+  const firmId = req.firm.id;
+  const staffId = req.firm.userId;
+  const messageId = parseInt(req.params.messageId);
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT m.id FROM messages m
+       JOIN message_threads mt ON mt.id = m.thread_id
+       WHERE m.id = $1 AND m.sender_id = $2 AND m.sender_type = 'staff' AND mt.firm_id = $3`,
+      [messageId, staffId, firmId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Message not found or not yours' });
+
+    await pool.query('DELETE FROM message_attachments WHERE message_id = $1', [messageId]);
+    await pool.query('DELETE FROM message_mentions WHERE message_id = $1', [messageId]);
+    await pool.query('DELETE FROM messages WHERE id = $1', [messageId]);
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[DELETE /messages/message/:messageId] error:', err);
+    res.status(500).json({ error: 'Failed to delete message' });
+  }
+});
+
 // ── GET /messages/:threadId ───────────────────────────────────────────────────
 router.get('/:threadId', async (req, res) => {
   const firmId = req.firm.id;
@@ -866,6 +893,8 @@ router.delete('/:threadId/companies/:companyId', async (req, res) => {
   }
 });
 
+// ── DELETE /messages/message/:messageId ──────────────────────────────────────
+// Staff can delete their own messages only
 // ── PUT /messages/:threadId/read ─────────────────────────────────────────────
 router.put('/:threadId/read', async (req, res) => {
   const firmId = req.firm.id;

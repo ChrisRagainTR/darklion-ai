@@ -24,15 +24,48 @@ const { getSignedDownloadUrl, uploadFile, deleteFile, buildKey } = require('../s
 
 const DEFAULT_BUCKET = process.env.S3_BUCKET || 'darklion-documents';
 
+// ─── Auth cache ──────────────────────────────────────────────────────────────
+// Cache successful auth results for 5 minutes to avoid bcrypt on every request
+const AUTH_CACHE = new Map();
+const AUTH_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function getCachedAuth(cacheKey) {
+  const entry = AUTH_CACHE.get(cacheKey);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > AUTH_CACHE_TTL_MS) {
+    AUTH_CACHE.delete(cacheKey);
+    return null;
+  }
+  return entry.auth;
+}
+
+function setCachedAuth(cacheKey, auth) {
+  AUTH_CACHE.set(cacheKey, { auth, ts: Date.now() });
+  // Prune old entries periodically
+  if (AUTH_CACHE.size > 500) {
+    const now = Date.now();
+    for (const [k, v] of AUTH_CACHE) {
+      if (now - v.ts > AUTH_CACHE_TTL_MS) AUTH_CACHE.delete(k);
+    }
+  }
+}
+
 // ─── Auth helper ────────────────────────────────────────────────────────────
 
 /**
  * Parse HTTP Basic auth header and validate against firm_users.
+ * Supports two modes:
+ *   1. email + password (bcrypt, cached 5 min)
+ *   2. email + webdav_token (fast token lookup, no bcrypt)
  * Returns { firmId, userId } on success, null on failure.
  */
 async function authenticateBasic(req) {
   const authHeader = req.headers['authorization'];
   if (!authHeader || !authHeader.startsWith('Basic ')) return null;
+
+  // Check cache first (keyed by full auth header)
+  const cached = getCachedAuth(authHeader);
+  if (cached) return cached;
 
   let email, password;
   try {
@@ -49,7 +82,7 @@ async function authenticateBasic(req) {
 
   try {
     const { rows } = await pool.query(
-      `SELECT fu.id, fu.firm_id, fu.password_hash
+      `SELECT fu.id, fu.firm_id, fu.password_hash, fu.webdav_token
        FROM firm_users fu
        WHERE fu.email = $1 AND fu.archived_at IS NULL
        LIMIT 1`,
@@ -58,12 +91,22 @@ async function authenticateBasic(req) {
     if (!rows.length) return null;
 
     const user = rows[0];
-    if (!user.password_hash) return null;
 
+    // Mode 1: WebDAV token (fast path — no bcrypt)
+    if (user.webdav_token && password === user.webdav_token) {
+      const auth = { firmId: user.firm_id, userId: user.id };
+      setCachedAuth(authHeader, auth);
+      return auth;
+    }
+
+    // Mode 2: Password (bcrypt, slower — cache result)
+    if (!user.password_hash) return null;
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return null;
 
-    return { firmId: user.firm_id, userId: user.id };
+    const auth = { firmId: user.firm_id, userId: user.id };
+    setCachedAuth(authHeader, auth);
+    return auth;
   } catch (err) {
     console.error('[WebDAV] Auth error:', err.message);
     return null;
@@ -152,16 +195,17 @@ function xmlEscape(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function propfindResponse(href, isDir, size, lastModified) {
+function propfindResponse(href, isDir, size, lastModified, displayNameOverride) {
   const mod = lastModified ? new Date(lastModified).toUTCString() : new Date().toUTCString();
   const contentType = isDir ? 'httpd/unix-directory' : 'application/octet-stream';
   const resourceType = isDir ? '<D:collection/>' : '';
+  const displayName = displayNameOverride || href.split('/').filter(Boolean).pop() || 'DarkLion Drive';
   return `
   <D:response>
     <D:href>${xmlEscape(href)}</D:href>
     <D:propstat>
       <D:prop>
-        <D:displayname>${xmlEscape(href.split('/').filter(Boolean).pop() || 'DarkLion')}</D:displayname>
+        <D:displayname>${xmlEscape(displayName)}</D:displayname>
         <D:resourcetype>${resourceType}</D:resourcetype>
         <D:getcontenttype>${contentType}</D:getcontenttype>
         ${!isDir ? `<D:getcontentlength>${size || 0}</D:getcontentlength>` : ''}
@@ -203,7 +247,7 @@ async function handlePropfind(req, res) {
 
     if (level === 'root') {
       // Self entry
-      responses.push(propfindResponse('/webdav/', true, 0, null));
+      responses.push(propfindResponse('/webdav/', true, 0, null, 'DarkLion Drive'));
 
       if (depth !== '0') {
         const { rows } = await pool.query(

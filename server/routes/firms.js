@@ -867,5 +867,49 @@ router.post('/branding/logo', requireFirm, upload.single('logo'), async (req, re
   }
 });
 
+// --- POST /firms/webdav-token --- generate or regenerate personal WebDAV token
+router.post('/webdav-token', requireFirm, async (req, res) => {
+  const firmId = req.firm.id;
+  const email = req.firm.email;
+  // userId may be in req.firm.userId or we look it up by email
+  let userId = req.firm.userId;
+  try {
+    if (!userId) {
+      const { rows } = await pool.query('SELECT id FROM firm_users WHERE firm_id=$1 AND email=$2 LIMIT 1', [firmId, email]);
+      userId = rows[0]?.id;
+    }
+    if (!userId) return res.status(401).json({ error: 'Could not identify user' });
+
+    const crypto = require('crypto');
+    const token = 'wdv_' + crypto.randomBytes(24).toString('hex');
+
+    await pool.query('UPDATE firm_users SET webdav_token = $1 WHERE id = $2', [token, userId]);
+    res.json({ token });
+  } catch (err) {
+    console.error('POST /firms/webdav-token error:', err);
+    res.status(500).json({ error: 'Failed to generate token' });
+  }
+});
+
+// --- GET /firms/webdav-token --- get current token (masked)
+router.get('/webdav-token', requireFirm, async (req, res) => {
+  const firmId = req.firm.id;
+  const email = req.firm.email;
+  let userId = req.firm.userId;
+  try {
+    if (!userId) {
+      const { rows } = await pool.query('SELECT id FROM firm_users WHERE firm_id=$1 AND email=$2 LIMIT 1', [firmId, email]);
+      userId = rows[0]?.id;
+    }
+    if (!userId) return res.json({ hasToken: false, tokenPreview: null });
+
+    const { rows } = await pool.query('SELECT webdav_token FROM firm_users WHERE id = $1', [userId]);
+    const token = rows[0]?.webdav_token;
+    res.json({ hasToken: !!token, tokenPreview: token ? token.slice(0, 12) + '...' : null });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
 module.exports = router;
 module.exports.auditLog = auditLog;

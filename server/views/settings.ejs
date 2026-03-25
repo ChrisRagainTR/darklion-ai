@@ -39,6 +39,8 @@
     <button class="settings-tab-btn active" onclick="switchTab('branding')">🎨 Firm Branding</button>
     <button class="settings-tab-btn" onclick="switchTab('domains')">🌐 Custom Domains</button>
     <button class="settings-tab-btn" onclick="switchTab('api-keys')">🔑 API Keys</button>
+    <button class="settings-tab-btn" onclick="switchTab('downloads')">⬇️ Downloads</button>
+
   </div>
 
   <!-- ============ FIRM BRANDING ============ -->
@@ -151,7 +153,50 @@
     </div>
   </div><!-- end tab-api-keys -->
 
-</div>
+  <!-- ============ DOWNLOADS ============ -->
+  <div class="settings-tab-panel" id="tab-downloads">
+    <div class="settings-section">
+      <h2>Desktop Apps</h2>
+      <p>Install desktop tools for your firm's staff.</p>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;display:flex;align-items:center;gap:1.5rem;">
+        <div style="font-size:2.5rem;line-height:1;">🦁</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">DarkLion Drive</div>
+          <div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.5rem;">Mount your DarkLion documents as a folder on your Windows desktop. Drag and drop files directly into client folders.</div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.75rem;">Windows 10/11 only &nbsp;·&nbsp; WinFsp installed automatically.</div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.75rem;background:rgba(255,255,255,0.04);border-radius:6px;padding:0.5rem 0.75rem;line-height:1.6;">
+            <strong style="color:var(--text);">Setup notes:</strong><br>
+            1. Install WinFsp <strong>before</strong> running the installer. If you see a WinFsp error, download it first: <a href="https://winfsp.dev/rel" target="_blank" style="color:var(--gold);">winfsp.dev/rel</a><br>
+            2. After connecting, look for the <strong>DarkLion Drive</strong> shortcut on your Desktop. On OneDrive-synced PCs it may appear in your user folder (<code style="color:var(--muted);">C:\Users\you\DarkLion Drive</code>) — drag it to your Desktop.
+          </div>
+          <a href="https://github.com/ChrisRagainTR/darklion-ai/releases/download/v1.0.1/DarkLionDrive_Setup_1.0.1.exe"
+             class="btn btn-gold"
+             style="display:inline-block;text-decoration:none;font-size:0.85rem;padding:0.5rem 1.25rem;">
+            ⬇️ Download DarkLion Drive v1.0.1
+          </a>
+        </div>
+      </div>
+    </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;display:flex;align-items:center;gap:1.5rem;margin-top:1rem;">
+        <div style="font-size:2.5rem;line-height:1;">🖨️</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">DarkLion Print Agent</div>
+          <div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.5rem;">Print and upload tax documents directly from Drake Software to DarkLion. Batch print jobs with automatic client matching.</div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.75rem;">Windows only &nbsp;·&nbsp; Requires Drake Tax Software</div>
+          <a href="https://github.com/ChrisRagainTR/darklion-ai/releases/download/printv1.0.0/DarkLionPrintAgent_Setup_1.0.0.exe"
+             class="btn btn-gold"
+             style="display:inline-block;text-decoration:none;font-size:0.85rem;padding:0.5rem 1.25rem;">
+            ⬇️ Download Print Agent v1.0.0
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- end tab-downloads -->
+
+</div><!-- end settings-wrap -->
 
 <!-- New Token Modal -->
 <div class="modal-overlay" id="new-token-modal" style="display:none;" onclick="if(event.target===this)closeNewTokenModal()">
@@ -345,6 +390,8 @@ function switchTab(tab) {
   if (tab === 'api-keys') loadApiTokens();
   if (tab === 'branding') loadBranding();
 }
+
+// WebDAV token functions removed — replaced by DarkLion Drive desktop app
 
 // ==================== BRANDING ====================
 async function loadBranding() {
