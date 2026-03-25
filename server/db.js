@@ -834,15 +834,18 @@ async function initDB() {
       category TEXT DEFAULT ''
     );
     INSERT INTO pipeline_triggers (key, label, category) VALUES
-      ('tax-return-sent',         'Tax Return Sent',            'tax'),
-      ('tax-return-approved',     'Tax Return Approved',        'tax'),
-      ('tax-return-signed',       'Tax Return Signed',          'tax'),
-      ('engagement-letter-sent',  'Engagement Letter Sent',     'engagement'),
-      ('engagement-letter-signed','Engagement Letter Signed',   'engagement'),
-      ('proposal-sent',           'Proposal Sent',              'proposals'),
-      ('proposal-accepted',       'Proposal Accepted',          'proposals'),
-      ('portal-first-login',      'Client First Portal Login',  'portal'),
-      ('portal-message-received', 'Client Sent a Message',      'portal')
+      ('tax_return_deployed',         'Tax Return Deployed to Portal', 'tax'),
+      ('tax_return_signed',           'Client Signed Tax Return',      'tax'),
+      ('tax_return_approved',         'Tax Return Approved',           'tax'),
+      ('client_requested_changes',    'Client Requested Changes',      'tax'),
+      ('engagement_letter_sent',      'Engagement Letter Sent',        'engagement'),
+      ('engagement_letter_signed',    'Client Signed Engagement Letter','engagement'),
+      ('proposal_sent',               'Proposal Sent',                 'proposals'),
+      ('proposal_accepted',           'Proposal Accepted',             'proposals'),
+      ('proposal_signed',             'Proposal Signed',               'proposals'),
+      ('portal_first_login',          'Client First Portal Login',     'portal'),
+      ('portal_message_received',     'Client Sent a Portal Message',  'portal'),
+      ('document_uploaded_by_client', 'Client Uploaded a Document',    'portal')
     ON CONFLICT (key) DO NOTHING;
 
     -- Maps trigger keys → pipeline stages (max 2 per stage)
