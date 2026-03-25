@@ -288,6 +288,9 @@ app.get('/api-docs', (req, res) => res.render('api-docs', { title: 'DarkLion API
 
 const pipelinesRouter = require('./routes/pipelines');
 app.use('/api/pipelines', requireFirm, apiLimiter, pipelinesRouter);
+
+const pipelineTriggersRouter = require('./routes/pipeline-triggers');
+app.use('/api/pipeline-triggers', requireFirm, apiLimiter, pipelineTriggersRouter);
 app.get('/pipelines', (req, res) => res.render('pipelines', { title: 'Pipelines', activeNav: 'pipelines' }));
 
 const engagementRouter = require('./routes/engagement');
