@@ -655,12 +655,12 @@
     if (name === 'organizers') {
       const urlInput = document.getElementById('stanford-url-input');
       if (urlInput && personData) urlInput.value = personData.stanford_tax_url || '';
-      const el = document.getElementById('org-stanford-link');
-      if (el) {
+      const orgLinkEl = document.getElementById('org-stanford-link');
+      if (orgLinkEl) {
         if (personData && personData.stanford_tax_url) {
-          el.innerHTML = `<a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
+          orgLinkEl.innerHTML = `<a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
         } else {
-          el.innerHTML = '';
+          orgLinkEl.innerHTML = '';
         }
       }
     }
