@@ -541,7 +541,7 @@ async function handlePut(req, res, token) {
   form.append('owner_type', entity.type);
   form.append('owner_id', String(entity.id));
   form.append('year', String(year));
-  form.append('folder_section', category);
+  form.append('folder_section', 'firm_uploaded'); // always upload as advisor docs so they show in the web app
   form.append('folder_category', category);
   form.append('display_name', filename);
 
