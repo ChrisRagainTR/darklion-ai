@@ -143,7 +143,7 @@ async function buildTree(token) {
     var companies = Array.isArray(rawResults[1]) ? rawResults[1] : [];
 
     for (const p of people) {
-      const name = [p.first_name, p.last_name].filter(Boolean).join(' ');
+      const name = safeName([p.first_name, p.last_name].filter(Boolean).join(' '));
       if (!name) continue;
       const docsRaw = await apiGet('/api/documents?owner_type=person&owner_id=' + p.id, token).catch(function() { return []; });
       const docs = Array.isArray(docsRaw) ? docsRaw : [];
@@ -151,14 +151,14 @@ async function buildTree(token) {
     }
 
     for (const c of companies) {
-      const name = c.company_name || c.name;
+      const name = safeName(c.company_name || c.name);
       if (!name) continue;
       const docsRaw2 = await apiGet('/api/documents?owner_type=company&owner_id=' + c.id, token).catch(function() { return []; });
       const docs = Array.isArray(docsRaw2) ? docsRaw2 : [];
       entities.set(name, { id: c.id, type: 'company', docs: groupDocs(docs) });
     }
 
-    tree.set(rel.name, { id: rel.id, entities });
+    tree.set(safeName(rel.name), { id: rel.id, entities });
   }
 
   cacheSet(cacheKey, tree);
@@ -213,8 +213,13 @@ ${responses.join('\n')}
 </D:multistatus>`;
 }
 
+function safeName(s) {
+  // Replace characters that break filesystem paths
+  return (s || '').replace(/\//g, '-').replace(/\\/g, '-').replace(/:/g, '-').replace(/\*/g, '-').replace(/\?/g, '-').replace(/"/g, "'").replace(/</g, '(').replace(/>/g, ')').replace(/\|/g, '-');
+}
+
 function encPart(s) {
-  return encodeURIComponent(s).replace(/%20/g, '%20');
+  return encodeURIComponent(safeName(s)).replace(/%20/g, '%20');
 }
 
 // ─── Path parsing ──────────────────────────────────────────────────────────────
