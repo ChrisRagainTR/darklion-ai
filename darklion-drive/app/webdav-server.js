@@ -357,7 +357,9 @@ async function handlePropfind(req, res, token) {
     responses.push(propfindResponse('/' + encPart(relName) + '/', true, 0, null));
     if (depth !== '0') {
       const tree = await buildTree(token);
+      console.log('[WebDAV] Tree keys:', JSON.stringify([...tree.keys()]));
       const rel = tree.get(relName);
+      console.log('[WebDAV] Looking for:', JSON.stringify(relName), 'found:', !!rel, rel ? 'entities:' + rel.entities.size : '');
       if (rel) {
         for (const [entityName] of rel.entities) {
           responses.push(propfindResponse(`/${encPart(relName)}/${encPart(entityName)}/`, true, 0, null));
