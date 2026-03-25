@@ -1,5 +1,26 @@
 'use strict';
 
+var fs = require('fs');
+var os = require('os');
+var path = require('path');
+
+// Log to file so we can diagnose crashes in installed (no-terminal) mode
+var logFile = path.join(os.homedir(), 'AppData', 'Roaming', 'DarkLion Drive', 'app.log');
+try { require('fs').mkdirSync(path.dirname(logFile), { recursive: true }); } catch(e) {}
+var _origLog = console.log.bind(console);
+var _origWarn = console.warn.bind(console);
+var _origErr = console.error.bind(console);
+function writeLog(level, args) {
+  try {
+    var line = '[' + new Date().toISOString() + '] [' + level + '] ' + args.map(String).join(' ') + '\n';
+    fs.appendFileSync(logFile, line);
+  } catch(e) {}
+}
+console.log   = function() { _origLog.apply(console, arguments);  writeLog('INFO',  Array.from(arguments)); };
+console.warn  = function() { _origWarn.apply(console, arguments); writeLog('WARN',  Array.from(arguments)); };
+console.error = function() { _origErr.apply(console, arguments);  writeLog('ERROR', Array.from(arguments)); };
+process.on('uncaughtException', function(e) { writeLog('CRASH', [e.stack || e.message]); });
+
 var electron = require('electron');
 var app = electron.app;
 var BrowserWindow = electron.BrowserWindow;
@@ -8,7 +29,6 @@ var Tray = electron.Tray;
 var Menu = electron.Menu;
 var nativeImage = electron.nativeImage;
 var powerMonitor = electron.powerMonitor;
-var path = require('path');
 
 // Single instance lock - MUST be before app.whenReady()
 var gotLock = app.requestSingleInstanceLock();
