@@ -339,12 +339,19 @@ router.post('/:id/send', async (req, res) => {
       }
     }
 
-    // Fire smart pipeline trigger for each signer (non-blocking)
-    for (const signer of signers) {
-      fireTrigger(firmId, 'tax_return_deployed', signer.person_id, {
+    // Fire smart pipeline trigger — company delivery fires on company, personal on person (non-blocking)
+    if (delivery.company_id) {
+      fireTrigger(firmId, 'tax_return_deployed', delivery.company_id, {
         delivery_id: id,
         tax_year: delivery.tax_year,
-      }).catch(e => console.error('[tax-delivery] fireTrigger non-fatal:', e));
+      }, 'company').catch(e => console.error('[tax-delivery] fireTrigger non-fatal:', e));
+    } else {
+      for (const signer of signers) {
+        fireTrigger(firmId, 'tax_return_deployed', signer.person_id, {
+          delivery_id: id,
+          tax_year: delivery.tax_year,
+        }, 'person').catch(e => console.error('[tax-delivery] fireTrigger non-fatal:', e));
+      }
     }
 
     res.json({ ok: true });

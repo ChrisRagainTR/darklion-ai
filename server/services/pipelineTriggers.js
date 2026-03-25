@@ -28,11 +28,14 @@ async function isTerminalStage(stageId) {
 /**
  * @param {number} firmId
  * @param {string} triggerKey  e.g. 'tax_return_deployed'
- * @param {number} personId
+ * @param {number} entityId    person_id (default) or company_id
  * @param {object} [context={}]  extra metadata stored in the log
+ * @param {string} [entityType='person']  'person' or 'company'
  * @returns {Promise<Array<{pipeline: string, from_stage: string|null, to_stage: string}>>}
  */
-async function fireTrigger(firmId, triggerKey, personId, context = {}) {
+async function fireTrigger(firmId, triggerKey, entityId, context = {}, entityType = 'person') {
+  const personId = entityType === 'person' ? entityId : null;
+  const companyId = entityType === 'company' ? entityId : null;
   const moved = [];
 
   // 1. Find all stage configs for this firm + trigger
@@ -52,17 +55,17 @@ async function fireTrigger(firmId, triggerKey, personId, context = {}) {
 
   for (const cfg of configs) {
     try {
-      // 2. Find the person's active pipeline_job in this pipeline instance
+      // 2. Find the entity's active pipeline_job in this pipeline instance
       const { rows: jobRows } = await pool.query(
         `SELECT pj.id, pj.current_stage_id, ps.name AS from_stage_name
          FROM pipeline_jobs pj
          LEFT JOIN pipeline_stages ps ON ps.id = pj.current_stage_id
          WHERE pj.instance_id = $1
-           AND pj.entity_type = 'person'
-           AND pj.entity_id = $2
+           AND pj.entity_type = $2
+           AND pj.entity_id = $3
            AND pj.job_status NOT IN ('complete', 'archived')
          LIMIT 1`,
-        [cfg.pipeline_instance_id, personId]
+        [cfg.pipeline_instance_id, entityType, entityId]
       );
 
       let job = jobRows[0];
@@ -71,9 +74,9 @@ async function fireTrigger(firmId, triggerKey, personId, context = {}) {
       if (!job) {
         const { rows: newJobRows } = await pool.query(
           `INSERT INTO pipeline_jobs (instance_id, entity_type, entity_id, current_stage_id, job_status)
-           VALUES ($1, 'person', $2, $3, 'active')
+           VALUES ($1, $2, $3, $4, 'active')
            RETURNING id, current_stage_id`,
-          [cfg.pipeline_instance_id, personId, cfg.stage_id]
+          [cfg.pipeline_instance_id, entityType, entityId, cfg.stage_id]
         );
         // Log the creation
         await pool.query(
@@ -111,8 +114,8 @@ async function fireTrigger(firmId, triggerKey, personId, context = {}) {
         `INSERT INTO pipeline_trigger_log
            (firm_id, trigger_key, person_id, pipeline_instance_id, from_stage_id, to_stage_id, job_id, context)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [firmId, triggerKey, personId, cfg.pipeline_instance_id,
-         job.current_stage_id, cfg.stage_id, job.id, JSON.stringify(context)]
+        [firmId, triggerKey, entityType === 'person' ? entityId : null, cfg.pipeline_instance_id,
+         job.current_stage_id, cfg.stage_id, job.id, JSON.stringify({ ...context, entityType, entityId })]
       );
 
       // 6. Terminal stage check — archive job + record completion
