@@ -134,6 +134,9 @@
         <div id="overview-tax-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
           <div class="loading-state"><div class="loading-spinner"></div></div>
         </div>
+        <div id="overview-pipeline-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
       </div>
       <!-- RIGHT col -->
       <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">
@@ -476,9 +479,10 @@
       </div>
     </div>
   </div>
+</div>
 
 <div id="tab-organizers" class="tab-content">
-  <div style="max-width:700px;">
+  <div style="max-width:700px;padding:1.5rem;">
     <div class="card">
       <div class="card-title">Stanford Tax Organizer</div>
       <div id="org-stanford-link" style="margin-bottom:1rem;"></div>
@@ -489,7 +493,10 @@
         </div>
         <button class="btn btn-gold btn-sm" onclick="saveStanfordUrl()">Save</button>
       </div>
-      <div style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem;">Paste the client's Stanford Tax organizer link. It will also appear in their portal.</div>
+      <div style="display:flex;align-items:center;gap:1rem;margin-top:0.6rem;">
+        <div style="font-size:0.78rem;color:var(--muted);">Paste the client's Stanford Tax organizer link. It will also appear in their portal.</div>
+        <div class="save-indicator" id="org-save-msg" style="flex-shrink:0;"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -506,7 +513,7 @@
     <!-- Pipeline History -->
     <div style="margin-top:2rem;">
       <div style="font-size:1.05rem;font-weight:700;margin-bottom:1rem;">📋 Pipeline History</div>
-      <div id="pipeline-history-loading" style="color:var(--muted);font-size:0.85rem;">Loading…</div>
+      <div id="pipeline-history-loading" style="color:var(--muted);font-size:0.85rem;"></div>
       <div id="pipeline-history-list" style="display:none;"></div>
     </div>
   </div>
@@ -556,6 +563,13 @@
       <div class="form-group"><label>Phone</label><input type="text" class="form-control" id="ef-phone"></div>
     </div>
     <div class="form-group"><label>Date of Birth</label><input type="date" class="form-control" id="ef-dob"></div>
+    <div class="form-group"><label>Billing Method</label>
+      <select class="form-control" id="ef-billing-method">
+        <option value="">— Select —</option>
+        <option value="monthly_billing">Monthly Billing</option>
+        <option value="client_invoice">Client Invoice</option>
+      </select>
+    </div>
     <div class="form-group"><label>Filing Status</label>
       <select class="form-control" id="ef-filing">
         <option value="">— Select —</option>
@@ -628,8 +642,9 @@
   function toast(msg, type) { if (_shellToast) _shellToast(msg, type === 'error' ? 'error' : undefined); }
 
   function switchTab(name, el) {
+    try {
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => { t.classList.remove('active'); t.style.display = ''; });
     if (el) el.classList.add('active');
     const tc = document.getElementById('tab-' + name);
     if (tc) tc.classList.add('active');
@@ -642,14 +657,23 @@
     if (name === 'organizers') {
       const urlInput = document.getElementById('stanford-url-input');
       if (urlInput && personData) urlInput.value = personData.stanford_tax_url || '';
-      const el = document.getElementById('org-stanford-link');
-      if (el && personData && personData.stanford_tax_url) {
-        el.innerHTML = `<a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
+      const orgLinkEl = document.getElementById('org-stanford-link');
+      if (orgLinkEl) {
+        if (personData && personData.stanford_tax_url) {
+          orgLinkEl.innerHTML = `<a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
+        } else {
+          orgLinkEl.innerHTML = '';
+        }
       }
     }
-    if (name === 'notes' && personData) document.getElementById('notes-ta-full').value = personData.notes || '';
+    if (name === 'notes') {
+      const notesEl = document.getElementById('notes-ta-full');
+      if (notesEl) notesEl.value = (personData && personData.notes) || '';
+    }
     if (name === 'workflow') loadWorkflow();
+    } catch(e) { console.error('switchTab error:', e); }
   }
+  window.switchTab = switchTab;
 
   async function loadWorkflow() {
     const loading = document.getElementById('workflow-loading');
@@ -659,7 +683,14 @@
       const res = await apiFetch(`/api/pipelines/entity-jobs?entity_type=person&entity_id=${personId}`);
       const jobs = await res.json();
       loading.style.display = 'none'; list.style.display = '';
-      if (!jobs.length) { list.innerHTML = '<div style="color:var(--muted);">This person is not in any pipelines yet.</div>'; return; }
+      if (!jobs.length) {
+        list.innerHTML = `<div style="text-align:center;padding:2.5rem 1rem;color:var(--muted);">
+          <div style="font-size:2rem;margin-bottom:0.75rem;">📋</div>
+          <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.4rem;color:var(--text);">No active pipelines</div>
+          <div style="font-size:0.84rem;">Workflows will appear here once this client is added to a pipeline.</div>
+        </div>`;
+        return;
+      }
       list.innerHTML = jobs.map(j => {
         const stageColor = j.stage_color || 'var(--gold)';
         const yearBadge = j.tax_year ? `<span style="font-size:0.72rem;background:rgba(255,255,255,0.06);border-radius:4px;padding:0.1rem 0.45rem;margin-left:0.5rem;color:var(--muted);">${j.tax_year}</span>` : '';
@@ -689,10 +720,11 @@
     loading.style.display = ''; list.style.display = 'none';
     try {
       const res = await apiFetch(`/api/pipelines/completions?entity_type=person&entity_id=${personId}`);
+      if (!res.ok) throw new Error('API error');
       const data = await res.json();
-      loading.style.display = 'none'; list.style.display = '';
       const completions = data.completions || [];
       const activeJobs = data.active_jobs || [];
+      loading.style.display = 'none'; list.style.display = '';
       if (!completions.length && !activeJobs.length) {
         list.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">No pipeline history yet.</div>';
         return;
@@ -717,7 +749,10 @@
         </div>`);
       });
       list.innerHTML = rows.join('') || '<div style="color:var(--muted);font-size:0.85rem;">No pipeline history yet.</div>';
-    } catch(e) { loading.textContent = 'Failed to load pipeline history.'; }
+    } catch(e) {
+      loading.style.display = 'none'; list.style.display = '';
+      list.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">No pipeline history yet.</div>';
+    }
   }
 
   // ── Fire Trigger Modal ────────────────────────────────
@@ -851,6 +886,9 @@
 
   function renderOverview(p) {
     document.getElementById('notes-ta').value = p.notes || '';
+    // Also seed the full notes textarea in the Notes tab
+    const notesFullEl = document.getElementById('notes-ta-full');
+    if (notesFullEl) notesFullEl.value = p.notes || '';
 
     // ── LEFT COL: Contact Details ──
     const contactEl = document.getElementById('overview-contact-panel');
@@ -861,6 +899,18 @@
     const fsKey = p.filing_status === 'mfj' ? 'MFJ' : p.filing_status === 'single' ? 'Single' : p.filing_status === 'hoh' ? 'HOH' : p.filing_status === 'mfs' ? 'MFS' : null;
     const fsBg = fsColors[fsKey] || 'rgba(143,163,184,0.15)';
     const fsTc = fsTextColors[fsKey] || '#8fa3b8';
+    const personBmLabel = p.billing_method === 'monthly_billing' ? 'Monthly Billing' : p.billing_method === 'client_invoice' ? 'Client Invoice' : (p.billing_method || '—');
+    const contactRows = [
+      { label: 'Email',          val: p.email ? `<a href="mailto:${esc(p.email)}" style="color:var(--gold);">${esc(p.email)}</a>` : '—' },
+      { label: 'Phone',          val: fmtPhone(p.phone) || '—' },
+      { label: 'Date of Birth',  val: fmtDOB(p.date_of_birth) || '—' },
+      { label: 'Billing Method', val: esc(personBmLabel) },
+      { label: 'Filing Status',  val: p.filing_status ? `<span style="background:${fsBg};color:${fsTc};border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">${esc(fsLabel)}</span>` : '—' },
+      ...(p.relationship_name ? [{ label: 'Relationship', val: `<a href="#" style="color:var(--gold);">${esc(p.relationship_name)}</a>` }] : []),
+    ];
+    const contactRowsHtml = contactRows.map(r =>
+      `<div style="min-width:0;"><div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.18rem;">${r.label}</div><div style="font-size:0.84rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;">${r.val}</div></div>`
+    ).join('');
     contactEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Contact Details</div>
       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.85rem;">
         <div style="width:48px;height:48px;border-radius:50%;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
@@ -869,10 +919,7 @@
           ${p.filing_status ? `<span style="background:${fsBg};color:${fsTc};border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">${esc(fsLabel)}</span>` : ''}
         </div>
       </div>
-      <div class="info-row"><span class="info-label">Email</span><span class="info-val">${p.email ? `<a href="mailto:${esc(p.email)}" style="color:var(--gold);">${esc(p.email)}</a>` : '—'}</span></div>
-      <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${fmtPhone(p.phone)}</span></div>
-      <div class="info-row"><span class="info-label">Date of Birth</span><span class="info-val">${fmtDOB(p.date_of_birth)}</span></div>
-      ${p.relationship_name ? `<div class="info-row"><span class="info-label">Relationship</span><span class="info-val"><a href="#" style="color:var(--gold);">${esc(p.relationship_name)}</a></span></div>` : ''}`;
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem 1rem;">${contactRowsHtml}</div>`;
 
     // ── LEFT COL: Client Portal ──
     const portalEl = document.getElementById('overview-portal-panel');
@@ -990,6 +1037,49 @@
         </a>`;
       }).join('');
     }).catch(()=>{ const el=document.getElementById('ov-person-msgs-inner'); if(el) el.innerHTML='<span style="color:var(--muted);">—</span>'; });
+
+    // ── CENTER COL: Pipeline History ──
+    loadOverviewPipelineHistory();
+  }
+
+  async function loadOverviewPipelineHistory() {
+    const panel = document.getElementById('overview-pipeline-panel');
+    if (!panel) return;
+    panel.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Pipeline History</div><div style="color:var(--muted);font-size:0.82rem;">Loading…</div>`;
+    try {
+      const res = await apiFetch(`/api/pipelines/completions?entity_type=person&entity_id=${personId}`);
+      const data = await res.json();
+      const completions = data.completions || [];
+      const activeJobs = data.active_jobs || [];
+      let html = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Pipeline History</div>`;
+      if (!completions.length && !activeJobs.length) {
+        html += `<div style="color:var(--muted);font-size:0.82rem;font-style:italic;">No pipeline history yet.</div>`;
+      } else {
+        const rows = [];
+        completions.forEach(c => {
+          const yr = c.tax_year ? ` ${c.tax_year}` : '';
+          const date = new Date(c.completed_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+          rows.push(`<div style="display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+            <span style="font-size:0.9rem;">✅</span>
+            <span style="flex:1;font-size:0.82rem;font-weight:600;">${esc(c.pipeline_name)}${yr}</span>
+            <span style="font-size:0.75rem;color:var(--muted);">${date}</span>
+          </div>`);
+        });
+        activeJobs.forEach(j => {
+          const yr = j.tax_year ? ` ${j.tax_year}` : '';
+          const stage = j.current_stage_name ? ` → ${j.current_stage_name}` : '';
+          rows.push(`<div style="display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+            <span style="font-size:0.9rem;">🔄</span>
+            <span style="flex:1;font-size:0.82rem;font-weight:600;">${esc(j.pipeline_name)}${yr}</span>
+            <span style="font-size:0.75rem;color:var(--muted);">in progress${esc(stage)}</span>
+          </div>`);
+        });
+        html += rows.join('');
+      }
+      panel.innerHTML = html;
+    } catch(e) {
+      panel.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Pipeline History</div><div style="color:var(--muted);font-size:0.82rem;font-style:italic;">No pipeline history yet.</div>`;
+    }
   }
 
   // ── Docs: helpers ──
@@ -1294,14 +1384,15 @@
 
   async function saveStanfordUrl() {
     const url = document.getElementById('stanford-url-input').value.trim();
+    const msgEl = document.getElementById('org-save-msg');
     try {
       await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify({ stanford_tax_url: url }) });
       if (personData) personData.stanford_tax_url = url;
       const el = document.getElementById('org-stanford-link');
       if (el && url) el.innerHTML = `<a href="${esc(url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
       else if (el) el.innerHTML = '';
-      toast('Organizer URL saved');
-    } catch(e) { toast(e.message, 'error'); }
+      if (msgEl) { msgEl.textContent = '✓ Saved'; setTimeout(() => { msgEl.textContent = ''; }, 2500); }
+    } catch(e) { if (msgEl) { msgEl.style.color='var(--red)'; msgEl.textContent='Failed to save'; setTimeout(()=>{ msgEl.textContent=''; msgEl.style.color=''; }, 2500); } }
   }
 
   async function autoSaveNotes(val, force) {
@@ -1385,6 +1476,7 @@
     document.getElementById('ef-email').value = personData.email || '';
     document.getElementById('ef-phone').value = personData.phone || '';
     document.getElementById('ef-dob').value = personData.date_of_birth || '';
+    document.getElementById('ef-billing-method').value = personData.billing_method || '';
     document.getElementById('ef-filing').value = personData.filing_status || '';
     document.getElementById('ef-spouse-id').value = personData.spouse_id || '';
     document.getElementById('ef-spouse-search').value = personData.spouse
@@ -1412,6 +1504,7 @@
       email: document.getElementById('ef-email').value.trim(),
       phone: document.getElementById('ef-phone').value.trim(),
       date_of_birth: document.getElementById('ef-dob').value || null,
+      billing_method: document.getElementById('ef-billing-method').value || null,
       filing_status: document.getElementById('ef-filing').value,
       spouse_id: spouseIdRaw ? parseInt(spouseIdRaw) : null,
     };

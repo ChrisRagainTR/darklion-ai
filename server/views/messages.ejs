@@ -511,6 +511,8 @@ function renderInbox() {
 
   if (!threads.length) {
     document.getElementById('inboxList').innerHTML = '<div style="color:var(--muted);padding:1.5rem 1rem;font-size:0.85rem;">No active threads.</div>';
+    // Clear the detail panel so it doesn't show a stale thread from the previous tab
+    clearThreadPanel();
     return;
   }
 
@@ -598,6 +600,12 @@ async function loadInboxSummary(force = false) {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '↺ Refresh'; }
   }
+}
+
+function clearThreadPanel() {
+  activeThreadId = null;
+  document.getElementById('threadView').style.display = 'none';
+  document.getElementById('noThreadSelected').style.display = '';
 }
 
 async function loadThread(threadId, silent = false) {

@@ -453,9 +453,11 @@
       var smartBadge = (smartStageConfigs[stage.id] && smartStageConfigs[stage.id].length)
         ? '<span title="Smart stage: auto-moves cards here" style="font-size:0.78rem;opacity:0.8;margin-left:0.3rem;cursor:default;">⚡</span>'
         : '';
-      var terminalBadge = stage.is_terminal
-        ? '<span title="Terminal stage: cards are archived and completion recorded when reaching here" style="font-size:0.78rem;margin-left:0.3rem;cursor:default;">🏁</span>'
-        : '';
+      var terminalBadge = stage.hold_for_migration
+        ? '<span title="Hold for migration: cards are held here until migrated to next year\'s pipeline" style="font-size:0.78rem;margin-left:0.3rem;cursor:default;">♻️</span>'
+        : (stage.is_terminal
+          ? '<span title="Terminal stage: cards are archived when reaching here" style="font-size:0.78rem;margin-left:0.3rem;cursor:default;">🏁</span>'
+          : '');
       html += '<div class="kanban-col" data-stage-id="' + stage.id + '"' +
         ' ondragover="event.preventDefault();this.classList.add(\'drag-over\')"' +
         ' ondragleave="this.classList.remove(\'drag-over\')"' +
@@ -516,11 +518,18 @@
     }).join('') : '';
 
     var terminalNote = isTerminal
-      ? '<div style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem;opacity:0.7;">🏁 Archiving tonight at 10 PM</div>'
+      ? (job.hold_for_migration
+        ? '<div style="font-size:0.68rem;color:#4a90d9;margin-top:0.2rem;opacity:0.85;">♻️ Held for migration</div>'
+        : '<div style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem;opacity:0.7;">🏁 Archiving tonight at 10 PM</div>'
+        )
+      : '';
+
+    var invoiceBadge = job.billing_method === 'client_invoice'
+      ? '<span style="display:inline-block;margin-left:0.4rem;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.62rem;font-weight:700;color:#fff;background:var(--red);letter-spacing:0.03em;vertical-align:middle;line-height:1.5;">INVOICE</span>'
       : '';
 
     return '<div class="job-card" data-job-id="' + job.id + '" draggable="true" onclick="openPanel(' + job.id + ')"' + statusAttr + '>' +
-      '<div class="job-name">' + pill + name + '</div>' +
+      '<div class="job-name">' + pill + name + invoiceBadge + '</div>' +
       terminalNote +
       updatesHtml +
       '<div class="job-meta" style="margin-top:0.35rem;">' +
@@ -722,7 +731,20 @@
           (h.note ? '<br><em>' + esc(h.note) + '</em>' : '') + '</div></div>';
       }).join('') : '<p style="color:var(--muted);font-size:0.8rem;">No history yet.</p>';
 
+      // Check if card is held for migration
+      var currentStage = stages.find(function(s) { return s.id == job.current_stage_id; });
+      var isHeld = currentStage && currentStage.is_terminal && currentStage.hold_for_migration;
+      var migrateBtn = isHeld
+        ? '<div style="margin-bottom:0.75rem;padding:0.75rem;background:rgba(74,144,217,0.08);border:1px solid rgba(74,144,217,0.25);border-radius:8px;">' +
+            '<div style="font-size:0.78rem;color:#4a90d9;font-weight:600;margin-bottom:0.4rem;">♻️ Card held for migration</div>' +
+            '<div style="font-size:0.76rem;color:var(--muted);margin-bottom:0.6rem;">Move this card to the same pipeline next year.</div>' +
+            '<button class="btn btn-sm" style="background:#4a90d9;color:#fff;border:none;" onclick="migrateCardToNextYear(' + jobId + ')">Move to Next Year →</button>' +
+            '<span id="migrate-msg-' + jobId + '" style="margin-left:0.5rem;font-size:0.76rem;"></span>' +
+          '</div>'
+        : '';
+
       qs('#panel-body').innerHTML =
+        migrateBtn +
         '<div class="panel-field"><label>Client</label>' +
           '<a class="panel-entity-link" href="' + entityUrl(job.entity_type, job.entity_id) + '" target="_blank">' + esc(job.entity_name || '#' + job.entity_id) + '</a>' +
         '</div>' +
@@ -772,6 +794,19 @@
   window.panelScheduleSave = function(jobId) {
     clearTimeout(panelSaveTimer);
     panelSaveTimer = setTimeout(function() { panelSave(jobId); }, 800);
+  };
+
+  window.migrateCardToNextYear = function(jobId) {
+    var msgEl = document.getElementById('migrate-msg-' + jobId);
+    if (msgEl) { msgEl.style.color = 'var(--muted)'; msgEl.textContent = 'Moving…'; }
+    api('POST', '/jobs/' + jobId + '/migrate-to-next-year', {})
+      .then(function(result) {
+        if (msgEl) { msgEl.style.color = 'var(--green)'; msgEl.textContent = '✓ Moved to ' + (result.new_tax_year || 'next year'); }
+        setTimeout(function() { closePanel(); loadBoard(); }, 1200);
+      })
+      .catch(function(e) {
+        if (msgEl) { msgEl.style.color = 'var(--red)'; msgEl.textContent = e.message; }
+      });
   };
 
   window.deleteJob = async function(jobId) {
@@ -1047,11 +1082,14 @@
   var _urlParams = new URLSearchParams(window.location.search);
   var _instanceParam = _urlParams.get('instance');
   if (_instanceParam) {
+    // Hide list immediately to prevent flash
+    showBoard();
+    document.getElementById('kanban-wrap').innerHTML = '<div class="board-empty"><p style="color:var(--muted)">Loading…</p></div>';
     api('GET', '/instances/' + _instanceParam).then(function(inst) {
-      if (!inst || !inst.template_id) return;
+      if (!inst || !inst.template_id) { showList(); return; }
       currentYear = parseInt(inst.tax_year) || currentYear;
       openPipeline(inst.template_id);
-    }).catch(function() {});
+    }).catch(function() { showList(); });
   }
 
 })();

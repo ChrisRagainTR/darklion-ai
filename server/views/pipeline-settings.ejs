@@ -119,48 +119,57 @@
   .add-stage-input:focus { border-color: var(--gold); }
   .add-stage-input::placeholder { color: var(--muted); }
 
-  /* ── AUTOMATION TABLE ── */
-  .automation-table {
-    width: 100%;
-    border-collapse: collapse;
+  /* ── AUTOMATION CARDS ── */
+  .auto-card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 10px;
     overflow: hidden;
   }
-  .automation-table th {
-    font-size: 0.7rem;
+  .auto-card-header {
+    padding: 0.6rem 1rem;
+    background: rgba(0,0,0,0.12);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+  .auto-card-body {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr;
+    align-items: start;
+  }
+  .auto-col {
+    padding: 0.85rem 1rem;
+  }
+  .auto-col-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.85rem 0;
+    color: var(--gold);
+    font-size: 1.3rem;
+    align-self: center;
+  }
+  .auto-col-label {
+    font-size: 0.67rem;
     font-weight: 700;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    padding: 0.65rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-    background: rgba(0,0,0,0.1);
-  }
-  .automation-table td {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    vertical-align: top;
-    font-size: 0.85rem;
-  }
-  .automation-table tbody tr:last-child td { border-bottom: none; }
-  .automation-table tbody tr:hover td { background: rgba(255,255,255,0.01); }
-  .at-stage-name {
-    font-weight: 600;
-    font-size: 0.85rem;
-    white-space: nowrap;
-    min-width: 120px;
+    margin-bottom: 0.6rem;
   }
   .at-stage-color { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); margin-right: 0.4rem; vertical-align: middle; }
+  .at-stage-name { font-weight: 600; font-size: 0.85rem; }
 
   /* ── TRIGGER CHIPS ── */
   .trigger-chips {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 0.35rem;
-    align-items: center;
+    align-items: flex-start;
   }
   .trigger-chip {
     display: inline-flex;
@@ -308,14 +317,28 @@
     </div>
   </div>
 
-  <!-- ══ DEFAULT YEAR ══ -->
+  <!-- ══ YEAR SETTINGS (Default Year + Copy to Year) ══ -->
   <div class="ps-section">
-    <div class="ps-section-title">📅 Default Year</div>
-    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-      <select id="default-year-sel" class="add-stage-input" style="max-width:140px;" onchange="saveDefaultYear(this.value)">
-        <option value="">No default</option>
-      </select>
-      <span style="font-size:0.78rem;color:var(--muted);">When you open this pipeline, it jumps straight to this year.</span>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:1rem;align-items:start;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1.1rem;">
+      <!-- Default Year -->
+      <div style="display:flex;flex-direction:column;gap:0.3rem;min-width:160px;">
+        <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">📅 Default Year</div>
+        <select id="default-year-sel" class="add-stage-input" style="max-width:140px;" onchange="saveDefaultYear(this.value)">
+          <option value="">No default</option>
+        </select>
+        <span style="font-size:0.72rem;color:var(--muted);">Opens to this year by default.</span>
+      </div>
+      <!-- Divider -->
+      <div style="border-left:1px solid var(--border);padding-left:1rem;">
+        <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">📋 Copy to Another Year</div>
+        <div style="font-size:0.76rem;color:var(--muted);margin-bottom:0.6rem;">Duplicate this pipeline's stages, triggers &amp; actions into a new year's instance.</div>
+        <div style="display:flex;align-items:center;gap:0.65rem;flex-wrap:wrap;">
+          <input type="number" id="copy-year-input" min="2020" max="2040" placeholder="e.g. 2026"
+            style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.6rem;border-radius:6px;font-size:0.84rem;outline:none;width:110px;" />
+          <button class="btn btn-gold btn-sm" onclick="copyPipelineToYear()">Copy →</button>
+          <span id="copy-year-msg" style="font-size:0.76rem;"></span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -331,21 +354,17 @@
     </div>
   </div>
 
-  <!-- ══ AUTOMATION TABLE ══ -->
+  <!-- ══ AUTOMATION ══ -->
   <div class="ps-section">
     <div class="ps-section-title">⚡ Automation</div>
-    <table class="automation-table">
-      <thead>
-        <tr>
-          <th style="width:160px;">Stage</th>
-          <th>⚡ Triggers <span style="font-weight:400;font-size:0.68rem;text-transform:none;letter-spacing:0;">(move card here when…)</span></th>
-          <th style="width:320px;">🎯 Actions <span style="font-weight:400;font-size:0.68rem;text-transform:none;letter-spacing:0;">(fire when card arrives)</span></th>
-        </tr>
-      </thead>
-      <tbody id="automation-tbody">
-        <tr><td colspan="3"><div class="ps-loading"><div class="loading-spinner"></div> Loading…</div></td></tr>
-      </tbody>
-    </table>
+    <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.25rem;font-size:0.82rem;color:var(--muted);line-height:1.6;">
+      <strong style="color:var(--gold);">How it works:</strong>
+      A <strong style="color:var(--text);">Trigger</strong> fires automatically (e.g. tax return sent) and moves a client's card into the Stage.
+      Once the card lands, the Stage's <strong style="color:var(--text);">Actions</strong> run — like sending a portal message or creating a staff task.
+    </div>
+    <div id="automation-list" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div class="ps-loading"><div class="loading-spinner"></div> Loading…</div>
+    </div>
   </div>
 </div>
 
@@ -369,7 +388,7 @@
   var activeActionForm = null; // { stageId, type } — which inline form is open
 
   // ── Update "Back to Pipeline" link ──
-  document.getElementById('back-to-pipeline').href = '/pipelines'; // will deepen once we know instanceId
+  document.getElementById('back-to-pipeline').href = '/pipelines?instance=' + instanceId;
 
   // ── Utility ──
   function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
@@ -447,7 +466,7 @@
       renderAutomationTable();
     }).catch(function(e) {
       document.getElementById('stage-grid').innerHTML = '<div class="ps-empty">Failed to load: ' + esc(e.message) + '</div>';
-      document.getElementById('automation-tbody').innerHTML = '<tr><td colspan="3"><div class="ps-empty">Failed to load.</div></td></tr>';
+      document.getElementById('automation-list').innerHTML = '<div class="ps-empty">Failed to load.</div>';
     });
   }
 
@@ -462,14 +481,18 @@
       var color = s.color || '#c9a84c';
       var terminalClass = s.is_terminal ? ' is-terminal' : '';
       var terminalChecked = s.is_terminal ? ' checked' : '';
-      // Only show 🏁 checkbox on the last stage
+      // Last stage is always terminal — show hold option on it
       var isLast = s.id === lastStageId;
+      var holdChecked = s.hold_for_migration ? ' checked' : '';
       var terminalHtml = isLast
-        ? '<label class="stage-terminal-label' + terminalClass + '" title="Archive card when it reaches this stage">' +
-            '<input type="checkbox"' + terminalChecked + ' onchange="toggleTerminal(' + s.id + ', this.checked)" />' +
-            '🏁 Archive on arrival' +
-          '</label>'
-        : (s.is_terminal ? '<div style="font-size:0.7rem;color:var(--muted);">🏁 Terminal</div>' : '');
+        ? '<div style="padding:0.4rem 0.5rem;border-top:1px solid rgba(255,255,255,0.05);">' +
+            '<div style="font-size:0.7rem;color:var(--gold);font-weight:600;margin-bottom:0.35rem;">🏁 Final stage</div>' +
+            '<label style="display:flex;align-items:center;gap:0.4rem;font-size:0.72rem;color:var(--muted);cursor:pointer;" title="Hold card here instead of archiving — migrate to next year\'s pipeline">' +
+              '<input type="checkbox"' + holdChecked + ' onchange="toggleHoldForMigration(' + s.id + ', this.checked)" style="cursor:pointer;accent-color:var(--gold);" />' +
+              '♻️ Hold card for migration' +
+            '</label>' +
+          '</div>'
+        : '';
       return '<div class="stage-card" data-stage-id="' + s.id + '" draggable="true">' +
         '<div class="stage-card-head">' +
           '<span class="stage-drag-handle" title="Drag to reorder" style="cursor:grab;color:var(--muted);font-size:0.85rem;flex-shrink:0;">⠿</span>' +
@@ -555,8 +578,9 @@
 
   // ── AUTOMATION TABLE ──
   function renderAutomationTable() {
+    var container = document.getElementById('automation-list');
     if (!stages.length) {
-      document.getElementById('automation-tbody').innerHTML = '<tr><td colspan="3"><div class="ps-empty">Add stages above to configure automation.</div></td></tr>';
+      container.innerHTML = '<div class="ps-empty" style="grid-column:1/-1;">Add stages above to configure automation.</div>';
       return;
     }
 
@@ -567,20 +591,20 @@
       byCategory[t.category].push(t);
     });
 
-    var rows = stages.map(function(s) {
+    var cards = stages.map(function(s) {
       var cfgs = smartStageConfigs[s.id] || [];
       var color = s.color || '#c9a84c';
 
-      // Chips
+      // Trigger chips
       var chips = cfgs.map(function(c) {
         var label = (availableTriggers.find(function(t) { return t.key === c.triggerKey; }) || {}).label || c.triggerKey;
-        return '<span class="trigger-chip">' +
+        return '<div class="trigger-chip">' +
           '⚡ ' + esc(label) +
           '<button class="trigger-chip-remove" onclick="removeTrigger(' + c.configId + ',' + s.id + ')" title="Remove">×</button>' +
-          '</span>';
+          '</div>';
       }).join('');
 
-      // Add dropdown (exclude already-used keys)
+      // Add trigger dropdown
       var usedKeys = cfgs.map(function(c) { return c.triggerKey; });
       var addOpts = '<option value="">+ Add trigger…</option>';
       Object.keys(byCategory).sort().forEach(function(cat) {
@@ -590,22 +614,32 @@
         catOpts.forEach(function(t) { addOpts += '<option value="' + esc(t.key) + '">' + esc(t.label) + '</option>'; });
         addOpts += '</optgroup>';
       });
+      var addTriggerEl = cfgs.length >= 2
+        ? '<span style="font-size:0.72rem;color:var(--muted);font-style:italic;">Max 2 triggers</span>'
+        : '<select class="trigger-add-select" id="trigger-sel-' + s.id + '" style="width:100%;" onchange="addTrigger(' + s.id + ', this)">' + addOpts + '</select>';
 
-      return '<tr>' +
-        '<td class="at-stage-name"><span class="at-stage-color" style="background:' + esc(color) + ';"></span>' + esc(s.name) + '</td>' +
-        '<td>' +
-          '<div class="trigger-chips" id="chips-' + s.id + '">' +
-            chips +
-            (cfgs.length >= 2 ? '<span style="font-size:0.72rem;color:var(--muted);font-style:italic;">Max 2 triggers</span>' : '<select class="trigger-add-select" id="trigger-sel-' + s.id + '" onchange="addTrigger(' + s.id + ', this)">' + addOpts + '</select>') +
+      return '<div class="auto-card">' +
+        '<div class="auto-card-header">' +
+          '<span class="at-stage-color" style="background:' + esc(color) + ';"></span>' +
+          '<span>' + esc(s.name) + '</span>' +
+          (s.hold_for_migration ? '<span style="margin-left:auto;font-size:0.7rem;background:rgba(74,144,217,0.12);color:#4a90d9;border-radius:4px;padding:0.1rem 0.4rem;font-weight:700;">♻️ Hold for Migration</span>' : (s.is_terminal ? '<span style="margin-left:auto;font-size:0.7rem;background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.1rem 0.4rem;font-weight:700;">🏁 Terminal</span>' : '')) +
+        '</div>' +
+        '<div class="auto-card-body">' +
+          '<div class="auto-col">' +
+            '<div class="auto-col-label">⚡ Triggers — move card here when…</div>' +
+            '<div class="trigger-chips" id="chips-' + s.id + '" style="flex-direction:column;">' +
+              chips + addTriggerEl +
+            '</div>' +
           '</div>' +
-        '</td>' +
-        '<td id="actions-cell-' + s.id + '">' +
-          renderActionsCell(s.id) +
-        '</td>' +
-      '</tr>';
+          '<div class="auto-col-arrow">→</div>' +
+          '<div class="auto-col" id="actions-cell-' + s.id + '">' +
+            renderActionsCell(s.id) +
+          '</div>' +
+        '</div>' +
+      '</div>';
     }).join('');
 
-    document.getElementById('automation-tbody').innerHTML = rows;
+    container.innerHTML = cards;
   }
 
   // ── STAGE ACTIONS ──
@@ -622,32 +656,45 @@
     apiPipelines('PUT', '/templates/' + templateId + '/stages/' + stageId, { name: name })
       .then(function() {
         if (stage) stage.name = name;
-        // Update automation table row name
-        var td = document.querySelector('#automation-tbody tr td.at-stage-name');
-        // re-render table to reflect name change
+        // Re-render automation cards to reflect name change
         renderAutomationTable();
         window.toast && window.toast('Stage renamed');
       })
       .catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
   };
 
-  window.toggleTerminal = function(stageId, isTerminal) {
-    fetch('/api/pipelines/stages/' + stageId + '/terminal', {
-      method: 'PUT',
+  window.toggleHoldForMigration = function(stageId, hold) {
+    var stage = stages.find(function(s) { return s.id === stageId; });
+    apiPipelines('PUT', '/templates/' + templateId + '/stages/' + stageId, { hold_for_migration: hold })
+      .then(function(updated) {
+        if (stage) stage.hold_for_migration = updated.hold_for_migration;
+        renderAutomationTable();
+        window.toast && window.toast(hold ? '♻️ Card will be held for migration' : '🗑️ Card will archive on completion');
+      }).catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  window.copyPipelineToYear = function() {
+    var year = (document.getElementById('copy-year-input').value || '').trim();
+    var migrateHeld = false;
+    var msgEl = document.getElementById('copy-year-msg');
+    if (!year || isNaN(parseInt(year))) {
+      msgEl.style.color = 'var(--red)'; msgEl.textContent = 'Please enter a valid year.'; return;
+    }
+    msgEl.style.color = 'var(--muted)'; msgEl.textContent = 'Creating…';
+    fetch('/api/pipelines/instances/' + instanceId + '/copy-to-year', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ is_terminal: isTerminal })
+      body: JSON.stringify({ tax_year: year, migrate_held: migrateHeld })
     }).then(function(r) {
-      if (!r.ok) return r.text().then(function(t) { var msg; try { msg = JSON.parse(t).error; } catch(e2) { msg = r.status === 503 ? 'Server is starting up, please try again' : (t.slice(0,120) || 'Failed'); } throw new Error(msg); });
-      var stage = stages.find(function(s) { return s.id === stageId; });
-      if (stage) stage.is_terminal = isTerminal;
-      // Update label class
-      var card = document.querySelector('[data-stage-id="' + stageId + '"]');
-      if (card) {
-        var label = card.querySelector('.stage-terminal-label');
-        if (label) { if (isTerminal) label.classList.add('is-terminal'); else label.classList.remove('is-terminal'); }
-      }
-      window.toast && window.toast(isTerminal ? '🏁 Terminal stage set' : 'Terminal removed');
-    }).catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
+      return r.json().then(function(data) { return { ok: r.ok, data: data }; });
+    }).then(function(res) {
+      if (!res.ok) { msgEl.style.color = 'var(--red)'; msgEl.textContent = res.data.error || 'Failed'; return; }
+      var migratedMsg = migrateHeld && res.data.migrated_cards > 0 ? ' Migrated ' + res.data.migrated_cards + ' card(s).' : '';
+      msgEl.style.color = 'var(--green)';
+      msgEl.textContent = '✓ ' + year + ' pipeline created.' + migratedMsg;
+      document.getElementById('copy-year-input').value = '';
+      document.getElementById('copy-migrate-held').checked = false;
+    }).catch(function(e) { msgEl.style.color = 'var(--red)'; msgEl.textContent = 'Error: ' + e.message; });
   };
 
   window.deleteStage = async function(stageId) {
@@ -697,7 +744,7 @@
         '</span>';
     }).join('');
 
-    var addSelect = '<select class="action-add-select" id="action-sel-' + stageId + '" onchange="openActionForm(' + stageId + ', this)">' +
+    var addSelect = '<select class="action-add-select" id="action-sel-' + stageId + '" style="width:100%;" onchange="openActionForm(' + stageId + ', this)">' +
       '<option value="">+ Add action…</option>' +
       '<option value="portal_message">📩 Client Message</option>' +
       '<option value="staff_task">📋 Staff Task</option>' +
@@ -708,7 +755,8 @@
       formHtml = buildActionForm(stageId, activeActionForm.type);
     }
 
-    return '<div class="action-chips">' + chips + addSelect + '</div>' + formHtml;
+    return '<div class="auto-col-label">🎯 Actions — fire when card arrives…</div>' +
+      '<div class="action-chips">' + chips + addSelect + '</div>' + formHtml;
   }
 
   function buildActionForm(stageId, type) {
