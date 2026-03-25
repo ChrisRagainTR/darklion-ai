@@ -42,8 +42,7 @@
       "include": "installer/installer.nsh"
     },
     "files": [
-      "**/*",
-      "!node_modules/**/*"
+      "**/*"
     ],
     "extraResources": [
       {
