@@ -32,6 +32,14 @@
     flex-direction: column;
     gap: 0.6rem;
     position: relative;
+    cursor: grab;
+    transition: opacity 0.15s, box-shadow 0.15s, border-color 0.15s;
+  }
+  .stage-card:active { cursor: grabbing; }
+  .stage-card.dragging { opacity: 0.4; }
+  .stage-card.drag-over {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(201,168,76,0.3);
   }
   .stage-card-head {
     display: flex;
@@ -329,8 +337,9 @@
       var color = s.color || '#c9a84c';
       var terminalClass = s.is_terminal ? ' is-terminal' : '';
       var terminalChecked = s.is_terminal ? ' checked' : '';
-      return '<div class="stage-card" data-stage-id="' + s.id + '">' +
+      return '<div class="stage-card" data-stage-id="' + s.id + '" draggable="true">' +
         '<div class="stage-card-head">' +
+          '<span class="stage-drag-handle" title="Drag to reorder" style="cursor:grab;color:var(--muted);font-size:0.85rem;flex-shrink:0;">⠿</span>' +
           '<span class="stage-color-dot" style="background:' + esc(color) + ';"></span>' +
           '<input type="text" class="stage-name-input" value="' + esc(s.name) + '" ' +
             'onblur="renameStage(' + s.id + ', this)" ' +
@@ -348,6 +357,70 @@
       '</div>';
     }).join('');
     document.getElementById('stage-grid').innerHTML = html;
+    initDragAndDrop();
+  }
+
+  // ── DRAG AND DROP REORDER ──
+  var dragSrcId = null;
+
+  function initDragAndDrop() {
+    var grid = document.getElementById('stage-grid');
+    var cards = grid.querySelectorAll('.stage-card');
+
+    cards.forEach(function(card) {
+      card.addEventListener('dragstart', function(e) {
+        dragSrcId = parseInt(card.getAttribute('data-stage-id'));
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', dragSrcId);
+      });
+
+      card.addEventListener('dragend', function() {
+        card.classList.remove('dragging');
+        grid.querySelectorAll('.stage-card').forEach(function(c) { c.classList.remove('drag-over'); });
+      });
+
+      card.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        var targetId = parseInt(card.getAttribute('data-stage-id'));
+        if (targetId !== dragSrcId) {
+          grid.querySelectorAll('.stage-card').forEach(function(c) { c.classList.remove('drag-over'); });
+          card.classList.add('drag-over');
+        }
+      });
+
+      card.addEventListener('dragleave', function() {
+        card.classList.remove('drag-over');
+      });
+
+      card.addEventListener('drop', function(e) {
+        e.preventDefault();
+        card.classList.remove('drag-over');
+        var targetId = parseInt(card.getAttribute('data-stage-id'));
+        if (!dragSrcId || dragSrcId === targetId) return;
+
+        // Reorder stages array
+        var srcIdx = stages.findIndex(function(s) { return s.id === dragSrcId; });
+        var tgtIdx = stages.findIndex(function(s) { return s.id === targetId; });
+        if (srcIdx === -1 || tgtIdx === -1) return;
+
+        var moved = stages.splice(srcIdx, 1)[0];
+        stages.splice(tgtIdx, 0, moved);
+
+        // Update positions
+        stages.forEach(function(s, i) { s.position = i; });
+
+        renderStageGrid();
+        renderAutomationTable();
+
+        // Persist to server
+        var orderedIds = stages.map(function(s) { return s.id; });
+        apiPipelines('PUT', '/templates/' + templateId + '/stages/reorder', { stageIds: orderedIds })
+          .then(function() { window.toast && window.toast('Stage order saved'); })
+          .catch(function(e) { window.toast && window.toast('Failed to save order: ' + e.message, 'error'); });
+      });
+    });
   }
 
   // ── AUTOMATION TABLE ──
