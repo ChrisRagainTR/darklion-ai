@@ -19,6 +19,11 @@ async function getRelationshipPage(page) {
   if (await rows.count() === 0) return false;
   await rows.first().click();
   await page.waitForURL('**/crm/relationship/**', { timeout: TIMEOUTS.api });
+  await page.waitForFunction(
+    () => !document.querySelector('.entity-name')?.textContent?.includes('Loading'),
+    { timeout: TIMEOUTS.api }
+  ).catch(() => null);
+  await page.waitForTimeout(500);
   return true;
 }
 

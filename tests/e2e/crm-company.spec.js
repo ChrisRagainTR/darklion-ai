@@ -23,6 +23,12 @@ async function getCompanyPage(page) {
 
   await rows.first().click();
   await page.waitForURL('**/crm/company/**', { timeout: TIMEOUTS.api });
+  // Wait for entity data to load (dismiss the "Loading..." state)
+  await page.waitForFunction(
+    () => !document.querySelector('.entity-name')?.textContent?.includes('Loading'),
+    { timeout: TIMEOUTS.api }
+  ).catch(() => null);
+  await page.waitForTimeout(500);
   return true;
 }
 

@@ -10,7 +10,9 @@ const { BASE_URL, TEST_EMAIL, TEST_PASSWORD, AUTH_STATE_PATH } = require('./help
 // Login tests (no pre-saved auth state — we're testing the login flow itself)
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('Authentication — login / logout', () => {
-  test.use({ storageState: undefined });
+  // Override storageState with empty state so we're not pre-authenticated
+  // storageState: undefined doesn't override project-level setting in Playwright
+  test.use({ storageState: { cookies: [], origins: [] } });
 
   test('login page renders the sign-in form with email, password, and submit button', async ({ page }) => {
     await page.goto(`${BASE_URL}/login`);
