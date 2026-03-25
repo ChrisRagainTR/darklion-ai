@@ -45,9 +45,7 @@
       "main": "app/main.js"
     },
     "files": [
-      "app/**/*",
-      "!app/node_modules/**/*",
-      "!node_modules/**/*"
+      "app/**/*"
     ],
     "extraResources": [
       {
