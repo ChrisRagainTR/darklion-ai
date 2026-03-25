@@ -128,23 +128,24 @@ async function buildTree(token) {
   const cached = cacheGet(cacheKey);
   if (cached) return cached;
 
-  // Fetch everything in parallel up front — one call each, then filter by relationship_id client-side
-  const [relationshipsRaw, allPeopleRaw, allCompaniesRaw] = await Promise.all([
+  // Fetch relationships + all people up front; companies fetched per-relationship via dedicated endpoint
+  const [relationshipsRaw, allPeopleRaw] = await Promise.all([
     apiGet('/api/relationships', token).catch(function() { return []; }),
     apiGet('/api/people', token).catch(function() { return []; }),
-    apiGet('/api/companies', token).catch(function() { return []; }),
   ]);
 
   const relationships = Array.isArray(relationshipsRaw) ? relationshipsRaw : [];
   const allPeople = Array.isArray(allPeopleRaw) ? allPeopleRaw : [];
-  const allCompanies = Array.isArray(allCompaniesRaw) ? allCompaniesRaw : [];
   const tree = new Map();
 
   for (const rel of relationships) {
     const entities = new Map();
 
     const people = allPeople.filter(function(p) { return String(p.relationship_id) === String(rel.id); });
-    const companies = allCompanies.filter(function(c) { return String(c.relationship_id) === String(rel.id); });
+
+    // Use dedicated per-relationship companies endpoint (returns CRM entities, not QBO companies)
+    const companiesRaw = await apiGet('/api/relationships/' + rel.id + '/companies', token).catch(function() { return []; });
+    const companies = Array.isArray(companiesRaw) ? companiesRaw : [];
 
     for (const p of people) {
       const name = safeName([p.first_name, p.last_name].filter(Boolean).join(' '));
