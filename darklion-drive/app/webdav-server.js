@@ -128,19 +128,23 @@ async function buildTree(token) {
   const cached = cacheGet(cacheKey);
   if (cached) return cached;
 
-  const relationshipsRaw = await apiGet('/api/relationships', token).catch(function() { return []; });
+  // Fetch everything in parallel up front — one call each, then filter by relationship_id client-side
+  const [relationshipsRaw, allPeopleRaw, allCompaniesRaw] = await Promise.all([
+    apiGet('/api/relationships', token).catch(function() { return []; }),
+    apiGet('/api/people', token).catch(function() { return []; }),
+    apiGet('/api/companies', token).catch(function() { return []; }),
+  ]);
+
   const relationships = Array.isArray(relationshipsRaw) ? relationshipsRaw : [];
+  const allPeople = Array.isArray(allPeopleRaw) ? allPeopleRaw : [];
+  const allCompanies = Array.isArray(allCompaniesRaw) ? allCompaniesRaw : [];
   const tree = new Map();
 
   for (const rel of relationships) {
     const entities = new Map();
 
-    var rawResults = await Promise.all([
-      apiGet('/api/people?relationship_id=' + rel.id, token).catch(function() { return []; }),
-      apiGet('/api/companies?relationship_id=' + rel.id, token).catch(function() { return []; }),
-    ]);
-    var people = Array.isArray(rawResults[0]) ? rawResults[0] : [];
-    var companies = Array.isArray(rawResults[1]) ? rawResults[1] : [];
+    const people = allPeople.filter(function(p) { return String(p.relationship_id) === String(rel.id); });
+    const companies = allCompanies.filter(function(c) { return String(c.relationship_id) === String(rel.id); });
 
     for (const p of people) {
       const name = safeName([p.first_name, p.last_name].filter(Boolean).join(' '));
@@ -153,8 +157,8 @@ async function buildTree(token) {
     for (const c of companies) {
       const name = safeName(c.company_name || c.name);
       if (!name) continue;
-      const docsRaw2 = await apiGet('/api/documents?owner_type=company&owner_id=' + c.id, token).catch(function() { return []; });
-      const docs = Array.isArray(docsRaw2) ? docsRaw2 : [];
+      const docsRaw = await apiGet('/api/documents?owner_type=company&owner_id=' + c.id, token).catch(function() { return []; });
+      const docs = Array.isArray(docsRaw) ? docsRaw : [];
       entities.set(name, { id: c.id, type: 'company', docs: groupDocs(docs) });
     }
 
