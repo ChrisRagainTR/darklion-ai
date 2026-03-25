@@ -259,6 +259,9 @@ router.delete('/templates/:id/stages/:stageId', async (req, res) => {
     if (!existing[0]) return res.status(404).json({ error: 'Stage not found' });
 
     const deletedPos = existing[0].position;
+    // Clean up dependent records first
+    await pool.query('DELETE FROM pipeline_stage_triggers WHERE stage_id = $1', [existing[0].id]);
+    await pool.query('DELETE FROM pipeline_stage_actions WHERE stage_id = $1', [existing[0].id]);
     await pool.query('DELETE FROM pipeline_stages WHERE id = $1', [existing[0].id]);
 
     // Reorder remaining stages
