@@ -388,7 +388,7 @@
   var activeActionForm = null; // { stageId, type } — which inline form is open
 
   // ── Update "Back to Pipeline" link ──
-  document.getElementById('back-to-pipeline').href = '/pipelines'; // will deepen once we know instanceId
+  document.getElementById('back-to-pipeline').href = '/pipelines?instance=' + instanceId;
 
   // ── Utility ──
   function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
