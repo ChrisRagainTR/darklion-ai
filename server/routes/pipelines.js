@@ -2,6 +2,7 @@
 
 const { Router } = require('express');
 const { pool } = require('../db');
+const { executeStageActions } = require('../services/pipelineActions');
 
 const router = Router();
 
@@ -258,6 +259,9 @@ router.delete('/templates/:id/stages/:stageId', async (req, res) => {
     if (!existing[0]) return res.status(404).json({ error: 'Stage not found' });
 
     const deletedPos = existing[0].position;
+    // Clean up dependent records first
+    await pool.query('DELETE FROM pipeline_stage_triggers WHERE stage_id = $1', [existing[0].id]);
+    await pool.query('DELETE FROM pipeline_stage_actions WHERE stage_id = $1', [existing[0].id]);
     await pool.query('DELETE FROM pipeline_stages WHERE id = $1', [existing[0].id]);
 
     // Reorder remaining stages
@@ -818,6 +822,37 @@ router.post('/jobs/:jobId/move', async (req, res) => {
       }
     }
 
+    // ── Fire pipeline stage actions (non-blocking) ──────────────────────────
+    try {
+      const { rows: instInfoRows } = await pool.query(
+        `SELECT pi.firm_id, pi.name AS instance_name, pi.tax_year, pt.name AS template_name
+         FROM pipeline_instances pi
+         JOIN pipeline_templates pt ON pt.id = pi.template_id
+         WHERE pi.id = $1`,
+        [job.instance_id]
+      );
+      const instInfo = instInfoRows[0];
+      console.log(`[pipelines] move job ${job.id} to stage ${stage_id}, instance ${job.instance_id}, instInfo found: ${!!instInfo}`);
+      if (instInfo) {
+        executeStageActions(
+          instInfo.firm_id,
+          stage_id,
+          job.instance_id,
+          updated.entity_type,
+          updated.entity_id,
+          {
+            pipeline_name: instInfo.instance_name || instInfo.template_name,
+            tax_year: instInfo.tax_year || '',
+            stage_name: newStage ? newStage.name : '',
+            triggered_by_user_id: req.firm.userId || null,
+            job_id: job.id,
+          }
+        ).catch(e => console.error('[actions] non-fatal:', e));
+      }
+    } catch (actErr) {
+      console.error('[actions] setup error (non-fatal):', actErr);
+    }
+
     res.json(updated);
   } catch (e) {
     console.error('POST /jobs/:jobId/move error:', e);
@@ -837,6 +872,17 @@ router.put('/stages/:stageId/terminal', async (req, res) => {
       [req.params.stageId, req.firm.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Stage not found' });
+
+    if (is_terminal) {
+      // Clear terminal from all other stages in the same template first
+      await pool.query(
+        `UPDATE pipeline_stages SET is_terminal = false
+         WHERE template_id = (SELECT template_id FROM pipeline_stages WHERE id = $1)
+           AND id != $1`,
+        [req.params.stageId]
+      );
+    }
+
     const { rows: updated } = await pool.query(
       'UPDATE pipeline_stages SET is_terminal = $1 WHERE id = $2 RETURNING *',
       [is_terminal, req.params.stageId]

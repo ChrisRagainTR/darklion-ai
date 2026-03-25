@@ -201,8 +201,10 @@ router.get('/', async (req, res) => {
          tp.added_by_id,
          adder.name as shared_by_name,
          (SELECT body FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) as last_body,
+         (SELECT message_type FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) as last_message_type,
          (SELECT created_at FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) as last_message_at_sub,
-         (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) as unread_count
+         (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) as unread_count,
+         (SELECT COUNT(*) > 0 FROM messages m WHERE m.thread_id = mt.id AND m.message_type = 'task' LIMIT 1) as has_task_messages
        FROM message_threads mt
        JOIN people p ON p.id = mt.person_id
        JOIN firm_users fu ON fu.id = mt.staff_user_id
@@ -234,6 +236,7 @@ router.get('/', async (req, res) => {
       },
       lastPreview: t.last_body ? t.last_body.slice(0, 80) : '',
       unreadCount: parseInt(t.unread_count, 10) || 0,
+      hasTaskMessages: t.has_task_messages === true || t.has_task_messages === 'true',
     })));
   } catch (err) {
     console.error('[GET /messages] error:', err);
@@ -441,11 +444,14 @@ router.get('/:threadId', async (req, res) => {
       try { const { rows: ur } = await pool.query('SELECT id FROM firm_users WHERE firm_id=$1 AND email=$2 LIMIT 1', [firmId, req.firm.email]); if (ur[0]) callerUserId = ur[0].id; } catch(e) {}
     }
     const { rows: threadRows } = await pool.query(
-      `SELECT mt.*, p.first_name, p.last_name, p.email,
+      `SELECT mt.*, p.first_name, p.last_name, p.email, p.phone,
+              r.name AS relationship_name,
               fu.name as staff_name, fu.display_name as staff_display_name,
-              (mt.staff_user_id != $3) as is_participant_check
+              (mt.staff_user_id != $3) as is_participant_check,
+              (SELECT COUNT(*) > 0 FROM messages m WHERE m.thread_id = mt.id AND m.message_type = 'task') as has_task_messages
        FROM message_threads mt
        JOIN people p ON p.id = mt.person_id
+       LEFT JOIN relationships r ON r.id = p.relationship_id
        LEFT JOIN firm_users fu ON fu.id = mt.staff_user_id
        WHERE mt.id = $1 AND mt.firm_id = $2`,
       [threadId, firmId, callerUserId || 0]
@@ -456,7 +462,7 @@ router.get('/:threadId', async (req, res) => {
 
     const { rows: msgs } = await pool.query(
       `SELECT m.id, m.thread_id, m.sender_type, m.sender_id, m.body,
-              m.is_internal, m.created_at, m.read_at
+              m.is_internal, m.message_type, m.created_at, m.read_at
        FROM messages m
        WHERE m.thread_id = $1
        ORDER BY m.created_at ASC`,
@@ -515,6 +521,7 @@ router.get('/:threadId', async (req, res) => {
                   m.sender_type === 'client' ? `${thread.first_name} ${thread.last_name}` : 'Agent',
       body: m.body,
       isInternal: m.is_internal,
+      messageType: m.message_type || 'message',
       createdAt: m.created_at,
       readAt: m.read_at,
       attachments: attachmentMap[m.id] || [],
@@ -525,6 +532,7 @@ router.get('/:threadId', async (req, res) => {
       subject: thread.subject,
       status: thread.status,
       category: thread.category,
+      hasTaskMessages: thread.has_task_messages === true || thread.has_task_messages === 'true',
       staffUserId: thread.staff_user_id,
       isParticipant: thread.is_participant_check || false,
       staffName: thread.staff_display_name || thread.staff_name || null,
@@ -535,6 +543,8 @@ router.get('/:threadId', async (req, res) => {
         firstName: thread.first_name,
         lastName: thread.last_name,
         email: thread.email,
+        phone: thread.phone || null,
+        relationshipName: thread.relationship_name || null,
       },
       messages,
     });

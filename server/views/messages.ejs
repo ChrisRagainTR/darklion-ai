@@ -4,7 +4,7 @@
     .main { display: flex; flex-direction: row; height: calc(100vh - var(--header-h)); overflow: hidden; }
 
     .inbox-panel {
-      width: 300px; flex-shrink: 0; border-right: 1px solid var(--border);
+      width: 340px; flex-shrink: 0; border-right: 1px solid var(--border);
       display: flex; flex-direction: column; height: 100%; overflow: hidden;
     }
     .inbox-header {
@@ -93,8 +93,15 @@
     .msg-bubble.staff { background: var(--gold); color: var(--navy); }
     .msg-bubble.client { background: var(--charcoal); color: var(--text); border: 1px solid var(--border); }
     .msg-bubble.internal { background: rgba(255,200,0,0.1); border: 1px dashed var(--gold); color: var(--text); }
+    .msg-bubble.task { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.35); color: var(--text); border-left: 3px solid #3b82f6; }
     .msg-meta { font-size: 0.68rem; color: var(--muted); margin-top: 0.15rem; }
     .msg-internal-label { font-size: 0.62rem; color: var(--gold); margin-bottom: 0.15rem; }
+    .msg-task-label { font-size: 0.62rem; color: #60a5fa; margin-bottom: 0.15rem; font-weight: 700; letter-spacing: 0.04em; }
+
+    /* ── TASK THREAD CARD ── */
+    .thread-card.has-task { border-left: 3px solid #3b82f6; background: rgba(59,130,246,0.04); }
+    .thread-card.has-task .thread-card-subject { color: #60a5fa; }
+    .task-badge { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.62rem; font-weight: 700; background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.35); border-radius: 4px; padding: 0.1rem 0.35rem; vertical-align: middle; margin-left: 0.3rem; }
     .msg-delete-btn {
       display: none; background: none; border: none; cursor: pointer;
       color: var(--muted); font-size: 0.7rem; padding: 0 0.25rem; margin-left: 0.35rem;
@@ -180,8 +187,29 @@
     .modal-field-wrap { position: relative; }
 
     @media (max-width: 1100px) { .summary-panel { display: none !important; } }
+    /* ── INBOX TABS ── */
+    .inbox-tabs {
+      display: flex; gap: 0; border-bottom: 1px solid var(--border); background: var(--card);
+      flex-shrink: 0;
+    }
+    .inbox-tab {
+      flex: 1; padding: 0.55rem 0.5rem; font-size: 0.78rem; font-weight: 600;
+      color: var(--muted); background: none; border: none; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+    }
+    .inbox-tab:hover { color: var(--text); }
+    .inbox-tab.active { color: var(--text); border-bottom-color: var(--gold); }
+    .inbox-tab.active-task { color: #60a5fa; border-bottom-color: #3b82f6; }
+    .tab-count {
+      font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.38rem;
+      border-radius: 10px; line-height: 1.4;
+    }
+    #tabMessages .tab-count { background: rgba(201,168,76,0.18); color: var(--gold); }
+    #tabTasks .tab-count { background: rgba(59,130,246,0.18); color: #60a5fa; }
+
     @media (max-width: 768px) {
-      .inbox-panel { width: 240px; }
+      .inbox-panel { width: 260px; }
     }
     @media (max-width: 600px) {
       .main {
@@ -229,6 +257,14 @@
 
       </div>
       <input type="text" class="inbox-search" id="searchBox" placeholder="Search by name…" oninput="filterThreads()">
+    </div>
+    <div class="inbox-tabs">
+      <button class="inbox-tab active" id="tabMessages" onclick="switchTab('messages')">
+        💬 Messages <span class="tab-count" id="tabCountMessages">0</span>
+      </button>
+      <button class="inbox-tab" id="tabTasks" onclick="switchTab('tasks')">
+        📋 Tasks <span class="tab-count" id="tabCountTasks">0</span>
+      </button>
     </div>
     <div class="inbox-list" id="inboxList">
       <div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>
@@ -322,6 +358,7 @@ if (!token) window.location.href = '/login';
 
 let allThreads = [];
 let activeThreadId = null;
+let activeTab = 'messages'; // 'messages' | 'tasks'
 let firmUsers = [];
 let attachedFiles = [];
 
@@ -376,6 +413,14 @@ async function apiFetch(url, opts = {}) {
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+function renderBody(body, isTask) {
+  let html = esc(body).replace(/\n/g,'<br>');
+  if (isTask) {
+    // Convert markdown links [text](url) → <a href="url">text</a>
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#60a5fa;text-decoration:underline;">$1</a>');
+  }
+  return html;
+}
 
 function relTime(ts) {
   if (!ts) return '';
@@ -402,9 +447,12 @@ async function loadInbox(showSpinner = false) {
     if (freshJson !== JSON.stringify(allThreads)) {
       allThreads = freshThreads;
       renderInbox();
-      // Auto-open first thread if none selected yet
+      // Auto-open first thread of the active tab if none selected yet
       if (!activeThreadId && freshThreads.length) {
-        loadThread(freshThreads[0].id);
+        const tabFirst = activeTab === 'tasks'
+          ? freshThreads.find(t => t.hasTaskMessages && t.category === 'internal')
+          : freshThreads.find(t => !(t.hasTaskMessages && t.category === 'internal'));
+        if (tabFirst) loadThread(tabFirst.id);
       }
     }
     // firmUsers loaded separately at init
@@ -421,9 +469,40 @@ function filterThreads() {
   renderInbox();
 }
 
+function switchTab(tab) {
+  activeTab = tab;
+  const msgBtn = document.getElementById('tabMessages');
+  const taskBtn = document.getElementById('tabTasks');
+  msgBtn.classList.toggle('active', tab === 'messages');
+  taskBtn.classList.toggle('active', tab === 'tasks');
+  taskBtn.classList.toggle('active-task', tab === 'tasks');
+  activeThreadId = null; // clear active so first item auto-loads
+  renderInbox();
+  // Auto-load first thread in the new tab
+  const tabThreads = tab === 'tasks'
+    ? allThreads.filter(t => t.hasTaskMessages && t.category === 'internal')
+    : allThreads.filter(t => !(t.hasTaskMessages && t.category === 'internal'));
+  if (tabThreads.length) loadThread(tabThreads[0].id);
+}
+
+function updateTabCounts() {
+  // Show total thread count (not just unread) for each tab
+  const msgCount = allThreads.filter(t => !t.hasTaskMessages || t.category !== 'internal').length;
+  const taskCount = allThreads.filter(t => t.hasTaskMessages && t.category === 'internal').length;
+  const msgEl = document.getElementById('tabCountMessages');
+  const taskEl = document.getElementById('tabCountTasks');
+  if (msgEl) msgEl.textContent = msgCount;
+  if (taskEl) taskEl.textContent = taskCount;
+}
+
 function renderInbox() {
+  updateTabCounts();
   const q = (document.getElementById('searchBox').value || '').toLowerCase();
-  let threads = allThreads;
+
+  // Split by tab
+  let threads = activeTab === 'tasks'
+    ? allThreads.filter(t => t.hasTaskMessages && t.category === 'internal')
+    : allThreads.filter(t => !(t.hasTaskMessages && t.category === 'internal'));
 
   if (q) threads = threads.filter(t => {
     const name = ((t.person?.firstName || '') + ' ' + (t.person?.lastName || '')).toLowerCase();
@@ -436,18 +515,23 @@ function renderInbox() {
   }
 
   document.getElementById('inboxList').innerHTML = threads.map(t => {
-    const name = esc((t.person?.firstName || '') + ' ' + (t.person?.lastName || ''));
+    // For task threads, show the subject (entity name) instead of the anchor person's name
+    const isTaskThread = t.hasTaskMessages && t.category === 'internal';
+    const personName = esc((t.person?.firstName || '') + ' ' + (t.person?.lastName || ''));
+    const name = isTaskThread ? esc(t.subject || 'Task') : personName;
     const sharedBadge = t.isParticipant
       ? `<span style="font-size:0.65rem;background:rgba(138,99,241,0.15);color:#a78bfa;border:1px solid rgba(138,99,241,0.3);border-radius:4px;padding:0.1rem 0.4rem;font-weight:600;">Shared${t.sharedByName ? ' by ' + esc(t.sharedByName.split(' ')[0]) : ''}</span>`
       : '';
+    const taskBadge = t.hasTaskMessages ? `<span class="task-badge">📋 Task</span>` : '';
     const archiveLabel = t.isParticipant ? 'Remove' : 'Archive';
     const archiveTitle = t.isParticipant ? 'Remove from your inbox' : 'Archive this thread';
-    return `<div class="thread-card${t.id === activeThreadId ? ' active' : ''}" onclick="loadThread(${t.id})">
+    const extraClass = (t.id === activeThreadId ? ' active' : '') + (t.hasTaskMessages ? ' has-task' : '');
+    return `<div class="thread-card${extraClass}" onclick="loadThread(${t.id})">
       <div class="thread-card-name">
-        <span>${name} ${sharedBadge}</span>
+        <span>${name} ${sharedBadge}${taskBadge}</span>
         <span style="font-size:0.7rem;color:var(--muted);">${relTime(t.lastMessageAt)}</span>
       </div>
-      <div class="thread-card-subject">${esc(t.subject || '(no subject)')}</div>
+      ${!isTaskThread ? `<div class="thread-card-subject">${esc(t.subject || '(no subject)')}</div>` : ''}
       <div class="thread-card-preview">${esc(t.lastPreview || '')}</div>
       <div class="thread-card-meta">
         ${t.unreadCount > 0 ? `<span class="unread-count-badge">${t.unreadCount} new</span>` : ''}
@@ -559,18 +643,38 @@ async function loadThread(threadId, silent = false) {
       loadInboxSummary();
     }
 
-    document.getElementById('detailHeader').innerHTML = `
+    const _isTaskThread = data.category === 'internal' && data.hasTaskMessages;
+    document.getElementById('detailHeader').innerHTML = _isTaskThread ? `
       <div class="detail-header-left">
-        <div class="detail-header-person">
-          <a href="/crm/person/${data.person?.id}">${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}</a>
-        </div>
-        <div class="detail-header-subject">${esc(data.subject || '(no subject)')}${data.staffName ? ` · <span style="color:var(--gold);">${esc(data.staffName)}</span>` : ''}</div>
+        <div class="detail-header-person" style="color:#60a5fa;">📋 Staff Task</div>
+        <div class="detail-header-subject">${esc(data.subject || 'Task')}</div>
       </div>
       <div class="detail-header-controls">
-        ${data.isParticipant ? `<span style="font-size:0.72rem;background:rgba(138,99,241,0.15);color:#a78bfa;border:1px solid rgba(138,99,241,0.3);border-radius:4px;padding:0.2rem 0.6rem;font-weight:600;">Shared thread — internal notes only</span>` : ''}
+        <button class="btn btn-sm btn-outline" onclick="archiveCurrentThread()">Archive</button>
+      </div>
+    ` : `
+      <div class="detail-header-left">
+        <div class="detail-header-person">
+          <a href="/crm/person/${data.person?.id}" style="font-size:1.05rem;font-weight:700;color:var(--text);">
+            ${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}
+          </a>
+        </div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:0.1rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
+          ${data.person?.email ? `<span>${esc(data.person.email)}</span>` : ''}
+          ${data.person?.phone ? `<span style="color:var(--gold);">${esc(data.person.phone)}</span>` : ''}
+          ${data.person?.relationshipName ? `<span style="color:var(--muted);">· ${esc(data.person.relationshipName)}</span>` : ''}
+        </div>
+      </div>
+      <div class="detail-header-controls">
+        ${data.isParticipant ? `<span style="font-size:0.72rem;background:rgba(138,99,241,0.15);color:#a78bfa;border:1px solid rgba(138,99,241,0.3);border-radius:4px;padding:0.2rem 0.6rem;font-weight:600;">Shared</span>` : ''}
         <button class="btn btn-sm btn-outline" onclick="archiveCurrentThread()">${data.isParticipant ? 'Remove' : 'Archive'}</button>
       </div>
     `;
+    // Hide reply box for task threads — tasks are read-only notifications
+    const isTaskThread = data.category === 'internal' && data.hasTaskMessages;
+    const replyBoxEl = document.getElementById('replyBox');
+    if (replyBoxEl) replyBoxEl.style.display = isTaskThread ? 'none' : '';
+
     // Auto-set internal for shared threads (checkbox is hidden but still drives is_internal on send)
     const internalToggle = document.getElementById('internalToggle');
     if (internalToggle) {
@@ -588,14 +692,16 @@ async function loadThread(threadId, silent = false) {
       for (const m of msgs) {
         if (!existingIds.has(m.id)) {
           const side = m.senderType === 'staff' ? 'staff' : 'client';
-          const bubbleClass = m.isInternal ? 'internal' : side;
+          const isTask = m.messageType === 'task';
+          const bubbleClass = isTask ? 'task' : (m.isInternal ? 'internal' : side);
           const attachmentsHtml = (m.attachments||[]).length > 0
             ? `<div class="msg-attachments">${m.attachments.map(a => `<a class="attachment-chip" href="#" onclick="downloadAttachment(${a.documentId});return false;">📎 ${esc(a.displayName)}</a>`).join('')}</div>` : '';
           const canDeleteAppended = m.senderType === 'staff' && m.senderId === _myUserId;
           const deleteBtnAppended = canDeleteAppended ? `<button class="msg-delete-btn" data-msg-id="${m.id}" title="Delete message" onclick="deleteMessage(${m.id}, this)">✕</button>` : '';
+          const labelHtml = isTask ? '<div class="msg-task-label">📋 Staff Task</div>' : (m.isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : '');
           msgContainer.insertAdjacentHTML('beforeend', `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
-            ${m.isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
-            <div class="msg-bubble-row"><div class="msg-bubble ${bubbleClass}">${m.body ? esc(m.body).replace(/\n/g,'<br>') : ''}${attachmentsHtml}</div>${deleteBtnAppended}</div>
+            ${labelHtml}
+            <div class="msg-bubble-row"><div class="msg-bubble ${bubbleClass}">${m.body ? renderBody(m.body, isTask) : ''}${attachmentsHtml}</div>${deleteBtnAppended}</div>
             <div class="msg-meta">${esc(m.senderName||'')} · ${relTime(m.createdAt)}</div>
           </div>`);
           appended = true;
@@ -605,7 +711,8 @@ async function loadThread(threadId, silent = false) {
     } else {
       msgContainer.innerHTML = msgs.map(m => {
         const side = m.senderType === 'staff' ? 'staff' : 'client';
-        const bubbleClass = m.isInternal ? 'internal' : side;
+        const isTask = m.messageType === 'task';
+        const bubbleClass = isTask ? 'task' : (m.isInternal ? 'internal' : side);
         const attachmentsHtml = (m.attachments || []).length > 0
           ? `<div class="msg-attachments">${(m.attachments).map(a => {
               const size = a.sizeBytes ? ' <span class="att-size">(' + formatBytes(a.sizeBytes) + ')</span>' : '';
@@ -613,9 +720,10 @@ async function loadThread(threadId, silent = false) {
             }).join('')}</div>` : '';
         const canDelete = m.senderType === 'staff' && m.senderId === _myUserId;
         const deleteBtn = canDelete ? `<button class="msg-delete-btn" data-msg-id="${m.id}" title="Delete message" onclick="deleteMessage(${m.id}, this)">✕</button>` : '';
+        const labelHtml = isTask ? '<div class="msg-task-label">📋 Staff Task</div>' : (m.isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : '');
         return `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
-          ${m.isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
-          <div class="msg-bubble-row"><div class="msg-bubble ${bubbleClass}">${m.body ? esc(m.body).replace(/\n/g,'<br>') : ''}${attachmentsHtml}</div>${deleteBtn}</div>
+          ${labelHtml}
+          <div class="msg-bubble-row"><div class="msg-bubble ${bubbleClass}">${m.body ? renderBody(m.body, isTask) : ''}${attachmentsHtml}</div>${deleteBtn}</div>
           <div class="msg-meta">${esc(m.senderName || '')} · ${relTime(m.createdAt)}</div>
         </div>`;
       }).join('');

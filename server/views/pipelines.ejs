@@ -285,7 +285,7 @@
     if (body !== undefined) opts.body = JSON.stringify(body);
     return fetch('/api/pipelines' + path, opts).then(function(r) {
       if (r.status === 401) { localStorage.removeItem('dl_token'); window.location.replace('/login'); throw new Error('Unauthorized'); }
-      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Request failed'); });
+      if (!r.ok) return r.text().then(function(t) { var msg; try { msg = JSON.parse(t).error; } catch(e) { msg = r.status === 503 ? 'Server is starting up, please try again in a moment' : (t.slice(0,120) || 'Request failed'); } throw new Error(msg); });
       return r.json();
     });
   }
@@ -419,6 +419,11 @@
       smartStageConfigs = {};
       configs.forEach(function(c) { if (!smartStageConfigs[c.stage_id]) smartStageConfigs[c.stage_id] = []; smartStageConfigs[c.stage_id].push({ configId: c.id, triggerKey: c.trigger_key }); });
       renderKanban();
+      // Auto-open job panel if ?job=ID is in the URL
+      var jobParam = new URLSearchParams(window.location.search).get('job');
+      if (jobParam) {
+        setTimeout(function() { renderPanel(parseInt(jobParam)); }, 300);
+      }
     });
   }
 
@@ -1037,6 +1042,17 @@
   // ── INIT ──────────────────────────────────────────
   loadTeam();
   loadList();
+
+  // Auto-navigate to instance if ?instance=X is in the URL
+  var _urlParams = new URLSearchParams(window.location.search);
+  var _instanceParam = _urlParams.get('instance');
+  if (_instanceParam) {
+    api('GET', '/instances/' + _instanceParam).then(function(inst) {
+      if (!inst || !inst.template_id) return;
+      currentYear = parseInt(inst.tax_year) || currentYear;
+      openPipeline(inst.template_id);
+    }).catch(function() {});
+  }
 
 })();
 </script>
