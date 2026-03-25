@@ -119,41 +119,50 @@
   .add-stage-input:focus { border-color: var(--gold); }
   .add-stage-input::placeholder { color: var(--muted); }
 
-  /* ── AUTOMATION TABLE ── */
-  .automation-table {
-    width: 100%;
-    border-collapse: collapse;
+  /* ── AUTOMATION CARDS ── */
+  .auto-card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 10px;
     overflow: hidden;
   }
-  .automation-table th {
-    font-size: 0.7rem;
+  .auto-card-header {
+    padding: 0.6rem 1rem;
+    background: rgba(0,0,0,0.12);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+  .auto-card-body {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr;
+    align-items: start;
+  }
+  .auto-col {
+    padding: 0.85rem 1rem;
+  }
+  .auto-col-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.85rem 0;
+    color: var(--gold);
+    font-size: 1.3rem;
+    align-self: center;
+  }
+  .auto-col-label {
+    font-size: 0.67rem;
     font-weight: 700;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    padding: 0.65rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-    background: rgba(0,0,0,0.1);
-  }
-  .automation-table td {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    vertical-align: top;
-    font-size: 0.85rem;
-  }
-  .automation-table tbody tr:last-child td { border-bottom: none; }
-  .automation-table tbody tr:hover td { background: rgba(255,255,255,0.01); }
-  .at-stage-name {
-    font-weight: 600;
-    font-size: 0.85rem;
-    white-space: nowrap;
-    min-width: 120px;
+    margin-bottom: 0.6rem;
   }
   .at-stage-color { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); margin-right: 0.4rem; vertical-align: middle; }
+  .at-stage-name { font-weight: 600; font-size: 0.85rem; }
 
   /* ── TRIGGER CHIPS ── */
   .trigger-chips {
@@ -331,28 +340,17 @@
     </div>
   </div>
 
-  <!-- ══ AUTOMATION TABLE ══ -->
+  <!-- ══ AUTOMATION ══ -->
   <div class="ps-section">
     <div class="ps-section-title">⚡ Automation</div>
-    <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:var(--muted);line-height:1.6;">
-      <strong style="color:var(--gold);">How automation works:</strong>
-      A <strong style="color:var(--text);">Trigger</strong> is an event (like a tax return being delivered) that automatically moves a client's card into a Stage.
-      Once a card arrives in a Stage, that Stage's <strong style="color:var(--text);">Actions</strong> fire — such as sending a portal message or creating a staff task.
+    <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.25rem;font-size:0.82rem;color:var(--muted);line-height:1.6;">
+      <strong style="color:var(--gold);">How it works:</strong>
+      A <strong style="color:var(--text);">Trigger</strong> fires automatically (e.g. tax return sent) and moves a client's card into the Stage.
+      Once the card lands, the Stage's <strong style="color:var(--text);">Actions</strong> run — like sending a portal message or creating a staff task.
     </div>
-    <table class="automation-table">
-      <thead>
-        <tr>
-          <th style="width:35%;text-align:center;">⚡ Triggers<br><span style="font-weight:400;font-size:0.65rem;text-transform:none;letter-spacing:0;color:var(--muted);">move card into the stage</span></th>
-          <th style="width:36px;padding:0;text-align:center;"></th>
-          <th style="width:18%;text-align:center;">Stage</th>
-          <th style="width:36px;padding:0;text-align:center;"></th>
-          <th style="width:35%;text-align:center;">🎯 Actions<br><span style="font-weight:400;font-size:0.65rem;text-transform:none;letter-spacing:0;color:var(--muted);">fire when card arrives</span></th>
-        </tr>
-      </thead>
-      <tbody id="automation-tbody">
-        <tr><td colspan="5"><div class="ps-loading"><div class="loading-spinner"></div> Loading…</div></td></tr>
-      </tbody>
-    </table>
+    <div id="automation-list" style="display:flex;flex-direction:column;gap:0.75rem;">
+      <div class="ps-loading"><div class="loading-spinner"></div> Loading…</div>
+    </div>
   </div>
 </div>
 
@@ -454,7 +452,7 @@
       renderAutomationTable();
     }).catch(function(e) {
       document.getElementById('stage-grid').innerHTML = '<div class="ps-empty">Failed to load: ' + esc(e.message) + '</div>';
-      document.getElementById('automation-tbody').innerHTML = '<tr><td colspan="5"><div class="ps-empty">Failed to load.</div></td></tr>';
+      document.getElementById('automation-list').innerHTML = '<div class="ps-empty">Failed to load.</div>';
     });
   }
 
@@ -562,8 +560,9 @@
 
   // ── AUTOMATION TABLE ──
   function renderAutomationTable() {
+    var container = document.getElementById('automation-list');
     if (!stages.length) {
-      document.getElementById('automation-tbody').innerHTML = '<tr><td colspan="5"><div class="ps-empty">Add stages above to configure automation.</div></td></tr>';
+      container.innerHTML = '<div class="ps-empty">Add stages above to configure automation.</div>';
       return;
     }
 
@@ -574,20 +573,20 @@
       byCategory[t.category].push(t);
     });
 
-    var rows = stages.map(function(s) {
+    var cards = stages.map(function(s) {
       var cfgs = smartStageConfigs[s.id] || [];
       var color = s.color || '#c9a84c';
 
-      // Chips
+      // Trigger chips
       var chips = cfgs.map(function(c) {
         var label = (availableTriggers.find(function(t) { return t.key === c.triggerKey; }) || {}).label || c.triggerKey;
-        return '<span class="trigger-chip">' +
+        return '<div class="trigger-chip">' +
           '⚡ ' + esc(label) +
           '<button class="trigger-chip-remove" onclick="removeTrigger(' + c.configId + ',' + s.id + ')" title="Remove">×</button>' +
-          '</span>';
+          '</div>';
       }).join('');
 
-      // Add dropdown (exclude already-used keys)
+      // Add trigger dropdown
       var usedKeys = cfgs.map(function(c) { return c.triggerKey; });
       var addOpts = '<option value="">+ Add trigger…</option>';
       Object.keys(byCategory).sort().forEach(function(cat) {
@@ -597,30 +596,32 @@
         catOpts.forEach(function(t) { addOpts += '<option value="' + esc(t.key) + '">' + esc(t.label) + '</option>'; });
         addOpts += '</optgroup>';
       });
+      var addTriggerEl = cfgs.length >= 2
+        ? '<span style="font-size:0.72rem;color:var(--muted);font-style:italic;">Max 2 triggers</span>'
+        : '<select class="trigger-add-select" id="trigger-sel-' + s.id + '" style="width:100%;" onchange="addTrigger(' + s.id + ', this)">' + addOpts + '</select>';
 
-      return '<tr>' +
-        '<td style="vertical-align:middle;padding:0.75rem 1rem;">' +
-          '<div class="trigger-chips" id="chips-' + s.id + '">' +
-            chips +
-            (cfgs.length >= 2 ? '<span style="font-size:0.72rem;color:var(--muted);font-style:italic;">Max 2</span>' : '<select class="trigger-add-select" id="trigger-sel-' + s.id + '" style="width:100%;max-width:220px;" onchange="addTrigger(' + s.id + ', this)">' + addOpts + '</select>') +
+      return '<div class="auto-card">' +
+        '<div class="auto-card-header">' +
+          '<span class="at-stage-color" style="background:' + esc(color) + ';"></span>' +
+          '<span>' + esc(s.name) + '</span>' +
+          (s.is_terminal ? '<span style="margin-left:auto;font-size:0.7rem;background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.1rem 0.4rem;font-weight:700;">🏁 Terminal</span>' : '') +
+        '</div>' +
+        '<div class="auto-card-body">' +
+          '<div class="auto-col">' +
+            '<div class="auto-col-label">⚡ Triggers — move card here when…</div>' +
+            '<div class="trigger-chips" id="chips-' + s.id + '" style="flex-direction:column;">' +
+              chips + addTriggerEl +
+            '</div>' +
           '</div>' +
-        '</td>' +
-        '<td style="text-align:center;vertical-align:middle;padding:0;white-space:nowrap;">' +
-          '<span style="font-size:1.2rem;color:var(--gold);">→</span>' +
-        '</td>' +
-        '<td style="text-align:center;vertical-align:middle;padding:0.75rem 0.5rem;">' +
-          '<div class="at-stage-name"><span class="at-stage-color" style="background:' + esc(color) + ';"></span>' + esc(s.name) + '</div>' +
-        '</td>' +
-        '<td style="text-align:center;vertical-align:middle;padding:0;white-space:nowrap;">' +
-          '<span style="font-size:1.2rem;color:var(--gold);">→</span>' +
-        '</td>' +
-        '<td id="actions-cell-' + s.id + '" style="vertical-align:middle;padding:0.75rem 1rem;">' +
-          renderActionsCell(s.id) +
-        '</td>' +
-      '</tr>';
+          '<div class="auto-col-arrow">→</div>' +
+          '<div class="auto-col" id="actions-cell-' + s.id + '">' +
+            renderActionsCell(s.id) +
+          '</div>' +
+        '</div>' +
+      '</div>';
     }).join('');
 
-    document.getElementById('automation-tbody').innerHTML = rows;
+    container.innerHTML = cards;
   }
 
   // ── STAGE ACTIONS ──
@@ -637,9 +638,7 @@
     apiPipelines('PUT', '/templates/' + templateId + '/stages/' + stageId, { name: name })
       .then(function() {
         if (stage) stage.name = name;
-        // Update automation table row name
-        var td = document.querySelector('#automation-tbody tr td.at-stage-name');
-        // re-render table to reflect name change
+        // Re-render automation cards to reflect name change
         renderAutomationTable();
         window.toast && window.toast('Stage renamed');
       })
@@ -712,7 +711,7 @@
         '</span>';
     }).join('');
 
-    var addSelect = '<select class="action-add-select" id="action-sel-' + stageId + '" onchange="openActionForm(' + stageId + ', this)">' +
+    var addSelect = '<select class="action-add-select" id="action-sel-' + stageId + '" style="width:100%;" onchange="openActionForm(' + stageId + ', this)">' +
       '<option value="">+ Add action…</option>' +
       '<option value="portal_message">📩 Client Message</option>' +
       '<option value="staff_task">📋 Staff Task</option>' +
@@ -723,7 +722,8 @@
       formHtml = buildActionForm(stageId, activeActionForm.type);
     }
 
-    return '<div class="action-chips">' + chips + addSelect + '</div>' + formHtml;
+    return '<div class="auto-col-label">🎯 Actions — fire when card arrives…</div>' +
+      '<div class="action-chips">' + chips + addSelect + '</div>' + formHtml;
   }
 
   function buildActionForm(stageId, type) {
