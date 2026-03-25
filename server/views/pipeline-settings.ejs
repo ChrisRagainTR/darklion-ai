@@ -335,10 +335,6 @@
         <div style="display:flex;align-items:center;gap:0.65rem;flex-wrap:wrap;">
           <input type="number" id="copy-year-input" min="2020" max="2040" placeholder="e.g. 2026"
             style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.6rem;border-radius:6px;font-size:0.84rem;outline:none;width:110px;" />
-          <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.78rem;color:var(--text);cursor:pointer;">
-            <input type="checkbox" id="copy-migrate-held" style="cursor:pointer;accent-color:var(--gold);" />
-            Migrate held ♻️ cards too
-          </label>
           <button class="btn btn-gold btn-sm" onclick="copyPipelineToYear()">Copy →</button>
           <span id="copy-year-msg" style="font-size:0.76rem;"></span>
         </div>
@@ -710,7 +706,7 @@
 
   window.copyPipelineToYear = function() {
     var year = (document.getElementById('copy-year-input').value || '').trim();
-    var migrateHeld = document.getElementById('copy-migrate-held').checked;
+    var migrateHeld = false;
     var msgEl = document.getElementById('copy-year-msg');
     if (!year || isNaN(parseInt(year))) {
       msgEl.style.color = 'var(--red)'; msgEl.textContent = 'Please enter a valid year.'; return;
