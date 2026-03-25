@@ -1,15 +1,14 @@
 'use strict';
 
-const FROM_NAME = 'DarkLion Portal';
+const DEFAULT_FROM_NAME = 'DarkLion Portal';
 const FROM_ADDR = process.env.RESEND_FROM || 'messages@darklion.ai';
-const FROM = `${FROM_NAME} <${FROM_ADDR}>`;
 
 /**
  * Send a transactional email via Resend.
  * @param {{ to: string, subject: string, html: string }}
  * @returns {{ ok: true } | { ok: true, skipped: true }}
  */
-async function sendEmail({ to, subject, html }) {
+async function sendEmail({ to, subject, html, fromName }) {
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
@@ -17,13 +16,16 @@ async function sendEmail({ to, subject, html }) {
     return { ok: true, skipped: true };
   }
 
+  const senderName = fromName || DEFAULT_FROM_NAME;
+  const from = `${senderName} <${FROM_ADDR}>`;
+
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ from: FROM, to, subject, html }),
+    body: JSON.stringify({ from, to, subject, html }),
   });
 
   if (!res.ok) {
@@ -84,7 +86,7 @@ async function sendPortalInvite({ to, name, firmName, inviteUrl }) {
     <p class="url-fallback">Or copy this link: ${esc(inviteUrl)}</p>
   `);
 
-  return sendEmail({ to, subject: `You're invited to the ${firmName} Client Portal`, html });
+  return sendEmail({ to, subject: `You're invited to the ${firmName} Client Portal`, html, fromName: firmName });
 }
 
 /**
@@ -101,7 +103,7 @@ async function sendPortalNotification({ to, name, firmName, message, portalUrl }
     <p>Log in to your secure client portal to view details.</p>
   `);
 
-  return sendEmail({ to, subject: `A message from ${firmName}`, html });
+  return sendEmail({ to, subject: `A message from ${firmName}`, html, fromName: firmName });
 }
 
 /**

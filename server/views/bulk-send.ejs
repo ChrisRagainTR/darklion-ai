@@ -1,0 +1,907 @@
+<%- include('partials/shell-top', { title: title, activeNav: activeNav }) %>
+
+<style>
+  .bulk-wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 1.5rem 1.5rem 4rem;
+  }
+  .bulk-header {
+    margin-bottom: 1.5rem;
+  }
+  .bulk-header h1 {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+  .bulk-header p {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  /* Steps */
+  .step-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+  }
+  .step-tab {
+    padding: 0.65rem 1.25rem;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+  }
+  .step-tab.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+  }
+  .step-tab.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .step-num {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(201,168,76,0.12);
+    color: var(--gold);
+    font-size: 0.72rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-tab.active .step-num {
+    background: var(--gold);
+    color: var(--navy);
+  }
+
+  .step-panel { display: none; }
+  .step-panel.active { display: block; }
+
+  /* Filters */
+  .filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  @media (max-width: 600px) {
+    .filter-grid { grid-template-columns: 1fr; }
+  }
+  .filter-group {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+  }
+  .filter-group label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.4rem;
+  }
+  .filter-select, .filter-input {
+    width: 100%;
+    background: var(--charcoal);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.45rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.84rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .filter-select:focus, .filter-input:focus { border-color: var(--gold); }
+
+  .audience-count-bar {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .audience-count-num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .audience-count-label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 0.15rem;
+  }
+  .recipient-preview {
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--charcoal);
+    padding: 0.5rem 0;
+    margin-top: 0.75rem;
+    display: none;
+  }
+  .recipient-preview.open { display: block; }
+  .recipient-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    color: var(--text);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .recipient-row:last-child { border-bottom: none; }
+  .recipient-name { font-weight: 600; flex: 1; }
+  .recipient-email { color: var(--muted); font-size: 0.74rem; }
+  .recipient-rel { color: var(--muted); font-size: 0.72rem; }
+
+  /* Compose */
+  .compose-section { margin-bottom: 1.25rem; }
+  .compose-section label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.35rem;
+  }
+  .compose-input {
+    width: 100%;
+    background: var(--charcoal);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.55rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .compose-input:focus { border-color: var(--gold); }
+  .compose-textarea {
+    width: 100%;
+    background: var(--charcoal);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.65rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    outline: none;
+    resize: vertical;
+    min-height: 180px;
+    font-family: inherit;
+    line-height: 1.6;
+    transition: border-color 0.15s;
+  }
+  .compose-textarea:focus { border-color: var(--gold); }
+
+  .template-picker {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1rem;
+  }
+  .template-picker label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.4rem;
+  }
+
+  .message-preview-box {
+    background: rgba(201,168,76,0.04);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-size: 0.86rem;
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 80px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .message-preview-box.has-content {
+    color: var(--text);
+    font-style: normal;
+  }
+
+  /* Send step */
+  .send-summary {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  .send-summary-row {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    align-items: flex-start;
+  }
+  .send-summary-row:last-child { margin-bottom: 0; }
+  .send-summary-label {
+    font-weight: 700;
+    color: var(--muted);
+    min-width: 90px;
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding-top: 1px;
+  }
+  .send-summary-value { color: var(--text); flex: 1; min-width: 0; word-break: break-word; }
+
+  .progress-bar-wrap {
+    background: var(--charcoal);
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--gold);
+    border-radius: 4px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+
+  /* History */
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+  }
+  .history-table th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+  .history-table td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--text);
+    vertical-align: top;
+  }
+  .history-table tr:last-child td { border-bottom: none; }
+
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.5rem 0;
+  }
+</style>
+
+<div class="bulk-wrap">
+  <div class="bulk-header">
+    <h1>📢 Bulk Send</h1>
+    <p>Send one message to multiple clients at once. Each client gets their own private thread.</p>
+  </div>
+
+  <!-- Step tabs -->
+  <div class="step-tabs" id="step-tabs">
+    <div class="step-tab active" data-step="1">
+      <span class="step-num">1</span> Audience
+    </div>
+    <div class="step-tab disabled" id="tab-2" data-step="2">
+      <span class="step-num">2</span> Compose
+    </div>
+    <div class="step-tab disabled" id="tab-3" data-step="3">
+      <span class="step-num">3</span> Send
+    </div>
+  </div>
+
+  <!-- ── STEP 1: Audience Builder ────────────────────── -->
+  <div class="step-panel active" id="step-1">
+    <div class="filter-grid" id="filter-grid">
+
+      <div class="filter-group">
+        <label>Relationship</label>
+        <select class="filter-select" id="f-relationship">
+          <option value="">All relationships</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Service Tier</label>
+        <select class="filter-select" id="f-service-tier">
+          <option value="">Any tier</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Billing Status</label>
+        <select class="filter-select" id="f-billing-status">
+          <option value="">Any status</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Portal Activity</label>
+        <select class="filter-select" id="f-portal-activity">
+          <option value="">Any</option>
+          <option value="30">Active (logged in within 30 days)</option>
+          <option value="60">Active (within 60 days)</option>
+          <option value="90">Active (within 90 days)</option>
+          <option value="never">Never logged in</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Pipeline</label>
+        <select class="filter-select" id="f-pipeline">
+          <option value="">Any pipeline</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Pipeline Stage</label>
+        <select class="filter-select" id="f-pipeline-stage" disabled>
+          <option value="">Select pipeline first</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Proposal Status</label>
+        <select class="filter-select" id="f-proposal-status">
+          <option value="">Any</option>
+          <option value="sent">Proposal Sent</option>
+          <option value="signed">Proposal Signed</option>
+          <option value="expired">Proposal Expired</option>
+          <option value="draft">Draft</option>
+        </select>
+      </div>
+
+    </div>
+
+    <!-- Live count bar -->
+    <div class="audience-count-bar">
+      <div>
+        <div class="audience-count-num" id="audience-count">—</div>
+        <div class="audience-count-label">recipients match (portal-enabled clients)</div>
+      </div>
+      <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" id="toggle-preview-btn" style="display:none">
+          Show recipients
+        </button>
+        <button class="btn btn-gold btn-sm" id="step1-next" disabled>
+          Continue to Compose →
+        </button>
+      </div>
+    </div>
+    <div class="recipient-preview" id="recipient-preview"></div>
+  </div>
+
+  <!-- ── STEP 2: Compose ────────────────────────────── -->
+  <div class="step-panel" id="step-2">
+
+    <div class="template-picker" id="template-picker-wrap" style="display:none">
+      <label>Load from Template</label>
+      <select class="filter-select" id="template-select">
+        <option value="">— pick a template to load —</option>
+      </select>
+    </div>
+
+    <div class="compose-section">
+      <label>Subject</label>
+      <input type="text" class="compose-input" id="compose-subject" placeholder="e.g. Important update from your advisor" maxlength="200">
+    </div>
+
+    <div class="compose-section">
+      <label>Message</label>
+      <textarea class="compose-textarea" id="compose-body" placeholder="Write your message here…"></textarea>
+    </div>
+
+    <div class="compose-section">
+      <label>Preview</label>
+      <div class="message-preview-box" id="message-preview">Your message will appear here as you type.</div>
+    </div>
+
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1.25rem;">
+      <button class="btn btn-outline" id="step2-back">← Back</button>
+      <button class="btn btn-gold" id="step2-next" disabled>
+        Continue to Send →
+      </button>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: Send ───────────────────────────────── -->
+  <div class="step-panel" id="step-3">
+
+    <div class="send-summary" id="send-summary">
+      <div class="send-summary-row">
+        <span class="send-summary-label">To</span>
+        <span class="send-summary-value" id="summary-recipients">—</span>
+      </div>
+      <div class="send-summary-row">
+        <span class="send-summary-label">Subject</span>
+        <span class="send-summary-value" id="summary-subject">—</span>
+      </div>
+      <div class="send-summary-row">
+        <span class="send-summary-label">Message</span>
+        <span class="send-summary-value" id="summary-message" style="white-space:pre-wrap;"></span>
+      </div>
+    </div>
+
+    <!-- Expandable recipient list -->
+    <div id="send-recipient-list-wrap" style="margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+        <span style="font-size:0.82rem;color:var(--muted);font-weight:600;">RECIPIENT LIST</span>
+        <button class="btn btn-ghost btn-xs" id="toggle-send-recipients">Show</button>
+      </div>
+      <div class="recipient-preview" id="send-recipient-preview"></div>
+    </div>
+
+    <!-- Progress (hidden until sending) -->
+    <div id="send-progress-wrap" style="display:none;margin-bottom:1.25rem;">
+      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.4rem;" id="send-progress-label">Sending…</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="send-progress-bar"></div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div id="send-result" style="display:none;padding:1rem 1.25rem;border-radius:8px;margin-bottom:1.25rem;font-size:0.9rem;font-weight:600;"></div>
+
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button class="btn btn-outline" id="step3-back">← Back</button>
+      <button class="btn btn-gold" id="confirm-send-btn">
+        ✉️ Confirm & Send <span id="confirm-count"></span>
+      </button>
+      <button class="btn btn-gold" id="send-another-btn" style="display:none">
+        Send Another
+      </button>
+    </div>
+  </div>
+
+  <!-- ── History ────────────────────────────────────── -->
+  <hr class="section-divider">
+  <h2 style="font-size:0.95rem;font-weight:700;margin-bottom:0.75rem;color:var(--text);">Recent Sends</h2>
+  <div id="history-wrap">
+    <div class="loading-state" style="padding:1.5rem;">
+      <div class="loading-spinner"></div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/shell-globals') %>
+<%- include('partials/shell-close') %>
+
+<script>
+(function() {
+  'use strict';
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let filterData = { relationships: [], pipelines: [], serviceTiers: [], billingStatuses: [], templates: [] };
+  let audienceRecipients = [];
+  let previewShown = false;
+  let currentStep = 1;
+  let isSending = false;
+
+  const token = localStorage.getItem('dl_token');
+  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  const audienceCount = document.getElementById('audience-count');
+  const togglePreviewBtn = document.getElementById('toggle-preview-btn');
+  const recipientPreview = document.getElementById('recipient-preview');
+  const step1Next = document.getElementById('step1-next');
+  const step2Next = document.getElementById('step2-next');
+  const step2Back = document.getElementById('step2-back');
+  const step3Back = document.getElementById('step3-back');
+  const confirmSendBtn = document.getElementById('confirm-send-btn');
+  const sendAnotherBtn = document.getElementById('send-another-btn');
+  const composeSubject = document.getElementById('compose-subject');
+  const composeBody = document.getElementById('compose-body');
+  const messagePreview = document.getElementById('message-preview');
+  const templateSelect = document.getElementById('template-select');
+  const templatePickerWrap = document.getElementById('template-picker-wrap');
+
+  // ── Step navigation ───────────────────────────────────────────────────────
+  function goToStep(n) {
+    currentStep = n;
+    document.querySelectorAll('.step-panel').forEach((p, i) => {
+      p.classList.toggle('active', i + 1 === n);
+    });
+    document.querySelectorAll('.step-tab').forEach((t, i) => {
+      const tabN = i + 1;
+      t.classList.toggle('active', tabN === n);
+      t.classList.toggle('disabled', tabN > n && !(tabN === 2 && audienceRecipients.length > 0) && !(tabN === 3));
+    });
+    if (n === 3) populateSendStep();
+  }
+
+  document.getElementById('step-tabs').addEventListener('click', e => {
+    const tab = e.target.closest('.step-tab');
+    if (!tab || tab.classList.contains('disabled')) return;
+    const n = parseInt(tab.dataset.step);
+    if (n < currentStep) goToStep(n);
+  });
+
+  step1Next.addEventListener('click', () => goToStep(2));
+  step2Back.addEventListener('click', () => goToStep(1));
+  step2Next.addEventListener('click', () => goToStep(3));
+  step3Back.addEventListener('click', () => goToStep(2));
+
+  // ── Load filter data ──────────────────────────────────────────────────────
+  async function loadFilters() {
+    try {
+      const res = await fetch('/api/bulk-send/filters', { headers });
+      if (!res.ok) throw new Error('Failed to load');
+      filterData = await res.json();
+      populateFilterDropdowns();
+    } catch (e) {
+      console.error('Failed to load filters:', e);
+    }
+  }
+
+  function populateFilterDropdowns() {
+    // Relationships
+    const relSel = document.getElementById('f-relationship');
+    filterData.relationships.forEach(r => {
+      const o = document.createElement('option');
+      o.value = r.id;
+      o.textContent = r.name;
+      relSel.appendChild(o);
+    });
+
+    // Service tiers
+    const tierSel = document.getElementById('f-service-tier');
+    filterData.serviceTiers.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t;
+      o.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+      tierSel.appendChild(o);
+    });
+
+    // Billing statuses
+    const billSel = document.getElementById('f-billing-status');
+    filterData.billingStatuses.forEach(b => {
+      const o = document.createElement('option');
+      o.value = b;
+      o.textContent = b.charAt(0).toUpperCase() + b.slice(1);
+      billSel.appendChild(o);
+    });
+
+    // Pipelines
+    const pipeSel = document.getElementById('f-pipeline');
+    filterData.pipelines.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.id;
+      o.textContent = p.name + (p.tax_year ? ` (${p.tax_year})` : '');
+      pipeSel.appendChild(o);
+    });
+
+    // Templates
+    if (filterData.templates.length > 0) {
+      templatePickerWrap.style.display = '';
+      filterData.templates.forEach(t => {
+        const o = document.createElement('option');
+        o.value = t.id;
+        o.textContent = t.name;
+        templateSelect.appendChild(o);
+      });
+    }
+  }
+
+  // ── Pipeline stage cascade ────────────────────────────────────────────────
+  document.getElementById('f-pipeline').addEventListener('change', function() {
+    const stageSel = document.getElementById('f-pipeline-stage');
+    stageSel.innerHTML = '<option value="">Any stage</option>';
+    const pipeline = filterData.pipelines.find(p => String(p.id) === this.value);
+    if (pipeline && pipeline.stages) {
+      stageSel.disabled = false;
+      pipeline.stages.forEach(s => {
+        const o = document.createElement('option');
+        o.value = s.id;
+        o.textContent = s.name;
+        stageSel.appendChild(o);
+      });
+    } else {
+      stageSel.disabled = true;
+      stageSel.innerHTML = '<option value="">Select pipeline first</option>';
+    }
+    debouncedRefreshCount();
+  });
+
+  // ── Live count refresh ────────────────────────────────────────────────────
+  let countDebounce = null;
+  function debouncedRefreshCount() {
+    clearTimeout(countDebounce);
+    countDebounce = setTimeout(refreshCount, 400);
+  }
+
+  async function refreshCount() {
+    audienceCount.textContent = '…';
+    step1Next.disabled = true;
+    togglePreviewBtn.style.display = 'none';
+
+    const filters = getFilters();
+    try {
+      const res = await fetch('/api/bulk-send/preview', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ filters }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      audienceRecipients = data.recipients || [];
+      audienceCount.textContent = data.count;
+      step1Next.disabled = data.count === 0;
+      togglePreviewBtn.style.display = data.count > 0 ? '' : 'none';
+      togglePreviewBtn.textContent = previewShown ? 'Hide recipients' : `Show recipients (${Math.min(data.count, 200)})`;
+      if (previewShown) renderRecipientPreview(recipientPreview, audienceRecipients);
+    } catch (e) {
+      audienceCount.textContent = '—';
+      console.error(e);
+    }
+  }
+
+  function getFilters() {
+    const filters = {};
+    const rel = document.getElementById('f-relationship').value;
+    if (rel) filters.relationship_id = rel;
+    const tier = document.getElementById('f-service-tier').value;
+    if (tier) filters.service_tier = tier;
+    const bill = document.getElementById('f-billing-status').value;
+    if (bill) filters.billing_status = bill;
+    const portal = document.getElementById('f-portal-activity').value;
+    if (portal === 'never') filters.portal_never_logged_in = true;
+    else if (portal) filters.portal_active_days = portal;
+    const pipelineId = document.getElementById('f-pipeline').value;
+    const stageId = document.getElementById('f-pipeline-stage').value;
+    if (pipelineId && stageId) {
+      filters.pipeline_instance_id = pipelineId;
+      filters.pipeline_stage_id = stageId;
+    }
+    const propStatus = document.getElementById('f-proposal-status').value;
+    if (propStatus) filters.proposal_status = propStatus;
+    return filters;
+  }
+
+  // Listen to all filter changes
+  document.querySelectorAll('.filter-select').forEach(sel => {
+    if (sel.id !== 'f-pipeline') { // pipeline handled above
+      sel.addEventListener('change', debouncedRefreshCount);
+    }
+  });
+
+  // Toggle recipient preview
+  togglePreviewBtn.addEventListener('click', () => {
+    previewShown = !previewShown;
+    recipientPreview.classList.toggle('open', previewShown);
+    togglePreviewBtn.textContent = previewShown
+      ? 'Hide recipients'
+      : `Show recipients (${Math.min(audienceRecipients.length, 200)})`;
+    if (previewShown) renderRecipientPreview(recipientPreview, audienceRecipients);
+  });
+
+  function renderRecipientPreview(container, recipients) {
+    if (!recipients.length) {
+      container.innerHTML = '<div class="recipient-row" style="color:var(--muted)">No recipients match.</div>';
+      return;
+    }
+    container.innerHTML = recipients.map(r => `
+      <div class="recipient-row">
+        <div class="recipient-name">${escHtml(r.name)}</div>
+        <div class="recipient-email">${escHtml(r.email || '—')}</div>
+        ${r.relationship ? `<div class="recipient-rel">· ${escHtml(r.relationship)}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // ── Compose step ──────────────────────────────────────────────────────────
+  composeBody.addEventListener('input', updatePreview);
+  composeSubject.addEventListener('input', () => {
+    step2Next.disabled = !composeBody.value.trim();
+  });
+
+  function updatePreview() {
+    const body = composeBody.value.trim();
+    step2Next.disabled = !body;
+    if (body) {
+      messagePreview.textContent = body;
+      messagePreview.classList.add('has-content');
+    } else {
+      messagePreview.textContent = 'Your message will appear here as you type.';
+      messagePreview.classList.remove('has-content');
+    }
+  }
+
+  // Template loader
+  templateSelect.addEventListener('change', function() {
+    const id = this.value;
+    if (!id) return;
+    const tmpl = filterData.templates.find(t => String(t.id) === id);
+    if (tmpl && tmpl.body) {
+      composeBody.value = tmpl.body;
+      updatePreview();
+    }
+    this.value = '';
+  });
+
+  // ── Send step ─────────────────────────────────────────────────────────────
+  function populateSendStep() {
+    const count = audienceRecipients.length;
+    document.getElementById('summary-recipients').textContent =
+      `${count} client${count !== 1 ? 's' : ''}`;
+    document.getElementById('summary-subject').textContent =
+      composeSubject.value.trim() || '(no subject)';
+    document.getElementById('summary-message').textContent = composeBody.value.trim();
+    document.getElementById('confirm-count').textContent =
+      `(${count} client${count !== 1 ? 's' : ''})`;
+
+    const sendPrev = document.getElementById('send-recipient-preview');
+    renderRecipientPreview(sendPrev, audienceRecipients);
+  }
+
+  document.getElementById('toggle-send-recipients').addEventListener('click', function() {
+    const pv = document.getElementById('send-recipient-preview');
+    const open = pv.classList.toggle('open');
+    this.textContent = open ? 'Hide' : 'Show';
+  });
+
+  confirmSendBtn.addEventListener('click', async () => {
+    if (isSending) return;
+    isSending = true;
+    confirmSendBtn.disabled = true;
+    step3Back.disabled = true;
+
+    const progressWrap = document.getElementById('send-progress-wrap');
+    const progressLabel = document.getElementById('send-progress-label');
+    const progressBar = document.getElementById('send-progress-bar');
+    const resultDiv = document.getElementById('send-result');
+
+    progressWrap.style.display = '';
+    progressLabel.textContent = 'Sending messages…';
+    progressBar.style.width = '20%';
+    resultDiv.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/bulk-send/send', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          subject: composeSubject.value.trim(),
+          message: composeBody.value.trim(),
+          filters: getFilters(),
+        }),
+      });
+      const data = await res.json();
+      progressBar.style.width = '100%';
+
+      if (res.ok && data.ok) {
+        progressLabel.textContent = `Done! Sent to ${data.sentCount} client${data.sentCount !== 1 ? 's' : ''}.`;
+        resultDiv.style.display = '';
+        resultDiv.style.background = 'rgba(62,207,142,0.1)';
+        resultDiv.style.border = '1px solid rgba(62,207,142,0.3)';
+        resultDiv.style.color = 'var(--green)';
+        resultDiv.textContent = `✅ Successfully sent to ${data.sentCount} client${data.sentCount !== 1 ? 's' : ''}!`;
+        confirmSendBtn.style.display = 'none';
+        sendAnotherBtn.style.display = '';
+        loadHistory();
+      } else {
+        throw new Error(data.error || 'Send failed');
+      }
+    } catch (e) {
+      progressLabel.textContent = 'Error sending.';
+      progressBar.style.background = 'var(--red)';
+      resultDiv.style.display = '';
+      resultDiv.style.background = 'rgba(245,101,101,0.1)';
+      resultDiv.style.border = '1px solid rgba(245,101,101,0.3)';
+      resultDiv.style.color = 'var(--red)';
+      resultDiv.textContent = '❌ ' + e.message;
+      confirmSendBtn.disabled = false;
+    }
+    isSending = false;
+  });
+
+  sendAnotherBtn.addEventListener('click', () => {
+    // Reset everything
+    composeSubject.value = '';
+    composeBody.value = '';
+    updatePreview();
+    audienceRecipients = [];
+    audienceCount.textContent = '—';
+    step1Next.disabled = true;
+    document.getElementById('send-progress-wrap').style.display = 'none';
+    document.getElementById('send-result').style.display = 'none';
+    confirmSendBtn.style.display = '';
+    confirmSendBtn.disabled = false;
+    sendAnotherBtn.style.display = 'none';
+    step3Back.disabled = false;
+    isSending = false;
+    goToStep(1);
+    refreshCount();
+  });
+
+  // ── History ───────────────────────────────────────────────────────────────
+  async function loadHistory() {
+    const wrap = document.getElementById('history-wrap');
+    try {
+      const res = await fetch('/api/bulk-send/history', { headers });
+      if (!res.ok) throw new Error('Failed');
+      const rows = await res.json();
+      if (!rows.length) {
+        wrap.innerHTML = '<div class="empty-state" style="padding:1.5rem 0;font-size:0.85rem;">No bulk sends yet.</div>';
+        return;
+      }
+      wrap.innerHTML = `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Recipients</th>
+                <th>Sent By</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(r => `
+                <tr>
+                  <td>${escHtml(r.subject || '(no subject)')}</td>
+                  <td>${r.recipient_count}</td>
+                  <td>${escHtml(r.sent_by_name || '—')}</td>
+                  <td style="color:var(--muted);white-space:nowrap;">${fmtDate(r.sent_at)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } catch (e) {
+      wrap.innerHTML = '<div style="font-size:0.84rem;color:var(--muted);padding:0.5rem 0;">Failed to load history.</div>';
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  loadFilters().then(() => refreshCount());
+  loadHistory();
+
+})();
+</script>

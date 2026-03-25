@@ -268,6 +268,10 @@ const messagesRouter = require('./routes/messages');
 app.use('/api/messages', requireFirm, apiLimiter, messagesRouter);
 app.get('/messages', (req, res) => res.render('messages', { title: 'Messages', activeNav: 'messages' }));
 
+const bulkSendRouter = require('./routes/bulk-send');
+app.use('/api/bulk-send', requireFirm, apiLimiter, bulkSendRouter);
+app.get('/bulk-send', (req, res) => res.render('bulk-send', { title: 'Bulk Send', activeNav: 'bulk-send' }));
+
 const summariesRouter = require('./routes/summaries');
 app.use('/api/summaries', requireFirm, apiLimiter, summariesRouter);
 app.get('/conversation-summaries', (req, res) => res.render('conversation-summaries', { title: 'Conversation Summaries', activeNav: 'conversation-summaries' }));
