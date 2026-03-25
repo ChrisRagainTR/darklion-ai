@@ -876,7 +876,6 @@
       </div>
       <div class="form-group"><label>Tax Year End</label><input type="text" class="form-control" id="ef-tax-year-end" placeholder="12/31"></div>
     </div>
-    <div class="form-group"><label>Stanford Tax URL</label><input type="url" class="form-control" id="ef-stanford"></div>
     <div class="form-group"><label>Status</label>
       <select class="form-control" id="ef-status"><option value="active">Active</option><option value="inactive">Inactive</option><option value="dissolved">Dissolved</option></select>
     </div>
@@ -1093,7 +1092,6 @@
       { label: 'Status',         val: esc(c.status || 'active') },
       { label: 'Tax Year End',   val: esc(c.tax_year_end || '—') },
       { label: 'Billing Method', val: esc(bmLabel) },
-      { label: 'Stanford Tax',   val: c.stanford_tax_url ? `<a href="${esc(c.stanford_tax_url)}" target="_blank" rel="noopener" style="color:var(--gold);">Open →</a>` : '—' },
     ];
     const detailRowsHtml = detailRows.map(r =>
       `<div style="min-width:0;"><div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.18rem;">${r.label}</div><div style="font-size:0.84rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.val}</div></div>`
@@ -1222,7 +1220,7 @@
     const qlEl = document.getElementById('overview-quicklinks-panel');
     let qlHtml = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Quick Links</div>`;
     const links = [];
-    if (c.stanford_tax_url) links.push(`<a href="${esc(c.stanford_tax_url)}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.5rem;color:var(--gold);font-size:0.84rem;padding:0.3rem 0;text-decoration:none;">🎓 Stanford Tax Organizer</a>`);
+
     if (c.realm_id) links.push(`<a href="https://qbo.intuit.com" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.5rem;color:var(--gold);font-size:0.84rem;padding:0.3rem 0;text-decoration:none;">💼 QuickBooks Online</a>`);
     if (!links.length) qlHtml += `<div style="color:var(--muted);font-size:0.82rem;font-style:italic;">No quick links configured.</div>`;
     else qlHtml += links.join('');
@@ -2000,7 +1998,7 @@
     document.getElementById('ef-name').value = companyData.company_name || '';
     document.getElementById('ef-entity-type').value = companyData.entity_type || '';
     document.getElementById('ef-tax-year-end').value = companyData.tax_year_end || '';
-    document.getElementById('ef-stanford').value = companyData.stanford_tax_url || '';
+
     document.getElementById('ef-status').value = companyData.status || 'active';
     document.getElementById('ef-billing-method').value = companyData.billing_method || '';
     document.getElementById('ef-bookkeeping-service').value = companyData.bookkeeping_service || 'none';
@@ -2029,7 +2027,7 @@
       company_name: document.getElementById('ef-name').value.trim(),
       entity_type: document.getElementById('ef-entity-type').value,
       tax_year_end: document.getElementById('ef-tax-year-end').value.trim(),
-      stanford_tax_url: document.getElementById('ef-stanford').value.trim(),
+
       status: document.getElementById('ef-status').value,
       billing_method: document.getElementById('ef-billing-method').value || null,
       bookkeeper_id: document.getElementById('ef-bookkeeper').value || null,
