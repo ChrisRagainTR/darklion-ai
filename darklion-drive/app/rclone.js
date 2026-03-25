@@ -38,8 +38,8 @@ var MAX_RETRIES = 3;
 var onDisconnectCallback = null;
 var currentToken = null;
 var retryTimeout = null;
-var MOUNT_DIR = path.join(os.homedir(), 'DarkLion Drive');
 var DRIVE_LETTER = 'O:';
+var MOUNT_DIR = DRIVE_LETTER; // Mount directly to drive letter in fixed-disk mode (no --network-mode)
 
 // Kill any running rclone.exe processes that might hold a stale mount
 function killStaleRclone() {
@@ -52,7 +52,7 @@ function killStaleRclone() {
     
     // Also kill any orphaned rclone.exe processes (from previous app crashes)
     exec('taskkill /F /IM rclone.exe /T', function() {
-      // Wait a moment for WinFsp to release the mount point
+      // Wait a moment for WinFsp to release the drive letter
       setTimeout(resolve, 1500);
     });
   });
@@ -72,20 +72,6 @@ function mountDrive(token, onDisconnect) {
 function doMount(token) {
   return new Promise(function(resolve, reject) {
     var rcloneBin = findRclone();
-
-    // After killing stale rclone, directory should be gone (WinFsp removes it on unmount)
-    // If it still exists, try PowerShell removal
-    if (fs.existsSync(MOUNT_DIR)) {
-      try {
-        childProcess.execSync(
-          'powershell -NoProfile -Command "Remove-Item -LiteralPath \'' + MOUNT_DIR + '\' -Force -ErrorAction SilentlyContinue"',
-          { timeout: 3000 }
-        );
-      } catch(e) { /* ignore */ }
-    }
-
-    // DO NOT create the directory — rclone on Windows requires the mountpoint to NOT exist
-    // It will create the directory itself when mounting
 
     // Write rclone config to temp file
     var configPath = path.join(os.tmpdir(), 'darklion-rclone.conf');
@@ -148,22 +134,8 @@ function doMount(token) {
         mounted = true;
         clearTimeout(mountTimeout);
         console.log('[Rclone] Mounted successfully at:', MOUNT_DIR);
-        // Mount O: via net use pointing at the local WebDAV server
-        // HTTP to localhost doesn't require any registry changes
-        exec('net use ' + DRIVE_LETTER + ' /delete /yes', function() {
-          exec(
-            'net use ' + DRIVE_LETTER + ' http://127.0.0.1:7891 /user:darklion "' + token + '" /persistent:no',
-            function(err, stdout, stderr) {
-              if (err) {
-                console.warn('[Rclone] net use drive letter failed:', stderr || err.message);
-                // Fall back — drive letter won't show but folder still works
-              } else {
-                console.log('[Rclone] Drive letter assigned:', DRIVE_LETTER, '-> http://127.0.0.1:7891');
-              }
-              resolve();
-            }
-          );
-        });
+        console.log('[Rclone] Mounted successfully at:', DRIVE_LETTER);
+        resolve();
       }
     }, 4000);
 
@@ -205,27 +177,12 @@ function unmountDrive() {
     if (retryTimeout) { clearTimeout(retryTimeout); retryTimeout = null; }
     currentToken = null;
     retries = 0;
-    // Remove net use drive letter, then kill rclone
-    exec('net use ' + DRIVE_LETTER + ' /delete /yes', function() {
-      killStaleRclone().then(resolve);
-    });
+    killStaleRclone().then(resolve);
   });
 }
 
 function openDrive() {
-  // Open via drive letter for a cleaner Explorer experience
-  exec('explorer.exe ' + DRIVE_LETTER + '\\', function(err) {
-    if (err) {
-      var shell = require('electron').shell;
-      if (shell && shell.openPath) {
-        shell.openPath(MOUNT_DIR).catch(function() {
-          exec('explorer.exe "' + MOUNT_DIR + '"', function() {});
-        });
-      } else {
-        exec('explorer.exe "' + MOUNT_DIR + '"', function() {});
-      }
-    }
-  });
+  exec('explorer.exe ' + DRIVE_LETTER + '\\', function() {});
 }
 
 function isRunning() {
