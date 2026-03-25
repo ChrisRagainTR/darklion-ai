@@ -93,8 +93,15 @@
     .msg-bubble.staff { background: var(--gold); color: var(--navy); }
     .msg-bubble.client { background: var(--charcoal); color: var(--text); border: 1px solid var(--border); }
     .msg-bubble.internal { background: rgba(255,200,0,0.1); border: 1px dashed var(--gold); color: var(--text); }
+    .msg-bubble.task { background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.4); color: var(--text); border-left: 3px solid var(--gold); }
     .msg-meta { font-size: 0.68rem; color: var(--muted); margin-top: 0.15rem; }
     .msg-internal-label { font-size: 0.62rem; color: var(--gold); margin-bottom: 0.15rem; }
+    .msg-task-label { font-size: 0.62rem; color: var(--gold); margin-bottom: 0.15rem; font-weight: 700; letter-spacing: 0.04em; }
+
+    /* ── TASK THREAD CARD ── */
+    .thread-card.has-task { border-left: 3px solid var(--gold); background: rgba(201,168,76,0.04); }
+    .thread-card.has-task .thread-card-subject { color: var(--gold); }
+    .task-badge { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.62rem; font-weight: 700; background: rgba(201,168,76,0.15); color: var(--gold); border: 1px solid rgba(201,168,76,0.35); border-radius: 4px; padding: 0.1rem 0.35rem; vertical-align: middle; margin-left: 0.3rem; }
     .msg-delete-btn {
       display: none; background: none; border: none; cursor: pointer;
       color: var(--muted); font-size: 0.7rem; padding: 0 0.25rem; margin-left: 0.35rem;
@@ -440,11 +447,13 @@ function renderInbox() {
     const sharedBadge = t.isParticipant
       ? `<span style="font-size:0.65rem;background:rgba(138,99,241,0.15);color:#a78bfa;border:1px solid rgba(138,99,241,0.3);border-radius:4px;padding:0.1rem 0.4rem;font-weight:600;">Shared${t.sharedByName ? ' by ' + esc(t.sharedByName.split(' ')[0]) : ''}</span>`
       : '';
+    const taskBadge = t.hasTaskMessages ? `<span class="task-badge">📋 Task</span>` : '';
     const archiveLabel = t.isParticipant ? 'Remove' : 'Archive';
     const archiveTitle = t.isParticipant ? 'Remove from your inbox' : 'Archive this thread';
-    return `<div class="thread-card${t.id === activeThreadId ? ' active' : ''}" onclick="loadThread(${t.id})">
+    const extraClass = (t.id === activeThreadId ? ' active' : '') + (t.hasTaskMessages ? ' has-task' : '');
+    return `<div class="thread-card${extraClass}" onclick="loadThread(${t.id})">
       <div class="thread-card-name">
-        <span>${name} ${sharedBadge}</span>
+        <span>${name} ${sharedBadge}${taskBadge}</span>
         <span style="font-size:0.7rem;color:var(--muted);">${relTime(t.lastMessageAt)}</span>
       </div>
       <div class="thread-card-subject">${esc(t.subject || '(no subject)')}</div>
@@ -588,13 +597,15 @@ async function loadThread(threadId, silent = false) {
       for (const m of msgs) {
         if (!existingIds.has(m.id)) {
           const side = m.senderType === 'staff' ? 'staff' : 'client';
-          const bubbleClass = m.isInternal ? 'internal' : side;
+          const isTask = m.messageType === 'task';
+          const bubbleClass = isTask ? 'task' : (m.isInternal ? 'internal' : side);
           const attachmentsHtml = (m.attachments||[]).length > 0
             ? `<div class="msg-attachments">${m.attachments.map(a => `<a class="attachment-chip" href="#" onclick="downloadAttachment(${a.documentId});return false;">📎 ${esc(a.displayName)}</a>`).join('')}</div>` : '';
           const canDeleteAppended = m.senderType === 'staff' && m.senderId === _myUserId;
           const deleteBtnAppended = canDeleteAppended ? `<button class="msg-delete-btn" data-msg-id="${m.id}" title="Delete message" onclick="deleteMessage(${m.id}, this)">✕</button>` : '';
+          const labelHtml = isTask ? '<div class="msg-task-label">📋 Staff Task</div>' : (m.isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : '');
           msgContainer.insertAdjacentHTML('beforeend', `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
-            ${m.isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
+            ${labelHtml}
             <div class="msg-bubble-row"><div class="msg-bubble ${bubbleClass}">${m.body ? esc(m.body).replace(/\n/g,'<br>') : ''}${attachmentsHtml}</div>${deleteBtnAppended}</div>
             <div class="msg-meta">${esc(m.senderName||'')} · ${relTime(m.createdAt)}</div>
           </div>`);
@@ -605,7 +616,8 @@ async function loadThread(threadId, silent = false) {
     } else {
       msgContainer.innerHTML = msgs.map(m => {
         const side = m.senderType === 'staff' ? 'staff' : 'client';
-        const bubbleClass = m.isInternal ? 'internal' : side;
+        const isTask = m.messageType === 'task';
+        const bubbleClass = isTask ? 'task' : (m.isInternal ? 'internal' : side);
         const attachmentsHtml = (m.attachments || []).length > 0
           ? `<div class="msg-attachments">${(m.attachments).map(a => {
               const size = a.sizeBytes ? ' <span class="att-size">(' + formatBytes(a.sizeBytes) + ')</span>' : '';
@@ -613,8 +625,9 @@ async function loadThread(threadId, silent = false) {
             }).join('')}</div>` : '';
         const canDelete = m.senderType === 'staff' && m.senderId === _myUserId;
         const deleteBtn = canDelete ? `<button class="msg-delete-btn" data-msg-id="${m.id}" title="Delete message" onclick="deleteMessage(${m.id}, this)">✕</button>` : '';
+        const labelHtml = isTask ? '<div class="msg-task-label">📋 Staff Task</div>' : (m.isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : '');
         return `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
-          ${m.isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : ''}
+          ${labelHtml}
           <div class="msg-bubble-row"><div class="msg-bubble ${bubbleClass}">${m.body ? esc(m.body).replace(/\n/g,'<br>') : ''}${attachmentsHtml}</div>${deleteBtn}</div>
           <div class="msg-meta">${esc(m.senderName || '')} · ${relTime(m.createdAt)}</div>
         </div>`;

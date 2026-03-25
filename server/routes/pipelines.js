@@ -2,6 +2,7 @@
 
 const { Router } = require('express');
 const { pool } = require('../db');
+const { executeStageActions } = require('../services/pipelineActions');
 
 const router = Router();
 
@@ -816,6 +817,34 @@ router.post('/jobs/:jobId/move', async (req, res) => {
       } catch (autoMsgErr) {
         console.error('Auto-message error (non-fatal):', autoMsgErr);
       }
+    }
+
+    // ── Fire pipeline stage actions (non-blocking) ──────────────────────────
+    try {
+      const { rows: instInfoRows } = await pool.query(
+        `SELECT pi.firm_id, pi.name AS instance_name, pi.tax_year, pt.name AS template_name
+         FROM pipeline_instances pi
+         JOIN pipeline_templates pt ON pt.id = pi.template_id
+         WHERE pi.id = $1`,
+        [job.instance_id]
+      );
+      const instInfo = instInfoRows[0];
+      if (instInfo) {
+        executeStageActions(
+          instInfo.firm_id,
+          stage_id,
+          job.instance_id,
+          updated.entity_type,
+          updated.entity_id,
+          {
+            pipeline_name: instInfo.instance_name || instInfo.template_name,
+            tax_year: instInfo.tax_year || '',
+            stage_name: newStage ? newStage.name : '',
+          }
+        ).catch(e => console.error('[actions] non-fatal:', e));
+      }
+    } catch (actErr) {
+      console.error('[actions] setup error (non-fatal):', actErr);
     }
 
     res.json(updated);

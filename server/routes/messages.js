@@ -201,8 +201,10 @@ router.get('/', async (req, res) => {
          tp.added_by_id,
          adder.name as shared_by_name,
          (SELECT body FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) as last_body,
+         (SELECT message_type FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) as last_message_type,
          (SELECT created_at FROM messages m WHERE m.thread_id = mt.id ORDER BY m.created_at DESC LIMIT 1) as last_message_at_sub,
-         (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) as unread_count
+         (SELECT COUNT(*) FROM messages m WHERE m.thread_id = mt.id AND m.sender_type = 'client' AND m.read_at IS NULL) as unread_count,
+         (SELECT COUNT(*) > 0 FROM messages m WHERE m.thread_id = mt.id AND m.message_type = 'task' LIMIT 1) as has_task_messages
        FROM message_threads mt
        JOIN people p ON p.id = mt.person_id
        JOIN firm_users fu ON fu.id = mt.staff_user_id
@@ -234,6 +236,7 @@ router.get('/', async (req, res) => {
       },
       lastPreview: t.last_body ? t.last_body.slice(0, 80) : '',
       unreadCount: parseInt(t.unread_count, 10) || 0,
+      hasTaskMessages: t.has_task_messages === true || t.has_task_messages === 'true',
     })));
   } catch (err) {
     console.error('[GET /messages] error:', err);
@@ -456,7 +459,7 @@ router.get('/:threadId', async (req, res) => {
 
     const { rows: msgs } = await pool.query(
       `SELECT m.id, m.thread_id, m.sender_type, m.sender_id, m.body,
-              m.is_internal, m.created_at, m.read_at
+              m.is_internal, m.message_type, m.created_at, m.read_at
        FROM messages m
        WHERE m.thread_id = $1
        ORDER BY m.created_at ASC`,
@@ -515,6 +518,7 @@ router.get('/:threadId', async (req, res) => {
                   m.sender_type === 'client' ? `${thread.first_name} ${thread.last_name}` : 'Agent',
       body: m.body,
       isInternal: m.is_internal,
+      messageType: m.message_type || 'message',
       createdAt: m.created_at,
       readAt: m.read_at,
       attachments: attachmentMap[m.id] || [],

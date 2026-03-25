@@ -291,6 +291,9 @@ app.use('/api/pipelines', requireFirm, apiLimiter, pipelinesRouter);
 
 const pipelineTriggersRouter = require('./routes/pipeline-triggers');
 app.use('/api/pipeline-triggers', requireFirm, apiLimiter, pipelineTriggersRouter);
+
+const pipelineActionsRouter = require('./routes/pipeline-actions');
+app.use('/api/pipeline-actions', requireFirm, apiLimiter, pipelineActionsRouter);
 app.get('/pipelines', (req, res) => res.render('pipelines', { title: 'Pipelines', activeNav: 'pipelines' }));
 app.get('/pipelines/:instanceId/settings', (req, res) => res.render('pipeline-settings', { title: 'Pipeline Settings', activeNav: 'pipelines' }));
 

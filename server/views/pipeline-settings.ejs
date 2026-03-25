@@ -196,15 +196,101 @@
   }
   .trigger-add-select:focus { border-color: var(--gold); }
 
-  /* ── ACTIONS PLACEHOLDER ── */
-  .actions-coming-soon {
+  /* ── ACTIONS CELL ── */
+  .action-chips {
     display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
     align-items: center;
-    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+  .action-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 12px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    color: var(--gold);
+  }
+  .action-chip-remove {
+    background: none;
+    border: none;
     color: var(--muted);
-    font-size: 0.78rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 0;
+    line-height: 1;
+    margin-left: 0.1rem;
+  }
+  .action-chip-remove:hover { color: var(--red); }
+  .action-add-select {
+    background: var(--charcoal);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.2rem 0.4rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    outline: none;
+    cursor: pointer;
+  }
+  .action-add-select:focus { border-color: var(--gold); }
+
+  /* ── ACTION FORM (inline) ── */
+  .action-form {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-top: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+  }
+  .action-form label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.1rem;
+    display: block;
+  }
+  .action-form input[type=text],
+  .action-form textarea,
+  .action-form select {
+    width: 100%;
+    background: var(--charcoal);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 5px;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+    font-family: inherit;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .action-form input:focus,
+  .action-form textarea:focus { border-color: var(--gold); }
+  .action-form textarea { resize: vertical; min-height: 60px; }
+  .action-form-actions { display: flex; gap: 0.4rem; justify-content: flex-end; margin-top: 0.15rem; }
+  .action-merge-hint {
+    font-size: 0.68rem;
+    color: var(--muted);
     font-style: italic;
   }
+  .action-assignees { display: flex; flex-direction: column; gap: 0.25rem; max-height: 120px; overflow-y: auto; }
+  .action-assignee-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .action-assignee-item input[type=checkbox] { accent-color: var(--gold); cursor: pointer; }
 
   /* ── LOADING / EMPTY ── */
   .ps-loading { display: flex; align-items: center; gap: 0.75rem; color: var(--muted); padding: 2rem 0; font-size: 0.88rem; }
@@ -278,6 +364,9 @@
   var stages = [];
   var availableTriggers = [];
   var smartStageConfigs = {}; // stageId -> [{ configId, triggerKey }]
+  var stageActions = {}; // stageId -> [action]
+  var firmTeam = []; // [{ id, name, display_name }]
+  var activeActionForm = null; // { stageId, type } — which inline form is open
 
   // ── Update "Back to Pipeline" link ──
   document.getElementById('back-to-pipeline').href = '/pipelines'; // will deepen once we know instanceId
@@ -301,17 +390,29 @@
       return r.json();
     });
   }
+  function apiActions(method, path, body) {
+    var opts = { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    return fetch('/api/pipeline-actions' + path, opts).then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Request failed'); });
+      return r.json();
+    });
+  }
 
   // ── LOAD PAGE DATA ──
   function loadAll() {
     Promise.all([
       apiPipelines('GET', '/instances/' + instanceId),
       apiTriggers('GET', ''),
-      apiTriggers('GET', '/stage-config/' + instanceId)
+      apiTriggers('GET', '/stage-config/' + instanceId),
+      apiActions('GET', '/' + instanceId),
+      fetch('/firms/team', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r) { return r.ok ? r.json() : []; })
     ]).then(function(results) {
       var instance = results[0];
       availableTriggers = results[1] || [];
       var configs = results[2] || [];
+      stageActions = results[3] || {};
+      firmTeam = results[4] || [];
 
       templateId = instance.template_id;
       stages = instance.stages || [];
@@ -492,8 +593,8 @@
             (cfgs.length >= 2 ? '<span style="font-size:0.72rem;color:var(--muted);font-style:italic;">Max 2 triggers</span>' : '<select class="trigger-add-select" id="trigger-sel-' + s.id + '" onchange="addTrigger(' + s.id + ', this)">' + addOpts + '</select>') +
           '</div>' +
         '</td>' +
-        '<td>' +
-          '<div class="actions-coming-soon">🎯 Coming soon — actions will fire emails, messages, and tasks when a card arrives</div>' +
+        '<td id="actions-cell-' + s.id + '">' +
+          renderActionsCell(s.id) +
         '</td>' +
       '</tr>';
     }).join('');
@@ -575,6 +676,132 @@
   window.saveDefaultYear = function(year) {
     apiPipelines('PUT', '/templates/' + templateId, { default_year: year || null })
       .then(function() { window.toast && window.toast(year ? '📅 Default year set to ' + year : 'Default year cleared'); })
+      .catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  // ── ACTIONS CELL RENDERING ──
+  function renderActionsCell(stageId) {
+    var actions = stageActions[stageId] || [];
+    var chips = actions.map(function(a) {
+      var label = a.action_type === 'portal_message'
+        ? '📩 ' + esc(a.config.subject || 'Client Message')
+        : '📋 ' + esc(a.config.name || 'Staff Task');
+      return '<span class="action-chip">' + label +
+        '<button class="action-chip-remove" onclick="removeAction(' + a.id + ',' + stageId + ')" title="Remove">×</button>' +
+        '</span>';
+    }).join('');
+
+    var addSelect = '<select class="action-add-select" id="action-sel-' + stageId + '" onchange="openActionForm(' + stageId + ', this)">' +
+      '<option value="">+ Add action…</option>' +
+      '<option value="portal_message">📩 Client Message</option>' +
+      '<option value="staff_task">📋 Staff Task</option>' +
+      '</select>';
+
+    var formHtml = '';
+    if (activeActionForm && activeActionForm.stageId === stageId) {
+      formHtml = buildActionForm(stageId, activeActionForm.type);
+    }
+
+    return '<div class="action-chips">' + chips + addSelect + '</div>' + formHtml;
+  }
+
+  function buildActionForm(stageId, type) {
+    if (type === 'portal_message') {
+      return '<div class="action-form" id="action-form-' + stageId + '">' +
+        '<div><label>Subject (optional)</label>' +
+        '<input type="text" id="af-subject-' + stageId + '" placeholder="e.g. Your return is ready" /></div>' +
+        '<div><label>Message Body</label>' +
+        '<textarea id="af-body-' + stageId + '" placeholder="Hi {First Name}, your documents are ready…"></textarea>' +
+        '<div class="action-merge-hint">Tags: {First Name} {Last Name} {Full Name} {Entity Name} {Tax Year} {Pipeline Name} {Stage Name}</div>' +
+        '</div>' +
+        '<div class="action-form-actions">' +
+        '<button class="btn btn-outline btn-sm" onclick="cancelActionForm(' + stageId + ')">Cancel</button>' +
+        '<button class="btn btn-gold btn-sm" onclick="saveAction(' + stageId + ', \'portal_message\')">Save</button>' +
+        '</div>' +
+        '</div>';
+    } else {
+      var assigneeCheckboxes = firmTeam.map(function(u) {
+        var name = esc(u.display_name || u.name || u.email || '');
+        return '<label class="action-assignee-item">' +
+          '<input type="checkbox" class="af-assignee-' + stageId + '" value="' + u.id + '" /> ' + name +
+          '</label>';
+      }).join('');
+      return '<div class="action-form" id="action-form-' + stageId + '">' +
+        '<div><label>Task Name</label>' +
+        '<input type="text" id="af-taskname-' + stageId + '" placeholder="e.g. Review {Entity Name}\'s return" /></div>' +
+        '<div><label>Description (optional)</label>' +
+        '<textarea id="af-taskbody-' + stageId + '" placeholder="Optional details…"></textarea>' +
+        '</div>' +
+        '<div><label>Assign to</label>' +
+        '<div class="action-assignees">' + (assigneeCheckboxes || '<span style="color:var(--muted);font-size:0.78rem;">No team members found</span>') + '</div>' +
+        '</div>' +
+        '<div class="action-form-actions">' +
+        '<button class="btn btn-outline btn-sm" onclick="cancelActionForm(' + stageId + ')">Cancel</button>' +
+        '<button class="btn btn-gold btn-sm" onclick="saveAction(' + stageId + ', \'staff_task\')">Save</button>' +
+        '</div>' +
+        '</div>';
+    }
+  }
+
+  function refreshActionsCell(stageId) {
+    var cell = document.getElementById('actions-cell-' + stageId);
+    if (cell) cell.innerHTML = renderActionsCell(stageId);
+  }
+
+  window.openActionForm = function(stageId, selectEl) {
+    var type = selectEl.value;
+    if (!type) return;
+    selectEl.value = '';
+    activeActionForm = { stageId: stageId, type: type };
+    refreshActionsCell(stageId);
+  };
+
+  window.cancelActionForm = function(stageId) {
+    activeActionForm = null;
+    refreshActionsCell(stageId);
+  };
+
+  window.saveAction = function(stageId, type) {
+    var config = {};
+    if (type === 'portal_message') {
+      var subject = (document.getElementById('af-subject-' + stageId) || {}).value || '';
+      var body = (document.getElementById('af-body-' + stageId) || {}).value || '';
+      if (!body.trim()) { window.toast && window.toast('Message body is required', 'error'); return; }
+      config = { subject: subject.trim(), body: body.trim() };
+    } else {
+      var taskName = (document.getElementById('af-taskname-' + stageId) || {}).value || '';
+      var taskBody = (document.getElementById('af-taskbody-' + stageId) || {}).value || '';
+      if (!taskName.trim()) { window.toast && window.toast('Task name is required', 'error'); return; }
+      var assigneeCheckboxes = document.querySelectorAll('.af-assignee-' + stageId + ':checked');
+      var assignees = Array.from(assigneeCheckboxes).map(function(cb) { return parseInt(cb.value); });
+      config = { name: taskName.trim(), body: taskBody.trim(), assignees: assignees };
+    }
+
+    apiActions('POST', '', {
+      pipeline_instance_id: parseInt(instanceId),
+      stage_id: stageId,
+      action_type: type,
+      config: config,
+    }).then(function(newAction) {
+      if (!stageActions[stageId]) stageActions[stageId] = [];
+      stageActions[stageId].push(newAction);
+      activeActionForm = null;
+      refreshActionsCell(stageId);
+      window.toast && window.toast('✅ Action saved');
+    }).catch(function(e) {
+      window.toast && window.toast('Failed: ' + e.message, 'error');
+    });
+  };
+
+  window.removeAction = function(actionId, stageId) {
+    apiActions('DELETE', '/' + actionId)
+      .then(function() {
+        if (stageActions[stageId]) {
+          stageActions[stageId] = stageActions[stageId].filter(function(a) { return a.id !== actionId; });
+        }
+        refreshActionsCell(stageId);
+        window.toast && window.toast('Action removed');
+      })
       .catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
   };
 

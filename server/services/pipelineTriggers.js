@@ -16,6 +16,7 @@
  */
 
 const { pool } = require('../db');
+const { executeStageActions } = require('./pipelineActions');
 
 async function isTerminalStage(stageId) {
   const { rows } = await pool.query(
@@ -148,6 +149,20 @@ async function fireTrigger(firmId, triggerKey, entityId, context = {}, entityTyp
       } catch (termErr) {
         console.error(`[pipelineTriggers] terminal check error (non-fatal):`, termErr);
       }
+
+      // ── Fire pipeline stage actions (non-blocking) ──
+      executeStageActions(
+        firmId,
+        cfg.stage_id,
+        cfg.pipeline_instance_id,
+        entityType,
+        entityId,
+        {
+          pipeline_name: cfg.pipeline_name,
+          tax_year: context.tax_year || '',
+          stage_name: cfg.stage_name,
+        }
+      ).catch(e => console.error('[actions] non-fatal (trigger):', e));
 
       moved.push({
         pipeline: cfg.pipeline_name,
