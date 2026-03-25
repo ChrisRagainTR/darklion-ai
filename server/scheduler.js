@@ -189,6 +189,7 @@ function scheduleAt10PM() {
         JOIN pipeline_instances pi ON pi.id = pj.instance_id
         JOIN pipeline_templates pt ON pt.id = pi.template_id
         WHERE ps.is_terminal = true
+          AND COALESCE(ps.hold_for_migration, false) = false
           AND pj.job_status NOT IN ('archived', 'complete')
       `);
 

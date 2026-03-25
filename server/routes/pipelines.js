@@ -231,13 +231,14 @@ router.put('/templates/:id/stages/:stageId', async (req, res) => {
       position = s.position,
       color = s.color,
       is_terminal = s.is_terminal,
+      hold_for_migration = s.hold_for_migration,
       auto_assign_to = s.auto_assign_to,
       auto_message = s.auto_message,
     } = req.body;
     const { rows } = await pool.query(
-      `UPDATE pipeline_stages SET name=$1, position=$2, color=$3, is_terminal=$4, auto_assign_to=$5, auto_message=$6
-       WHERE id=$7 RETURNING *`,
-      [name, position, color, is_terminal, auto_assign_to || null, auto_message || '', s.id]
+      `UPDATE pipeline_stages SET name=$1, position=$2, color=$3, is_terminal=$4, hold_for_migration=$5, auto_assign_to=$6, auto_message=$7
+       WHERE id=$8 RETURNING *`,
+      [name, position, color, is_terminal, hold_for_migration || false, auto_assign_to || null, auto_message || '', s.id]
     );
     res.json(rows[0]);
   } catch (e) {
@@ -336,6 +337,109 @@ router.post('/templates/:id/clone', async (req, res) => {
     }
     res.status(201).json(newTmpl);
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /instances/:instanceId/copy-to-year — copy instance stages/triggers/actions to a new year instance
+router.post('/instances/:instanceId/copy-to-year', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { tax_year } = req.body;
+    if (!tax_year) return res.status(400).json({ error: 'tax_year required' });
+
+    // Load source instance
+    const { rows: [srcInstance] } = await client.query(
+      `SELECT pi.*, pt.name AS template_name FROM pipeline_instances pi
+       JOIN pipeline_templates pt ON pt.id = pi.template_id
+       WHERE pi.id = $1 AND pi.firm_id = $2`,
+      [req.params.instanceId, req.firm.id]
+    );
+    if (!srcInstance) return res.status(404).json({ error: 'Instance not found' });
+
+    // Check if target year already exists
+    const { rows: existing } = await client.query(
+      `SELECT id FROM pipeline_instances WHERE template_id = $1 AND firm_id = $2 AND tax_year = $3`,
+      [srcInstance.template_id, req.firm.id, tax_year]
+    );
+    if (existing.length) return res.status(409).json({ error: `A ${tax_year} instance already exists for this pipeline` });
+
+    await client.query('BEGIN');
+
+    // Create new instance
+    const { rows: [newInstance] } = await client.query(
+      `INSERT INTO pipeline_instances (firm_id, template_id, name, tax_year)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [req.firm.id, srcInstance.template_id, srcInstance.template_name + ' ' + tax_year, tax_year]
+    );
+
+    // Copy stages
+    const { rows: srcStages } = await client.query(
+      `SELECT * FROM pipeline_stages WHERE template_id = $1 ORDER BY position ASC`,
+      [srcInstance.template_id]
+    );
+    const stageIdMap = {}; // old stage id → new stage id (same template, just tracking for triggers)
+
+    // Copy triggers (pipeline_stage_triggers) from source instance → new instance
+    const { rows: srcTriggers } = await client.query(
+      `SELECT * FROM pipeline_stage_triggers WHERE pipeline_instance_id = $1 AND firm_id = $2`,
+      [srcInstance.id, req.firm.id]
+    );
+    for (const t of srcTriggers) {
+      await client.query(
+        `INSERT INTO pipeline_stage_triggers (firm_id, pipeline_instance_id, stage_id, trigger_key)
+         VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
+        [req.firm.id, newInstance.id, t.stage_id, t.trigger_key]
+      );
+    }
+
+    // Copy actions (pipeline_stage_actions) from source instance → new instance
+    const { rows: srcActions } = await client.query(
+      `SELECT * FROM pipeline_stage_actions WHERE pipeline_instance_id = $1 AND firm_id = $2`,
+      [srcInstance.id, req.firm.id]
+    );
+    for (const a of srcActions) {
+      await client.query(
+        `INSERT INTO pipeline_stage_actions (firm_id, pipeline_instance_id, stage_id, action_type, config)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [req.firm.id, newInstance.id, a.stage_id, a.action_type, a.config]
+      );
+    }
+
+    // Optionally migrate held cards
+    const { migrate_held = false } = req.body;
+    let migratedCount = 0;
+    if (migrate_held) {
+      // Find first stage of the template
+      const firstStage = srcStages[0];
+      if (firstStage) {
+        // Find all jobs in terminal+hold_for_migration stages in the source instance
+        const { rows: heldJobs } = await client.query(
+          `SELECT pj.id FROM pipeline_jobs pj
+           JOIN pipeline_stages ps ON ps.id = pj.current_stage_id
+           WHERE pj.instance_id = $1
+             AND ps.is_terminal = true
+             AND ps.hold_for_migration = true
+             AND pj.job_status NOT IN ('archived', 'complete')`,
+          [srcInstance.id]
+        );
+        for (const job of heldJobs) {
+          await client.query(
+            `UPDATE pipeline_jobs SET instance_id = $1, current_stage_id = $2, job_status = 'active', tax_year = $3, updated_at = NOW() WHERE id = $4`,
+            [newInstance.id, firstStage.id, tax_year, job.id]
+          );
+          migratedCount++;
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    res.status(201).json({ instance: newInstance, migrated_cards: migratedCount });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('POST /instances/:id/copy-to-year error:', e);
+    res.status(500).json({ error: e.message });
+  } finally {
+    client.release();
+  }
 });
 
 // POST /templates/:id/archive
@@ -867,7 +971,7 @@ router.post('/jobs/:jobId/move', async (req, res) => {
 // PUT /stages/:stageId/terminal — mark/unmark a stage as terminal
 router.put('/stages/:stageId/terminal', async (req, res) => {
   try {
-    const { is_terminal = false } = req.body;
+    const { is_terminal = false, hold_for_migration = false } = req.body;
     // Verify the stage belongs to a template owned by this firm
     const { rows } = await pool.query(
       `SELECT ps.id FROM pipeline_stages ps
@@ -880,7 +984,7 @@ router.put('/stages/:stageId/terminal', async (req, res) => {
     if (is_terminal) {
       // Clear terminal from all other stages in the same template first
       await pool.query(
-        `UPDATE pipeline_stages SET is_terminal = false
+        `UPDATE pipeline_stages SET is_terminal = false, hold_for_migration = false
          WHERE template_id = (SELECT template_id FROM pipeline_stages WHERE id = $1)
            AND id != $1`,
         [req.params.stageId]
@@ -888,8 +992,8 @@ router.put('/stages/:stageId/terminal', async (req, res) => {
     }
 
     const { rows: updated } = await pool.query(
-      'UPDATE pipeline_stages SET is_terminal = $1 WHERE id = $2 RETURNING *',
-      [is_terminal, req.params.stageId]
+      'UPDATE pipeline_stages SET is_terminal = $1, hold_for_migration = $2 WHERE id = $3 RETURNING *',
+      [is_terminal, is_terminal ? hold_for_migration : false, req.params.stageId]
     );
     res.json(updated[0]);
   } catch (e) {

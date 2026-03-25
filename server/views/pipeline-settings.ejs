@@ -340,6 +340,30 @@
     </div>
   </div>
 
+  <!-- ══ COPY TO YEAR ══ -->
+  <div class="ps-section">
+    <div class="ps-section-title">📋 Copy Pipeline to Another Year</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;">
+      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.85rem;line-height:1.6;">
+        Create a new year's instance of this pipeline with the same stages, triggers, and actions.
+        Optionally migrate any cards being <strong style="color:var(--text);">held for migration</strong> into the new pipeline.
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <div>
+          <label style="font-size:0.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:0.3rem;">Target Year</label>
+          <input type="number" id="copy-year-input" min="2020" max="2040" placeholder="e.g. 2026"
+            style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.45rem 0.65rem;border-radius:6px;font-size:0.88rem;outline:none;width:120px;" />
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;margin-top:1.15rem;">
+          <input type="checkbox" id="copy-migrate-held" style="cursor:pointer;accent-color:var(--gold);" />
+          <label for="copy-migrate-held" style="font-size:0.82rem;color:var(--text);cursor:pointer;">Also migrate held cards into the new pipeline</label>
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="copyPipelineToYear()" style="margin-top:1.1rem;">Copy to Year →</button>
+      </div>
+      <div id="copy-year-msg" style="margin-top:0.6rem;font-size:0.8rem;height:1.2rem;"></div>
+    </div>
+  </div>
+
   <!-- ══ AUTOMATION ══ -->
   <div class="ps-section">
     <div class="ps-section-title">⚡ Automation</div>
@@ -469,12 +493,23 @@
       var terminalChecked = s.is_terminal ? ' checked' : '';
       // Only show 🏁 checkbox on the last stage
       var isLast = s.id === lastStageId;
+      var holdChecked = s.hold_for_migration ? ' checked' : '';
       var terminalHtml = isLast
-        ? '<label class="stage-terminal-label' + terminalClass + '" title="Archive card when it reaches this stage">' +
-            '<input type="checkbox"' + terminalChecked + ' onchange="toggleTerminal(' + s.id + ', this.checked)" />' +
-            '🏁 Archive on arrival' +
-          '</label>'
-        : (s.is_terminal ? '<div style="font-size:0.7rem;color:var(--muted);">🏁 Terminal</div>' : '');
+        ? '<div style="padding:0.4rem 0.5rem;border-top:1px solid rgba(255,255,255,0.05);">' +
+            '<label class="stage-terminal-label' + terminalClass + '" title="Mark as the final stage" style="margin-bottom:0.3rem;">' +
+              '<input type="checkbox"' + terminalChecked + ' onchange="toggleTerminal(' + s.id + ', this.checked)" />' +
+              '🏁 Final stage' +
+            '</label>' +
+            (s.is_terminal
+              ? '<div style="margin-top:0.35rem;padding-top:0.35rem;border-top:1px solid rgba(255,255,255,0.04);">' +
+                  '<label style="display:flex;align-items:center;gap:0.4rem;font-size:0.72rem;color:var(--muted);cursor:pointer;" title="Hold card here instead of archiving — migrate to next year\'s pipeline">' +
+                    '<input type="checkbox"' + holdChecked + ' onchange="toggleHoldForMigration(' + s.id + ', this.checked)" style="cursor:pointer;accent-color:var(--gold);" />' +
+                    '♻️ Hold card for migration (don\'t archive)' +
+                  '</label>' +
+                '</div>'
+              : '') +
+          '</div>'
+        : (s.is_terminal ? '<div style="font-size:0.7rem;color:var(--muted);padding:0.3rem 0.5rem;">🏁 Terminal</div>' : '');
       return '<div class="stage-card" data-stage-id="' + s.id + '" draggable="true">' +
         '<div class="stage-card-head">' +
           '<span class="stage-drag-handle" title="Drag to reorder" style="cursor:grab;color:var(--muted);font-size:0.85rem;flex-shrink:0;">⠿</span>' +
@@ -604,7 +639,7 @@
         '<div class="auto-card-header">' +
           '<span class="at-stage-color" style="background:' + esc(color) + ';"></span>' +
           '<span>' + esc(s.name) + '</span>' +
-          (s.is_terminal ? '<span style="margin-left:auto;font-size:0.7rem;background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.1rem 0.4rem;font-weight:700;">🏁 Terminal</span>' : '') +
+          (s.hold_for_migration ? '<span style="margin-left:auto;font-size:0.7rem;background:rgba(74,144,217,0.12);color:#4a90d9;border-radius:4px;padding:0.1rem 0.4rem;font-weight:700;">♻️ Hold for Migration</span>' : (s.is_terminal ? '<span style="margin-left:auto;font-size:0.7rem;background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.1rem 0.4rem;font-weight:700;">🏁 Terminal</span>' : '')) +
         '</div>' +
         '<div class="auto-card-body">' +
           '<div class="auto-col">' +
@@ -646,22 +681,61 @@
   };
 
   window.toggleTerminal = function(stageId, isTerminal) {
+    var stage = stages.find(function(s) { return s.id === stageId; });
+    var holdForMigration = stage ? (stage.hold_for_migration || false) : false;
     fetch('/api/pipelines/stages/' + stageId + '/terminal', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ is_terminal: isTerminal })
+      body: JSON.stringify({ is_terminal: isTerminal, hold_for_migration: holdForMigration })
     }).then(function(r) {
       if (!r.ok) return r.text().then(function(t) { var msg; try { msg = JSON.parse(t).error; } catch(e2) { msg = r.status === 503 ? 'Server is starting up, please try again' : (t.slice(0,120) || 'Failed'); } throw new Error(msg); });
-      var stage = stages.find(function(s) { return s.id === stageId; });
-      if (stage) stage.is_terminal = isTerminal;
-      // Update label class
-      var card = document.querySelector('[data-stage-id="' + stageId + '"]');
-      if (card) {
-        var label = card.querySelector('.stage-terminal-label');
-        if (label) { if (isTerminal) label.classList.add('is-terminal'); else label.classList.remove('is-terminal'); }
-      }
-      window.toast && window.toast(isTerminal ? '🏁 Terminal stage set' : 'Terminal removed');
+      return r.json();
+    }).then(function(updated) {
+      if (stage) { stage.is_terminal = updated.is_terminal; stage.hold_for_migration = updated.hold_for_migration; }
+      // Re-render stage grid to show/hide hold checkbox
+      renderStageGrid();
+      renderAutomationTable();
+      window.toast && window.toast(isTerminal ? '🏁 Final stage set' : 'Terminal removed');
     }).catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  window.toggleHoldForMigration = function(stageId, hold) {
+    var stage = stages.find(function(s) { return s.id === stageId; });
+    fetch('/api/pipelines/stages/' + stageId + '/terminal', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ is_terminal: true, hold_for_migration: hold })
+    }).then(function(r) {
+      if (!r.ok) throw new Error('Failed');
+      return r.json();
+    }).then(function(updated) {
+      if (stage) stage.hold_for_migration = updated.hold_for_migration;
+      window.toast && window.toast(hold ? '♻️ Card will be held for migration' : '🗑️ Card will archive on completion');
+    }).catch(function(e) { window.toast && window.toast('Failed: ' + e.message, 'error'); });
+  };
+
+  window.copyPipelineToYear = function() {
+    var year = (document.getElementById('copy-year-input').value || '').trim();
+    var migrateHeld = document.getElementById('copy-migrate-held').checked;
+    var msgEl = document.getElementById('copy-year-msg');
+    if (!year || isNaN(parseInt(year))) {
+      msgEl.style.color = 'var(--red)'; msgEl.textContent = 'Please enter a valid year.'; return;
+    }
+    msgEl.style.color = 'var(--muted)'; msgEl.textContent = 'Creating…';
+    fetch('/api/pipelines/instances/' + instanceId + '/copy-to-year', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ tax_year: year, migrate_held: migrateHeld })
+    }).then(function(r) {
+      return r.json().then(function(data) { return { ok: r.ok, data: data }; });
+    }).then(function(res) {
+      if (!res.ok) { msgEl.style.color = 'var(--red)'; msgEl.textContent = res.data.error || 'Failed'; return; }
+      var migratedMsg = migrateHeld && res.data.migrated_cards > 0 ? ' Migrated ' + res.data.migrated_cards + ' card(s).' : '';
+      msgEl.style.color = 'var(--green)';
+      msgEl.textContent = '✓ ' + year + ' pipeline created.' + migratedMsg;
+      document.getElementById('copy-year-input').value = '';
+      document.getElementById('copy-migrate-held').checked = false;
+    }).catch(function(e) { msgEl.style.color = 'var(--red)'; msgEl.textContent = 'Error: ' + e.message; });
   };
 
   window.deleteStage = async function(stageId) {

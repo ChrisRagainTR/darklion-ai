@@ -904,6 +904,12 @@ async function initDB() {
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
 
+    -- hold_for_migration: immortal card — don't archive, hold for next year's pipeline
+    DO $$ BEGIN
+      ALTER TABLE pipeline_stages ADD COLUMN IF NOT EXISTS hold_for_migration BOOLEAN DEFAULT FALSE;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
     -- default_year on pipeline_templates
     DO $$ BEGIN
       ALTER TABLE pipeline_templates ADD COLUMN IF NOT EXISTS default_year TEXT DEFAULT '';
