@@ -153,7 +153,16 @@ function doMount(token) {
         console.log('[Rclone] Mounted successfully at:', MOUNT_DIR);
         console.log('[Rclone] Folder mounted at:', MOUNT_DIR);
         // Create a desktop shortcut pointing to the mounted folder
-        var desktopPath = path.join(os.homedir(), 'Desktop');
+        // Use Windows shell to get the real desktop path (handles OneDrive-synced desktops)
+        var desktopPath;
+        try {
+          desktopPath = childProcess.execSync(
+            'powershell -NoProfile -Command "[Environment]::GetFolderPath(\'Desktop\')"',
+            { timeout: 3000 }
+          ).toString().trim();
+        } catch(e) {
+          desktopPath = path.join(os.homedir(), 'Desktop');
+        }
         var shortcutPath = path.join(desktopPath, 'DarkLion Drive.lnk');
         // Write PS script to temp file to avoid shell quoting issues
         var psFile = path.join(os.tmpdir(), 'darklion-shortcut.ps1');
