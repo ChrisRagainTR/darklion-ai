@@ -134,6 +134,9 @@
         <div id="overview-tax-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
           <div class="loading-state"><div class="loading-spinner"></div></div>
         </div>
+        <div id="overview-pipeline-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;width:100%;box-sizing:border-box;">
+          <div class="loading-state"><div class="loading-spinner"></div></div>
+        </div>
       </div>
       <!-- RIGHT col -->
       <div style="display:flex;flex-direction:column;gap:0.85rem;min-width:0;width:100%;">
@@ -1006,6 +1009,49 @@
         </a>`;
       }).join('');
     }).catch(()=>{ const el=document.getElementById('ov-person-msgs-inner'); if(el) el.innerHTML='<span style="color:var(--muted);">—</span>'; });
+
+    // ── CENTER COL: Pipeline History ──
+    loadOverviewPipelineHistory();
+  }
+
+  async function loadOverviewPipelineHistory() {
+    const panel = document.getElementById('overview-pipeline-panel');
+    if (!panel) return;
+    panel.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Pipeline History</div><div style="color:var(--muted);font-size:0.82rem;">Loading…</div>`;
+    try {
+      const res = await apiFetch(`/api/pipelines/completions?entity_type=person&entity_id=${personId}`);
+      const data = await res.json();
+      const completions = data.completions || [];
+      const activeJobs = data.active_jobs || [];
+      let html = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Pipeline History</div>`;
+      if (!completions.length && !activeJobs.length) {
+        html += `<div style="color:var(--muted);font-size:0.82rem;font-style:italic;">No pipeline history yet.</div>`;
+      } else {
+        const rows = [];
+        completions.forEach(c => {
+          const yr = c.tax_year ? ` ${c.tax_year}` : '';
+          const date = new Date(c.completed_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+          rows.push(`<div style="display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+            <span style="font-size:0.9rem;">✅</span>
+            <span style="flex:1;font-size:0.82rem;font-weight:600;">${esc(c.pipeline_name)}${yr}</span>
+            <span style="font-size:0.75rem;color:var(--muted);">${date}</span>
+          </div>`);
+        });
+        activeJobs.forEach(j => {
+          const yr = j.tax_year ? ` ${j.tax_year}` : '';
+          const stage = j.current_stage_name ? ` → ${j.current_stage_name}` : '';
+          rows.push(`<div style="display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+            <span style="font-size:0.9rem;">🔄</span>
+            <span style="flex:1;font-size:0.82rem;font-weight:600;">${esc(j.pipeline_name)}${yr}</span>
+            <span style="font-size:0.75rem;color:var(--muted);">in progress${esc(stage)}</span>
+          </div>`);
+        });
+        html += rows.join('');
+      }
+      panel.innerHTML = html;
+    } catch(e) {
+      panel.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Pipeline History</div><div style="color:var(--muted);font-size:0.82rem;">Failed to load.</div>`;
+    }
   }
 
   // ── Docs: helpers ──
