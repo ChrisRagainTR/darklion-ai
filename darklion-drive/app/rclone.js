@@ -51,7 +51,15 @@ function killStaleRclone() {
     
     // Also kill any orphaned rclone.exe processes (from previous app crashes)
     exec('taskkill /F /IM rclone.exe /T', function() {
-      // Wait a moment for WinFsp to release the drive letter
+      // Clear rclone VFS cache so stale/phantom files don't persist between sessions
+      var cacheDir = path.join(os.homedir(), 'AppData', 'Local', 'rclone');
+      try {
+        childProcess.execSync(
+          'powershell -NoProfile -Command "if (Test-Path \'' + cacheDir.replace(/'/g, "''") + '\') { Remove-Item -Recurse -Force \'' + cacheDir.replace(/'/g, "''") + '\' }"',
+          { timeout: 3000 }
+        );
+      } catch(e) { /* ignore */ }
+      // Wait a moment for WinFsp to release the mount point
       setTimeout(resolve, 1500);
     });
   });
