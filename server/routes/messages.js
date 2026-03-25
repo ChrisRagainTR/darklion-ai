@@ -444,7 +444,7 @@ router.get('/:threadId', async (req, res) => {
       try { const { rows: ur } = await pool.query('SELECT id FROM firm_users WHERE firm_id=$1 AND email=$2 LIMIT 1', [firmId, req.firm.email]); if (ur[0]) callerUserId = ur[0].id; } catch(e) {}
     }
     const { rows: threadRows } = await pool.query(
-      `SELECT mt.*, p.first_name, p.last_name, p.email, p.phone, p.credentials,
+      `SELECT mt.*, p.first_name, p.last_name, p.email, p.phone,
               r.name AS relationship_name,
               fu.name as staff_name, fu.display_name as staff_display_name,
               (mt.staff_user_id != $3) as is_participant_check,
@@ -544,7 +544,6 @@ router.get('/:threadId', async (req, res) => {
         lastName: thread.last_name,
         email: thread.email,
         phone: thread.phone || null,
-        credentials: thread.credentials || null,
         relationshipName: thread.relationship_name || null,
       },
       messages,

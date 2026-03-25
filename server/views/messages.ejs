@@ -656,7 +656,7 @@ async function loadThread(threadId, silent = false) {
       <div class="detail-header-left">
         <div class="detail-header-person">
           <a href="/crm/person/${data.person?.id}" style="font-size:1.05rem;font-weight:700;color:var(--text);">
-            ${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}${data.person?.credentials ? `<span style="color:var(--gold);font-size:0.78rem;font-weight:400;margin-left:0.4rem;">${esc(data.person.credentials)}</span>` : ''}
+            ${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}
           </a>
         </div>
         <div style="font-size:0.78rem;color:var(--muted);margin-top:0.1rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
