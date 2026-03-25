@@ -39,6 +39,7 @@ var onDisconnectCallback = null;
 var currentToken = null;
 var retryTimeout = null;
 var MOUNT_DIR = path.join(os.homedir(), 'DarkLion Drive');
+var DRIVE_LETTER = 'O:';
 
 // Kill any running rclone.exe processes that might hold a stale mount
 function killStaleRclone() {
@@ -141,13 +142,23 @@ function doMount(token) {
       console.log('[Rclone] stdout:', data.toString().trim());
     });
 
-    // Assume mounted after 4s with no fatal error
+    // Assume mounted after 4s with no fatal error, then assign drive letter via subst
     setTimeout(function() {
       if (!mounted && !rejected && rcloneProc && !rcloneProc.killed) {
         mounted = true;
         clearTimeout(mountTimeout);
         console.log('[Rclone] Mounted successfully at:', MOUNT_DIR);
-        resolve();
+        // Remove stale subst first, then assign O:
+        exec('subst ' + DRIVE_LETTER + ' /D', function() {
+          exec('subst ' + DRIVE_LETTER + ' "' + MOUNT_DIR + '"', function(err) {
+            if (err) {
+              console.warn('[Rclone] subst drive letter failed:', err.message);
+            } else {
+              console.log('[Rclone] Drive letter assigned:', DRIVE_LETTER, '->', MOUNT_DIR);
+            }
+            resolve();
+          });
+        });
       }
     }, 4000);
 
@@ -189,19 +200,27 @@ function unmountDrive() {
     if (retryTimeout) { clearTimeout(retryTimeout); retryTimeout = null; }
     currentToken = null;
     retries = 0;
-    killStaleRclone().then(resolve);
+    // Remove the subst drive letter first, then kill rclone
+    exec('subst ' + DRIVE_LETTER + ' /D', function() {
+      killStaleRclone().then(resolve);
+    });
   });
 }
 
 function openDrive() {
-  var shell = require('electron').shell;
-  if (shell && shell.openPath) {
-    shell.openPath(MOUNT_DIR).catch(function() {
-      exec('explorer.exe "' + MOUNT_DIR + '"', function() {});
-    });
-  } else {
-    exec('explorer.exe "' + MOUNT_DIR + '"', function() {});
-  }
+  // Open via drive letter for a cleaner Explorer experience
+  exec('explorer.exe ' + DRIVE_LETTER + '\\', function(err) {
+    if (err) {
+      var shell = require('electron').shell;
+      if (shell && shell.openPath) {
+        shell.openPath(MOUNT_DIR).catch(function() {
+          exec('explorer.exe "' + MOUNT_DIR + '"', function() {});
+        });
+      } else {
+        exec('explorer.exe "' + MOUNT_DIR + '"', function() {});
+      }
+    }
+  });
 }
 
 function isRunning() {

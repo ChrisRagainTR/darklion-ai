@@ -54,7 +54,7 @@ function createTrayIcon(connected) {
 
 function buildTrayMenu() {
   var statusLabel = isConnected
-    ? 'DarkLion Drive (L:)  Connected'
+    ? 'DarkLion Drive (O:)  Connected'
     : 'DarkLion Drive -- Not Connected';
 
   return Menu.buildFromTemplate([
@@ -153,7 +153,7 @@ function connectDrive(token) {
     isConnected = true;
     currentToken = token;
     updateTray();
-    console.log('[Main] Drive connected successfully on L:');
+    console.log('[Main] Drive connected successfully on O:');
     return true;
   }).catch(function(err) {
     console.error('[Main] connectDrive failed:', err.message);
