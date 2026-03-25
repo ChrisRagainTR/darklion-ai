@@ -416,20 +416,35 @@ function buildAudienceQuery(firmId, filters = [], countOnly = false) {
       }
 
       case 'pipeline_stage': {
-        if (!val || !val2) break;
+        if (!val) break;
         const pipeId = parseInt(isArray ? val[0] : val);
-        const stageId = parseInt(val2);
-        if (isNaN(pipeId) || isNaN(stageId)) break;
-        const cond = `EXISTS (
-          SELECT 1 FROM pipeline_jobs pj
-          WHERE pj.instance_id = $${paramIdx++}
-            AND pj.current_stage_id = $${paramIdx++}
-            AND pj.entity_type = 'person'
-            AND pj.entity_id = p.id
-        )`;
+        if (isNaN(pipeId)) break;
+        // value2 can be a single id, array of ids, or empty (any stage)
+        const stageIds = Array.isArray(val2)
+          ? val2.map(Number).filter(n => !isNaN(n))
+          : (val2 ? [parseInt(val2)].filter(n => !isNaN(n)) : []);
+        let cond;
+        if (!stageIds.length) {
+          // Any stage in this pipeline
+          cond = `EXISTS (
+            SELECT 1 FROM pipeline_jobs pj
+            WHERE pj.instance_id = $${paramIdx++}
+              AND pj.entity_type = 'person'
+              AND pj.entity_id = p.id
+          )`;
+          params.push(pipeId);
+        } else {
+          cond = `EXISTS (
+            SELECT 1 FROM pipeline_jobs pj
+            WHERE pj.instance_id = $${paramIdx++}
+              AND pj.current_stage_id = ANY($${paramIdx++}::int[])
+              AND pj.entity_type = 'person'
+              AND pj.entity_id = p.id
+          )`;
+          params.push(pipeId);
+          params.push(stageIds);
+        }
         conditions.push(negate ? `NOT (${cond})` : cond);
-        params.push(pipeId);
-        params.push(stageId);
         break;
       }
 

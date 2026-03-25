@@ -1015,18 +1015,20 @@
               return a.id - b.id;
             })
           : [];
-        const stageOpts = sortedStages.length
-          ? sortedStages.map(s =>
-              `<option value="${s.id}"${filter.value2 == s.id ? ' selected' : ''}>${escHtml(s.name)}</option>`
-            ).join('')
-          : '';
+        // value2 is an array of selected stage IDs for multi-select
+        const selectedStageIds = Array.isArray(filter.value2) ? filter.value2
+          : (filter.value2 ? [String(filter.value2)] : []);
+        const stageOptions = sortedStages.map(s => ({ v: String(s.id), l: s.name }));
+        const stagePickerRaw = stageOptions.length
+          ? buildMultiSelectHTML(filter.id + '_stage', stageOptions, selectedStageIds, 'Any stage')
+          : `<div style="color:var(--muted);font-size:0.78rem;padding:0.3rem;">Select a pipeline first</div>`;
+        // Mark this ms-wrap as targeting value2
+        const stagePicker = stagePickerRaw.replace('class="ms-wrap"', 'class="ms-wrap" data-target="value2"');
         controlsHTML = `${operatorBtn}
-          <select class="filter-select-inline" data-field="value" style="flex:1;min-width:120px;">
+          <select class="filter-select-inline" data-field="value" style="flex:1;min-width:140px;">
             <option value="">Select pipeline…</option>${pipeOpts}
           </select>
-          <select class="filter-select-inline" data-field="value2" style="flex:1;min-width:120px;" ${!stageOpts ? 'disabled' : ''}>
-            <option value="">Any stage</option>${stageOpts}
-          </select>`;
+          <div style="flex:1;min-width:140px;" data-field="value2-multiselect">${stagePicker}</div>`;
         break;
       }
       case 'pipeline_completed': {
@@ -1114,7 +1116,8 @@
       dropdown.addEventListener('change', (e) => {
         if (e.target.type !== 'checkbox') return;
         const checked = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
-        filter.value = checked;
+        const targetField = wrap.dataset.target || 'value';
+        filter[targetField] = checked;
         // Update checked class
         dropdown.querySelectorAll('.ms-option').forEach(opt => {
           const cb = opt.querySelector('input[type="checkbox"]');
@@ -1150,7 +1153,7 @@
         if (filter.type === 'pipeline_stage' && field === 'value') {
           const row2 = document.getElementById(`filter-row-${filter.id}`);
           if (row2) {
-            filter.value2 = '';
+            filter.value2 = []; // reset stage multi-select when pipeline changes
             row2.innerHTML = buildFilterRowHTML(filter);
             attachFilterRowEvents(row2, filter);
           }
