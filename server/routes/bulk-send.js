@@ -19,7 +19,7 @@ router.get('/filters', async (req, res) => {
       ),
       pool.query(
         `SELECT pi.id, pi.name, pi.tax_year,
-           json_agg(json_build_object('id', ps.id, 'name', ps.name, 'position', ps.position) ORDER BY ps.position) as stages
+           json_agg(json_build_object('id', ps.id, 'name', ps.name, 'position', ps.position) ORDER BY ps.position, ps.id) as stages
          FROM pipeline_instances pi
          JOIN pipeline_stages ps ON ps.template_id = pi.template_id
          WHERE pi.firm_id = $1 AND pi.status = 'active'

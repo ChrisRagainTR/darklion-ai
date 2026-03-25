@@ -885,8 +885,14 @@
         const selectedPipeline = filterData.pipelines && filter.value
           ? filterData.pipelines.find(p => String(p.id) === String(filter.value))
           : null;
-        const stageOpts = selectedPipeline && selectedPipeline.stages
-          ? selectedPipeline.stages.map(s =>
+        const sortedStages = selectedPipeline && selectedPipeline.stages
+          ? [...selectedPipeline.stages].sort((a, b) => {
+              if (a.position !== b.position) return a.position - b.position;
+              return a.id - b.id; // fallback: creation order
+            })
+          : [];
+        const stageOpts = sortedStages.length
+          ? sortedStages.map(s =>
               `<option value="${s.id}"${filter.value2 == s.id ? ' selected' : ''}>${escHtml(s.name)}</option>`
             ).join('')
           : '';
