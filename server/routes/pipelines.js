@@ -157,19 +157,34 @@ router.delete('/templates/:id', async (req, res) => {
   }
 });
 
+// ── Auto-sync is_terminal: last stage = true, all others = false ──
+async function syncTerminalStage(templateId) {
+  const { rows: stages } = await pool.query(
+    'SELECT id FROM pipeline_stages WHERE template_id = $1 ORDER BY position ASC, id ASC',
+    [templateId]
+  );
+  if (!stages.length) return;
+  const lastId = stages[stages.length - 1].id;
+  await pool.query(
+    'UPDATE pipeline_stages SET is_terminal = (id = $1) WHERE template_id = $2',
+    [lastId, templateId]
+  );
+}
+
 // POST /templates/:id/stages
 router.post('/templates/:id/stages', async (req, res) => {
   try {
     const tmpl = await getTemplate(req.firm.id, req.params.id);
     if (!tmpl) return res.status(404).json({ error: 'Template not found' });
 
-    const { name = '', position = 0, color = '#c9a84c', is_terminal = false } = req.body;
+    const { name = '', position = 0, color = '#c9a84c' } = req.body;
     const { rows } = await pool.query(
-      `INSERT INTO pipeline_stages (template_id, name, position, color, is_terminal)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [tmpl.id, name, position, color, is_terminal]
+      `INSERT INTO pipeline_stages (template_id, name, position, color) VALUES ($1, $2, $3, $4) RETURNING *`,
+      [tmpl.id, name, position, color]
     );
-    res.status(201).json(rows[0]);
+    await syncTerminalStage(tmpl.id);
+    const { rows: updated } = await pool.query('SELECT * FROM pipeline_stages WHERE id = $1', [rows[0].id]);
+    res.status(201).json(updated[0]);
   } catch (e) {
     console.error('POST /templates/:id/stages error:', e);
     res.status(500).json({ error: 'Failed to add stage' });
@@ -202,6 +217,7 @@ router.put('/templates/:id/stages/reorder', async (req, res) => {
       client.release();
     }
 
+    await syncTerminalStage(tmpl.id);
     const { rows: stages } = await pool.query(
       'SELECT * FROM pipeline_stages WHERE template_id = $1 ORDER BY position ASC, id ASC',
       [tmpl.id]
@@ -272,6 +288,7 @@ router.delete('/templates/:id/stages/:stageId', async (req, res) => {
       [tmpl.id, deletedPos]
     );
 
+    await syncTerminalStage(tmpl.id);
     res.json({ ok: true });
   } catch (e) {
     console.error('DELETE /templates/:id/stages/:stageId error:', e);
