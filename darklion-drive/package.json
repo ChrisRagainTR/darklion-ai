@@ -28,12 +28,12 @@
           "arch": ["x64"]
         }
       ],
-      "icon": null
+      "icon": "app/icon.ico"
     },
     "nsis": {
-      "installerIcon": null,
-      "uninstallerIcon": null,
-      "installerHeaderIcon": null,
+      "installerIcon": "app/icon.ico",
+      "uninstallerIcon": "app/icon.ico",
+      "installerHeaderIcon": "app/icon.ico",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
