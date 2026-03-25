@@ -1614,7 +1614,7 @@
             (d.status === 'draft' ? '<button class="btn btn-gold btn-sm" onclick="sendDelivery(' + d.id + ')">Send →</button>' : '') +
             (d.status === 'draft' ? '<button class="btn btn-outline btn-sm" onclick="deleteDelivery(' + d.id + ')">Delete</button>' : '') +
             (['sent','approved','needs_changes'].includes(d.status) ? '<button class="btn btn-outline btn-sm" onclick="cancelDelivery(' + d.id + ')" style="color:var(--orange);border-color:var(--orange);">↩ Cancel & Revise</button>' : '') +
-            (d.review_doc_id ? '<button class="btn btn-outline btn-sm" onclick="openTaxSummary(' + d.id + ')">📊 Tax Summary</button>' : '') +
+            /* Tax Summary not applicable for business returns */ +
           '</div>' +
         '</div>' +
         ((signedDocLinks || reviewDocLink) ? '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;padding-top:0.75rem;margin-top:0.75rem;border-top:1px solid var(--border);">' + reviewDocLink + signedDocLinks + '</div>' : '') +
