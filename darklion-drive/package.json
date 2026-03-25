@@ -41,19 +41,18 @@
       "shortcutName": "DarkLion Drive",
       "include": "installer/installer.nsh"
     },
-    "extraMetadata": {
-      "main": "app/main.js"
-    },
     "files": [
-      "app/**/*"
+      "**/*",
+      "!node_modules/**/*"
     ],
     "extraResources": [
       {
-        "from": "vendor/rclone.exe",
+        "from": "../vendor/rclone.exe",
         "to": "rclone.exe"
       }
     ],
     "directories": {
+      "app": "app",
       "output": "dist"
     },
     "artifactName": "DarkLionDrive_Setup_${version}.exe"
