@@ -103,19 +103,30 @@ async function resolveAnyPersonForEntity(entityType, entityId, firmId) {
 }
 
 // ── Get or create an open message thread for portal messaging ──
-async function getOrCreatePortalThread(firmId, personId, subject) {
+async function getOrCreatePortalThread(firmId, personId, staffUserId, subject) {
+  // Prefer the thread belonging to this specific staff member
   const { rows: existing } = await pool.query(
+    `SELECT id FROM message_threads
+     WHERE firm_id = $1 AND person_id = $2 AND staff_user_id = $3 AND status != 'archived'
+     ORDER BY last_message_at DESC LIMIT 1`,
+    [firmId, personId, staffUserId]
+  );
+  if (existing[0]) return existing[0].id;
+
+  // Fall back to any open thread for this person
+  const { rows: anyOpen } = await pool.query(
     `SELECT id FROM message_threads
      WHERE firm_id = $1 AND person_id = $2 AND status = 'open'
      ORDER BY last_message_at DESC LIMIT 1`,
     [firmId, personId]
   );
-  if (existing[0]) return existing[0].id;
+  if (anyOpen[0]) return anyOpen[0].id;
 
+  // Create new thread owned by the triggering staff member
   const { rows: created } = await pool.query(
-    `INSERT INTO message_threads (firm_id, person_id, subject, status, category, last_message_at)
-     VALUES ($1, $2, $3, 'open', 'general', NOW()) RETURNING id`,
-    [firmId, personId, subject || 'Pipeline Update']
+    `INSERT INTO message_threads (firm_id, person_id, staff_user_id, subject, status, category, last_message_at)
+     VALUES ($1, $2, $3, $4, 'open', 'general', NOW()) RETURNING id`,
+    [firmId, personId, staffUserId, subject || 'Pipeline Update']
   );
   return created[0].id;
 }
@@ -203,7 +214,8 @@ async function executePortalMessage(action, firmId, entityType, entityId, entity
   const people = await resolvePeopleForEntity(entityType, entityId, firmId);
   if (!people.length) return;
 
-  const senderId = await getFirmOwnerId(firmId);
+  // Use triggering user if available, fall back to firm owner
+  const senderId = context.triggered_by_user_id || await getFirmOwnerId(firmId);
   const firmName = await getFirmName(firmId);
 
   for (const person of people) {
@@ -220,7 +232,7 @@ async function executePortalMessage(action, firmId, entityType, entityId, entity
     const body = applyMergeTags(bodyTemplate, tags);
     const resolvedSubject = applyMergeTags(subject, tags);
 
-    const threadId = await getOrCreatePortalThread(firmId, person.id, resolvedSubject);
+    const threadId = await getOrCreatePortalThread(firmId, person.id, senderId, resolvedSubject);
 
     await pool.query(
       `INSERT INTO messages (thread_id, sender_type, sender_id, body, is_internal)

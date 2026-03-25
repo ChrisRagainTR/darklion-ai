@@ -840,6 +840,7 @@ router.post('/jobs/:jobId/move', async (req, res) => {
             pipeline_name: instInfo.instance_name || instInfo.template_name,
             tax_year: instInfo.tax_year || '',
             stage_name: newStage ? newStage.name : '',
+            triggered_by_user_id: req.firm.userId || null,
           }
         ).catch(e => console.error('[actions] non-fatal:', e));
       }

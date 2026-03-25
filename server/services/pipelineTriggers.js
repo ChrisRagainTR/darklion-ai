@@ -161,6 +161,7 @@ async function fireTrigger(firmId, triggerKey, entityId, context = {}, entityTyp
           pipeline_name: cfg.pipeline_name,
           tax_year: context.tax_year || '',
           stage_name: cfg.stage_name,
+          triggered_by_user_id: context.triggered_by_user_id || null,
         }
       ).catch(e => console.error('[actions] non-fatal (trigger):', e));
 
