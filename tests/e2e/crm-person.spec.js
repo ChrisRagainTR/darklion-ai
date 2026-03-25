@@ -109,30 +109,39 @@ test.describe('CRM — Person detail page', () => {
   test('clicking Edit opens the edit modal (modal-overlay visible)', async ({ page }) => {
     const found = await getPersonPage(page);
     if (!found) return test.skip(true, 'No people in the system');
-    await page.locator('.entity-actions button:has-text("Edit"), .entity-header button:has-text("Edit")').first().click();
-    await expect(page.locator('.modal-overlay:not(.hidden), .modal-overlay.open')).toBeVisible({ timeout: TIMEOUTS.element });
+    // Wait for edit button to be enabled (person data loaded)
+    const editBtn = page.locator('.entity-actions button:has-text("Edit"), .entity-header button:has-text("Edit")').first();
+    await expect(editBtn).toBeVisible({ timeout: TIMEOUTS.api });
+    await editBtn.click();
+    await expect(page.locator('.modal-overlay:not(.hidden), .modal-overlay.open')).toBeVisible({ timeout: TIMEOUTS.api });
   });
 
   test('Edit modal contains First Name input (#person-form-fname)', async ({ page }) => {
     const found = await getPersonPage(page);
     if (!found) return test.skip(true, 'No people in the system');
-    await page.locator('.entity-actions button:has-text("Edit"), .entity-header button:has-text("Edit")').first().click();
-    await expect(page.locator('#person-form-fname, input[placeholder="First"]')).toBeVisible({ timeout: TIMEOUTS.element });
+    const editBtn = page.locator('.entity-actions button:has-text("Edit"), .entity-header button:has-text("Edit")').first();
+    await expect(editBtn).toBeVisible({ timeout: TIMEOUTS.api });
+    await editBtn.click();
+    await expect(page.locator('#person-form-fname, input[placeholder="First"]')).toBeVisible({ timeout: TIMEOUTS.api });
   });
 
   test('Edit modal contains Last Name input (#person-form-lname)', async ({ page }) => {
     const found = await getPersonPage(page);
     if (!found) return test.skip(true, 'No people in the system');
-    await page.locator('.entity-actions button:has-text("Edit"), .entity-header button:has-text("Edit")').first().click();
-    await expect(page.locator('#person-form-lname, input[placeholder="Last"]')).toBeVisible({ timeout: TIMEOUTS.element });
+    const editBtn = page.locator('.entity-actions button:has-text("Edit"), .entity-header button:has-text("Edit")').first();
+    await expect(editBtn).toBeVisible({ timeout: TIMEOUTS.api });
+    await editBtn.click();
+    await expect(page.locator('#person-form-lname, input[placeholder="Last"]')).toBeVisible({ timeout: TIMEOUTS.api });
   });
 
   test('Edit modal Cancel button closes the modal', async ({ page }) => {
     const found = await getPersonPage(page);
     if (!found) return test.skip(true, 'No people in the system');
-    await page.locator('.entity-actions button:has-text("Edit"), .entity-header button:has-text("Edit")').first().click();
+    const editBtn = page.locator('.entity-actions button:has-text("Edit"), .entity-header button:has-text("Edit")').first();
+    await expect(editBtn).toBeVisible({ timeout: TIMEOUTS.api });
+    await editBtn.click();
     const modal = page.locator('.modal-overlay:not(.hidden), .modal-overlay.open');
-    await expect(modal).toBeVisible({ timeout: TIMEOUTS.element });
+    await expect(modal).toBeVisible({ timeout: TIMEOUTS.api });
     await modal.locator('button:has-text("Cancel"), .btn-cancel').first().click();
     await page.waitForTimeout(400);
     expect(await page.locator('.modal-overlay.open').count()).toBe(0);

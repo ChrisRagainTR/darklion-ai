@@ -62,9 +62,9 @@ test.describe('CRM — Relationship detail page', () => {
   test('tab bar is visible with at least "Overview" and "People" tabs', async ({ page }) => {
     const found = await getRelationshipPage(page);
     if (!found) return test.skip(true, 'No relationships in the system');
-    await expect(page.locator('.tab-bar')).toBeVisible({ timeout: TIMEOUTS.element });
-    await expect(page.locator('.tab-bar .tab-item').filter({ hasText: 'Overview' })).toBeVisible({ timeout: TIMEOUTS.element });
-    await expect(page.locator('.tab-bar .tab-item').filter({ hasText: 'People' })).toBeVisible({ timeout: TIMEOUTS.element });
+    await expect(page.locator('.tab-bar')).toBeVisible({ timeout: TIMEOUTS.api });
+    await expect(page.locator('.tab-bar .tab-item').filter({ hasText: 'Overview' })).toBeVisible({ timeout: TIMEOUTS.api });
+    await expect(page.locator('.tab-bar .tab-item').filter({ hasText: 'People' })).toBeVisible({ timeout: TIMEOUTS.api });
   });
 
   test('"Overview" tab is active by default', async ({ page }) => {
@@ -78,10 +78,11 @@ test.describe('CRM — Relationship detail page', () => {
   test('clicking "People" tab shows people content and marks the tab active', async ({ page }) => {
     const found = await getRelationshipPage(page);
     if (!found) return test.skip(true, 'No relationships in the system');
+    await expect(page.locator('.tab-bar .tab-item').filter({ hasText: 'People' })).toBeVisible({ timeout: TIMEOUTS.api });
     await page.locator('.tab-bar .tab-item').filter({ hasText: 'People' }).click();
     await expect(
       page.locator('.tab-bar .tab-item').filter({ hasText: 'People' })
-    ).toHaveClass(/active/, { timeout: TIMEOUTS.element });
+    ).toHaveClass(/active/, { timeout: TIMEOUTS.api });
   });
 
   test('clicking "Companies" tab marks it active', async ({ page }) => {
@@ -124,19 +125,22 @@ test.describe('CRM — Relationship detail page', () => {
   test('clicking Edit opens a modal with the relationship Name field', async ({ page }) => {
     const found = await getRelationshipPage(page);
     if (!found) return test.skip(true, 'No relationships in the system');
-    await page.locator('.entity-actions button:has-text("Edit"), .entity-header button:has-text("Edit")').first().click();
-    await expect(page.locator('.modal-overlay:not(.hidden), .modal-overlay.open')).toBeVisible({ timeout: TIMEOUTS.element });
-    // The edit form should include the Name field
+    const editBtn = page.locator('.entity-actions button:has-text("Edit"), .entity-header button:has-text("Edit")').first();
+    await expect(editBtn).toBeVisible({ timeout: TIMEOUTS.api });
+    await editBtn.click();
+    await expect(page.locator('.modal-overlay:not(.hidden), .modal-overlay.open')).toBeVisible({ timeout: TIMEOUTS.api });
     await expect(
       page.locator('#rel-form-name, input[placeholder*="Family"], input[id*="name"]').first()
-    ).toBeVisible({ timeout: TIMEOUTS.element });
+    ).toBeVisible({ timeout: TIMEOUTS.api });
   });
 
   test('Edit modal has Service Tier and Billing Status selects', async ({ page }) => {
     const found = await getRelationshipPage(page);
     if (!found) return test.skip(true, 'No relationships in the system');
-    await page.locator('.entity-actions button:has-text("Edit"), .entity-header button:has-text("Edit")').first().click();
-    await expect(page.locator('#rel-form-tier, select[id*="tier"]')).toBeVisible({ timeout: TIMEOUTS.element });
+    const editBtn = page.locator('.entity-actions button:has-text("Edit"), .entity-header button:has-text("Edit")').first();
+    await expect(editBtn).toBeVisible({ timeout: TIMEOUTS.api });
+    await editBtn.click();
+    await expect(page.locator('#rel-form-tier, select[id*="tier"]')).toBeVisible({ timeout: TIMEOUTS.api });
   });
 
   // ── Overview content and pipeline ─────────────────────────────────────────

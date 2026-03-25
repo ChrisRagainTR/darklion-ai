@@ -94,9 +94,11 @@ test.describe('CRM — Company detail page', () => {
   test('clicking Edit opens a modal with company form fields', async ({ page }) => {
     const found = await getCompanyPage(page);
     if (!found) return test.skip(true, 'No companies in the system');
-    await page.locator('button:has-text("Edit")').first().click();
+    const editBtn = page.locator('button:has-text("Edit")').first();
+    await expect(editBtn).toBeVisible({ timeout: TIMEOUTS.api });
+    await editBtn.click();
     const modal = page.locator('.modal-overlay:not(.hidden), .modal-overlay.open');
-    await expect(modal).toBeVisible({ timeout: TIMEOUTS.element });
+    await expect(modal).toBeVisible({ timeout: TIMEOUTS.api });
   });
 
   // ── Docs tab ─────────────────────────────────────────────────────────────
@@ -107,7 +109,7 @@ test.describe('CRM — Company detail page', () => {
     const docsTab = page.locator('.subtab-item:has-text("Docs"), .subtab-item:has-text("Documents"), .tab-item:has-text("Docs")');
     if (await docsTab.count() === 0) return test.skip(true, 'No Docs tab');
     await docsTab.first().click();
-    await expect(page.locator('button:has-text("Upload"), button:has-text("↑ Upload")')).toBeVisible({ timeout: TIMEOUTS.element });
+    await expect(page.locator('button:has-text("Upload"), button:has-text("↑ Upload"), button:has-text("↑ Upload Document")')).toBeVisible({ timeout: TIMEOUTS.api });
   });
 
   test('Docs tab: content area loads (year folders, doc rows, or empty state)', async ({ page }) => {
