@@ -133,9 +133,10 @@ test.describe('CRM — Person detail page', () => {
     if (!found) return test.skip(true, 'No people in the system');
     await page.locator('.tab-item').filter({ hasText: 'Workflow' }).click();
     await expect(page.locator('#tab-workflow')).toHaveClass(/active/, { timeout: TIMEOUTS.element });
-    // Either shows pipeline cards or the empty state
-    const hasContent = await page.locator('#workflow-list, #workflow-loading').isVisible();
-    expect(hasContent).toBeTruthy();
+    // Either the loading indicator or the list container is visible
+    const listVisible = await page.locator('#workflow-list').isVisible();
+    const loadingVisible = await page.locator('#workflow-loading').isVisible();
+    expect(listVisible || loadingVisible).toBeTruthy();
   });
 
   test('"Notes" tab shows Internal Notes textarea', async ({ page }) => {
