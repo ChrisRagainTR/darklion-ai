@@ -39,6 +39,7 @@
     <button class="settings-tab-btn active" onclick="switchTab('branding')">🎨 Firm Branding</button>
     <button class="settings-tab-btn" onclick="switchTab('domains')">🌐 Custom Domains</button>
     <button class="settings-tab-btn" onclick="switchTab('api-keys')">🔑 API Keys</button>
+    <button class="settings-tab-btn" onclick="switchTab('downloads')">⬇️ Downloads</button>
 
   </div>
 
@@ -181,6 +182,29 @@
       </div>
     </div>
   </div>
+
+  <!-- ============ DOWNLOADS ============ -->
+  <div class="settings-tab-panel" id="tab-downloads">
+    <div class="settings-section">
+      <div class="settings-section-title">Desktop Apps</div>
+      <div class="settings-section-desc">Install desktop tools for your firm's staff.</div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;display:flex;align-items:center;gap:1.5rem;margin-top:1rem;">
+        <div style="font-size:2.5rem;line-height:1;">🦁</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">DarkLion Drive</div>
+          <div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.75rem;">Mount your DarkLion documents as a folder on your Windows desktop. Drag and drop files directly into client folders.</div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.75rem;">⚠️ Windows only &nbsp;·&nbsp; Requires Windows 10/11 &nbsp;·&nbsp; WinFsp installed automatically</div>
+          <a href="https://github.com/ChrisRagainTR/darklion-ai/releases/download/v1.0.0/DarkLionDrive_Setup_1.0.0.exe"
+             class="btn btn-gold"
+             style="display:inline-block;text-decoration:none;font-size:0.85rem;padding:0.5rem 1.25rem;">
+            ⬇️ Download DarkLion Drive v1.0.0
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <div class="toast" id="toast"></div>
