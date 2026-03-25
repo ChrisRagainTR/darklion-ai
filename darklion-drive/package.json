@@ -41,19 +41,18 @@
       "shortcutName": "DarkLion Drive",
       "include": "installer/installer.nsh"
     },
+    "extraMetadata": {
+      "main": "app/main.js"
+    },
     "files": [
       "app/**/*",
-      "!app/node_modules/**/*"
+      "!app/node_modules/**/*",
+      "!node_modules/**/*"
     ],
     "extraResources": [
       {
         "from": "vendor/rclone.exe",
         "to": "rclone.exe"
-      },
-      {
-        "from": "installer/winfsp.msi",
-        "to": "winfsp.msi",
-        "filter": ["**/*"]
       }
     ],
     "directories": {
