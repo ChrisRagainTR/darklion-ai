@@ -870,7 +870,9 @@
         catOpts.forEach(function(t) { addOpts += '<option value="' + esc(t.key) + '">' + esc(t.label) + '</option>'; });
         addOpts += '</optgroup>';
       });
-      var addSelect = '<select onchange="addSmartStage(' + s.id + ', this)" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.25rem 0.4rem;border-radius:6px;font-size:0.75rem;outline:none;">' + addOpts + '</select>';
+      var addSelect = cfgs.length >= 2
+        ? '<span style="font-size:0.72rem;color:var(--muted);font-style:italic;">Max 2 triggers per stage</span>'
+        : '<select onchange="addSmartStage(' + s.id + ', this)" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.25rem 0.4rem;border-radius:6px;font-size:0.75rem;outline:none;">' + addOpts + '</select>';
 
       html += '<div style="padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05);">' +
         '<div style="font-weight:600;font-size:0.82rem;margin-bottom:0.35rem;">' + esc(s.name) + '</div>' +

@@ -393,7 +393,7 @@
         '<td>' +
           '<div class="trigger-chips" id="chips-' + s.id + '">' +
             chips +
-            '<select class="trigger-add-select" id="trigger-sel-' + s.id + '" onchange="addTrigger(' + s.id + ', this)">' + addOpts + '</select>' +
+            (cfgs.length >= 2 ? '<span style="font-size:0.72rem;color:var(--muted);font-style:italic;">Max 2 triggers</span>' : '<select class="trigger-add-select" id="trigger-sel-' + s.id + '" onchange="addTrigger(' + s.id + ', this)">' + addOpts + '</select>') +
           '</div>' +
         '</td>' +
         '<td>' +

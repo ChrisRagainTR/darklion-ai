@@ -99,6 +99,15 @@ router.post('/stage-config', async (req, res) => {
     );
     if (!stageCheck[0]) return res.status(400).json({ error: 'Stage does not belong to this pipeline' });
 
+    // Enforce max 2 triggers per stage
+    const { rows: existingForStage } = await pool.query(
+      'SELECT id FROM pipeline_stage_triggers WHERE firm_id = $1 AND pipeline_instance_id = $2 AND stage_id = $3',
+      [firmId, pipeline_instance_id, stage_id]
+    );
+    if (existingForStage.length >= 2) {
+      return res.status(400).json({ error: 'Maximum of 2 triggers per stage. Remove one before adding another.' });
+    }
+
     // Upsert: one trigger = one destination per pipeline (UNIQUE on firm_id, pipeline_instance_id, trigger_key)
     const { rows } = await pool.query(
       `INSERT INTO pipeline_stage_triggers (firm_id, pipeline_instance_id, stage_id, trigger_key)
