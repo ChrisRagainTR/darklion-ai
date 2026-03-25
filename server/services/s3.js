@@ -65,10 +65,10 @@ async function uploadFile({ buffer, key, mimeType, bucket }) {
  * @param {string} opts.bucket
  * @returns {Promise<string>} signed URL
  */
-async function getSignedDownloadUrl({ key, bucket }) {
+async function getSignedDownloadUrl({ key, bucket, expiresIn = 900 }) {
   try {
     const command = new GetObjectCommand({ Bucket: bucket, Key: key });
-    return await getSignedUrl(s3, command, { expiresIn: 900 }); // 15 minutes
+    return await getSignedUrl(s3, command, { expiresIn }); // default 15 minutes
   } catch (err) {
     console.error('S3 signed URL error:', err);
     throw new Error(`Failed to generate download URL: ${err.message}`);

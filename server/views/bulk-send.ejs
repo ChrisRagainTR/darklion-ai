@@ -69,43 +69,157 @@
   .step-panel { display: none; }
   .step-panel.active { display: block; }
 
-  /* Filters */
-  .filter-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+  /* ── Filter builder ─────────────────────────────── */
+  .filter-builder {
     margin-bottom: 1rem;
   }
-  @media (max-width: 600px) {
-    .filter-grid { grid-template-columns: 1fr; }
+  .filter-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
   }
-  .filter-group {
+  .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 0.85rem 1rem;
+    padding: 0.6rem 0.85rem;
+    flex-wrap: wrap;
   }
-  .filter-group label {
-    display: block;
+  .filter-row-label {
     font-size: 0.72rem;
     font-weight: 700;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin-bottom: 0.4rem;
+    min-width: 90px;
+    flex-shrink: 0;
+  }
+  .filter-row-controls {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    min-width: 0;
   }
   .filter-select, .filter-input {
-    width: 100%;
     background: var(--charcoal);
     border: 1px solid var(--border);
     color: var(--text);
-    padding: 0.45rem 0.65rem;
+    padding: 0.4rem 0.6rem;
     border-radius: 6px;
     font-size: 0.84rem;
     outline: none;
     transition: border-color 0.15s;
   }
   .filter-select:focus, .filter-input:focus { border-color: var(--gold); }
+  .filter-select-inline {
+    background: var(--charcoal);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.84rem;
+    outline: none;
+    transition: border-color 0.15s;
+    flex: 1;
+    min-width: 140px;
+  }
+  .filter-select-inline:focus { border-color: var(--gold); }
+  .filter-remove-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0.25rem 0.35rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    line-height: 1;
+    margin-left: auto;
+    transition: color 0.15s, background 0.15s;
+    flex-shrink: 0;
+  }
+  .filter-remove-btn:hover {
+    color: var(--red, #f56565);
+    background: rgba(245,101,101,0.1);
+  }
+
+  /* Add filter dropdown */
+  .add-filter-wrap {
+    position: relative;
+    display: inline-block;
+  }
+  .add-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: none;
+    border: 1px dashed var(--border);
+    color: var(--gold);
+    padding: 0.45rem 0.85rem;
+    border-radius: 6px;
+    font-size: 0.83rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .add-filter-btn:hover {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.06);
+  }
+  .filter-type-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 50;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    min-width: 220px;
+    padding: 0.35rem 0;
+    animation: dropIn 0.12s ease;
+  }
+  .filter-type-dropdown.open { display: block; }
+  @keyframes dropIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .filter-type-group-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.5rem 0.85rem 0.2rem;
+  }
+  .filter-type-option {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.84rem;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .filter-type-option:hover {
+    background: rgba(201,168,76,0.08);
+  }
+  .filter-type-option.disabled-opt {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .filter-type-sep {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0.3rem 0;
+  }
 
   .audience-count-bar {
     background: var(--card);
@@ -218,12 +332,11 @@
     border-radius: 8px;
     padding: 1rem 1.25rem;
     font-size: 0.86rem;
-    color: var(--text);
+    color: var(--muted);
     line-height: 1.7;
     min-height: 80px;
     white-space: pre-wrap;
     word-break: break-word;
-    color: var(--muted);
     font-style: italic;
   }
   .message-preview-box.has-content {
@@ -303,6 +416,21 @@
     border-top: 1px solid var(--border);
     margin: 1.5rem 0;
   }
+
+  /* Active-filter pills in summary */
+  .filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.25);
+    color: var(--gold);
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 0.15rem 0.55rem;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
 </style>
 
 <div class="bulk-wrap">
@@ -326,65 +454,38 @@
 
   <!-- ── STEP 1: Audience Builder ────────────────────── -->
   <div class="step-panel active" id="step-1">
-    <div class="filter-grid" id="filter-grid">
 
-      <div class="filter-group">
-        <label>Relationship</label>
-        <select class="filter-select" id="f-relationship">
-          <option value="">All relationships</option>
-        </select>
+    <!-- Dynamic filter rows -->
+    <div class="filter-builder">
+      <div class="filter-rows" id="filter-rows">
+        <!-- Filter rows injected here by JS -->
       </div>
 
-      <div class="filter-group">
-        <label>Service Tier</label>
-        <select class="filter-select" id="f-service-tier">
-          <option value="">Any tier</option>
-        </select>
+      <!-- Add filter button + dropdown -->
+      <div class="add-filter-wrap" id="add-filter-wrap">
+        <button class="add-filter-btn" id="add-filter-btn">
+          <span>＋</span> Add Filter
+        </button>
+        <div class="filter-type-dropdown" id="filter-type-dropdown">
+          <div class="filter-type-group-label">Relationship</div>
+          <div class="filter-type-option" data-type="relationship">👥 Relationship</div>
+          <div class="filter-type-option" data-type="service_tier">⭐ Service Tier</div>
+          <div class="filter-type-option" data-type="billing_status">💳 Billing Status</div>
+          <hr class="filter-type-sep">
+          <div class="filter-type-group-label">CRM</div>
+          <div class="filter-type-option" data-type="entity_type">🏢 Entity Type</div>
+          <div class="filter-type-option" data-type="filing_status">📋 Filing Status</div>
+          <div class="filter-type-option" data-type="company_status">🔖 Company Status</div>
+          <div class="filter-type-option" data-type="has_documents">📎 Has Documents</div>
+          <hr class="filter-type-sep">
+          <div class="filter-type-group-label">Portal</div>
+          <div class="filter-type-option" data-type="portal_activity">🟢 Portal Activity</div>
+          <hr class="filter-type-sep">
+          <div class="filter-type-group-label">Pipeline</div>
+          <div class="filter-type-option" data-type="pipeline_stage">🔁 Pipeline Stage</div>
+          <div class="filter-type-option" data-type="proposal_status">📝 Proposal Status</div>
+        </div>
       </div>
-
-      <div class="filter-group">
-        <label>Billing Status</label>
-        <select class="filter-select" id="f-billing-status">
-          <option value="">Any status</option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label>Portal Activity</label>
-        <select class="filter-select" id="f-portal-activity">
-          <option value="">Any</option>
-          <option value="30">Active (logged in within 30 days)</option>
-          <option value="60">Active (within 60 days)</option>
-          <option value="90">Active (within 90 days)</option>
-          <option value="never">Never logged in</option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label>Pipeline</label>
-        <select class="filter-select" id="f-pipeline">
-          <option value="">Any pipeline</option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label>Pipeline Stage</label>
-        <select class="filter-select" id="f-pipeline-stage" disabled>
-          <option value="">Select pipeline first</option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label>Proposal Status</label>
-        <select class="filter-select" id="f-proposal-status">
-          <option value="">Any</option>
-          <option value="sent">Proposal Sent</option>
-          <option value="signed">Proposal Signed</option>
-          <option value="expired">Proposal Expired</option>
-          <option value="draft">Draft</option>
-        </select>
-      </div>
-
     </div>
 
     <!-- Live count bar -->
@@ -447,6 +548,10 @@
         <span class="send-summary-value" id="summary-recipients">—</span>
       </div>
       <div class="send-summary-row">
+        <span class="send-summary-label">Filters</span>
+        <span class="send-summary-value" id="summary-filters" style="display:flex;flex-wrap:wrap;gap:0.35rem;"></span>
+      </div>
+      <div class="send-summary-row">
         <span class="send-summary-label">Subject</span>
         <span class="send-summary-value" id="summary-subject">—</span>
       </div>
@@ -505,14 +610,46 @@
   'use strict';
 
   // ── State ─────────────────────────────────────────────────────────────────
-  let filterData = { relationships: [], pipelines: [], serviceTiers: [], billingStatuses: [], templates: [] };
+  let filterData = {
+    relationships: [], pipelines: [], serviceTiers: [], billingStatuses: [],
+    templates: [], filingStatuses: [], entityTypes: [], companyStatuses: [],
+  };
   let audienceRecipients = [];
   let previewShown = false;
   let currentStep = 1;
   let isSending = false;
 
+  // Active filters: array of { id, type, value, value2 }
+  let activeFilters = [];
+  let filterIdCounter = 0;
+
   const token = localStorage.getItem('dl_token');
   const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+
+  // ── Filter type definitions ───────────────────────────────────────────────
+  const FILTER_TYPES = {
+    relationship:    { label: 'Relationship',     icon: '👥' },
+    service_tier:    { label: 'Service Tier',      icon: '⭐' },
+    billing_status:  { label: 'Billing Status',    icon: '💳' },
+    entity_type:     { label: 'Entity Type',       icon: '🏢' },
+    filing_status:   { label: 'Filing Status',     icon: '📋' },
+    company_status:  { label: 'Company Status',    icon: '🔖' },
+    has_documents:   { label: 'Has Documents',     icon: '📎' },
+    portal_activity: { label: 'Portal Activity',   icon: '🟢' },
+    pipeline_stage:  { label: 'Pipeline Stage',    icon: '🔁' },
+    proposal_status: { label: 'Proposal Status',   icon: '📝' },
+  };
+
+  // Labels for filter pills in the send summary
+  const ENTITY_TYPE_LABELS = {
+    s_corp: 'S-Corp', c_corp: 'C-Corp', llc: 'LLC', partnership: 'Partnership',
+    sole_prop: 'Sole Prop', individual: 'Individual', trust: 'Trust', other: 'Other',
+  };
+  const FILING_STATUS_LABELS = {
+    single: 'Single', mfj: 'MFJ', mfs: 'MFS', hoh: 'Head of Household',
+    qw: 'Qualifying Widow(er)', married_joint: 'Married Filing Joint',
+    married_separate: 'Married Filing Separate',
+  };
 
   // ── DOM refs ──────────────────────────────────────────────────────────────
   const audienceCount = document.getElementById('audience-count');
@@ -529,6 +666,9 @@
   const messagePreview = document.getElementById('message-preview');
   const templateSelect = document.getElementById('template-select');
   const templatePickerWrap = document.getElementById('template-picker-wrap');
+  const filterRowsEl = document.getElementById('filter-rows');
+  const addFilterBtn = document.getElementById('add-filter-btn');
+  const filterTypeDropdown = document.getElementById('filter-type-dropdown');
 
   // ── Step navigation ───────────────────────────────────────────────────────
   function goToStep(n) {
@@ -562,80 +702,261 @@
       const res = await fetch('/api/bulk-send/filters', { headers });
       if (!res.ok) throw new Error('Failed to load');
       filterData = await res.json();
-      populateFilterDropdowns();
+      // Templates
+      if (filterData.templates && filterData.templates.length > 0) {
+        templatePickerWrap.style.display = '';
+        filterData.templates.forEach(t => {
+          const o = document.createElement('option');
+          o.value = t.id;
+          o.textContent = t.name;
+          templateSelect.appendChild(o);
+        });
+      }
+      // Update any already-rendered filter rows that need filter data
+      rerenderAllFilterRows();
     } catch (e) {
       console.error('Failed to load filters:', e);
     }
   }
 
-  function populateFilterDropdowns() {
-    // Relationships
-    const relSel = document.getElementById('f-relationship');
-    filterData.relationships.forEach(r => {
-      const o = document.createElement('option');
-      o.value = r.id;
-      o.textContent = r.name;
-      relSel.appendChild(o);
-    });
+  // ── Add/remove filter rows ────────────────────────────────────────────────
+  addFilterBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    filterTypeDropdown.classList.toggle('open');
+  });
 
-    // Service tiers
-    const tierSel = document.getElementById('f-service-tier');
-    filterData.serviceTiers.forEach(t => {
-      const o = document.createElement('option');
-      o.value = t;
-      o.textContent = t.charAt(0).toUpperCase() + t.slice(1);
-      tierSel.appendChild(o);
-    });
-
-    // Billing statuses
-    const billSel = document.getElementById('f-billing-status');
-    filterData.billingStatuses.forEach(b => {
-      const o = document.createElement('option');
-      o.value = b;
-      o.textContent = b.charAt(0).toUpperCase() + b.slice(1);
-      billSel.appendChild(o);
-    });
-
-    // Pipelines
-    const pipeSel = document.getElementById('f-pipeline');
-    filterData.pipelines.forEach(p => {
-      const o = document.createElement('option');
-      o.value = p.id;
-      o.textContent = p.name + (p.tax_year ? ` (${p.tax_year})` : '');
-      pipeSel.appendChild(o);
-    });
-
-    // Templates
-    if (filterData.templates.length > 0) {
-      templatePickerWrap.style.display = '';
-      filterData.templates.forEach(t => {
-        const o = document.createElement('option');
-        o.value = t.id;
-        o.textContent = t.name;
-        templateSelect.appendChild(o);
-      });
+  document.addEventListener('click', (e) => {
+    if (!filterTypeDropdown.contains(e.target) && e.target !== addFilterBtn) {
+      filterTypeDropdown.classList.remove('open');
     }
+  });
+
+  filterTypeDropdown.addEventListener('click', (e) => {
+    const opt = e.target.closest('.filter-type-option');
+    if (!opt || opt.classList.contains('disabled-opt')) return;
+    const type = opt.dataset.type;
+    filterTypeDropdown.classList.remove('open');
+    addFilterRow(type);
+  });
+
+  function addFilterRow(type) {
+    const id = ++filterIdCounter;
+    const filter = { id, type, value: '', value2: '' };
+    activeFilters.push(filter);
+    renderFilterRow(filter);
+    debouncedRefreshCount();
   }
 
-  // ── Pipeline stage cascade ────────────────────────────────────────────────
-  document.getElementById('f-pipeline').addEventListener('change', function() {
-    const stageSel = document.getElementById('f-pipeline-stage');
-    stageSel.innerHTML = '<option value="">Any stage</option>';
-    const pipeline = filterData.pipelines.find(p => String(p.id) === this.value);
-    if (pipeline && pipeline.stages) {
-      stageSel.disabled = false;
-      pipeline.stages.forEach(s => {
-        const o = document.createElement('option');
-        o.value = s.id;
-        o.textContent = s.name;
-        stageSel.appendChild(o);
-      });
-    } else {
-      stageSel.disabled = true;
-      stageSel.innerHTML = '<option value="">Select pipeline first</option>';
-    }
+  function removeFilterRow(id) {
+    activeFilters = activeFilters.filter(f => f.id !== id);
+    const el = document.getElementById(`filter-row-${id}`);
+    if (el) el.remove();
     debouncedRefreshCount();
-  });
+  }
+
+  function renderFilterRow(filter) {
+    const row = document.createElement('div');
+    row.className = 'filter-row';
+    row.id = `filter-row-${filter.id}`;
+    row.innerHTML = buildFilterRowHTML(filter);
+    filterRowsEl.appendChild(row);
+    // Attach events
+    attachFilterRowEvents(row, filter);
+  }
+
+  function rerenderAllFilterRows() {
+    // Re-render all rows (called after filterData loads to populate selects)
+    filterRowsEl.innerHTML = '';
+    activeFilters.forEach(f => renderFilterRow(f));
+  }
+
+  function buildFilterRowHTML(filter) {
+    const def = FILTER_TYPES[filter.type] || { label: filter.type, icon: '' };
+    const labelHTML = `<span class="filter-row-label">${def.icon} ${def.label}</span>`;
+    const removeBtn = `<button class="filter-remove-btn" data-remove="${filter.id}" title="Remove filter">✕</button>`;
+
+    let controlsHTML = '';
+
+    switch (filter.type) {
+      case 'relationship': {
+        const opts = filterData.relationships.map(r =>
+          `<option value="${r.id}"${filter.value == r.id ? ' selected' : ''}>${escHtml(r.name)}</option>`
+        ).join('');
+        controlsHTML = `<select class="filter-select-inline" data-field="value">
+          <option value="">All relationships</option>${opts}
+        </select>`;
+        break;
+      }
+      case 'service_tier': {
+        const opts = (filterData.serviceTiers || []).map(t =>
+          `<option value="${t}"${filter.value === t ? ' selected' : ''}>${escHtml(cap(t))}</option>`
+        ).join('');
+        controlsHTML = `<select class="filter-select-inline" data-field="value">
+          <option value="">Any tier</option>${opts}
+        </select>`;
+        break;
+      }
+      case 'billing_status': {
+        const opts = (filterData.billingStatuses || []).map(b =>
+          `<option value="${b}"${filter.value === b ? ' selected' : ''}>${escHtml(cap(b))}</option>`
+        ).join('');
+        controlsHTML = `<select class="filter-select-inline" data-field="value">
+          <option value="">Any status</option>${opts}
+        </select>`;
+        break;
+      }
+      case 'entity_type': {
+        const staticOpts = [
+          { v: '', l: 'All entity types' },
+          { v: 'individual', l: 'Individual (no company)' },
+          { v: 's_corp', l: 'S-Corp' },
+          { v: 'c_corp', l: 'C-Corp' },
+          { v: 'llc', l: 'LLC' },
+          { v: 'partnership', l: 'Partnership' },
+          { v: 'sole_prop', l: 'Sole Prop' },
+          { v: 'trust', l: 'Trust' },
+          { v: 'other', l: 'Other' },
+        ];
+        // Merge with live entity types from DB
+        const dbTypes = filterData.entityTypes || [];
+        const extra = dbTypes.filter(t => !staticOpts.find(o => o.v === t));
+        const allOpts = [...staticOpts, ...extra.map(t => ({ v: t, l: cap(t) }))];
+        const opts = allOpts.map(o =>
+          `<option value="${o.v}"${filter.value === o.v ? ' selected' : ''}>${escHtml(o.l)}</option>`
+        ).join('');
+        controlsHTML = `<select class="filter-select-inline" data-field="value">${opts}</select>`;
+        break;
+      }
+      case 'filing_status': {
+        const staticStatuses = [
+          { v: '', l: 'Any filing status' },
+          { v: 'single', l: 'Single' },
+          { v: 'mfj', l: 'MFJ – Married Filing Jointly' },
+          { v: 'mfs', l: 'MFS – Married Filing Separately' },
+          { v: 'hoh', l: 'HOH – Head of Household' },
+          { v: 'qw', l: 'QW – Qualifying Widow(er)' },
+          { v: 'married_joint', l: 'Married Joint' },
+          { v: 'married_separate', l: 'Married Separate' },
+        ];
+        const dbStatuses = filterData.filingStatuses || [];
+        const extra = dbStatuses.filter(s => !staticStatuses.find(o => o.v === s));
+        const allS = [...staticStatuses, ...extra.map(s => ({ v: s, l: cap(s) }))];
+        const opts = allS.map(o =>
+          `<option value="${o.v}"${filter.value === o.v ? ' selected' : ''}>${escHtml(o.l)}</option>`
+        ).join('');
+        controlsHTML = `<select class="filter-select-inline" data-field="value">${opts}</select>`;
+        break;
+      }
+      case 'company_status': {
+        const dbStatuses = filterData.companyStatuses || [];
+        const defaultStatuses = ['active', 'inactive', 'prospect'];
+        const all = [...new Set([...defaultStatuses, ...dbStatuses])];
+        const opts = all.map(s =>
+          `<option value="${s}"${filter.value === s ? ' selected' : ''}>${escHtml(cap(s))}</option>`
+        ).join('');
+        controlsHTML = `<select class="filter-select-inline" data-field="value">
+          <option value="">Any status</option>${opts}
+        </select>`;
+        break;
+      }
+      case 'has_documents': {
+        controlsHTML = `<span style="font-size:0.84rem;color:var(--muted);">
+          People who have at least one document uploaded
+        </span>
+        <input type="hidden" data-field="value" value="true">`;
+        break;
+      }
+      case 'portal_activity': {
+        controlsHTML = `<select class="filter-select-inline" data-field="value">
+          <option value="">Any</option>
+          <option value="30"${filter.value === '30' ? ' selected' : ''}>Active (within 30 days)</option>
+          <option value="60"${filter.value === '60' ? ' selected' : ''}>Active (within 60 days)</option>
+          <option value="90"${filter.value === '90' ? ' selected' : ''}>Active (within 90 days)</option>
+          <option value="never"${filter.value === 'never' ? ' selected' : ''}>Never logged in</option>
+        </select>`;
+        break;
+      }
+      case 'pipeline_stage': {
+        const pipeOpts = (filterData.pipelines || []).map(p =>
+          `<option value="${p.id}"${filter.value == p.id ? ' selected' : ''}>
+            ${escHtml(p.name)}${p.tax_year ? ` (${p.tax_year})` : ''}
+          </option>`
+        ).join('');
+        const selectedPipeline = filterData.pipelines && filter.value
+          ? filterData.pipelines.find(p => String(p.id) === String(filter.value))
+          : null;
+        const sortedStages = selectedPipeline && selectedPipeline.stages
+          ? [...selectedPipeline.stages].sort((a, b) => {
+              if (a.position !== b.position) return a.position - b.position;
+              return a.id - b.id; // fallback: creation order
+            })
+          : [];
+        const stageOpts = sortedStages.length
+          ? sortedStages.map(s =>
+              `<option value="${s.id}"${filter.value2 == s.id ? ' selected' : ''}>${escHtml(s.name)}</option>`
+            ).join('')
+          : '';
+        controlsHTML = `
+          <select class="filter-select-inline" data-field="value" style="flex:1;min-width:120px;">
+            <option value="">Select pipeline…</option>${pipeOpts}
+          </select>
+          <select class="filter-select-inline" data-field="value2" style="flex:1;min-width:120px;" ${!stageOpts ? 'disabled' : ''}>
+            <option value="">Any stage</option>${stageOpts}
+          </select>`;
+        break;
+      }
+      case 'proposal_status': {
+        const pStatuses = [
+          { v: 'sent', l: 'Proposal Sent' },
+          { v: 'signed', l: 'Proposal Signed' },
+          { v: 'expired', l: 'Proposal Expired' },
+          { v: 'draft', l: 'Draft' },
+        ];
+        const opts = pStatuses.map(o =>
+          `<option value="${o.v}"${filter.value === o.v ? ' selected' : ''}>${o.l}</option>`
+        ).join('');
+        controlsHTML = `<select class="filter-select-inline" data-field="value">
+          <option value="">Any</option>${opts}
+        </select>`;
+        break;
+      }
+      default:
+        controlsHTML = `<span style="color:var(--muted);font-size:0.82rem;">Unknown filter type</span>`;
+    }
+
+    return `
+      ${labelHTML}
+      <div class="filter-row-controls">${controlsHTML}</div>
+      ${removeBtn}
+    `;
+  }
+
+  function attachFilterRowEvents(row, filter) {
+    // Remove button
+    row.querySelector('[data-remove]').addEventListener('click', () => {
+      removeFilterRow(filter.id);
+    });
+
+    // Value fields
+    row.querySelectorAll('[data-field]').forEach(el => {
+      const field = el.dataset.field;
+      const evt = el.tagName === 'SELECT' ? 'change' : 'input';
+      el.addEventListener(evt, () => {
+        filter[field] = el.value;
+        // Special: pipeline stage cascade
+        if (filter.type === 'pipeline_stage' && field === 'value') {
+          // Re-render the stage dropdown
+          const row2 = document.getElementById(`filter-row-${filter.id}`);
+          if (row2) {
+            filter.value2 = '';
+            row2.innerHTML = buildFilterRowHTML(filter);
+            attachFilterRowEvents(row2, filter);
+          }
+        }
+        debouncedRefreshCount();
+      });
+    });
+  }
 
   // ── Live count refresh ────────────────────────────────────────────────────
   let countDebounce = null;
@@ -672,32 +993,46 @@
 
   function getFilters() {
     const filters = {};
-    const rel = document.getElementById('f-relationship').value;
-    if (rel) filters.relationship_id = rel;
-    const tier = document.getElementById('f-service-tier').value;
-    if (tier) filters.service_tier = tier;
-    const bill = document.getElementById('f-billing-status').value;
-    if (bill) filters.billing_status = bill;
-    const portal = document.getElementById('f-portal-activity').value;
-    if (portal === 'never') filters.portal_never_logged_in = true;
-    else if (portal) filters.portal_active_days = portal;
-    const pipelineId = document.getElementById('f-pipeline').value;
-    const stageId = document.getElementById('f-pipeline-stage').value;
-    if (pipelineId && stageId) {
-      filters.pipeline_instance_id = pipelineId;
-      filters.pipeline_stage_id = stageId;
-    }
-    const propStatus = document.getElementById('f-proposal-status').value;
-    if (propStatus) filters.proposal_status = propStatus;
+    activeFilters.forEach(f => {
+      switch (f.type) {
+        case 'relationship':
+          if (f.value) filters.relationship_id = f.value;
+          break;
+        case 'service_tier':
+          if (f.value) filters.service_tier = f.value;
+          break;
+        case 'billing_status':
+          if (f.value) filters.billing_status = f.value;
+          break;
+        case 'entity_type':
+          if (f.value) filters.entity_type = f.value;
+          break;
+        case 'filing_status':
+          if (f.value) filters.filing_status = f.value;
+          break;
+        case 'company_status':
+          if (f.value) filters.company_status = f.value;
+          break;
+        case 'has_documents':
+          filters.has_documents = true;
+          break;
+        case 'portal_activity':
+          if (f.value === 'never') filters.portal_never_logged_in = true;
+          else if (f.value) filters.portal_active_days = f.value;
+          break;
+        case 'pipeline_stage':
+          if (f.value && f.value2) {
+            filters.pipeline_instance_id = f.value;
+            filters.pipeline_stage_id = f.value2;
+          }
+          break;
+        case 'proposal_status':
+          if (f.value) filters.proposal_status = f.value;
+          break;
+      }
+    });
     return filters;
   }
-
-  // Listen to all filter changes
-  document.querySelectorAll('.filter-select').forEach(sel => {
-    if (sel.id !== 'f-pipeline') { // pipeline handled above
-      sel.addEventListener('change', debouncedRefreshCount);
-    }
-  });
 
   // Toggle recipient preview
   togglePreviewBtn.addEventListener('click', () => {
@@ -764,8 +1099,39 @@
     document.getElementById('confirm-count').textContent =
       `(${count} client${count !== 1 ? 's' : ''})`;
 
+    // Render filter pills
+    const pillsEl = document.getElementById('summary-filters');
+    const filters = getFilters();
+    const pills = buildFilterPills(filters);
+    pillsEl.innerHTML = pills.length
+      ? pills.map(p => `<span class="filter-pill">${escHtml(p)}</span>`).join('')
+      : '<span style="color:var(--muted);font-size:0.82rem;">No filters — all portal-enabled clients</span>';
+
     const sendPrev = document.getElementById('send-recipient-preview');
     renderRecipientPreview(sendPrev, audienceRecipients);
+  }
+
+  function buildFilterPills(filters) {
+    const pills = [];
+    if (filters.relationship_id) {
+      const rel = filterData.relationships.find(r => String(r.id) === String(filters.relationship_id));
+      pills.push(rel ? rel.name : `Relationship #${filters.relationship_id}`);
+    }
+    if (filters.service_tier) pills.push(`Tier: ${cap(filters.service_tier)}`);
+    if (filters.billing_status) pills.push(`Billing: ${cap(filters.billing_status)}`);
+    if (filters.entity_type) pills.push(`Entity: ${ENTITY_TYPE_LABELS[filters.entity_type] || cap(filters.entity_type)}`);
+    if (filters.filing_status) pills.push(`Filing: ${FILING_STATUS_LABELS[filters.filing_status] || cap(filters.filing_status)}`);
+    if (filters.company_status) pills.push(`Co. Status: ${cap(filters.company_status)}`);
+    if (filters.has_documents) pills.push('Has Documents');
+    if (filters.portal_never_logged_in) pills.push('Never logged in');
+    if (filters.portal_active_days) pills.push(`Active within ${filters.portal_active_days}d`);
+    if (filters.pipeline_instance_id && filters.pipeline_stage_id) {
+      const pipe = filterData.pipelines && filterData.pipelines.find(p => String(p.id) === String(filters.pipeline_instance_id));
+      const stage = pipe && pipe.stages && pipe.stages.find(s => String(s.id) === String(filters.pipeline_stage_id));
+      pills.push(`Pipeline: ${pipe ? pipe.name : '?'} → ${stage ? stage.name : '?'}`);
+    }
+    if (filters.proposal_status) pills.push(`Proposal: ${cap(filters.proposal_status)}`);
+    return pills;
   }
 
   document.getElementById('toggle-send-recipients').addEventListener('click', function() {
@@ -830,13 +1196,14 @@
   });
 
   sendAnotherBtn.addEventListener('click', () => {
-    // Reset everything
     composeSubject.value = '';
     composeBody.value = '';
     updatePreview();
     audienceRecipients = [];
     audienceCount.textContent = '—';
     step1Next.disabled = true;
+    activeFilters = [];
+    filterRowsEl.innerHTML = '';
     document.getElementById('send-progress-wrap').style.display = 'none';
     document.getElementById('send-result').style.display = 'none';
     confirmSendBtn.style.display = '';
@@ -892,6 +1259,11 @@
   function escHtml(str) {
     if (!str) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function cap(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ');
   }
 
   function fmtDate(iso) {

@@ -307,6 +307,7 @@ router.post('/:id/send', async (req, res) => {
             to: signer.email,
             name: fullName,
             firmName: delivery.firm_name,
+            firmId: signer.firm_id,
             message: `Your ${delivery.tax_year} tax return from ${delivery.firm_name} is ready for your review. Log in to your portal to review and sign.`,
             portalUrl,
           });
