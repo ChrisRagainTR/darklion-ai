@@ -317,14 +317,32 @@
     </div>
   </div>
 
-  <!-- ══ DEFAULT YEAR ══ -->
+  <!-- ══ YEAR SETTINGS (Default Year + Copy to Year) ══ -->
   <div class="ps-section">
-    <div class="ps-section-title">📅 Default Year</div>
-    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-      <select id="default-year-sel" class="add-stage-input" style="max-width:140px;" onchange="saveDefaultYear(this.value)">
-        <option value="">No default</option>
-      </select>
-      <span style="font-size:0.78rem;color:var(--muted);">When you open this pipeline, it jumps straight to this year.</span>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:1rem;align-items:start;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1.1rem;">
+      <!-- Default Year -->
+      <div style="display:flex;flex-direction:column;gap:0.3rem;min-width:160px;">
+        <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">📅 Default Year</div>
+        <select id="default-year-sel" class="add-stage-input" style="max-width:140px;" onchange="saveDefaultYear(this.value)">
+          <option value="">No default</option>
+        </select>
+        <span style="font-size:0.72rem;color:var(--muted);">Opens to this year by default.</span>
+      </div>
+      <!-- Divider -->
+      <div style="border-left:1px solid var(--border);padding-left:1rem;">
+        <div style="font-size:0.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">📋 Copy to Another Year</div>
+        <div style="font-size:0.76rem;color:var(--muted);margin-bottom:0.6rem;">Duplicate this pipeline's stages, triggers &amp; actions into a new year's instance.</div>
+        <div style="display:flex;align-items:center;gap:0.65rem;flex-wrap:wrap;">
+          <input type="number" id="copy-year-input" min="2020" max="2040" placeholder="e.g. 2026"
+            style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.6rem;border-radius:6px;font-size:0.84rem;outline:none;width:110px;" />
+          <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.78rem;color:var(--text);cursor:pointer;">
+            <input type="checkbox" id="copy-migrate-held" style="cursor:pointer;accent-color:var(--gold);" />
+            Migrate held ♻️ cards too
+          </label>
+          <button class="btn btn-gold btn-sm" onclick="copyPipelineToYear()">Copy →</button>
+          <span id="copy-year-msg" style="font-size:0.76rem;"></span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -337,30 +355,6 @@
     <div class="add-stage-row">
       <input type="text" id="new-stage-input" class="add-stage-input" placeholder="New stage name…" onkeydown="if(event.key==='Enter')addStage()" />
       <button class="btn btn-gold btn-sm" onclick="addStage()">+ Add Stage</button>
-    </div>
-  </div>
-
-  <!-- ══ COPY TO YEAR ══ -->
-  <div class="ps-section">
-    <div class="ps-section-title">📋 Copy Pipeline to Another Year</div>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;">
-      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.85rem;line-height:1.6;">
-        Create a new year's instance of this pipeline with the same stages, triggers, and actions.
-        Optionally migrate any cards being <strong style="color:var(--text);">held for migration</strong> into the new pipeline.
-      </div>
-      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-        <div>
-          <label style="font-size:0.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:0.3rem;">Target Year</label>
-          <input type="number" id="copy-year-input" min="2020" max="2040" placeholder="e.g. 2026"
-            style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.45rem 0.65rem;border-radius:6px;font-size:0.88rem;outline:none;width:120px;" />
-        </div>
-        <div style="display:flex;align-items:center;gap:0.4rem;margin-top:1.15rem;">
-          <input type="checkbox" id="copy-migrate-held" style="cursor:pointer;accent-color:var(--gold);" />
-          <label for="copy-migrate-held" style="font-size:0.82rem;color:var(--text);cursor:pointer;">Also migrate held cards into the new pipeline</label>
-        </div>
-        <button class="btn btn-gold btn-sm" onclick="copyPipelineToYear()" style="margin-top:1.1rem;">Copy to Year →</button>
-      </div>
-      <div id="copy-year-msg" style="margin-top:0.6rem;font-size:0.8rem;height:1.2rem;"></div>
     </div>
   </div>
 
