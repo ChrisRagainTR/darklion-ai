@@ -1712,14 +1712,7 @@
   }
 
   async function sendDelivery(id) {
-    try {
-      const summaryRes = await apiFetch('/api/tax-deliveries/' + id + '/summary');
-      const summary = await summaryRes.json();
-      openTaxSummary(id, { sendAfter: true });
-      return;
-    } catch(e) {
-      // Fall through to direct send if summary check fails
-    }
+    // Companies skip the Tax Return Summary — that's for individual returns only
     if (!await window.dlConfirm('Send this tax return to the client for review and e-signature?', {title:'Send Tax Return', confirmLabel:'Send', icon:'📤'})) return;
     try {
       const res = await apiFetch('/api/tax-deliveries/' + id + '/send', { method: 'POST', body: '{}' });
