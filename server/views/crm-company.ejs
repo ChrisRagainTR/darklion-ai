@@ -1087,18 +1087,19 @@
 
     // ── TOP LEFT: Company Details panel ──
     const detailsEl = document.getElementById('overview-details-panel');
-    let detailsHtml = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Company Details</div>`;
-    detailsHtml += `<div class="info-row"><span class="info-label">Entity Type</span><span class="info-val">${esc(etLabel(c.entity_type) || '—')}</span></div>`;
-    detailsHtml += `<div class="info-row"><span class="info-label">Status</span><span class="info-val">${esc(c.status || 'active')}</span></div>`;
-    detailsHtml += `<div class="info-row"><span class="info-label">Tax Year End</span><span class="info-val">${esc(c.tax_year_end || '—')}</span></div>`;
-    if (c.billing_method) {
-      const bmLabel = c.billing_method === 'monthly_billing' ? 'Monthly Billing' : c.billing_method === 'client_invoice' ? 'Client Invoice' : c.billing_method;
-      detailsHtml += `<div class="info-row"><span class="info-label">Billing Method</span><span class="info-val">${esc(bmLabel)}</span></div>`;
-    }
-    if (c.stanford_tax_url) {
-      detailsHtml += `<div class="info-row"><span class="info-label">Stanford Tax</span><span class="info-val"><a href="${esc(c.stanford_tax_url)}" target="_blank" rel="noopener" style="color:var(--gold);">Open →</a></span></div>`;
-    }
-    detailsEl.innerHTML = detailsHtml;
+    const bmLabel = c.billing_method === 'monthly_billing' ? 'Monthly Billing' : c.billing_method === 'client_invoice' ? 'Client Invoice' : (c.billing_method || '—');
+    const detailRows = [
+      { label: 'Entity Type',    val: esc(etLabel(c.entity_type) || '—') },
+      { label: 'Status',         val: esc(c.status || 'active') },
+      { label: 'Tax Year End',   val: esc(c.tax_year_end || '—') },
+      { label: 'Billing Method', val: esc(bmLabel) },
+      { label: 'Stanford Tax',   val: c.stanford_tax_url ? `<a href="${esc(c.stanford_tax_url)}" target="_blank" rel="noopener" style="color:var(--gold);">Open →</a>` : '—' },
+    ];
+    const detailRowsHtml = detailRows.map(r =>
+      `<div style="min-width:0;"><div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.18rem;">${r.label}</div><div style="font-size:0.84rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.val}</div></div>`
+    ).join('');
+    detailsEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Company Details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem 1rem;">${detailRowsHtml}</div>`;
 
     // ── TOP RIGHT: People panel ──
     const peopleEl = document.getElementById('overview-people-panel');

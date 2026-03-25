@@ -868,6 +868,18 @@
     const fsKey = p.filing_status === 'mfj' ? 'MFJ' : p.filing_status === 'single' ? 'Single' : p.filing_status === 'hoh' ? 'HOH' : p.filing_status === 'mfs' ? 'MFS' : null;
     const fsBg = fsColors[fsKey] || 'rgba(143,163,184,0.15)';
     const fsTc = fsTextColors[fsKey] || '#8fa3b8';
+    const personBmLabel = p.billing_method === 'monthly_billing' ? 'Monthly Billing' : p.billing_method === 'client_invoice' ? 'Client Invoice' : (p.billing_method || '—');
+    const contactRows = [
+      { label: 'Email',          val: p.email ? `<a href="mailto:${esc(p.email)}" style="color:var(--gold);">${esc(p.email)}</a>` : '—' },
+      { label: 'Phone',          val: fmtPhone(p.phone) || '—' },
+      { label: 'Date of Birth',  val: fmtDOB(p.date_of_birth) || '—' },
+      { label: 'Billing Method', val: esc(personBmLabel) },
+      { label: 'Filing Status',  val: p.filing_status ? `<span style="background:${fsBg};color:${fsTc};border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">${esc(fsLabel)}</span>` : '—' },
+      ...(p.relationship_name ? [{ label: 'Relationship', val: `<a href="#" style="color:var(--gold);">${esc(p.relationship_name)}</a>` }] : []),
+    ];
+    const contactRowsHtml = contactRows.map(r =>
+      `<div style="min-width:0;"><div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.18rem;">${r.label}</div><div style="font-size:0.84rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;">${r.val}</div></div>`
+    ).join('');
     contactEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Contact Details</div>
       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.85rem;">
         <div style="width:48px;height:48px;border-radius:50%;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
@@ -876,11 +888,7 @@
           ${p.filing_status ? `<span style="background:${fsBg};color:${fsTc};border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">${esc(fsLabel)}</span>` : ''}
         </div>
       </div>
-      <div class="info-row"><span class="info-label">Email</span><span class="info-val">${p.email ? `<a href="mailto:${esc(p.email)}" style="color:var(--gold);">${esc(p.email)}</a>` : '—'}</span></div>
-      <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${fmtPhone(p.phone)}</span></div>
-      <div class="info-row"><span class="info-label">Date of Birth</span><span class="info-val">${fmtDOB(p.date_of_birth)}</span></div>
-      ${p.billing_method ? `<div class="info-row"><span class="info-label">Billing Method</span><span class="info-val">${p.billing_method === 'monthly_billing' ? 'Monthly Billing' : p.billing_method === 'client_invoice' ? 'Client Invoice' : esc(p.billing_method)}</span></div>` : ''}
-      ${p.relationship_name ? `<div class="info-row"><span class="info-label">Relationship</span><span class="info-val"><a href="#" style="color:var(--gold);">${esc(p.relationship_name)}</a></span></div>` : ''}`;
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem 1rem;">${contactRowsHtml}</div>`;
 
     // ── LEFT COL: Client Portal ──
     const portalEl = document.getElementById('overview-portal-panel');
