@@ -1043,6 +1043,17 @@
   loadTeam();
   loadList();
 
+  // Auto-navigate to instance if ?instance=X is in the URL
+  var _urlParams = new URLSearchParams(window.location.search);
+  var _instanceParam = _urlParams.get('instance');
+  if (_instanceParam) {
+    api('GET', '/instances/' + _instanceParam).then(function(inst) {
+      if (!inst || !inst.template_id) return;
+      currentYear = parseInt(inst.tax_year) || currentYear;
+      openPipeline(inst.template_id);
+    }).catch(function() {});
+  }
+
 })();
 </script>
 
