@@ -148,16 +148,21 @@ function doMount(token) {
         mounted = true;
         clearTimeout(mountTimeout);
         console.log('[Rclone] Mounted successfully at:', MOUNT_DIR);
-        // Remove stale subst first, then assign O:
-        exec('subst ' + DRIVE_LETTER + ' /D', function() {
-          exec('subst ' + DRIVE_LETTER + ' "' + MOUNT_DIR + '"', function(err) {
-            if (err) {
-              console.warn('[Rclone] subst drive letter failed:', err.message);
-            } else {
-              console.log('[Rclone] Drive letter assigned:', DRIVE_LETTER, '->', MOUNT_DIR);
+        // Mount O: via net use pointing at the local WebDAV server
+        // HTTP to localhost doesn't require any registry changes
+        exec('net use ' + DRIVE_LETTER + ' /delete /yes', function() {
+          exec(
+            'net use ' + DRIVE_LETTER + ' http://127.0.0.1:7891 /user:darklion "' + token + '" /persistent:no',
+            function(err, stdout, stderr) {
+              if (err) {
+                console.warn('[Rclone] net use drive letter failed:', stderr || err.message);
+                // Fall back — drive letter won't show but folder still works
+              } else {
+                console.log('[Rclone] Drive letter assigned:', DRIVE_LETTER, '-> http://127.0.0.1:7891');
+              }
+              resolve();
             }
-            resolve();
-          });
+          );
         });
       }
     }, 4000);
@@ -200,8 +205,8 @@ function unmountDrive() {
     if (retryTimeout) { clearTimeout(retryTimeout); retryTimeout = null; }
     currentToken = null;
     retries = 0;
-    // Remove the subst drive letter first, then kill rclone
-    exec('subst ' + DRIVE_LETTER + ' /D', function() {
+    // Remove net use drive letter, then kill rclone
+    exec('net use ' + DRIVE_LETTER + ' /delete /yes', function() {
       killStaleRclone().then(resolve);
     });
   });
