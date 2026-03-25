@@ -431,6 +431,107 @@
     border-radius: 20px;
     white-space: nowrap;
   }
+
+  /* Operator toggle */
+  .operator-toggle {
+    background: var(--charcoal);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.3rem 0.55rem;
+    border-radius: 5px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    line-height: 1.4;
+  }
+  .operator-toggle:hover {
+    border-color: var(--gold);
+    color: var(--text);
+  }
+  .operator-toggle.is-not {
+    color: var(--red, #f56565);
+    border-color: rgba(245,101,101,0.4);
+    background: rgba(245,101,101,0.07);
+  }
+
+  /* Multi-select checkbox dropdown */
+  .ms-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 140px;
+  }
+  .ms-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--charcoal);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.84rem;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: border-color 0.15s;
+    outline: none;
+    min-height: 32px;
+  }
+  .ms-trigger:focus, .ms-trigger.open {
+    border-color: var(--gold);
+  }
+  .ms-trigger-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ms-trigger-arrow {
+    color: var(--muted);
+    font-size: 0.7rem;
+    flex-shrink: 0;
+  }
+  .ms-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    z-index: 60;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    min-width: 200px;
+    max-width: 320px;
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 0.3rem 0;
+    animation: dropIn 0.12s ease;
+  }
+  .ms-dropdown.open { display: block; }
+  .ms-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.84rem;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.1s;
+    user-select: none;
+  }
+  .ms-option:hover { background: rgba(201,168,76,0.08); }
+  .ms-option input[type="checkbox"] {
+    accent-color: var(--gold);
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+  }
+  .ms-option.checked { color: var(--gold); }
 </style>
 
 <div class="bulk-wrap">
@@ -739,9 +840,15 @@
     addFilterRow(type);
   });
 
+  // Multi-select filter types
+  const MULTI_SELECT_TYPES = new Set([
+    'pipeline_stage', 'service_tier', 'billing_status', 'filing_status',
+    'entity_type', 'company_status', 'portal_activity', 'proposal_status',
+  ]);
+
   function addFilterRow(type) {
     const id = ++filterIdCounter;
-    const filter = { id, type, value: '', value2: '' };
+    const filter = { id, type, value: MULTI_SELECT_TYPES.has(type) ? [] : '', value2: '', operator: 'is' };
     activeFilters.push(filter);
     renderFilterRow(filter);
     debouncedRefreshCount();
@@ -770,10 +877,35 @@
     activeFilters.forEach(f => renderFilterRow(f));
   }
 
+  function buildMultiSelectHTML(filterId, options, selectedValues, placeholder) {
+    const sel = Array.isArray(selectedValues) ? selectedValues : (selectedValues ? [selectedValues] : []);
+    const label = sel.length === 0
+      ? placeholder
+      : sel.length === 1
+        ? escHtml(options.find(o => o.v === sel[0])?.l || cap(sel[0]))
+        : `${sel.length} selected`;
+    const isNotSelected = (v) => sel.includes(v);
+    const optionsHTML = options.map(o =>
+      `<label class="ms-option${isNotSelected(o.v) ? ' checked' : ''}">
+        <input type="checkbox" value="${escHtml(o.v)}"${isNotSelected(o.v) ? ' checked' : ''}>
+        ${escHtml(o.l)}
+      </label>`
+    ).join('');
+    return `<div class="ms-wrap" data-ms-id="${filterId}">
+      <button type="button" class="ms-trigger" data-field="value" data-placeholder="${escHtml(placeholder)}">
+        <span class="ms-trigger-text">${label}</span>
+        <span class="ms-trigger-arrow">▾</span>
+      </button>
+      <div class="ms-dropdown">${optionsHTML}</div>
+    </div>`;
+  }
+
   function buildFilterRowHTML(filter) {
     const def = FILTER_TYPES[filter.type] || { label: filter.type, icon: '' };
     const labelHTML = `<span class="filter-row-label">${def.icon} ${def.label}</span>`;
     const removeBtn = `<button class="filter-remove-btn" data-remove="${filter.id}" title="Remove filter">✕</button>`;
+    const isNot = filter.operator === 'is_not';
+    const operatorBtn = `<button type="button" class="operator-toggle${isNot ? ' is-not' : ''}" data-op-toggle="${filter.id}">${isNot ? 'is not ▾' : 'is ▾'}</button>`;
 
     let controlsHTML = '';
 
@@ -782,32 +914,23 @@
         const opts = filterData.relationships.map(r =>
           `<option value="${r.id}"${filter.value == r.id ? ' selected' : ''}>${escHtml(r.name)}</option>`
         ).join('');
-        controlsHTML = `<select class="filter-select-inline" data-field="value">
+        controlsHTML = `${operatorBtn}<select class="filter-select-inline" data-field="value">
           <option value="">All relationships</option>${opts}
         </select>`;
         break;
       }
       case 'service_tier': {
-        const opts = (filterData.serviceTiers || []).map(t =>
-          `<option value="${t}"${filter.value === t ? ' selected' : ''}>${escHtml(cap(t))}</option>`
-        ).join('');
-        controlsHTML = `<select class="filter-select-inline" data-field="value">
-          <option value="">Any tier</option>${opts}
-        </select>`;
+        const opts = (filterData.serviceTiers || []).map(t => ({ v: t, l: cap(t) }));
+        controlsHTML = `${operatorBtn}${buildMultiSelectHTML(filter.id, opts, filter.value, 'Any tier')}`;
         break;
       }
       case 'billing_status': {
-        const opts = (filterData.billingStatuses || []).map(b =>
-          `<option value="${b}"${filter.value === b ? ' selected' : ''}>${escHtml(cap(b))}</option>`
-        ).join('');
-        controlsHTML = `<select class="filter-select-inline" data-field="value">
-          <option value="">Any status</option>${opts}
-        </select>`;
+        const opts = (filterData.billingStatuses || []).map(b => ({ v: b, l: cap(b) }));
+        controlsHTML = `${operatorBtn}${buildMultiSelectHTML(filter.id, opts, filter.value, 'Any status')}`;
         break;
       }
       case 'entity_type': {
         const staticOpts = [
-          { v: '', l: 'All entity types' },
           { v: 'individual', l: 'Individual (no company)' },
           { v: 's_corp', l: 'S-Corp' },
           { v: 'c_corp', l: 'C-Corp' },
@@ -817,19 +940,14 @@
           { v: 'trust', l: 'Trust' },
           { v: 'other', l: 'Other' },
         ];
-        // Merge with live entity types from DB
         const dbTypes = filterData.entityTypes || [];
         const extra = dbTypes.filter(t => !staticOpts.find(o => o.v === t));
         const allOpts = [...staticOpts, ...extra.map(t => ({ v: t, l: cap(t) }))];
-        const opts = allOpts.map(o =>
-          `<option value="${o.v}"${filter.value === o.v ? ' selected' : ''}>${escHtml(o.l)}</option>`
-        ).join('');
-        controlsHTML = `<select class="filter-select-inline" data-field="value">${opts}</select>`;
+        controlsHTML = `${operatorBtn}${buildMultiSelectHTML(filter.id, allOpts, filter.value, 'All entity types')}`;
         break;
       }
       case 'filing_status': {
         const staticStatuses = [
-          { v: '', l: 'Any filing status' },
           { v: 'single', l: 'Single' },
           { v: 'mfj', l: 'MFJ – Married Filing Jointly' },
           { v: 'mfs', l: 'MFS – Married Filing Separately' },
@@ -841,54 +959,48 @@
         const dbStatuses = filterData.filingStatuses || [];
         const extra = dbStatuses.filter(s => !staticStatuses.find(o => o.v === s));
         const allS = [...staticStatuses, ...extra.map(s => ({ v: s, l: cap(s) }))];
-        const opts = allS.map(o =>
-          `<option value="${o.v}"${filter.value === o.v ? ' selected' : ''}>${escHtml(o.l)}</option>`
-        ).join('');
-        controlsHTML = `<select class="filter-select-inline" data-field="value">${opts}</select>`;
+        controlsHTML = `${operatorBtn}${buildMultiSelectHTML(filter.id, allS, filter.value, 'Any filing status')}`;
         break;
       }
       case 'company_status': {
         const dbStatuses = filterData.companyStatuses || [];
         const defaultStatuses = ['active', 'inactive', 'prospect'];
         const all = [...new Set([...defaultStatuses, ...dbStatuses])];
-        const opts = all.map(s =>
-          `<option value="${s}"${filter.value === s ? ' selected' : ''}>${escHtml(cap(s))}</option>`
-        ).join('');
-        controlsHTML = `<select class="filter-select-inline" data-field="value">
-          <option value="">Any status</option>${opts}
-        </select>`;
+        const opts = all.map(s => ({ v: s, l: cap(s) }));
+        controlsHTML = `${operatorBtn}${buildMultiSelectHTML(filter.id, opts, filter.value, 'Any status')}`;
         break;
       }
       case 'has_documents': {
-        controlsHTML = `<span style="font-size:0.84rem;color:var(--muted);">
+        controlsHTML = `${operatorBtn}<span style="font-size:0.84rem;color:var(--muted);">
           People who have at least one document uploaded
         </span>
         <input type="hidden" data-field="value" value="true">`;
         break;
       }
       case 'portal_activity': {
-        controlsHTML = `<select class="filter-select-inline" data-field="value">
-          <option value="">Any</option>
-          <option value="30"${filter.value === '30' ? ' selected' : ''}>Active (within 30 days)</option>
-          <option value="60"${filter.value === '60' ? ' selected' : ''}>Active (within 60 days)</option>
-          <option value="90"${filter.value === '90' ? ' selected' : ''}>Active (within 90 days)</option>
-          <option value="never"${filter.value === 'never' ? ' selected' : ''}>Never logged in</option>
-        </select>`;
+        const paOpts = [
+          { v: '30', l: 'Active (within 30 days)' },
+          { v: '60', l: 'Active (within 60 days)' },
+          { v: '90', l: 'Active (within 90 days)' },
+          { v: 'never', l: 'Never logged in' },
+        ];
+        controlsHTML = `${operatorBtn}${buildMultiSelectHTML(filter.id, paOpts, filter.value, 'Any')}`;
         break;
       }
       case 'pipeline_stage': {
+        const pipeVal = Array.isArray(filter.value) ? (filter.value[0] || '') : (filter.value || '');
         const pipeOpts = (filterData.pipelines || []).map(p =>
-          `<option value="${p.id}"${filter.value == p.id ? ' selected' : ''}>
+          `<option value="${p.id}"${String(p.id) === String(pipeVal) ? ' selected' : ''}>
             ${escHtml(p.name)}${p.tax_year ? ` (${p.tax_year})` : ''}
           </option>`
         ).join('');
-        const selectedPipeline = filterData.pipelines && filter.value
-          ? filterData.pipelines.find(p => String(p.id) === String(filter.value))
+        const selectedPipeline = filterData.pipelines && pipeVal
+          ? filterData.pipelines.find(p => String(p.id) === String(pipeVal))
           : null;
         const sortedStages = selectedPipeline && selectedPipeline.stages
           ? [...selectedPipeline.stages].sort((a, b) => {
               if (a.position !== b.position) return a.position - b.position;
-              return a.id - b.id; // fallback: creation order
+              return a.id - b.id;
             })
           : [];
         const stageOpts = sortedStages.length
@@ -896,7 +1008,7 @@
               `<option value="${s.id}"${filter.value2 == s.id ? ' selected' : ''}>${escHtml(s.name)}</option>`
             ).join('')
           : '';
-        controlsHTML = `
+        controlsHTML = `${operatorBtn}
           <select class="filter-select-inline" data-field="value" style="flex:1;min-width:120px;">
             <option value="">Select pipeline…</option>${pipeOpts}
           </select>
@@ -912,12 +1024,7 @@
           { v: 'expired', l: 'Proposal Expired' },
           { v: 'draft', l: 'Draft' },
         ];
-        const opts = pStatuses.map(o =>
-          `<option value="${o.v}"${filter.value === o.v ? ' selected' : ''}>${o.l}</option>`
-        ).join('');
-        controlsHTML = `<select class="filter-select-inline" data-field="value">
-          <option value="">Any</option>${opts}
-        </select>`;
+        controlsHTML = `${operatorBtn}${buildMultiSelectHTML(filter.id, pStatuses, filter.value, 'Any')}`;
         break;
       }
       default:
@@ -937,15 +1044,74 @@
       removeFilterRow(filter.id);
     });
 
-    // Value fields
+    // Operator toggle
+    const opBtn = row.querySelector('[data-op-toggle]');
+    if (opBtn) {
+      opBtn.addEventListener('click', () => {
+        filter.operator = filter.operator === 'is_not' ? 'is' : 'is_not';
+        opBtn.textContent = filter.operator === 'is_not' ? 'is not ▾' : 'is ▾';
+        opBtn.classList.toggle('is-not', filter.operator === 'is_not');
+        debouncedRefreshCount();
+      });
+    }
+
+    // Multi-select checkboxes
+    row.querySelectorAll('.ms-wrap').forEach(msWrap => {
+      const trigger = msWrap.querySelector('.ms-trigger');
+      const dropdown = msWrap.querySelector('.ms-dropdown');
+      const triggerText = msWrap.querySelector('.ms-trigger-text');
+
+      // Open/close dropdown
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.contains('open');
+        // Close all other open dropdowns in this row
+        document.querySelectorAll('.ms-dropdown.open').forEach(d => d.classList.remove('open'));
+        document.querySelectorAll('.ms-trigger.open').forEach(d => d.classList.remove('open'));
+        if (!isOpen) {
+          dropdown.classList.add('open');
+          trigger.classList.add('open');
+        }
+      });
+
+      // Handle checkbox changes
+      dropdown.addEventListener('change', (e) => {
+        if (e.target.type !== 'checkbox') return;
+        const checked = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        filter.value = checked;
+        // Update checked class
+        dropdown.querySelectorAll('.ms-option').forEach(opt => {
+          const cb = opt.querySelector('input[type="checkbox"]');
+          opt.classList.toggle('checked', cb && cb.checked);
+        });
+        // Update trigger label
+        const allOpts = Array.from(dropdown.querySelectorAll('.ms-option')).map(o => ({
+          v: o.querySelector('input').value,
+          l: o.textContent.trim(),
+        }));
+        if (checked.length === 0) {
+          triggerText.textContent = trigger.dataset.placeholder || 'Any';
+        } else if (checked.length === 1) {
+          const found = allOpts.find(o => o.v === checked[0]);
+          triggerText.textContent = found ? found.l : checked[0];
+        } else {
+          triggerText.textContent = `${checked.length} selected`;
+        }
+        debouncedRefreshCount();
+      });
+    });
+
+    // Regular <select> and <input> value fields (non-multiselect)
     row.querySelectorAll('[data-field]').forEach(el => {
+      if (el.classList.contains('ms-trigger')) return; // handled above
+      if (el.tagName !== 'SELECT' && el.type !== 'hidden') return;
+      if (el.closest('.ms-wrap')) return; // skip ms internals
       const field = el.dataset.field;
       const evt = el.tagName === 'SELECT' ? 'change' : 'input';
       el.addEventListener(evt, () => {
         filter[field] = el.value;
         // Special: pipeline stage cascade
         if (filter.type === 'pipeline_stage' && field === 'value') {
-          // Re-render the stage dropdown
           const row2 = document.getElementById(`filter-row-${filter.id}`);
           if (row2) {
             filter.value2 = '';
@@ -957,6 +1123,14 @@
       });
     });
   }
+
+  // Close multi-select dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.ms-wrap')) {
+      document.querySelectorAll('.ms-dropdown.open').forEach(d => d.classList.remove('open'));
+      document.querySelectorAll('.ms-trigger.open').forEach(t => t.classList.remove('open'));
+    }
+  });
 
   // ── Live count refresh ────────────────────────────────────────────────────
   let countDebounce = null;
@@ -992,46 +1166,19 @@
   }
 
   function getFilters() {
-    const filters = {};
-    activeFilters.forEach(f => {
-      switch (f.type) {
-        case 'relationship':
-          if (f.value) filters.relationship_id = f.value;
-          break;
-        case 'service_tier':
-          if (f.value) filters.service_tier = f.value;
-          break;
-        case 'billing_status':
-          if (f.value) filters.billing_status = f.value;
-          break;
-        case 'entity_type':
-          if (f.value) filters.entity_type = f.value;
-          break;
-        case 'filing_status':
-          if (f.value) filters.filing_status = f.value;
-          break;
-        case 'company_status':
-          if (f.value) filters.company_status = f.value;
-          break;
-        case 'has_documents':
-          filters.has_documents = true;
-          break;
-        case 'portal_activity':
-          if (f.value === 'never') filters.portal_never_logged_in = true;
-          else if (f.value) filters.portal_active_days = f.value;
-          break;
-        case 'pipeline_stage':
-          if (f.value && f.value2) {
-            filters.pipeline_instance_id = f.value;
-            filters.pipeline_stage_id = f.value2;
-          }
-          break;
-        case 'proposal_status':
-          if (f.value) filters.proposal_status = f.value;
-          break;
-      }
-    });
-    return filters;
+    // Return array format for new API
+    return activeFilters
+      .filter(f => {
+        if (f.type === 'has_documents') return true;
+        if (Array.isArray(f.value)) return f.value.length > 0 || f.value2;
+        return f.value || f.value2;
+      })
+      .map(f => ({
+        type: f.type,
+        value: f.value,
+        value2: f.value2 || '',
+        operator: f.operator || 'is',
+      }));
   }
 
   // Toggle recipient preview
@@ -1112,25 +1259,55 @@
   }
 
   function buildFilterPills(filters) {
+    // filters is now an array of { type, value, value2, operator }
     const pills = [];
-    if (filters.relationship_id) {
-      const rel = filterData.relationships.find(r => String(r.id) === String(filters.relationship_id));
-      pills.push(rel ? rel.name : `Relationship #${filters.relationship_id}`);
+    if (!Array.isArray(filters)) return pills;
+
+    for (const f of filters) {
+      const neg = f.operator === 'is_not' ? 'NOT ' : '';
+      const vals = Array.isArray(f.value) ? f.value : (f.value ? [f.value] : []);
+      const valStr = (labelFn) => vals.map(labelFn).join(', ');
+
+      switch (f.type) {
+        case 'relationship': {
+          const rel = filterData.relationships.find(r => String(r.id) === String(f.value));
+          pills.push(`${neg}${rel ? rel.name : `Relationship #${f.value}`}`);
+          break;
+        }
+        case 'service_tier':
+          if (vals.length) pills.push(`${neg}Tier: ${valStr(v => cap(v))}`);
+          break;
+        case 'billing_status':
+          if (vals.length) pills.push(`${neg}Billing: ${valStr(v => cap(v))}`);
+          break;
+        case 'entity_type':
+          if (vals.length) pills.push(`${neg}Entity: ${valStr(v => ENTITY_TYPE_LABELS[v] || cap(v))}`);
+          break;
+        case 'filing_status':
+          if (vals.length) pills.push(`${neg}Filing: ${valStr(v => FILING_STATUS_LABELS[v] || cap(v))}`);
+          break;
+        case 'company_status':
+          if (vals.length) pills.push(`${neg}Co. Status: ${valStr(v => cap(v))}`);
+          break;
+        case 'has_documents':
+          pills.push(`${neg}Has Documents`);
+          break;
+        case 'portal_activity':
+          if (vals.includes('never')) pills.push(`${neg}Never logged in`);
+          else if (vals.length) pills.push(`${neg}Active within ${vals[0]}d`);
+          break;
+        case 'pipeline_stage': {
+          const pipeId = Array.isArray(f.value) ? f.value[0] : f.value;
+          const pipe = filterData.pipelines && filterData.pipelines.find(p => String(p.id) === String(pipeId));
+          const stage = pipe && pipe.stages && pipe.stages.find(s => String(s.id) === String(f.value2));
+          pills.push(`${neg}Pipeline: ${pipe ? pipe.name : '?'} → ${stage ? stage.name : '?'}`);
+          break;
+        }
+        case 'proposal_status':
+          if (vals.length) pills.push(`${neg}Proposal: ${valStr(v => cap(v))}`);
+          break;
+      }
     }
-    if (filters.service_tier) pills.push(`Tier: ${cap(filters.service_tier)}`);
-    if (filters.billing_status) pills.push(`Billing: ${cap(filters.billing_status)}`);
-    if (filters.entity_type) pills.push(`Entity: ${ENTITY_TYPE_LABELS[filters.entity_type] || cap(filters.entity_type)}`);
-    if (filters.filing_status) pills.push(`Filing: ${FILING_STATUS_LABELS[filters.filing_status] || cap(filters.filing_status)}`);
-    if (filters.company_status) pills.push(`Co. Status: ${cap(filters.company_status)}`);
-    if (filters.has_documents) pills.push('Has Documents');
-    if (filters.portal_never_logged_in) pills.push('Never logged in');
-    if (filters.portal_active_days) pills.push(`Active within ${filters.portal_active_days}d`);
-    if (filters.pipeline_instance_id && filters.pipeline_stage_id) {
-      const pipe = filterData.pipelines && filterData.pipelines.find(p => String(p.id) === String(filters.pipeline_instance_id));
-      const stage = pipe && pipe.stages && pipe.stages.find(s => String(s.id) === String(filters.pipeline_stage_id));
-      pills.push(`Pipeline: ${pipe ? pipe.name : '?'} → ${stage ? stage.name : '?'}`);
-    }
-    if (filters.proposal_status) pills.push(`Proposal: ${cap(filters.proposal_status)}`);
     return pills;
   }
 
