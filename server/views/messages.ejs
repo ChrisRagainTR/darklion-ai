@@ -93,10 +93,10 @@
     .msg-bubble.staff { background: var(--gold); color: var(--navy); }
     .msg-bubble.client { background: var(--charcoal); color: var(--text); border: 1px solid var(--border); }
     .msg-bubble.internal { background: rgba(255,200,0,0.1); border: 1px dashed var(--gold); color: var(--text); }
-    .msg-bubble.task { background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.4); color: var(--text); border-left: 3px solid var(--gold); }
+    .msg-bubble.task { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.35); color: var(--text); border-left: 3px solid #3b82f6; }
     .msg-meta { font-size: 0.68rem; color: var(--muted); margin-top: 0.15rem; }
     .msg-internal-label { font-size: 0.62rem; color: var(--gold); margin-bottom: 0.15rem; }
-    .msg-task-label { font-size: 0.62rem; color: var(--gold); margin-bottom: 0.15rem; font-weight: 700; letter-spacing: 0.04em; }
+    .msg-task-label { font-size: 0.62rem; color: #60a5fa; margin-bottom: 0.15rem; font-weight: 700; letter-spacing: 0.04em; }
 
     /* ── TASK THREAD CARD ── */
     .thread-card.has-task { border-left: 3px solid var(--gold); background: rgba(201,168,76,0.04); }
@@ -383,6 +383,14 @@ async function apiFetch(url, opts = {}) {
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+function renderBody(body, isTask) {
+  let html = esc(body).replace(/\n/g,'<br>');
+  if (isTask) {
+    // Convert markdown links [text](url) → <a href="url">text</a>
+    html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" style="color:#60a5fa;text-decoration:underline;">$1</a>');
+  }
+  return html;
+}
 
 function relTime(ts) {
   if (!ts) return '';
@@ -606,7 +614,7 @@ async function loadThread(threadId, silent = false) {
           const labelHtml = isTask ? '<div class="msg-task-label">📋 Staff Task</div>' : (m.isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : '');
           msgContainer.insertAdjacentHTML('beforeend', `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
             ${labelHtml}
-            <div class="msg-bubble-row"><div class="msg-bubble ${bubbleClass}">${m.body ? esc(m.body).replace(/\n/g,'<br>') : ''}${attachmentsHtml}</div>${deleteBtnAppended}</div>
+            <div class="msg-bubble-row"><div class="msg-bubble ${bubbleClass}">${m.body ? renderBody(m.body, isTask) : ''}${attachmentsHtml}</div>${deleteBtnAppended}</div>
             <div class="msg-meta">${esc(m.senderName||'')} · ${relTime(m.createdAt)}</div>
           </div>`);
           appended = true;
@@ -628,7 +636,7 @@ async function loadThread(threadId, silent = false) {
         const labelHtml = isTask ? '<div class="msg-task-label">📋 Staff Task</div>' : (m.isInternal ? '<div class="msg-internal-label">🔒 Internal note</div>' : '');
         return `<div class="msg-bubble-wrap ${side}" data-msg-id="${m.id}">
           ${labelHtml}
-          <div class="msg-bubble-row"><div class="msg-bubble ${bubbleClass}">${m.body ? esc(m.body).replace(/\n/g,'<br>') : ''}${attachmentsHtml}</div>${deleteBtn}</div>
+          <div class="msg-bubble-row"><div class="msg-bubble ${bubbleClass}">${m.body ? renderBody(m.body, isTask) : ''}${attachmentsHtml}</div>${deleteBtn}</div>
           <div class="msg-meta">${esc(m.senderName || '')} · ${relTime(m.createdAt)}</div>
         </div>`;
       }).join('');
