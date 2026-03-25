@@ -1082,11 +1082,14 @@
   var _urlParams = new URLSearchParams(window.location.search);
   var _instanceParam = _urlParams.get('instance');
   if (_instanceParam) {
+    // Hide list immediately to prevent flash
+    showBoard();
+    document.getElementById('kanban-wrap').innerHTML = '<div class="board-empty"><p style="color:var(--muted)">Loading…</p></div>';
     api('GET', '/instances/' + _instanceParam).then(function(inst) {
-      if (!inst || !inst.template_id) return;
+      if (!inst || !inst.template_id) { showList(); return; }
       currentYear = parseInt(inst.tax_year) || currentYear;
       openPipeline(inst.template_id);
-    }).catch(function() {});
+    }).catch(function() { showList(); });
   }
 
 })();
