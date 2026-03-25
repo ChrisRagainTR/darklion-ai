@@ -285,7 +285,7 @@
     if (body !== undefined) opts.body = JSON.stringify(body);
     return fetch('/api/pipelines' + path, opts).then(function(r) {
       if (r.status === 401) { localStorage.removeItem('dl_token'); window.location.replace('/login'); throw new Error('Unauthorized'); }
-      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Request failed'); });
+      if (!r.ok) return r.text().then(function(t) { var msg; try { msg = JSON.parse(t).error; } catch(e) { msg = r.status === 503 ? 'Server is starting up, please try again in a moment' : (t.slice(0,120) || 'Request failed'); } throw new Error(msg); });
       return r.json();
     });
   }

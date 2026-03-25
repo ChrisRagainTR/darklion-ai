@@ -378,7 +378,7 @@
     if (body !== undefined) opts.body = JSON.stringify(body);
     return fetch('/api/pipelines' + path, opts).then(function(r) {
       if (r.status === 401) { localStorage.removeItem('dl_token'); window.location.replace('/login'); throw new Error('Unauthorized'); }
-      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Request failed'); });
+      if (!r.ok) return r.text().then(function(t) { var msg; try { msg = JSON.parse(t).error; } catch(e2) { msg = r.status === 503 ? 'Server is starting up, please try again' : (t.slice(0,120) || 'Request failed'); } throw new Error(msg); });
       return r.json();
     });
   }
@@ -386,7 +386,7 @@
     var opts = { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } };
     if (body !== undefined) opts.body = JSON.stringify(body);
     return fetch('/api/pipeline-triggers' + path, opts).then(function(r) {
-      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Request failed'); });
+      if (!r.ok) return r.text().then(function(t) { var msg; try { msg = JSON.parse(t).error; } catch(e2) { msg = r.status === 503 ? 'Server is starting up, please try again' : (t.slice(0,120) || 'Request failed'); } throw new Error(msg); });
       return r.json();
     });
   }
@@ -394,7 +394,7 @@
     var opts = { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } };
     if (body !== undefined) opts.body = JSON.stringify(body);
     return fetch('/api/pipeline-actions' + path, opts).then(function(r) {
-      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Request failed'); });
+      if (!r.ok) return r.text().then(function(t) { var msg; try { msg = JSON.parse(t).error; } catch(e2) { msg = r.status === 503 ? 'Server is starting up, please try again' : (t.slice(0,120) || 'Request failed'); } throw new Error(msg); });
       return r.json();
     });
   }
@@ -631,7 +631,7 @@
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ is_terminal: isTerminal })
     }).then(function(r) {
-      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Failed'); });
+      if (!r.ok) return r.text().then(function(t) { var msg; try { msg = JSON.parse(t).error; } catch(e2) { msg = r.status === 503 ? 'Server is starting up, please try again' : (t.slice(0,120) || 'Failed'); } throw new Error(msg); });
       var stage = stages.find(function(s) { return s.id === stageId; });
       if (stage) stage.is_terminal = isTerminal;
       // Update label class
