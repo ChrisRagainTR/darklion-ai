@@ -476,7 +476,13 @@ function switchTab(tab) {
   msgBtn.classList.toggle('active', tab === 'messages');
   taskBtn.classList.toggle('active', tab === 'tasks');
   taskBtn.classList.toggle('active-task', tab === 'tasks');
+  activeThreadId = null; // clear active so first item auto-loads
   renderInbox();
+  // Auto-load first thread in the new tab
+  const tabThreads = tab === 'tasks'
+    ? allThreads.filter(t => t.hasTaskMessages && t.category === 'internal')
+    : allThreads.filter(t => !(t.hasTaskMessages && t.category === 'internal'));
+  if (tabThreads.length) loadThread(tabThreads[0].id);
 }
 
 function updateTabCounts() {
