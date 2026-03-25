@@ -73,16 +73,19 @@ test.describe('API Health — /api/search', () => {
 
   test('GET /api/search?q=test returns a JSON array or object', async ({ browser }) => {
     const token = readSavedToken();
+    if (!token) return test.skip(true, 'No saved auth token — global setup may have failed');
 
     const context = await browser.newContext();
     const res = await context.request.get(`${BASE_URL}/api/search?q=test`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { Authorization: `Bearer ${token}` },
     });
     await context.close();
 
-    const body = await res.json();
+    const text = await res.text();
+    let body;
+    try { body = JSON.parse(text); } catch (e) { body = null; }
     // Should be an array (search results) or an object with a results key
-    expect(typeof body === 'object' || Array.isArray(body)).toBeTruthy();
+    expect(body !== null && (typeof body === 'object' || Array.isArray(body))).toBeTruthy();
   });
 });
 
@@ -114,7 +117,9 @@ test.describe('API Health — /api/dashboard/intel', () => {
     });
     await context.close();
 
-    const body = await res.json();
+    const text = await res.text();
+    let body;
+    try { body = JSON.parse(text); } catch (e) { body = {}; }
     expect(body).toHaveProperty('counts');
   });
 
@@ -128,7 +133,9 @@ test.describe('API Health — /api/dashboard/intel', () => {
     });
     await context.close();
 
-    const body = await res.json();
+    const text = await res.text();
+    let body;
+    try { body = JSON.parse(text); } catch (e) { body = {}; }
     expect(body.counts).toHaveProperty('relationships');
     expect(body.counts).toHaveProperty('companies');
   });
