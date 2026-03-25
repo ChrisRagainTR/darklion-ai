@@ -277,9 +277,18 @@ async function executeStaffTask(action, firmId, entityType, entityId, entityName
   };
 
   const taskName = applyMergeTags(taskNameTemplate, tags);
-  const jobSuffix = jobId ? `&job=${jobId}` : '';
-  const pipelineLink = `/pipelines?instance=${pipelineInstanceId}${jobSuffix}`;
-  const messageBody = `📋 ${taskName} — ${entityName}\n\n[View in Pipeline →](${pipelineLink})`;
+
+  // Link to the entity's CRM page — more useful than the pipeline board
+  let entityLink = `/pipelines?instance=${pipelineInstanceId}`;
+  if (entityType === 'person') {
+    entityLink = `/crm/person/${entityId}`;
+  } else if (entityType === 'company') {
+    entityLink = `/crm/company/${entityId}`;
+  } else if (entityType === 'relationship') {
+    entityLink = `/crm/relationship/${entityId}`;
+  }
+
+  const messageBody = `📋 ${taskName} — ${entityName}\n\n[View ${entityName} →](${entityLink})`;
 
   // Find a person to anchor the thread to (required by schema)
   let anchorPerson = await resolveAnyPersonForEntity(entityType, entityId, firmId);
