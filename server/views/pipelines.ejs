@@ -519,8 +519,12 @@
       ? '<div style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem;opacity:0.7;">🏁 Archiving tonight at 10 PM</div>'
       : '';
 
+    var invoiceBadge = job.billing_method === 'client_invoice'
+      ? '<span style="display:inline-block;margin-left:0.4rem;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.62rem;font-weight:700;color:#fff;background:rgba(74,158,255,0.75);letter-spacing:0.03em;vertical-align:middle;line-height:1.5;">INVOICE</span>'
+      : '';
+
     return '<div class="job-card" data-job-id="' + job.id + '" draggable="true" onclick="openPanel(' + job.id + ')"' + statusAttr + '>' +
-      '<div class="job-name">' + pill + name + '</div>' +
+      '<div class="job-name">' + pill + name + invoiceBadge + '</div>' +
       terminalNote +
       updatesHtml +
       '<div class="job-meta" style="margin-top:0.35rem;">' +
