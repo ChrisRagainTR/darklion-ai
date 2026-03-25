@@ -706,8 +706,6 @@
           (h.note ? '<br><em>' + esc(h.note) + '</em>' : '') + '</div></div>';
       }).join('') : '<p style="color:var(--muted);font-size:0.8rem;">No history yet.</p>';
 
-      var dueVal = job.due_date ? job.due_date.split('T')[0] : '';
-
       qs('#panel-body').innerHTML =
         '<div class="panel-field"><label>Client</label>' +
           '<a class="panel-entity-link" href="' + entityUrl(job.entity_type, job.entity_id) + '" target="_blank">' + esc(job.entity_name || '#' + job.entity_id) + '</a>' +
@@ -721,13 +719,8 @@
           '<option value="under_extension"' + (job.job_status==='under_extension' ? ' selected' : '') + '>🔵 Under Extension</option>' +
           '<option value="on_hold"' + (job.job_status==='on_hold' ? ' selected' : '') + '>⚫ On Hold</option>' +
         '</select></div>' +
-        '<div class="panel-field"><label>Priority</label><select id="pf-priority" onchange="panelSave(' + jobId + ')">' +
-          '<option value="normal"' + (job.priority==='normal' ? ' selected' : '') + '>Normal</option>' +
-          '<option value="high"' + (job.priority==='high' ? ' selected' : '') + '>High</option>' +
-          '<option value="urgent"' + (job.priority==='urgent' ? ' selected' : '') + '>Urgent</option>' +
-        '</select></div>' +
         '<div class="panel-field"><label>Assigned To</label><select id="pf-assigned" onchange="panelSave(' + jobId + ')">' + teamOpts + '</select></div>' +
-        '<div class="panel-field"><label>Due Date</label><input type="date" id="pf-due" value="' + dueVal + '" onchange="panelSave(' + jobId + ')" /></div>' +
+        '<div class="panel-field"><label>Notes</label><textarea id="pf-notes" rows="10" onblur="panelSave(' + jobId + ')" style="width:100%;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.5rem 0.65rem;border-radius:6px;font-size:0.84rem;resize:vertical;min-height:160px;outline:none;font-family:inherit;line-height:1.5;">' + esc(job.notes || '') + '</textarea></div>' +
         '<div class="section-label">Updates</div>' +
         '<div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">' +
           '<input type="text" id="pf-update-input" placeholder="Add an update…" style="flex:1;background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.45rem 0.65rem;border-radius:6px;font-size:0.85rem;outline:none;" onkeydown="if(event.key===\'Enter\')postUpdate(' + jobId + ')" />' +
@@ -752,12 +745,10 @@
   };
 
   window.panelSave = function(jobId) {
-    var priority = document.getElementById('pf-priority') ? document.getElementById('pf-priority').value : null;
     var assigned = document.getElementById('pf-assigned') ? document.getElementById('pf-assigned').value : null;
-    var due = document.getElementById('pf-due') ? document.getElementById('pf-due').value : null;
-    var notes = null; // notes replaced by updates feed
+    var notes = document.getElementById('pf-notes') ? document.getElementById('pf-notes').value : null;
     var status = document.getElementById('pf-status') ? document.getElementById('pf-status').value : 'active';
-    api('PUT', '/jobs/' + jobId, { priority: priority, assigned_to: assigned || null, due_date: due || null, notes: notes, job_status: status })
+    api('PUT', '/jobs/' + jobId, { assigned_to: assigned || null, notes: notes, job_status: status })
       .then(function() { return loadBoard(); })
       .catch(function(err) { console.error('Panel save error:', err); });
   };
