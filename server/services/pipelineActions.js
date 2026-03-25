@@ -164,6 +164,7 @@ async function executeStageActions(firmId, stageId, pipelineInstanceId, entityTy
     [firmId, pipelineInstanceId, stageId]
   );
 
+  console.log(`[pipelineActions] stage ${stageId} instance ${pipelineInstanceId}: ${actions.length} action(s) found`);
   if (!actions.length) return [];
 
   // 2. Resolve entity name once
@@ -196,7 +197,7 @@ async function executeStageActions(firmId, stageId, pipelineInstanceId, entityTy
         executed.push({ id: action.id, type: 'staff_task', ok: true });
       }
     } catch (err) {
-      console.error(`[pipelineActions] action ${action.id} failed (non-fatal):`, err.message);
+      console.error(`[pipelineActions] action ${action.id} (${action.action_type}) failed:`, err.message, err.stack?.split('\n').slice(0,3).join(' | '));
       executed.push({ id: action.id, type: action.action_type, ok: false, error: err.message });
     }
   }
