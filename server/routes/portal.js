@@ -965,7 +965,7 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
         [id]
       );
 
-      // Fetch delivery info for notifications and pipeline advance
+      // Fetch delivery info — get person via taxpayer signer row (td has no person_id column)
       const { rows: deliveryRows } = await pool.query(
         `SELECT td.*, co.company_name, f.email AS firm_email, f.name AS firm_name,
                 p.first_name, p.last_name, p.email AS person_email,
@@ -973,7 +973,8 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
          FROM tax_deliveries td
          LEFT JOIN companies co ON co.id = td.company_id
          JOIN firms f ON f.id = td.firm_id
-         LEFT JOIN people p ON p.id = td.person_id
+         LEFT JOIN tax_delivery_signers tds_p ON tds_p.delivery_id = td.id AND tds_p.signer_role = 'taxpayer'
+         LEFT JOIN people p ON p.id = tds_p.person_id
          WHERE td.id = $1`,
         [id]
       );
