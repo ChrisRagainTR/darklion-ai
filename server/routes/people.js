@@ -13,6 +13,9 @@ function sanitizePerson(row) {
   const person = { ...row };
   delete person.ssn_encrypted;
   delete person.ssn_last4;
+  // Expose whether a password actually exists (without exposing the hash)
+  person.portal_has_password = !!row.portal_password_hash;
+  person.spouse_portal_has_password = !!row.spouse_portal_password_hash;
   delete person.portal_password_hash;
   delete person.spouse_portal_password_hash;
   // Decrypt DOB for staff display
