@@ -737,16 +737,16 @@ router.get('/tax-deliveries', async (req, res) => {
               tds.approved_at, tds.signed_at, tds.needs_changes_at, tds.needs_changes_note
        FROM tax_deliveries td
        LEFT JOIN companies co ON co.id = td.company_id
-       LEFT JOIN tax_delivery_signers tds ON tds.delivery_id = td.id AND tds.person_id = $1
+       LEFT JOIN tax_delivery_signers tds ON tds.delivery_id = td.id AND tds.person_id = $1 AND tds.signer_role = $2
        WHERE td.status IN ('sent','approved','needs_changes','signed')
          AND (
-           tds.person_id = $1
+           EXISTS (SELECT 1 FROM tax_delivery_signers WHERE delivery_id = td.id AND person_id = $1)
            OR td.company_id IN (
              SELECT company_id FROM person_company_access WHERE person_id = $1
            )
          )
        ORDER BY td.id, td.created_at DESC`,
-      [personId]
+      [personId, req.portal.signerRole || 'taxpayer']
     );
     res.json(rows);
   } catch (err) {
