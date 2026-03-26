@@ -515,8 +515,8 @@ let editingRelId = null;
 let editingPersonId = null;
 
 // Searchable select state
-const ssData = { rel: [], spouse: [] };
-const ssFiltered = { rel: [], spouse: [] };
+const ssData = { rel: [] };
+const ssFiltered = { rel: [] };
 
 // =====================================================================
 //  INIT
@@ -1034,8 +1034,6 @@ function openNewPerson(prefilledRelId = null, prefilledRelName = null) {
   document.getElementById('person-form-spouse-email').value = '';
   document.getElementById('person-form-spouse-portal').checked = false;
   document.getElementById('person-form-error').style.display = 'none';
-  ssFiltered.spouse = [];
-  renderSearchableOptions('spouse');
   openModal('person-modal');
   setTimeout(() => document.getElementById('person-form-fname').focus(), 100);
 }
