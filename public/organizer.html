@@ -366,7 +366,7 @@
       <div class="field-grid">
         <div class="field-wrap">
           <label class="field-label">First Name</label>
-          <input class="field-input prefilled" type="text" value="Jacob">
+          <input class="field-input prefilled" type="text" id="field-first-name" value="Jacob">
         </div>
         <div class="field-wrap">
           <label class="field-label">Last Name</label>
@@ -374,15 +374,15 @@
         </div>
         <div class="field-wrap">
           <label class="field-label">Your Email</label>
-          <input class="field-input prefilled" type="email" value="jake@skaled.com">
+          <input class="field-input prefilled" type="email" id="field-email" value="jake@skaled.com">
         </div>
         <div class="field-wrap">
           <label class="field-label">Phone</label>
-          <input class="field-input prefilled" type="tel" value="480-334-2299">
+          <input class="field-input prefilled" type="tel" id="field-phone" value="480-334-2299">
         </div>
         <div class="field-wrap span-2">
           <label class="field-label">Home Address</label>
-          <input class="field-input prefilled" type="text" value="6205 Diamond Head Circle, Austin, TX 78746">
+          <input class="field-input prefilled" type="text" id="field-address" value="6205 Diamond Head Circle, Austin, TX 78746">
         </div>
       </div>
     </div>
@@ -393,7 +393,7 @@
       <div class="field-grid">
         <div class="field-wrap">
           <label class="field-label">Spouse First Name</label>
-          <input class="field-input prefilled" type="text" value="Jennifer">
+          <input class="field-input prefilled" type="text" id="field-spouse-first" value="Jennifer">
         </div>
         <div class="field-wrap">
           <label class="field-label">Spouse Last Name</label>
@@ -401,7 +401,7 @@
         </div>
         <div class="field-wrap">
           <label class="field-label">Spouse Email</label>
-          <input class="field-input prefilled" type="email" value="jenni.l.weber@gmail.com">
+          <input class="field-input prefilled" type="email" id="field-spouse-email" value="jenni.l.weber@gmail.com">
         </div>
         <div class="field-wrap">
           <label class="field-label">Spouse Phone</label>
@@ -1125,8 +1125,237 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // Initialize — everything starts pending
-  updateProgress();
+  // ── LIVE API WIRE-UP ──────────────────────────────────────
+  // Pull real organizer data from the portal API and populate the page.
+  // Falls back to hardcoded Dunlap demo data if no token or no organizer found.
+
+  const YEAR = new URLSearchParams(location.search).get('year') || '2025';
+  const token = localStorage.getItem('portalToken');
+
+  async function portalApi(path) {
+    const r = await fetch(path, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+  }
+
+  function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function populatePersonInfo(me) {
+    // Step 1 — fill in name, email, address fields from /portal/me
+    const set = (sel, val) => { const el = document.querySelector(sel); if (el && val) { el.value = val; el.classList.add('prefilled'); } };
+    set('#field-first-name', me.firstName);
+    set('#field-last-name', me.lastName);
+    set('#field-email', me.email);
+    set('#field-phone', me.phone);
+    set('#field-address', me.address);
+    if (me.spouseName) {
+      const parts = me.spouseName.split(' ');
+      set('#field-spouse-first', parts[0]);
+      set('#field-spouse-last', parts.slice(1).join(' '));
+    }
+    set('#field-spouse-email', me.spouseEmail);
+  }
+
+  const SECTION_LABELS = {
+    'w2': 'Form W-2 · Wages',
+    '1099-r': 'Form 1099-R · Retirement',
+    '1099-div': 'Form 1099-DIV · Dividends',
+    '1099-int': 'Form 1099-INT · Interest',
+    '1099-nec': 'Form 1099-NEC · Non-Employee Compensation',
+    '1099-misc': 'Form 1099-MISC · Miscellaneous',
+    '1099-g': 'Form 1099-G · State Refund',
+    'k1': 'Schedule K-1',
+    'schedule-c': 'Schedule C · Business',
+    '1098': 'Form 1098 · Mortgage Interest',
+    'childcare': 'Childcare / Tuition',
+    'other': 'Other',
+  };
+
+  const SECTION_ORDER_LIST = ['w2','1099-r','1099-div','1099-int','1099-nec','1099-misc','1099-g','k1','schedule-c','1098','childcare','other'];
+
+  function buildChecklistFromItems(items) {
+    // Group by section
+    const groups = {};
+    for (const item of items) {
+      if (!groups[item.section]) groups[item.section] = [];
+      groups[item.section].push(item);
+    }
+
+    // Build left and right column sections
+    const leftSections = ['w2','1099-r','1099-div','1099-int','1099-nec','1099-misc','1099-g'];
+    const rightSections = ['k1','schedule-c','1098','childcare','other'];
+
+    function renderSection(sectionKey) {
+      const sectionItems = groups[sectionKey];
+      if (!sectionItems || !sectionItems.length) return '';
+      const title = SECTION_LABELS[sectionKey] || sectionKey;
+      const rows = sectionItems.map(item => {
+        const id = `ci-${item.id}`;
+        const acct = item.account_number ? ` (acct ···${item.account_number.replace(/\*/g,'').slice(-4)})` : '';
+        const amt = item.prior_year_amount ? ` · $${Number(item.prior_year_amount).toLocaleString()} in 2024` : '';
+        const ein = item.ein ? ` · EIN ${item.ein}` : '';
+        const ownerLabel = item.owner === 'taxpayer' ? ' · Taxpayer' : item.owner === 'spouse' ? ' · Spouse' : '';
+        const typeLabel = escH(`${SECTION_LABELS[item.section] || item.section}${ownerLabel}${ein}${amt}`);
+
+        if (item.sentinel_provides) {
+          return `<div class="checklist-item sentinel-provides">
+            <div class="ci-check uploaded" style="background:var(--gold);border-color:var(--gold);">🏢</div>
+            <div class="ci-info">
+              <div class="ci-payer">${escH(item.payer_name)}${acct}</div>
+              <div class="ci-type">${typeLabel}</div>
+            </div>
+            <div class="ci-actions"><span class="ci-sentinel-badge">🏢 Sentinel Provides</span></div>
+          </div>`;
+        }
+
+        const isUploaded = item.status === 'uploaded';
+        const isNTY = item.status === 'not_this_year';
+        const itemClass = isUploaded ? 'checklist-item uploaded' : isNTY ? 'checklist-item na' : 'checklist-item';
+        const checkClass = isUploaded ? 'ci-check uploaded' : isNTY ? 'ci-check na' : 'ci-check';
+        const checkText = isUploaded ? '✓' : isNTY ? '–' : '';
+        const statusClass = isUploaded ? 'ci-status uploaded' : isNTY ? 'ci-status na' : 'ci-status pending';
+        const statusText = isUploaded ? '✓ Uploaded' : isNTY ? 'Not This Year' : 'Pending';
+        const actions = isUploaded || isNTY
+          ? `<button class="ci-btn undo" onclick="undoItemById(${item.id},'${id}')">Undo</button>`
+          : `<button class="ci-btn upload" onclick="fakeUploadById(${item.id},'${id}')">⬆ Upload</button>
+             <button class="ci-btn nty-btn" onclick="markNTYById(${item.id},'${id}')">Not This Year</button>`;
+
+        if (isUploaded) itemStates[id] = 'uploaded';
+        if (isNTY) itemStates[id] = 'nty';
+
+        return `<div class="checklist-item ${isUploaded?'uploaded':isNTY?'na':''}" id="${id}">
+          <div class="${checkClass}" onclick="cycleItemById(${item.id},'${id}')">${checkText}</div>
+          <div class="ci-info">
+            <div class="ci-payer">${escH(item.payer_name)}${acct}</div>
+            <div class="ci-type">${typeLabel}</div>
+          </div>
+          <div class="${statusClass}" id="${id}-status">${statusText}</div>
+          <div class="ci-actions">${actions}</div>
+        </div>`;
+      }).join('');
+
+      return `<div class="checklist-section">
+        <div class="checklist-section-title">${escH(title)}</div>
+        ${rows}
+      </div>`;
+    }
+
+    const leftHtml = leftSections.map(renderSection).join('');
+    const rightHtml = rightSections.map(renderSection).join('');
+
+    // Replace the checklist grid content
+    const leftCol = document.querySelector('.checklist-grid > div:first-child');
+    const rightCol = document.querySelector('.checklist-grid > div:last-child');
+    if (leftCol) leftCol.innerHTML = leftHtml;
+    if (rightCol) rightCol.innerHTML = rightHtml;
+
+    // Update total item count
+    const actionable = items.filter(i => !i.sentinel_provides);
+    window.TOTAL_ITEMS_LIVE = actionable.length;
+  }
+
+  // API-backed item actions
+  async function apiUpdateItem(itemId, status) {
+    if (!token) return;
+    try {
+      await fetch(`/portal/organizer/portal/${YEAR}/item/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+    } catch(e) { console.warn('Item update failed:', e); }
+  }
+
+  function fakeUploadById(itemId, domId) {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = '.pdf,.jpg,.jpeg,.png,.heic';
+    input.onchange = async () => {
+      if (!input.files.length) return;
+      const item = document.getElementById(domId);
+      if (!item) return;
+      item.className = 'checklist-item uploaded';
+      item.querySelector('.ci-check').className = 'ci-check uploaded';
+      item.querySelector('.ci-check').textContent = '✓';
+      document.getElementById(domId+'-status').className = 'ci-status uploaded';
+      document.getElementById(domId+'-status').textContent = '✓ ' + input.files[0].name;
+      item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn undo" onclick="undoItemById(${itemId},'${domId}')">Remove</button>`;
+      itemStates[domId] = 'uploaded';
+      await apiUpdateItem(itemId, 'uploaded');
+      updateProgressLive();
+    };
+    input.click();
+  }
+
+  function markNTYById(itemId, domId) {
+    const item = document.getElementById(domId);
+    if (!item) return;
+    item.className = 'checklist-item na';
+    item.querySelector('.ci-check').className = 'ci-check na';
+    item.querySelector('.ci-check').textContent = '–';
+    document.getElementById(domId+'-status').className = 'ci-status na';
+    document.getElementById(domId+'-status').textContent = 'Not This Year';
+    item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn undo" onclick="undoItemById(${itemId},'${domId}')">Undo</button>`;
+    itemStates[domId] = 'nty';
+    apiUpdateItem(itemId, 'not_this_year');
+    updateProgressLive();
+  }
+
+  function undoItemById(itemId, domId) {
+    const item = document.getElementById(domId);
+    if (!item) return;
+    item.className = 'checklist-item';
+    item.querySelector('.ci-check').className = 'ci-check';
+    item.querySelector('.ci-check').textContent = '';
+    document.getElementById(domId+'-status').className = 'ci-status pending';
+    document.getElementById(domId+'-status').textContent = 'Pending';
+    item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn upload" onclick="fakeUploadById(${itemId},'${domId}')">⬆ Upload</button><button class="ci-btn nty-btn" onclick="markNTYById(${itemId},'${domId}')">Not This Year</button>`;
+    delete itemStates[domId];
+    apiUpdateItem(itemId, 'pending');
+    updateProgressLive();
+  }
+
+  function cycleItemById(itemId, domId) {
+    if (itemStates[domId]) undoItemById(itemId, domId);
+    else fakeUploadById(itemId, domId);
+  }
+
+  function updateProgressLive() {
+    // Override TOTAL_ITEMS with live count if available
+    if (window.TOTAL_ITEMS_LIVE) window.TOTAL_ITEMS = window.TOTAL_ITEMS_LIVE;
+    updateProgress();
+  }
+
+  // ── BOOT ──────────────────────────────────────────────────
+  async function bootOrganizer() {
+    if (!token) { updateProgress(); return; } // demo mode
+
+    try {
+      // Load person info for Step 1
+      const me = await portalApi('/portal/me');
+      populatePersonInfo(me);
+
+      // Load organizer items for Step 3
+      const orgData = await portalApi(`/portal/organizer/portal/${YEAR}`);
+      if (orgData.items && orgData.items.length) {
+        // Clear existing hardcoded itemStates
+        Object.keys(itemStates).forEach(k => delete itemStates[k]);
+        buildChecklistFromItems(orgData.items);
+
+        // Update page title with real client name
+        const nameEl = document.querySelector('.section-title');
+        if (nameEl && me.firstName) {
+          document.querySelector('#step-3 .section-title').textContent = `Your ${YEAR} Documents`;
+        }
+      }
+    } catch(e) {
+      console.warn('Could not load live organizer data:', e.message);
+      // Fall back to hardcoded demo data — updateProgress already called below
+    }
+
+    updateProgress();
+  }
+
+  bootOrganizer();
 </script>
 
 </body>
