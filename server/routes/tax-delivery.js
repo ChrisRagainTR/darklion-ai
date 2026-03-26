@@ -155,9 +155,23 @@ router.post('/', async (req, res) => {
     ])];
     for (const pid of allSigners) {
       await pool.query(
-        'INSERT INTO tax_delivery_signers (delivery_id, person_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        [delivery.id, pid]
+        'INSERT INTO tax_delivery_signers (delivery_id, person_id, signer_role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+        [delivery.id, pid, 'taxpayer']
       );
+    }
+
+    // Auto-add spouse signer for MFJ with active spouse portal
+    for (const pid of allSigners) {
+      const { rows: [person] } = await pool.query(
+        'SELECT filing_status, spouse_portal_enabled, spouse_email FROM people WHERE id = $1',
+        [parseInt(pid)]
+      );
+      if (person && person.filing_status === 'mfj' && person.spouse_portal_enabled && person.spouse_email) {
+        await pool.query(
+          'INSERT INTO tax_delivery_signers (delivery_id, person_id, signer_role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+          [delivery.id, parseInt(pid), 'spouse']
+        );
+      }
     }
 
     res.status(201).json(delivery);

@@ -571,19 +571,31 @@
       </select>
     </div>
     <div class="form-group"><label>Filing Status</label>
-      <select class="form-control" id="ef-filing">
+      <select class="form-control" id="ef-filing" onchange="efFilingChanged(this.value)">
         <option value="">— Select —</option>
-        <option value="single">Single</option><option value="married_joint">Married Filing Jointly</option>
+        <option value="single">Single</option><option value="mfj">Married Filing Jointly</option>
         <option value="married_separate">Married Filing Separately</option><option value="head_household">Head of Household</option>
         <option value="widow">Qualifying Widow(er)</option>
       </select>
     </div>
-    <div class="form-group" style="position:relative;">
-      <label>Spouse <span style="font-weight:400;color:var(--muted);font-size:0.78rem;">(must be in same relationship)</span></label>
-      <input type="text" class="form-control" id="ef-spouse-search" placeholder="Search by name…" autocomplete="off"
-        oninput="efSpouseFilter(this.value)" onfocus="efSpouseOpen()" onblur="setTimeout(efSpouseClose,150)">
-      <input type="hidden" id="ef-spouse-id">
-      <div id="ef-spouse-options" style="display:none;position:absolute;z-index:200;background:var(--charcoal);border:1px solid var(--border);border-radius:8px;width:100%;max-height:180px;overflow-y:auto;top:calc(100% - 2px);box-shadow:0 4px 16px rgba(0,0,0,0.4);"></div>
+    <!-- Spouse section - shown only when filing_status = mfj -->
+    <div id="ef-spouse-section" style="display:none;">
+      <div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin:1rem 0 0.5rem;text-transform:uppercase;letter-spacing:0.05em;">Spouse / MFJ</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Spouse Name</label>
+          <input type="text" class="form-control" id="ef-spouse-name" placeholder="Full name">
+        </div>
+        <div class="form-group">
+          <label>Spouse Email</label>
+          <input type="email" class="form-control" id="ef-spouse-email" placeholder="spouse@email.com">
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+          <input type="checkbox" id="ef-spouse-portal-enabled"> Enable spouse portal access
+        </label>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
@@ -935,22 +947,26 @@
 
     // ── CENTER COL: Spouse ──
     const spouseEl = document.getElementById('overview-spouse-panel');
-    if (p.spouse) {
-      const sp = p.spouse;
-      const spInitials = ((sp.first_name||'').charAt(0)+(sp.last_name||'').charAt(0)).toUpperCase() || '?';
-      spouseEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Spouse</div>
+    if (p.filing_status === 'mfj' && p.spouse_name) {
+      const spInitials = p.spouse_name.split(' ').map(w => w.charAt(0)).join('').toUpperCase().slice(0,2) || '?';
+      const portalBadge = p.spouse_portal_enabled
+        ? `<span style="font-size:0.7rem;background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.1rem 0.35rem;font-weight:600;">Portal Active</span>`
+        : `<button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:0.2rem 0.6rem;" onclick="sendSpousePortalInvite()">Send Spouse Invite</button>`;
+      spouseEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Spouse / MFJ</div>
         <div style="background:var(--charcoal);border:1px solid var(--border);border-radius:8px;padding:0.75rem;display:flex;align-items:flex-start;gap:0.65rem;">
           <div style="width:38px;height:38px;border-radius:50%;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:0.95rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${spInitials}</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.2rem;"><a href="/crm/person/${sp.id||sp.person_id}" style="color:var(--text);text-decoration:none;">${esc((sp.first_name||'')+' '+(sp.last_name||'')).trim()}</a></div>
-            ${sp.email ? `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.15rem;">${esc(sp.email)}</div>` : ''}
-            ${sp.phone ? `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.15rem;">${fmtPhone(sp.phone)}</div>` : ''}
-            ${sp.portal_enabled ? `<span style="font-size:0.7rem;background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.1rem 0.35rem;font-weight:600;">Portal Active</span>` : ''}
+            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.2rem;">${esc(p.spouse_name)}</div>
+            ${p.spouse_email ? `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.3rem;">${esc(p.spouse_email)}</div>` : ''}
+            ${portalBadge}
           </div>
         </div>`;
+    } else if (p.filing_status === 'mfj') {
+      spouseEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Spouse / MFJ</div>
+        <div style="color:var(--muted);font-size:0.84rem;font-style:italic;">No spouse info — add via Edit</div>`;
     } else {
       spouseEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Spouse</div>
-        <div style="color:var(--muted);font-size:0.84rem;font-style:italic;">No spouse linked — set via Edit</div>`;
+        <div style="color:var(--muted);font-size:0.84rem;font-style:italic;">N/A — not filing MFJ</div>`;
     }
 
     // ── CENTER COL: Tax Deliveries ──
@@ -1404,64 +1420,6 @@
     } catch(e) { toast('Failed to save notes', 'error'); }
   }
 
-    // ── Spouse search dropdown (edit modal) ──
-  let efSpousePeople = [];
-
-  async function efSpouseLoadPeople() {
-    if (!personData || !personData.relationship_id) { efSpousePeople = []; return; }
-    try {
-      const res = await apiFetch(`/api/relationships/${personData.relationship_id}`);
-      if (!res.ok) { efSpousePeople = []; return; }
-      const data = await res.json();
-      // Exclude self
-      efSpousePeople = (data.people || []).filter(p => p.id !== parseInt(personId));
-    } catch(e) { efSpousePeople = []; }
-  }
-
-  function efSpouseFilter(q) {
-    const filtered = q
-      ? efSpousePeople.filter(p => (`${p.first_name} ${p.last_name}`).toLowerCase().includes(q.toLowerCase()))
-      : efSpousePeople;
-    efSpouseRender(filtered);
-    efSpouseOpen();
-    // If the search box is cleared, also clear the hidden id
-    if (!q.trim()) document.getElementById('ef-spouse-id').value = '';
-  }
-
-  function efSpouseRender(list) {
-    const el = document.getElementById('ef-spouse-options');
-    if (!list.length) {
-      el.innerHTML = `<div style="padding:0.6rem 0.9rem;color:var(--muted);font-size:0.84rem;font-style:italic;">No other people in this relationship</div>`;
-    } else {
-      el.innerHTML = list.map(p =>
-        `<div style="padding:0.55rem 0.9rem;cursor:pointer;font-size:0.88rem;border-bottom:1px solid var(--border);"
-          onmousedown="efSpouseSelect(${p.id},'${esc((p.first_name||'')+' '+(p.last_name||''))}')"
-          onmouseover="this.style.background='rgba(201,168,76,0.1)'" onmouseout="this.style.background=''"
-        >${esc((p.first_name||'')+' '+(p.last_name||''))}</div>`
-      ).join('');
-    }
-  }
-
-  function efSpouseOpen() {
-    const el = document.getElementById('ef-spouse-options');
-    efSpouseRender(efSpousePeople);
-    el.style.display = 'block';
-  }
-
-  function efSpouseClose() {
-    document.getElementById('ef-spouse-options').style.display = 'none';
-  }
-
-  function efSpouseSelect(id, name) {
-    document.getElementById('ef-spouse-id').value = id;
-    document.getElementById('ef-spouse-search').value = name;
-    efSpouseClose();
-  }
-
-  function efSpouseClear() {
-    document.getElementById('ef-spouse-id').value = '';
-    document.getElementById('ef-spouse-search').value = '';
-  }
 
   // Move edit modal to document.body on init so it's outside .main stacking context
   (function() {
@@ -1477,14 +1435,20 @@
     document.getElementById('ef-phone').value = personData.phone || '';
     document.getElementById('ef-dob').value = personData.date_of_birth || '';
     document.getElementById('ef-billing-method').value = personData.billing_method || '';
-    document.getElementById('ef-filing').value = personData.filing_status || '';
-    document.getElementById('ef-spouse-id').value = personData.spouse_id || '';
-    document.getElementById('ef-spouse-search').value = personData.spouse
-      ? `${personData.spouse.first_name||''} ${personData.spouse.last_name||''}`.trim() : '';
+    const filingVal = personData.filing_status || '';
+    document.getElementById('ef-filing').value = filingVal;
+    document.getElementById('ef-spouse-name').value = personData.spouse_name || '';
+    document.getElementById('ef-spouse-email').value = personData.spouse_email || '';
+    document.getElementById('ef-spouse-portal-enabled').checked = !!personData.spouse_portal_enabled;
+    // Show/hide spouse section based on filing status
+    document.getElementById('ef-spouse-section').style.display = filingVal === 'mfj' ? '' : 'none';
     const m = document.getElementById('edit-modal');
     m.classList.remove('hidden');
     m.style.display = 'flex';
-    efSpouseLoadPeople().catch(() => {});
+  }
+
+  function efFilingChanged(val) {
+    document.getElementById('ef-spouse-section').style.display = val === 'mfj' ? '' : 'none';
   }
   function closeModal() {
     const m = document.getElementById('edit-modal');
@@ -1497,7 +1461,6 @@
     const errEl = document.getElementById('edit-error');
     errEl.style.display = 'none';
     btn.disabled = true; btn.textContent = 'Saving…';
-    const spouseIdRaw = document.getElementById('ef-spouse-id').value;
     const body = {
       first_name: document.getElementById('ef-fname').value.trim(),
       last_name: document.getElementById('ef-lname').value.trim(),
@@ -1506,7 +1469,9 @@
       date_of_birth: document.getElementById('ef-dob').value || null,
       billing_method: document.getElementById('ef-billing-method').value || null,
       filing_status: document.getElementById('ef-filing').value,
-      spouse_id: spouseIdRaw ? parseInt(spouseIdRaw) : null,
+      spouse_name: document.getElementById('ef-spouse-name').value.trim(),
+      spouse_email: document.getElementById('ef-spouse-email').value.trim(),
+      spouse_portal_enabled: document.getElementById('ef-spouse-portal-enabled').checked,
     };
     try {
       const res = await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify(body) });
@@ -1521,9 +1486,18 @@
 
   async function sendPortalInvite() {
     try {
-      const res = await apiFetch('/portal-auth/send-invite', { method: 'POST', body: JSON.stringify({ person_id: parseInt(personId) }) });
+      const res = await apiFetch('/portal-auth/send-invite', { method: 'POST', body: JSON.stringify({ personId: parseInt(personId) }) });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed');
       toast('Invite sent');
+      await loadPerson();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function sendSpousePortalInvite() {
+    try {
+      const res = await apiFetch('/portal-auth/send-invite', { method: 'POST', body: JSON.stringify({ personId: parseInt(personId), spouse: true }) });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      toast('Spouse invite sent');
       await loadPerson();
     } catch(e) { toast(e.message, 'error'); }
   }

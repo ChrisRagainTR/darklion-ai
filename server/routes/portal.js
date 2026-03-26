@@ -71,6 +71,7 @@ router.get('/me', async (req, res) => {
       portalEnabled: person.portal_enabled,
       lastLogin: person.portal_last_login_at,
       createdAt: person.created_at,
+      signerRole: req.portal.signerRole || 'taxpayer',
     });
   } catch (err) {
     console.error('Portal /me error:', err);

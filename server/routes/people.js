@@ -14,6 +14,7 @@ function sanitizePerson(row) {
   delete person.ssn_encrypted;
   delete person.ssn_last4;
   delete person.portal_password_hash;
+  delete person.spouse_portal_password_hash;
   // Decrypt DOB for staff display
   if (row.date_of_birth_encrypted) {
     try { person.date_of_birth = decrypt(row.date_of_birth_encrypted); } catch(e) { person.date_of_birth = null; }
@@ -59,11 +60,13 @@ router.post('/', async (req, res) => {
     email = '',
     phone = '',
     filing_status = '',
-    spouse_id = null,
     portal_enabled = false,
     stanford_tax_url = '',
     notes = '',
     date_of_birth,
+    spouse_name = '',
+    spouse_email = '',
+    spouse_portal_enabled = false,
   } = req.body;
 
   if (!relationship_id) return res.status(400).json({ error: 'relationship_id is required' });
@@ -82,15 +85,17 @@ router.post('/', async (req, res) => {
       INSERT INTO people (
         firm_id, relationship_id, first_name, last_name, email, phone,
         date_of_birth_encrypted,
-        filing_status, spouse_id, portal_enabled, stanford_tax_url, notes,
+        filing_status, portal_enabled, stanford_tax_url, notes,
+        spouse_name, spouse_email, spouse_portal_enabled,
         created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
       RETURNING *
     `, [
       firmId, relationship_id, first_name, last_name, email, phone,
       date_of_birth_encrypted,
-      filing_status, spouse_id, portal_enabled, stanford_tax_url, notes,
+      filing_status, portal_enabled, stanford_tax_url, notes,
+      spouse_name, spouse_email, spouse_portal_enabled,
     ]);
 
     res.status(201).json(sanitizePerson(rows[0]));
@@ -133,17 +138,6 @@ router.get('/:id', async (req, res) => {
 
     person.company_access = accessRows;
 
-    // Include spouse data if set
-    if (person.spouse_id) {
-      const { rows: spouseRows } = await pool.query(
-        'SELECT id, first_name, last_name, email, phone, filing_status, portal_enabled FROM people WHERE id = $1 AND firm_id = $2',
-        [person.spouse_id, firmId]
-      );
-      person.spouse = spouseRows[0] || null;
-    } else {
-      person.spouse = null;
-    }
-
     res.json(person);
   } catch (err) {
     console.error('GET /people/:id error:', err);
@@ -162,12 +156,14 @@ router.put('/:id', async (req, res) => {
     email,
     phone,
     filing_status,
-    spouse_id,
     portal_enabled,
     stanford_tax_url,
     notes,
     date_of_birth,
     billing_method,
+    spouse_name,
+    spouse_email,
+    spouse_portal_enabled,
   } = req.body;
 
   try {
@@ -197,14 +193,16 @@ router.put('/:id', async (req, res) => {
         email = COALESCE($4, email),
         phone = COALESCE($5, phone),
         filing_status = COALESCE($6, filing_status),
-        spouse_id = CASE WHEN $14::BOOLEAN THEN $7::INT ELSE spouse_id END,
-        portal_enabled = COALESCE($8, portal_enabled),
-        stanford_tax_url = COALESCE($9, stanford_tax_url),
-        notes = COALESCE($10, notes),
-        date_of_birth_encrypted = CASE WHEN $11::TEXT IS NOT NULL THEN $11 ELSE date_of_birth_encrypted END,
-        billing_method = COALESCE($15, billing_method),
+        portal_enabled = COALESCE($7, portal_enabled),
+        stanford_tax_url = COALESCE($8, stanford_tax_url),
+        notes = COALESCE($9, notes),
+        date_of_birth_encrypted = CASE WHEN $10::TEXT IS NOT NULL THEN $10 ELSE date_of_birth_encrypted END,
+        billing_method = COALESCE($13, billing_method),
+        spouse_name = CASE WHEN $14::BOOLEAN THEN $15 ELSE spouse_name END,
+        spouse_email = CASE WHEN $16::BOOLEAN THEN $17 ELSE spouse_email END,
+        spouse_portal_enabled = CASE WHEN $18::BOOLEAN THEN $19 ELSE spouse_portal_enabled END,
         updated_at = NOW()
-      WHERE id = $12 AND firm_id = $13
+      WHERE id = $11 AND firm_id = $12
       RETURNING *
     `, [
       relationship_id || null,
@@ -213,58 +211,22 @@ router.put('/:id', async (req, res) => {
       email !== undefined ? email : null,
       phone !== undefined ? phone : null,
       filing_status || null,
-      spouse_id !== undefined ? spouse_id : null,    // $7
-      portal_enabled !== undefined ? portal_enabled : null,
-      stanford_tax_url !== undefined ? stanford_tax_url : null,
-      notes !== undefined ? notes : null,
-      date_of_birth_encrypted !== undefined ? date_of_birth_encrypted : null,
-      id,
-      firmId,
-      spouse_id !== undefined,                        // $14: whether spouse_id was explicitly passed
-      billing_method !== undefined ? (billing_method || null) : null,  // $15
+      portal_enabled !== undefined ? portal_enabled : null,       // $7
+      stanford_tax_url !== undefined ? stanford_tax_url : null,   // $8
+      notes !== undefined ? notes : null,                          // $9
+      date_of_birth_encrypted !== undefined ? date_of_birth_encrypted : null, // $10
+      id,                                                          // $11
+      firmId,                                                      // $12
+      billing_method !== undefined ? (billing_method || null) : null, // $13
+      spouse_name !== undefined,                                   // $14: was explicitly passed
+      spouse_name !== undefined ? (spouse_name || '') : '',        // $15
+      spouse_email !== undefined,                                  // $16
+      spouse_email !== undefined ? (spouse_email || '') : '',      // $17
+      spouse_portal_enabled !== undefined,                         // $18
+      spouse_portal_enabled !== undefined ? !!spouse_portal_enabled : false, // $19
     ]);
 
     const updated = rows[0];
-
-    // ── Bidirectional spouse linking ──
-    // If spouse_id is being explicitly set (including null to clear it):
-    if (spouse_id !== undefined) {
-      const prevSpouseId = existing[0].spouse_id;
-
-      // If we had an old spouse and it's changing, clear the reverse link on the old spouse
-      if (prevSpouseId && prevSpouseId !== spouse_id) {
-        await pool.query(
-          'UPDATE people SET spouse_id = NULL, updated_at = NOW() WHERE id = $1 AND firm_id = $2 AND spouse_id = $3',
-          [prevSpouseId, firmId, id]
-        );
-      }
-
-      // If setting a new spouse, set the reverse link on them too
-      if (spouse_id) {
-        await pool.query(
-          'UPDATE people SET spouse_id = $1, updated_at = NOW() WHERE id = $2 AND firm_id = $3',
-          [id, spouse_id, firmId]
-        );
-      }
-    }
-
-    // ── Bidirectional Stanford Tax URL sync ──
-    // If the URL was explicitly set (including cleared), sync it to the spouse too
-    // Check both directions: this person's spouse_id AND anyone who has this person as their spouse
-    if (stanford_tax_url !== undefined) {
-      const spouseId = updated.spouse_id;
-      if (spouseId) {
-        await pool.query(
-          'UPDATE people SET stanford_tax_url = $1, updated_at = NOW() WHERE id = $2 AND firm_id = $3',
-          [stanford_tax_url || null, spouseId, firmId]
-        );
-      }
-      // Also sync to anyone who lists this person as their spouse (reverse link)
-      await pool.query(
-        'UPDATE people SET stanford_tax_url = $1, updated_at = NOW() WHERE spouse_id = $2 AND firm_id = $3',
-        [stanford_tax_url || null, id, firmId]
-      );
-    }
 
     res.json(sanitizePerson(updated));
   } catch (err) {

@@ -34,7 +34,7 @@ function validatePassword(password) {
 }
 
 // --- Build portal JWT ---
-function buildPortalToken(person, firmId) {
+function buildPortalToken(person, firmId, signerRole = 'taxpayer') {
   return jwt.sign(
     {
       personId: person.id,
@@ -43,6 +43,7 @@ function buildPortalToken(person, firmId) {
       email: person.email,
       name: `${person.first_name} ${person.last_name}`.trim(),
       type: 'portal',
+      signerRole,
     },
     process.env.JWT_SECRET,
     { expiresIn: PORTAL_JWT_EXPIRES_IN }
@@ -65,27 +66,35 @@ router.post('/login', portalLoginLimiter, async (req, res) => {
     let params;
 
     if (firmSlug) {
-      // Firm-scoped lookup via slug
+      // Firm-scoped lookup via slug — matches primary OR spouse email
       query = `
-        SELECT p.*, f.name as firm_name, f.id as firm_id_val
+        SELECT p.*,
+          CASE WHEN LOWER(p.email) = LOWER($1) THEN 'taxpayer' ELSE 'spouse' END as signer_role,
+          f.name as firm_name, f.id as firm_id_val
         FROM people p
         JOIN firms f ON f.id = p.firm_id
-        WHERE LOWER(p.email) = $1
-          AND f.slug = $2
-          AND p.portal_enabled = true
-          AND p.portal_password_hash IS NOT NULL
+        WHERE f.slug = $2
+          AND (
+            (LOWER(p.email) = LOWER($1) AND p.portal_enabled = true AND p.portal_password_hash IS NOT NULL)
+            OR
+            (LOWER(p.spouse_email) = LOWER($1) AND p.spouse_portal_enabled = true AND p.spouse_portal_password_hash IS NOT NULL)
+          )
         LIMIT 1
       `;
       params = [email, firmSlug];
     } else {
-      // Global lookup — pick the one with portal_enabled=true if multiple
+      // Global lookup — matches primary OR spouse email
       query = `
-        SELECT p.*, f.name as firm_name, f.id as firm_id_val
+        SELECT p.*,
+          CASE WHEN LOWER(p.email) = LOWER($1) THEN 'taxpayer' ELSE 'spouse' END as signer_role,
+          f.name as firm_name, f.id as firm_id_val
         FROM people p
         JOIN firms f ON f.id = p.firm_id
-        WHERE LOWER(p.email) = $1
-          AND p.portal_enabled = true
-          AND p.portal_password_hash IS NOT NULL
+        WHERE (
+          (LOWER(p.email) = LOWER($1) AND p.portal_enabled = true AND p.portal_password_hash IS NOT NULL)
+          OR
+          (LOWER(p.spouse_email) = LOWER($1) AND p.spouse_portal_enabled = true AND p.spouse_portal_password_hash IS NOT NULL)
+        )
         ORDER BY p.portal_last_login_at DESC NULLS LAST
         LIMIT 1
       `;
@@ -94,11 +103,18 @@ router.post('/login', portalLoginLimiter, async (req, res) => {
 
     const { rows } = await pool.query(query, params);
     const person = rows[0];
+    const signerRole = person?.signer_role || 'taxpayer';
 
     // Timing-safe: always run bcrypt
     const dummyHash = '$2b$12$invalidhashfortiming0000000000000000000000000000000000000';
+    let hashToCheck = dummyHash;
+    if (person) {
+      hashToCheck = signerRole === 'spouse'
+        ? (person.spouse_portal_password_hash || dummyHash)
+        : (person.portal_password_hash || dummyHash);
+    }
     const match = person
-      ? await bcrypt.compare(password, person.portal_password_hash || dummyHash)
+      ? await bcrypt.compare(password, hashToCheck)
       : await bcrypt.compare(password, dummyHash).then(() => false);
 
     if (!person || !match) {
@@ -106,10 +122,15 @@ router.post('/login', portalLoginLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    await pool.query('UPDATE people SET portal_last_login_at = NOW() WHERE id = $1', [person.id]);
-    await auditLog(person.firm_id, 'portal_login_success', `Portal login: ${email}`, ip);
+    // Update last login timestamp for the appropriate login type
+    if (signerRole === 'spouse') {
+      await pool.query('UPDATE people SET spouse_portal_last_login_at = NOW() WHERE id = $1', [person.id]);
+    } else {
+      await pool.query('UPDATE people SET portal_last_login_at = NOW() WHERE id = $1', [person.id]);
+    }
+    await auditLog(person.firm_id, 'portal_login_success', `Portal login (${signerRole}): ${email}`, ip);
 
-    const token = buildPortalToken(person, person.firm_id);
+    const token = buildPortalToken(person, person.firm_id, signerRole);
 
     res.json({
       token,
@@ -121,6 +142,7 @@ router.post('/login', portalLoginLimiter, async (req, res) => {
         firmId: person.firm_id,
         firmName: person.firm_name,
         relationshipId: person.relationship_id,
+        signerRole,
       },
     });
   } catch (err) {
@@ -176,37 +198,68 @@ router.post('/invite/:token/accept', async (req, res) => {
     const passErr = validatePassword(password);
     if (passErr) return res.status(400).json({ error: passErr });
 
-    const { rows } = await pool.query(
-      `SELECT p.*, f.name as firm_name
+    // Check primary portal_invite_token first, then spouse_portal_invite_token
+    let { rows } = await pool.query(
+      `SELECT p.*, f.name as firm_name, 'taxpayer' as signer_role
        FROM people p
        JOIN firms f ON f.id = p.firm_id
        WHERE p.portal_invite_token = $1`,
       [token]
     );
 
+    if (rows.length === 0) {
+      // Try spouse token
+      const spouseResult = await pool.query(
+        `SELECT p.*, f.name as firm_name, 'spouse' as signer_role
+         FROM people p
+         JOIN firms f ON f.id = p.firm_id
+         WHERE p.spouse_portal_invite_token = $1`,
+        [token]
+      );
+      rows = spouseResult.rows;
+    }
+
     if (rows.length === 0) return res.status(404).json({ error: 'Invalid invite link' });
     const person = rows[0];
+    const signerRole = person.signer_role;
 
-    const expired = person.portal_invite_expires_at && new Date(person.portal_invite_expires_at) < new Date();
-    if (expired) return res.status(410).json({ error: 'Invite link has expired' });
-    if (person.portal_enabled) return res.status(409).json({ error: 'Invite already accepted' });
+    if (signerRole === 'spouse') {
+      const expired = person.spouse_portal_invite_expires_at && new Date(person.spouse_portal_invite_expires_at) < new Date();
+      if (expired) return res.status(410).json({ error: 'Invite link has expired' });
+      if (person.spouse_portal_enabled && person.spouse_portal_password_hash) return res.status(409).json({ error: 'Invite already accepted' });
 
-    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      await pool.query(
+        `UPDATE people SET
+           spouse_portal_enabled = true,
+           spouse_portal_password_hash = $1,
+           spouse_portal_invite_token = NULL,
+           spouse_portal_invite_expires_at = NULL,
+           spouse_portal_last_login_at = NOW()
+         WHERE id = $2`,
+        [passwordHash, person.id]
+      );
+      await auditLog(person.firm_id, 'portal_invite_accepted', `${person.spouse_email} accepted spouse portal invite`, ip);
+    } else {
+      const expired = person.portal_invite_expires_at && new Date(person.portal_invite_expires_at) < new Date();
+      if (expired) return res.status(410).json({ error: 'Invite link has expired' });
+      if (person.portal_enabled) return res.status(409).json({ error: 'Invite already accepted' });
 
-    await pool.query(
-      `UPDATE people SET
-         portal_enabled = true,
-         portal_password_hash = $1,
-         portal_invite_token = NULL,
-         portal_invite_expires_at = NULL,
-         portal_last_login_at = NOW()
-       WHERE id = $2`,
-      [passwordHash, person.id]
-    );
+      const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      await pool.query(
+        `UPDATE people SET
+           portal_enabled = true,
+           portal_password_hash = $1,
+           portal_invite_token = NULL,
+           portal_invite_expires_at = NULL,
+           portal_last_login_at = NOW()
+         WHERE id = $2`,
+        [passwordHash, person.id]
+      );
+      await auditLog(person.firm_id, 'portal_invite_accepted', `${person.email} accepted portal invite`, ip);
+    }
 
-    await auditLog(person.firm_id, 'portal_invite_accepted', `${person.email} accepted portal invite`, ip);
-
-    const jwtToken = buildPortalToken(person, person.firm_id);
+    const jwtToken = buildPortalToken(person, person.firm_id, signerRole);
 
     res.json({
       token: jwtToken,
@@ -218,6 +271,7 @@ router.post('/invite/:token/accept', async (req, res) => {
         firmId: person.firm_id,
         firmName: person.firm_name,
         relationshipId: person.relationship_id,
+        signerRole,
       },
     });
   } catch (err) {
@@ -235,33 +289,56 @@ router.post('/forgot-password', async (req, res) => {
     // Always return ok to prevent email enumeration
     if (!email) return res.json({ ok: true });
 
-    const { rows } = await pool.query(
-      `SELECT p.* FROM people p
+    // Check primary email first, then spouse email
+    let { rows } = await pool.query(
+      `SELECT p.*, 'taxpayer' as signer_role FROM people p
        WHERE LOWER(p.email) = $1 AND p.portal_enabled = true
        LIMIT 1`,
       [email]
     );
 
+    if (rows.length === 0) {
+      const spouseResult = await pool.query(
+        `SELECT p.*, 'spouse' as signer_role FROM people p
+         WHERE LOWER(p.spouse_email) = $1 AND p.spouse_portal_enabled = true
+         LIMIT 1`,
+        [email]
+      );
+      rows = spouseResult.rows;
+    }
+
     if (rows.length > 0) {
       const person = rows[0];
+      const signerRole = person.signer_role;
       const resetToken = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-      await pool.query(
-        `UPDATE people SET portal_invite_token = $1, portal_invite_expires_at = $2 WHERE id = $3`,
-        [resetToken, expiresAt, person.id]
-      );
+      if (signerRole === 'spouse') {
+        await pool.query(
+          `UPDATE people SET spouse_portal_invite_token = $1, spouse_portal_invite_expires_at = $2 WHERE id = $3`,
+          [resetToken, expiresAt, person.id]
+        );
+      } else {
+        await pool.query(
+          `UPDATE people SET portal_invite_token = $1, portal_invite_expires_at = $2 WHERE id = $3`,
+          [resetToken, expiresAt, person.id]
+        );
+      }
 
-      await auditLog(person.firm_id, 'portal_password_reset_requested', `Password reset requested: ${email}`, ip);
+      await auditLog(person.firm_id, 'portal_password_reset_requested', `Password reset requested: ${email} (${signerRole})`, ip);
 
       // Send reset email (graceful — don't fail if email service is down)
       try {
         const { rows: firmRows } = await pool.query('SELECT name FROM firms WHERE id = $1', [person.firm_id]);
         const firmName = firmRows[0]?.name || 'Your Advisory Firm';
         const resetUrl = `${APP_URL}/portal-login?reset=${resetToken}`;
+        const toEmail = signerRole === 'spouse' ? person.spouse_email : person.email;
+        const toName = signerRole === 'spouse'
+          ? (person.spouse_name || 'Spouse')
+          : `${person.first_name} ${person.last_name}`.trim();
         await sendPasswordReset({
-          to: person.email,
-          name: `${person.first_name} ${person.last_name}`.trim(),
+          to: toEmail,
+          name: toName,
           firmName,
           firmId: person.firm_id,
           resetUrl,
@@ -289,35 +366,63 @@ router.post('/reset-password/:token', async (req, res) => {
     const passErr = validatePassword(password);
     if (passErr) return res.status(400).json({ error: passErr });
 
-    const { rows } = await pool.query(
-      `SELECT p.*, f.name as firm_name
+    // Check primary token first, then spouse token
+    let { rows } = await pool.query(
+      `SELECT p.*, f.name as firm_name, 'taxpayer' as signer_role
        FROM people p
        JOIN firms f ON f.id = p.firm_id
        WHERE p.portal_invite_token = $1`,
       [token]
     );
 
+    if (rows.length === 0) {
+      const spouseResult = await pool.query(
+        `SELECT p.*, f.name as firm_name, 'spouse' as signer_role
+         FROM people p
+         JOIN firms f ON f.id = p.firm_id
+         WHERE p.spouse_portal_invite_token = $1`,
+        [token]
+      );
+      rows = spouseResult.rows;
+    }
+
     if (rows.length === 0) return res.status(404).json({ error: 'Invalid or expired reset link' });
     const person = rows[0];
-
-    const expired = person.portal_invite_expires_at && new Date(person.portal_invite_expires_at) < new Date();
-    if (expired) return res.status(410).json({ error: 'Reset link has expired' });
+    const signerRole = person.signer_role;
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-    await pool.query(
-      `UPDATE people SET
-         portal_password_hash = $1,
-         portal_invite_token = NULL,
-         portal_invite_expires_at = NULL,
-         portal_last_login_at = NOW()
-       WHERE id = $2`,
-      [passwordHash, person.id]
-    );
+    if (signerRole === 'spouse') {
+      const expired = person.spouse_portal_invite_expires_at && new Date(person.spouse_portal_invite_expires_at) < new Date();
+      if (expired) return res.status(410).json({ error: 'Reset link has expired' });
 
-    await auditLog(person.firm_id, 'portal_password_reset', `Password reset completed: ${person.email}`, ip);
+      await pool.query(
+        `UPDATE people SET
+           spouse_portal_password_hash = $1,
+           spouse_portal_invite_token = NULL,
+           spouse_portal_invite_expires_at = NULL,
+           spouse_portal_last_login_at = NOW()
+         WHERE id = $2`,
+        [passwordHash, person.id]
+      );
+      await auditLog(person.firm_id, 'portal_password_reset', `Spouse password reset completed: ${person.spouse_email}`, ip);
+    } else {
+      const expired = person.portal_invite_expires_at && new Date(person.portal_invite_expires_at) < new Date();
+      if (expired) return res.status(410).json({ error: 'Reset link has expired' });
 
-    const jwtToken = buildPortalToken(person, person.firm_id);
+      await pool.query(
+        `UPDATE people SET
+           portal_password_hash = $1,
+           portal_invite_token = NULL,
+           portal_invite_expires_at = NULL,
+           portal_last_login_at = NOW()
+         WHERE id = $2`,
+        [passwordHash, person.id]
+      );
+      await auditLog(person.firm_id, 'portal_password_reset', `Password reset completed: ${person.email}`, ip);
+    }
+
+    const jwtToken = buildPortalToken(person, person.firm_id, signerRole);
 
     res.json({
       token: jwtToken,
@@ -329,6 +434,7 @@ router.post('/reset-password/:token', async (req, res) => {
         firmId: person.firm_id,
         firmName: person.firm_name,
         relationshipId: person.relationship_id,
+        signerRole,
       },
     });
   } catch (err) {
@@ -375,7 +481,7 @@ router.get('/firm-info', async (req, res) => {
 router.post('/send-invite', requireFirm, async (req, res) => {
   const ip = req.ip;
   try {
-    const { personId } = req.body;
+    const { personId, spouse = false } = req.body;
     if (!personId) return res.status(400).json({ error: 'personId is required' });
 
     const firmId = req.firm.id;
@@ -392,40 +498,70 @@ router.post('/send-invite', requireFirm, async (req, res) => {
     if (personRows.length === 0) return res.status(404).json({ error: 'Person not found' });
     const person = personRows[0];
 
-    if (!person.email) return res.status(400).json({ error: 'Person has no email address' });
-
     // Generate invite token
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    // Store token + enable portal access
-    await pool.query(
-      `UPDATE people SET
-         portal_invite_token = $1,
-         portal_invite_expires_at = $2,
-         portal_enabled = false
-       WHERE id = $3`,
-      [token, expiresAt, person.id]
-    );
+    if (spouse) {
+      // Spouse invite
+      if (!person.spouse_email) return res.status(400).json({ error: 'Person has no spouse email address' });
 
-    await auditLog(firmId, 'portal_invite_sent', `Portal invite sent to ${person.email}`, ip);
+      await pool.query(
+        `UPDATE people SET
+           spouse_portal_invite_token = $1,
+           spouse_portal_invite_expires_at = $2
+         WHERE id = $3`,
+        [token, expiresAt, person.id]
+      );
 
-    const inviteUrl = `${APP_URL}/portal-login?invite=${token}`;
+      await auditLog(firmId, 'portal_invite_sent', `Spouse portal invite sent to ${person.spouse_email}`, ip);
 
-    // Send invite email (non-fatal)
-    try {
-      await sendPortalInvite({
-        to: person.email,
-        name: `${person.first_name} ${person.last_name}`.trim(),
-        firmName: person.firm_name,
-        firmId: person.firm_id,
-        inviteUrl,
-      });
-    } catch (emailErr) {
-      console.error('Portal invite email failed (non-fatal):', emailErr.message);
+      const inviteUrl = `${APP_URL}/portal-login?invite=${token}`;
+
+      try {
+        await sendPortalInvite({
+          to: person.spouse_email,
+          name: person.spouse_name || 'Spouse',
+          firmName: person.firm_name,
+          firmId: person.firm_id,
+          inviteUrl,
+        });
+      } catch (emailErr) {
+        console.error('Spouse portal invite email failed (non-fatal):', emailErr.message);
+      }
+
+      res.json({ ok: true, inviteUrl });
+    } else {
+      // Primary taxpayer invite
+      if (!person.email) return res.status(400).json({ error: 'Person has no email address' });
+
+      await pool.query(
+        `UPDATE people SET
+           portal_invite_token = $1,
+           portal_invite_expires_at = $2,
+           portal_enabled = false
+         WHERE id = $3`,
+        [token, expiresAt, person.id]
+      );
+
+      await auditLog(firmId, 'portal_invite_sent', `Portal invite sent to ${person.email}`, ip);
+
+      const inviteUrl = `${APP_URL}/portal-login?invite=${token}`;
+
+      try {
+        await sendPortalInvite({
+          to: person.email,
+          name: `${person.first_name} ${person.last_name}`.trim(),
+          firmName: person.firm_name,
+          firmId: person.firm_id,
+          inviteUrl,
+        });
+      } catch (emailErr) {
+        console.error('Portal invite email failed (non-fatal):', emailErr.message);
+      }
+
+      res.json({ ok: true, inviteUrl });
     }
-
-    res.json({ ok: true, inviteUrl });
   } catch (err) {
     console.error('Send invite error:', err);
     res.status(500).json({ error: 'Failed to send invite' });

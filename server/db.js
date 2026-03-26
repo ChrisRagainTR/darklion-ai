@@ -309,12 +309,18 @@ async function initDB() {
       ssn_last4 TEXT DEFAULT '',
       ssn_encrypted TEXT DEFAULT '',
       filing_status TEXT DEFAULT '',
-      spouse_id INTEGER REFERENCES people(id),
       portal_enabled BOOLEAN DEFAULT FALSE,
       portal_password_hash TEXT,
       portal_invite_token TEXT UNIQUE,
       portal_invite_expires_at TIMESTAMPTZ,
       portal_last_login_at TIMESTAMPTZ,
+      spouse_name TEXT DEFAULT '',
+      spouse_email TEXT DEFAULT '',
+      spouse_portal_enabled BOOLEAN DEFAULT FALSE,
+      spouse_portal_password_hash TEXT,
+      spouse_portal_invite_token TEXT,
+      spouse_portal_invite_expires_at TIMESTAMPTZ,
+      spouse_portal_last_login_at TIMESTAMPTZ,
       stanford_tax_url TEXT DEFAULT '',
       notes TEXT DEFAULT '',
       created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -602,6 +608,7 @@ async function initDB() {
       signature_type TEXT DEFAULT 'drawn' CHECK(signature_type IN ('drawn','typed')),
       needs_changes_at TIMESTAMPTZ,
       needs_changes_note TEXT DEFAULT '',
+      signer_role TEXT DEFAULT 'taxpayer',
       UNIQUE(delivery_id, person_id)
     );
 

@@ -1,0 +1,18 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "https://darklion-ai-development.up.railway.app",
+      "localStorage": [
+        {
+          "name": "dl_token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmaXJtSWQiOjEsInVzZXJJZCI6MTQwMiwicm9sZSI6InN0YWZmIiwiZW1haWwiOiJ0ZXN0QGRhcmtsaW9uLmFpIiwibmFtZSI6IlRlc3QgVXNlciIsImZpcm1OYW1lIjoiU2VudGluZWwgV2VhbHRoICYgVGF4IiwiaWF0IjoxNzc0NTI2MTIzLCJleHAiOjE3NzQ2MTI1MjN9.w-sFdmeQJEkfh4szyLIc7GI-AcyKdi__YyP5BFP6UAU"
+        },
+        {
+          "name": "dl_firm",
+          "value": "{\"id\":1,\"name\":\"Sentinel Wealth & Tax\",\"email\":\"test@darklion.ai\",\"plan\":\"trial\"}"
+        }
+      ]
+    }
+  ]
+}
