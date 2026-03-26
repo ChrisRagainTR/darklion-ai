@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2025 Tax Organizer — DarkLion</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0f1923; --shell: #141d26; --card: #1a2535; --charcoal: #1c2b3a;
+      --gold: #c9a84c; --gold-light: #e2c068;
+      --text: #e8edf2; --muted: #8fa3b8;
+      --border: rgba(201,168,76,0.22);
+      --green: #3ecf8e; --red: #f56565; --orange: #ed8936; --blue: #4299e1;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--navy); color: var(--text); min-height: 100vh;
+    }
+
+    /* === TOP HEADER === */
+    .top-header {
+      background: var(--shell);
+      border-bottom: 2px solid var(--gold);
+      padding: 0 1.5rem;
+      height: 58px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
+    .header-logo img { width: 30px; height: 30px; border-radius: 6px; }
+    .header-logo span { font-size: 1.1rem; font-weight: 800; color: var(--text); }
+    .header-logo span em { color: var(--gold); font-style: normal; }
+    .header-back {
+      color: var(--muted); text-decoration: none; font-size: 0.85rem;
+      display: flex; align-items: center; gap: 0.4rem;
+      transition: color 0.15s;
+    }
+    .header-back:hover { color: var(--text); }
+
+    /* === MAIN LAYOUT === */
+    .org-wrap {
+      max-width: 720px; margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* === PROGRESS BAR === */
+    .progress-bar-wrap {
+      margin-bottom: 2rem;
+    }
+    .progress-steps {
+      display: flex; gap: 0; margin-bottom: 0.6rem;
+    }
+    .progress-step {
+      flex: 1; text-align: center;
+      font-size: 0.78rem; color: var(--muted);
+      padding-bottom: 0.5rem;
+      border-bottom: 3px solid rgba(201,168,76,0.15);
+      transition: all 0.2s;
+    }
+    .progress-step.active { color: var(--gold); border-color: var(--gold); font-weight: 600; }
+    .progress-step.done { color: var(--green); border-color: var(--green); }
+
+    /* === SECTION TITLE === */
+    .section-title {
+      font-size: 1.4rem; font-weight: 700; color: var(--text);
+      margin-bottom: 0.4rem;
+    }
+    .section-sub {
+      font-size: 0.9rem; color: var(--muted); margin-bottom: 1.75rem;
+      line-height: 1.5;
+    }
+
+    /* === CARDS === */
+    .org-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .org-card-title {
+      font-size: 0.78rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--gold); margin-bottom: 1rem;
+    }
+
+    /* === FORM FIELDS === */
+    .field-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem;
+    }
+    .field-grid.cols-1 { grid-template-columns: 1fr; }
+    .field-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .field-wrap { display: flex; flex-direction: column; gap: 0.3rem; }
+    .field-wrap.span-2 { grid-column: span 2; }
+    .field-label {
+      font-size: 0.78rem; color: var(--muted); font-weight: 500;
+    }
+    .field-input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 7px; color: var(--text);
+      padding: 0.5rem 0.75rem; font-size: 0.88rem;
+      outline: none; transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    .field-input:focus { border-color: var(--gold); }
+    .field-input.prefilled { border-color: rgba(62,207,142,0.3); background: rgba(62,207,142,0.04); }
+
+    /* === DEPENDENT ROWS === */
+    .dep-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 0.5rem 0.75rem; align-items: end;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .dep-row:last-child { border-bottom: none; }
+    .add-dep-btn {
+      background: none; border: 1px dashed var(--border);
+      color: var(--muted); border-radius: 7px;
+      padding: 0.5rem 1rem; font-size: 0.82rem;
+      cursor: pointer; margin-top: 0.75rem;
+      transition: all 0.15s; font-family: inherit;
+    }
+    .add-dep-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* === YES/NO QUESTIONS === */
+    .question-row {
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .question-row:last-child { border-bottom: none; }
+    .question-text {
+      font-size: 0.92rem; color: var(--text);
+      margin-bottom: 0.6rem; line-height: 1.45;
+    }
+    .question-text .q-tag {
+      display: inline-block; font-size: 0.7rem;
+      background: rgba(201,168,76,0.15); color: var(--gold);
+      border-radius: 4px; padding: 0.1em 0.4em;
+      margin-left: 0.4rem; font-weight: 600; vertical-align: middle;
+    }
+    .yn-btns { display: flex; gap: 0.5rem; }
+    .yn-btn {
+      padding: 0.35rem 1.1rem; border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted); cursor: pointer;
+      font-size: 0.85rem; font-weight: 500;
+      transition: all 0.15s; font-family: inherit;
+    }
+    .yn-btn.selected-yes { background: rgba(62,207,142,0.15); border-color: var(--green); color: var(--green); }
+    .yn-btn.selected-no { background: rgba(143,163,184,0.12); border-color: var(--muted); color: var(--text); }
+    .yn-followup {
+      margin-top: 0.75rem; padding: 0.75rem 1rem;
+      background: rgba(201,168,76,0.06);
+      border-left: 3px solid var(--gold);
+      border-radius: 0 8px 8px 0;
+      font-size: 0.85rem; color: var(--muted);
+      display: none;
+    }
+    .yn-followup.visible { display: block; }
+    .yn-followup textarea, .yn-followup input {
+      width: 100%; margin-top: 0.5rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text);
+      padding: 0.5rem 0.75rem; font-size: 0.85rem;
+      font-family: inherit; outline: none; resize: vertical;
+    }
+
+    /* === CHECKLIST === */
+    .checklist-section { margin-bottom: 1.5rem; }
+    .checklist-section-title {
+      font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--gold); margin-bottom: 0.6rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .checklist-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.7rem 0.9rem;
+      border-radius: 8px;
+      transition: background 0.15s;
+      margin-bottom: 0.25rem;
+    }
+    .checklist-item:hover { background: rgba(255,255,255,0.03); }
+    .checklist-item.done { opacity: 0.6; }
+    .ci-check {
+      width: 20px; height: 20px; flex-shrink: 0;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.15s;
+      font-size: 0.7rem; color: transparent;
+    }
+    .ci-check.uploaded { background: var(--green); border-color: var(--green); color: white; }
+    .ci-check.na { background: var(--muted); border-color: var(--muted); color: white; }
+    .ci-info { flex: 1; }
+    .ci-payer { font-size: 0.9rem; font-weight: 500; color: var(--text); }
+    .ci-type { font-size: 0.76rem; color: var(--muted); margin-top: 0.1rem; }
+    .ci-status { font-size: 0.75rem; }
+    .ci-status.uploaded { color: var(--green); }
+    .ci-status.pending { color: var(--muted); }
+    .ci-status.na { color: var(--muted); text-decoration: line-through; }
+    .ci-actions { display: flex; gap: 0.4rem; align-items: center; }
+    .ci-btn {
+      font-size: 0.75rem; padding: 0.28rem 0.7rem;
+      border-radius: 5px; border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04); color: var(--muted);
+      cursor: pointer; transition: all 0.15s; font-family: inherit;
+      white-space: nowrap;
+    }
+    .ci-btn.upload { border-color: rgba(201,168,76,0.4); color: var(--gold); }
+    .ci-btn.upload:hover { background: rgba(201,168,76,0.12); }
+    .ci-btn.na-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .ci-btn.undo { color: var(--muted); }
+
+    /* === PROGRESS SUMMARY === */
+    .progress-summary {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1rem 1.25rem;
+      display: flex; align-items: center; gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .ps-bar-wrap { flex: 1; }
+    .ps-label { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.4rem; }
+    .ps-bar { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+    .ps-fill { height: 100%; background: var(--green); border-radius: 3px; transition: width 0.3s; }
+    .ps-count { font-size: 1.1rem; font-weight: 700; color: var(--text); white-space: nowrap; }
+    .ps-count span { font-size: 0.8rem; font-weight: 400; color: var(--muted); }
+
+    /* === BIG UPLOAD === */
+    .bulk-upload-card {
+      background: rgba(201,168,76,0.06);
+      border: 1px dashed rgba(201,168,76,0.35);
+      border-radius: 12px; padding: 1.25rem 1.5rem;
+      text-align: center; margin-bottom: 1.5rem;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .bulk-upload-card:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
+    .bulk-upload-card .bu-icon { font-size: 1.6rem; margin-bottom: 0.4rem; }
+    .bulk-upload-card .bu-title { font-size: 0.95rem; font-weight: 600; color: var(--gold); }
+    .bulk-upload-card .bu-sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
+
+    /* === NAV BUTTONS === */
+    .org-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 2rem; padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .btn-primary {
+      background: var(--gold); color: #0f1923;
+      border: none; border-radius: 8px;
+      padding: 0.65rem 1.6rem; font-size: 0.92rem; font-weight: 700;
+      cursor: pointer; transition: background 0.15s; font-family: inherit;
+    }
+    .btn-primary:hover { background: var(--gold-light); }
+    .btn-secondary {
+      background: rgba(255,255,255,0.05); color: var(--muted);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.65rem 1.25rem; font-size: 0.88rem;
+      cursor: pointer; transition: all 0.15s; font-family: inherit;
+    }
+    .btn-secondary:hover { color: var(--text); border-color: var(--muted); }
+    .btn-submit {
+      background: var(--green); color: #0f1923;
+      border: none; border-radius: 8px;
+      padding: 0.75rem 2rem; font-size: 1rem; font-weight: 700;
+      cursor: pointer; transition: background 0.15s; font-family: inherit;
+    }
+    .btn-submit:hover { background: #5fdfa6; }
+    .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* === STEP PANELS === */
+    .step-panel { display: none; }
+    .step-panel.active { display: block; }
+
+    /* === SUBMIT SCREEN === */
+    .submit-screen {
+      text-align: center; padding: 3rem 1rem;
+    }
+    .submit-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .submit-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .submit-sub { font-size: 0.92rem; color: var(--muted); line-height: 1.6; }
+
+    .banner-note {
+      background: rgba(66,153,225,0.1); border: 1px solid rgba(66,153,225,0.3);
+      border-radius: 8px; padding: 0.75rem 1rem;
+      font-size: 0.82rem; color: #90cdf4; margin-bottom: 1.5rem;
+      display: flex; gap: 0.5rem; align-items: flex-start;
+    }
+
+    @media (max-width: 600px) {
+      .field-grid { grid-template-columns: 1fr; }
+      .field-grid.cols-3 { grid-template-columns: 1fr 1fr; }
+      .dep-row { grid-template-columns: 1fr 1fr; }
+      .field-wrap.span-2 { grid-column: span 1; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-header">
+  <a class="header-logo" href="/portal">
+    <img src="/favicon.png" alt="DarkLion">
+    <span>Dark<em>Lion</em></span>
+  </a>
+  <a class="header-back" href="/portal">← Back to Portal</a>
+</div>
+
+<div class="org-wrap">
+
+  <!-- PROGRESS STEPS -->
+  <div class="progress-bar-wrap">
+    <div class="progress-steps">
+      <div class="progress-step active" id="pstep-1">1 · Confirm Info</div>
+      <div class="progress-step" id="pstep-2">2 · Quick Questions</div>
+      <div class="progress-step" id="pstep-3">3 · Your Documents</div>
+      <div class="progress-step" id="pstep-4">4 · Submit</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- STEP 1 — CONFIRM YOUR INFO                      -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="step-panel active" id="step-1">
+    <div class="section-title">Confirm Your Information</div>
+    <div class="section-sub">We've pre-filled this from your file. Please review and correct anything that's changed.</div>
+
+    <!-- Contact Info -->
+    <div class="org-card">
+      <div class="org-card-title">Contact Information</div>
+      <div class="field-grid">
+        <div class="field-wrap">
+          <label class="field-label">First Name</label>
+          <input class="field-input prefilled" type="text" value="Jacob">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Last Name</label>
+          <input class="field-input prefilled" type="text" value="Dunlap">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Your Email</label>
+          <input class="field-input prefilled" type="email" value="jake@skaled.com">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Phone</label>
+          <input class="field-input prefilled" type="tel" value="480-334-2299">
+        </div>
+        <div class="field-wrap span-2">
+          <label class="field-label">Home Address</label>
+          <input class="field-input prefilled" type="text" value="6205 Diamond Head Circle, Austin, TX 78746">
+        </div>
+      </div>
+    </div>
+
+    <!-- Spouse -->
+    <div class="org-card">
+      <div class="org-card-title">Spouse / Filing Partner</div>
+      <div class="field-grid">
+        <div class="field-wrap">
+          <label class="field-label">Spouse First Name</label>
+          <input class="field-input prefilled" type="text" value="Jennifer">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Spouse Last Name</label>
+          <input class="field-input prefilled" type="text" value="Dunlap">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Spouse Email</label>
+          <input class="field-input prefilled" type="email" value="jenni.l.weber@gmail.com">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Spouse Phone</label>
+          <input class="field-input prefilled" type="tel" value="919-332-0023">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Spouse Occupation</label>
+          <input class="field-input prefilled" type="text" value="VP People Operations">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Your Occupation</label>
+          <input class="field-input prefilled" type="text" value="Consultant">
+        </div>
+      </div>
+    </div>
+
+    <!-- Dependents -->
+    <div class="org-card">
+      <div class="org-card-title">Dependents</div>
+      <div id="dep-list">
+        <div class="dep-row">
+          <div class="field-wrap">
+            <label class="field-label">Full Name</label>
+            <input class="field-input prefilled" type="text" value="Landon T Dunlap">
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Relationship</label>
+            <input class="field-input prefilled" type="text" value="Son">
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Date of Birth</label>
+            <input class="field-input prefilled" type="text" value="On File">
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">School / Childcare</label>
+            <input class="field-input prefilled" type="text" value="Trinity School">
+          </div>
+        </div>
+        <div class="dep-row">
+          <div class="field-wrap">
+            <label class="field-label">Full Name</label>
+            <input class="field-input prefilled" type="text" value="Ella Dunlap">
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Relationship</label>
+            <input class="field-input prefilled" type="text" value="Daughter">
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Date of Birth</label>
+            <input class="field-input prefilled" type="text" value="On File">
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">School / Childcare</label>
+            <input class="field-input prefilled" type="text" value="Trinity School">
+          </div>
+        </div>
+      </div>
+      <button class="add-dep-btn" onclick="addDependent()">+ Add Dependent</button>
+    </div>
+
+    <div class="org-nav">
+      <div></div>
+      <button class="btn-primary" onclick="goStep(2)">Everything looks right → Next</button>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- STEP 2 — QUICK QUESTIONS                        -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="step-panel" id="step-2">
+    <div class="section-title">A Few Quick Questions</div>
+    <div class="section-sub">These help us make sure we're asking for the right documents. Answer honestly — no wrong answers.</div>
+
+    <div class="org-card">
+      <div class="org-card-title">Life Changes</div>
+
+      <div class="question-row">
+        <div class="question-text">Did anything major change this year — marriage, divorce, new baby, or death in the family?</div>
+        <div class="yn-btns">
+          <button class="yn-btn" onclick="selectYN(this,'yes','qlife')">Yes</button>
+          <button class="yn-btn" onclick="selectYN(this,'no','qlife')">No</button>
+        </div>
+        <div class="yn-followup" id="qlife-followup">
+          Please briefly describe the change so we can make sure we capture everything correctly.
+          <textarea rows="2" placeholder="e.g. Had our third child in March, name is Oliver…"></textarea>
+        </div>
+      </div>
+
+      <div class="question-row">
+        <div class="question-text">Did your address change during 2025?</div>
+        <div class="yn-btns">
+          <button class="yn-btn" onclick="selectYN(this,'yes','qaddr')">Yes</button>
+          <button class="yn-btn selected-no" onclick="selectYN(this,'no','qaddr')">No</button>
+        </div>
+        <div class="yn-followup" id="qaddr-followup">
+          <input type="text" placeholder="New address">
+        </div>
+      </div>
+    </div>
+
+    <div class="org-card">
+      <div class="org-card-title">Income & Investments</div>
+
+      <div class="question-row">
+        <div class="question-text">Did you sell any stocks, bonds, or other investments during 2025?</div>
+        <div class="yn-btns">
+          <button class="yn-btn" onclick="selectYN(this,'yes','qinv')">Yes</button>
+          <button class="yn-btn" onclick="selectYN(this,'no','qinv')">No</button>
+        </div>
+        <div class="yn-followup" id="qinv-followup">
+          Your brokerage will issue a 1099-B — make sure to include all brokerage statements in your documents.
+        </div>
+      </div>
+
+      <div class="question-row">
+        <div class="question-text">Did you have any cryptocurrency transactions in 2025? <span class="q-tag">Required</span></div>
+        <div class="yn-btns">
+          <button class="yn-btn" onclick="selectYN(this,'yes','qcrypto')">Yes</button>
+          <button class="yn-btn" onclick="selectYN(this,'no','qcrypto')">No</button>
+        </div>
+        <div class="yn-followup" id="qcrypto-followup">
+          Please upload your complete transaction history from each exchange (Coinbase, Kraken, etc.) or from a crypto tax tool like Koinly or CoinTracker.
+          <textarea rows="2" placeholder="List any exchanges or platforms you used…"></textarea>
+        </div>
+      </div>
+
+      <div class="question-row">
+        <div class="question-text">Did you start, close, or sell a business during 2025?</div>
+        <div class="yn-btns">
+          <button class="yn-btn" onclick="selectYN(this,'yes','qbiz')">Yes</button>
+          <button class="yn-btn" onclick="selectYN(this,'no','qbiz')">No</button>
+        </div>
+        <div class="yn-followup" id="qbiz-followup">
+          Please describe the business and what happened — we'll follow up with specific questions.
+          <textarea rows="2" placeholder="e.g. Closed my LLC in June, sold the assets…"></textarea>
+        </div>
+      </div>
+
+      <div class="question-row">
+        <div class="question-text">Did you receive any income from freelancing, consulting, or side work not reported on a W-2?</div>
+        <div class="yn-btns">
+          <button class="yn-btn selected-yes" onclick="selectYN(this,'yes','qfreelance')">Yes</button>
+          <button class="yn-btn" onclick="selectYN(this,'no','qfreelance')">No</button>
+        </div>
+        <div class="yn-followup visible" id="qfreelance-followup">
+          Please provide any 1099-NEC or 1099-MISC forms, and an estimate of total income if no 1099 was issued.
+        </div>
+      </div>
+    </div>
+
+    <div class="org-card">
+      <div class="org-card-title">Property & Real Estate</div>
+
+      <div class="question-row">
+        <div class="question-text">Did you buy, sell, or refinance any real estate during 2025?</div>
+        <div class="yn-btns">
+          <button class="yn-btn" onclick="selectYN(this,'yes','qre')">Yes</button>
+          <button class="yn-btn" onclick="selectYN(this,'no','qre')">No</button>
+        </div>
+        <div class="yn-followup" id="qre-followup">
+          Please provide the closing disclosure / HUD-1 settlement statement for any purchase or sale.
+        </div>
+      </div>
+
+      <div class="question-row">
+        <div class="question-text">Did you rent out any property during 2025?</div>
+        <div class="yn-btns">
+          <button class="yn-btn" onclick="selectYN(this,'yes','qrent')">Yes</button>
+          <button class="yn-btn" onclick="selectYN(this,'no','qrent')">No</button>
+        </div>
+        <div class="yn-followup" id="qrent-followup">
+          Please provide a summary of rental income and expenses (or a P&amp;L if you use property management software).
+        </div>
+      </div>
+    </div>
+
+    <div class="org-card">
+      <div class="org-card-title">Foreign &amp; Other</div>
+
+      <div class="question-row">
+        <div class="question-text">Did you have any foreign bank accounts or financial assets exceeding $10,000 at any point in 2025? <span class="q-tag">Required</span></div>
+        <div class="yn-btns">
+          <button class="yn-btn" onclick="selectYN(this,'yes','qfbar')">Yes</button>
+          <button class="yn-btn" onclick="selectYN(this,'no','qfbar')">No</button>
+        </div>
+        <div class="yn-followup" id="qfbar-followup">
+          You may be required to file an FBAR (FinCEN 114). Please list the institutions and countries involved.
+          <textarea rows="2" placeholder="e.g. HSBC Canada, account held all year…"></textarea>
+        </div>
+      </div>
+
+      <div class="question-row">
+        <div class="question-text">Did you receive any income from, or pay taxes to, a foreign country?</div>
+        <div class="yn-btns">
+          <button class="yn-btn" onclick="selectYN(this,'yes','qforeigninc')">Yes</button>
+          <button class="yn-btn" onclick="selectYN(this,'no','qforeigninc')">No</button>
+        </div>
+        <div class="yn-followup" id="qforeigninc-followup">
+          Please provide any foreign tax statements or details about the income source.
+        </div>
+      </div>
+
+      <div class="question-row">
+        <div class="question-text">Did you receive any IRS or state tax notices in 2025?</div>
+        <div class="yn-btns">
+          <button class="yn-btn" onclick="selectYN(this,'yes','qnotice')">Yes</button>
+          <button class="yn-btn" onclick="selectYN(this,'no','qnotice')">No</button>
+        </div>
+        <div class="yn-followup" id="qnotice-followup">
+          Please upload or forward the notice — we'll review and advise.
+        </div>
+      </div>
+    </div>
+
+    <div class="org-nav">
+      <button class="btn-secondary" onclick="goStep(1)">← Back</button>
+      <button class="btn-primary" onclick="goStep(3)">Next: Your Documents →</button>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- STEP 3 — DOCUMENT CHECKLIST                     -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="step-panel" id="step-3">
+    <div class="section-title">Your 2025 Documents</div>
+    <div class="section-sub">Based on your 2024 return, here's what we're expecting. Upload each item, mark it N/A if it no longer applies, or come back later — your progress is saved automatically.</div>
+
+    <div class="banner-note">
+      ℹ️ <span>You can return to this page any time. Your uploads and checkmarks are saved as you go. Hit <strong>Submit</strong> when you're ready — even if a few items are still pending.</span>
+    </div>
+
+    <!-- Progress Summary -->
+    <div class="progress-summary">
+      <div class="ps-bar-wrap">
+        <div class="ps-label">Documents collected</div>
+        <div class="ps-bar"><div class="ps-fill" id="progress-fill" style="width:23%"></div></div>
+      </div>
+      <div class="ps-count" id="progress-count">3 <span>of 13 complete</span></div>
+    </div>
+
+    <!-- Bulk Upload Option -->
+    <div class="bulk-upload-card" onclick="alert('Upload UI coming — drag your files here or click to browse')">
+      <div class="bu-icon">📦</div>
+      <div class="bu-title">Have everything in one PDF?</div>
+      <div class="bu-sub">Upload one file and check off what's inside — no need to separate each document.</div>
+    </div>
+
+    <!-- W-2s -->
+    <div class="checklist-section">
+      <div class="checklist-section-title">W-2 · Wages</div>
+      <div class="checklist-item" id="ci-w2-1">
+        <div class="ci-check" onclick="cycleItem('ci-w2-1')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">Justworks Employment Group LLC</div>
+          <div class="ci-type">Form W-2 · Jacob · Wages &amp; Salary</div>
+        </div>
+        <div class="ci-status pending" id="ci-w2-1-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-w2-1')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-w2-1')">N/A</button>
+        </div>
+      </div>
+      <div class="checklist-item uploaded" id="ci-w2-2">
+        <div class="ci-check uploaded" onclick="cycleItem('ci-w2-2')">✓</div>
+        <div class="ci-info">
+          <div class="ci-payer">ThredUp Inc.</div>
+          <div class="ci-type">Form W-2 · Jennifer · Wages &amp; Salary</div>
+        </div>
+        <div class="ci-status uploaded" id="ci-w2-2-status">✓ Uploaded</div>
+        <div class="ci-actions">
+          <button class="ci-btn undo" onclick="undoItem('ci-w2-2')">Undo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1099-NEC / MISC -->
+    <div class="checklist-section">
+      <div class="checklist-section-title">1099-NEC / 1099-MISC · Non-Employee &amp; Misc Income</div>
+      <div class="checklist-item uploaded" id="ci-nec-1">
+        <div class="ci-check uploaded" onclick="cycleItem('ci-nec-1')">✓</div>
+        <div class="ci-info">
+          <div class="ci-payer">Amherst Holdings LLC</div>
+          <div class="ci-type">Form 1099-NEC · Jennifer · Non-Employee Compensation</div>
+        </div>
+        <div class="ci-status uploaded" id="ci-nec-1-status">✓ Uploaded</div>
+        <div class="ci-actions">
+          <button class="ci-btn undo" onclick="undoItem('ci-nec-1')">Undo</button>
+        </div>
+      </div>
+      <div class="checklist-item" id="ci-misc-1">
+        <div class="ci-check" onclick="cycleItem('ci-misc-1')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">Ivy Exec Inc</div>
+          <div class="ci-type">Form 1099-MISC · Jennifer · Miscellaneous Income</div>
+        </div>
+        <div class="ci-status pending" id="ci-misc-1-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-misc-1')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-misc-1')">N/A</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1099-DIV -->
+    <div class="checklist-section">
+      <div class="checklist-section-title">1099-DIV · Dividends</div>
+      <div class="checklist-item" id="ci-div-1">
+        <div class="ci-check" onclick="cycleItem('ci-div-1')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">Charles Schwab (acct ···7744)</div>
+          <div class="ci-type">Form 1099-DIV · Joint</div>
+        </div>
+        <div class="ci-status pending" id="ci-div-1-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-div-1')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-div-1')">N/A</button>
+        </div>
+      </div>
+      <div class="checklist-item" id="ci-div-2">
+        <div class="ci-check" onclick="cycleItem('ci-div-2')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">Merrill Lynch (acct ···9122)</div>
+          <div class="ci-type">Form 1099-DIV · Joint</div>
+        </div>
+        <div class="ci-status pending" id="ci-div-2-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-div-2')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-div-2')">N/A</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1099-INT -->
+    <div class="checklist-section">
+      <div class="checklist-section-title">1099-INT · Interest</div>
+      <div class="checklist-item" id="ci-int-1">
+        <div class="ci-check" onclick="cycleItem('ci-int-1')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">Merrill Lynch (acct ···1793)</div>
+          <div class="ci-type">Form 1099-INT · Joint · $3,596 in 2024</div>
+        </div>
+        <div class="ci-status pending" id="ci-int-1-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-int-1')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-int-1')">N/A</button>
+        </div>
+      </div>
+      <div class="checklist-item" id="ci-int-2">
+        <div class="ci-check" onclick="cycleItem('ci-int-2')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">Charles Schwab Bank (acct ···5028)</div>
+          <div class="ci-type">Form 1099-INT · Jennifer</div>
+        </div>
+        <div class="ci-status pending" id="ci-int-2-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-int-2')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-int-2')">N/A</button>
+        </div>
+      </div>
+      <div class="checklist-item na" id="ci-int-3">
+        <div class="ci-check na" onclick="cycleItem('ci-int-3')">–</div>
+        <div class="ci-info">
+          <div class="ci-payer">Northwestern Mutual Life Insurance</div>
+          <div class="ci-type">Form 1099-INT · Jacob</div>
+        </div>
+        <div class="ci-status na" id="ci-int-3-status">Not applicable</div>
+        <div class="ci-actions">
+          <button class="ci-btn undo" onclick="undoItem('ci-int-3')">Undo</button>
+        </div>
+      </div>
+      <div class="checklist-item" id="ci-int-4">
+        <div class="ci-check" onclick="cycleItem('ci-int-4')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">Security Service Federal Credit Union</div>
+          <div class="ci-type">Form 1099-INT · Jennifer</div>
+        </div>
+        <div class="ci-status pending" id="ci-int-4-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-int-4')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-int-4')">N/A</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- K-1s -->
+    <div class="checklist-section">
+      <div class="checklist-section-title">Schedule K-1 · Partnerships &amp; S-Corps</div>
+      <div class="checklist-item" id="ci-k1-1">
+        <div class="ci-check" onclick="cycleItem('ci-k1-1')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">Stage 2 Capital Fund, LP</div>
+          <div class="ci-type">Schedule K-1 · Jacob · EIN 83-2019265</div>
+        </div>
+        <div class="ci-status pending" id="ci-k1-1-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-k1-1')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-k1-1')">N/A</button>
+        </div>
+      </div>
+      <div class="checklist-item" id="ci-k1-2">
+        <div class="ci-check" onclick="cycleItem('ci-k1-2')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">The Amherst Group Master Partners Fund LLC</div>
+          <div class="ci-type">Schedule K-1 · Jennifer · EIN 86-3298493</div>
+        </div>
+        <div class="ci-status pending" id="ci-k1-2-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-k1-2')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-k1-2')">N/A</button>
+        </div>
+      </div>
+      <div class="checklist-item" id="ci-k1-3">
+        <div class="ci-check" onclick="cycleItem('ci-k1-3')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">RevOptics LLC</div>
+          <div class="ci-type">Schedule K-1 · Jacob · EIN 33-1307913</div>
+        </div>
+        <div class="ci-status pending" id="ci-k1-3-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-k1-3')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-k1-3')">N/A</button>
+        </div>
+      </div>
+      <div class="checklist-item" id="ci-k1-4">
+        <div class="ci-check" onclick="cycleItem('ci-k1-4')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">Skaled Consulting LLC</div>
+          <div class="ci-type">Schedule K-1 · Jacob · EIN 46-1995048</div>
+        </div>
+        <div class="ci-status pending" id="ci-k1-4-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-k1-4')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-k1-4')">N/A</button>
+        </div>
+      </div>
+      <div class="checklist-item" id="ci-k1-5">
+        <div class="ci-check" onclick="cycleItem('ci-k1-5')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">Journey AI LLC</div>
+          <div class="ci-type">Schedule K-1 · Jacob · EIN 99-2838167</div>
+        </div>
+        <div class="ci-status pending" id="ci-k1-5-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-k1-5')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-k1-5')">N/A</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Business / Schedule C -->
+    <div class="checklist-section">
+      <div class="checklist-section-title">Schedule C · Business Income</div>
+      <div class="checklist-item" id="ci-c-1">
+        <div class="ci-check" onclick="cycleItem('ci-c-1')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">JDunlap Management LLC — Income &amp; Expense Records</div>
+          <div class="ci-type">Schedule C · Jacob · P&amp;L or bank/bookkeeping export</div>
+        </div>
+        <div class="ci-status pending" id="ci-c-1-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-c-1')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-c-1')">N/A</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1098 Mortgage -->
+    <div class="checklist-section">
+      <div class="checklist-section-title">Form 1098 · Mortgage Interest</div>
+      <div class="checklist-item" id="ci-1098-1">
+        <div class="ci-check" onclick="cycleItem('ci-1098-1')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">Truist Bank</div>
+          <div class="ci-type">Form 1098 · $24,024 interest paid in 2024</div>
+        </div>
+        <div class="ci-status pending" id="ci-1098-1-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-1098-1')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-1098-1')">N/A</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Childcare -->
+    <div class="checklist-section">
+      <div class="checklist-section-title">Childcare &amp; Dependent Expenses</div>
+      <div class="checklist-item" id="ci-care-1">
+        <div class="ci-check" onclick="cycleItem('ci-care-1')"></div>
+        <div class="ci-info">
+          <div class="ci-payer">Trinity School — Childcare / Tuition Statement</div>
+          <div class="ci-type">Year-end receipt or statement · $28,160 paid in 2024</div>
+        </div>
+        <div class="ci-status pending" id="ci-care-1-status">Pending</div>
+        <div class="ci-actions">
+          <button class="ci-btn upload" onclick="fakeUpload('ci-care-1')">⬆ Upload</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-care-1')">N/A</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="org-nav">
+      <button class="btn-secondary" onclick="goStep(2)">← Back</button>
+      <button class="btn-primary" onclick="goStep(4)">Review &amp; Submit →</button>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- STEP 4 — SUBMIT                                 -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="step-panel" id="step-4">
+    <div class="section-title">Review &amp; Submit</div>
+    <div class="section-sub">Here's a summary of what you're sending us. You can go back and add more if needed.</div>
+
+    <div class="org-card">
+      <div class="org-card-title">Summary</div>
+      <div style="display:flex; gap:2rem; flex-wrap:wrap; padding:0.5rem 0;">
+        <div>
+          <div style="font-size:1.8rem; font-weight:700; color:var(--green)">3</div>
+          <div style="font-size:0.8rem; color:var(--muted)">Documents Uploaded</div>
+        </div>
+        <div>
+          <div style="font-size:1.8rem; font-weight:700; color:var(--muted)">1</div>
+          <div style="font-size:0.8rem; color:var(--muted)">Marked N/A</div>
+        </div>
+        <div>
+          <div style="font-size:1.8rem; font-weight:700; color:var(--orange)">9</div>
+          <div style="font-size:0.8rem; color:var(--muted)">Still Pending</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="org-card">
+      <div class="org-card-title">Questions Answered</div>
+      <div style="font-size:0.88rem; color:var(--muted); line-height:1.8;">
+        ✓ No major life changes &nbsp;·&nbsp; ✓ Address unchanged &nbsp;·&nbsp; ✓ No crypto transactions<br>
+        ✓ No real estate transactions &nbsp;·&nbsp; ✓ No foreign accounts &nbsp;·&nbsp; ⚠️ Freelance income (Jennifer) — 1099-NEC from Amherst uploaded
+      </div>
+    </div>
+
+    <div class="banner-note">
+      ℹ️ <span>You still have <strong>9 pending documents</strong>. You can submit now and we'll follow up on what's missing, or go back and upload more first.</span>
+    </div>
+
+    <div class="org-nav">
+      <button class="btn-secondary" onclick="goStep(3)">← Back to Documents</button>
+      <button class="btn-submit" onclick="submitOrg()">✓ Send to Sentinel Tax</button>
+    </div>
+  </div>
+
+</div><!-- /org-wrap -->
+
+<script>
+  // === STEP NAVIGATION ===
+  function goStep(n) {
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('step-' + n).classList.add('active');
+    document.querySelectorAll('.progress-step').forEach((s, i) => {
+      s.classList.remove('active', 'done');
+      if (i + 1 < n) s.classList.add('done');
+      if (i + 1 === n) s.classList.add('active');
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // === YES/NO QUESTIONS ===
+  function selectYN(btn, val, key) {
+    const row = btn.closest('.question-row');
+    row.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('selected-yes', 'selected-no'));
+    btn.classList.add(val === 'yes' ? 'selected-yes' : 'selected-no');
+    const followup = document.getElementById(key + '-followup');
+    if (followup) followup.classList.toggle('visible', val === 'yes');
+  }
+
+  // === CHECKLIST ITEMS ===
+  let itemStates = {};
+
+  function fakeUpload(id) {
+    const item = document.getElementById(id);
+    item.className = 'checklist-item uploaded';
+    const check = item.querySelector('.ci-check');
+    check.className = 'ci-check uploaded';
+    check.textContent = '✓';
+    const status = document.getElementById(id + '-status');
+    status.className = 'ci-status uploaded';
+    status.textContent = '✓ Uploaded';
+    const actions = item.querySelector('.ci-actions');
+    actions.innerHTML = `<button class="ci-btn undo" onclick="undoItem('${id}')">Undo</button>`;
+    itemStates[id] = 'uploaded';
+    updateProgress();
+  }
+
+  function markNA(id) {
+    const item = document.getElementById(id);
+    item.className = 'checklist-item na';
+    const check = item.querySelector('.ci-check');
+    check.className = 'ci-check na';
+    check.textContent = '–';
+    const status = document.getElementById(id + '-status');
+    status.className = 'ci-status na';
+    status.textContent = 'Not applicable';
+    const actions = item.querySelector('.ci-actions');
+    actions.innerHTML = `<button class="ci-btn undo" onclick="undoItem('${id}')">Undo</button>`;
+    itemStates[id] = 'na';
+    updateProgress();
+  }
+
+  function undoItem(id) {
+    const item = document.getElementById(id);
+    item.className = 'checklist-item';
+    const check = item.querySelector('.ci-check');
+    check.className = 'ci-check';
+    check.textContent = '';
+    const status = document.getElementById(id + '-status');
+    status.className = 'ci-status pending';
+    status.textContent = 'Pending';
+    const actions = item.querySelector('.ci-actions');
+    actions.innerHTML = `<button class="ci-btn upload" onclick="fakeUpload('${id}')">⬆ Upload</button><button class="ci-btn na-btn" onclick="markNA('${id}')">N/A</button>`;
+    delete itemStates[id];
+    updateProgress();
+  }
+
+  function cycleItem(id) {
+    const state = itemStates[id];
+    if (state === 'uploaded') undoItem(id);
+    else if (state === 'na') undoItem(id);
+    else fakeUpload(id);
+  }
+
+  function updateProgress() {
+    const total = 13;
+    const done = Object.keys(itemStates).length;
+    const pct = Math.round((done / total) * 100);
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-count').innerHTML = `${done} <span>of ${total} complete</span>`;
+  }
+
+  function addDependent() {
+    const list = document.getElementById('dep-list');
+    const row = document.createElement('div');
+    row.className = 'dep-row';
+    row.innerHTML = `
+      <div class="field-wrap"><label class="field-label">Full Name</label><input class="field-input" type="text" placeholder="Full name"></div>
+      <div class="field-wrap"><label class="field-label">Relationship</label><input class="field-input" type="text" placeholder="Son / Daughter…"></div>
+      <div class="field-wrap"><label class="field-label">Date of Birth</label><input class="field-input" type="text" placeholder="MM/DD/YYYY"></div>
+      <div class="field-wrap"><label class="field-label">School / Childcare</label><input class="field-input" type="text" placeholder="School name"></div>
+    `;
+    list.appendChild(row);
+  }
+
+  function submitOrg() {
+    document.querySelector('.org-wrap').innerHTML = `
+      <div class="submit-screen">
+        <div class="submit-icon">✅</div>
+        <div class="submit-title">Sent to Sentinel Tax!</div>
+        <div class="submit-sub">
+          Your organizer has been submitted. We'll review what you've uploaded and follow up if anything's missing.<br><br>
+          You can continue uploading documents from your <a href="/portal" style="color:var(--gold)">client portal</a> at any time.
+        </div>
+      </div>
+    `;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Initialize pre-existing states
+  itemStates['ci-w2-2'] = 'uploaded';
+  itemStates['ci-nec-1'] = 'uploaded';
+  itemStates['ci-int-3'] = 'na';
+  updateProgress();
+</script>
+
+</body>
+</html>
