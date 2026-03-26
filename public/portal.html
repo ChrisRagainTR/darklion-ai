@@ -804,8 +804,17 @@
   .tsm-stat { background:rgba(255,255,255,0.04); border:1px solid var(--border,#2a2d3a); border-radius:10px; padding:0.85rem 1rem; }
   /* Close package report styles */
   .report-section { margin-bottom:1.5rem; }
-  .report-section .table-wrap { overflow-x:auto; border:1px solid var(--border,#2a2d3a); border-radius:6px; }
-  .report-section table { border-collapse:collapse; font-size:0.82rem; }
+  .report-section .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border,#2a2d3a);
+    border-radius: 6px;
+    /* Break out of main's max-width so wide tables scroll freely */
+    margin-left: calc(-1 * (100vw - 100%) / 2 - 1.25rem);
+    margin-right: calc(-1 * (100vw - 100%) / 2 - 1.25rem);
+    width: calc(100vw - 2.5rem);
+    max-width: calc(100vw - 2.5rem);
+  }
+  .report-section table { border-collapse:collapse; font-size:0.82rem; table-layout:auto !important; width:auto !important; min-width:100%; }
   .report-section td, .report-section th { white-space:nowrap; }
 
   .tsm-stat-val { font-size:1.35rem; font-weight:800; color:#c9a84c; }
@@ -1543,11 +1552,7 @@
       const firstColPct = dataCols <= 1 ? 60 : dataCols <= 3 ? 40 : 30;
       const restPct = (100 - firstColPct) / dataCols;
 
-      let html = '<div class="table-wrap" style="overflow-x:auto;"><table style="table-layout:fixed;width:100%;border-collapse:collapse;font-size:0.82rem;">';
-      html += '<colgroup>';
-      html += `<col style="width:${firstColPct}%">`;
-      for (let i = 0; i < dataCols; i++) html += `<col style="width:${restPct.toFixed(2)}%">`;
-      html += '</colgroup>';
+      let html = '<div class="table-wrap"><table style="border-collapse:collapse;font-size:0.82rem;">';
       html += '<thead><tr>';
       for (let i = 0; i < colCount; i++) {
         const title = columns[i]?.ColTitle || '';
