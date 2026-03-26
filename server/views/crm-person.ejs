@@ -1527,7 +1527,9 @@
     try {
       const res = await apiFetch('/portal-auth/send-invite', { method: 'POST', body: JSON.stringify({ personId: parseInt(personId) }) });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed');
-      toast('Invite sent');
+      toast('✓ Invite sent');
+      // Optimistically update so panel reflects change immediately, then re-fetch
+      if (personData) { personData.portal_invite_token = '__sent__'; personData.portal_has_password = false; renderOverview(personData); }
       await loadPerson();
     } catch(e) { toast(e.message, 'error'); }
   }
@@ -1536,7 +1538,9 @@
     try {
       const res = await apiFetch('/portal-auth/send-invite', { method: 'POST', body: JSON.stringify({ personId: parseInt(personId), spouse: true }) });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed');
-      toast('Spouse invite sent');
+      toast('✓ Spouse invite sent');
+      // Optimistically update so panel reflects change immediately, then re-fetch
+      if (personData) { personData.spouse_portal_invite_token = '__sent__'; personData.spouse_portal_has_password = false; renderOverview(personData); }
       await loadPerson();
     } catch(e) { toast(e.message, 'error'); }
   }
