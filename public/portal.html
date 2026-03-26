@@ -1913,33 +1913,9 @@
 
       let html = '';
 
-      // Personal docs — no bookkeeping category
+      // Personal docs only — company docs live in their own business tabs
       const personalDocs = (_docs || []).filter(d => d.owner_type === 'person');
-      const companyDocs = (_docs || []).filter(d => d.owner_type === 'company');
-
-      html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.25rem;border-bottom:2px solid var(--border);">👤 My Documents</div>`;
       html += renderSideBySide(personalDocs, false, null);
-
-      // Group company docs by company — include bookkeeping
-      const byCompany = {};
-      companyDocs.forEach(d => {
-        const cid = d.owner_id;
-        if (!byCompany[cid]) byCompany[cid] = [];
-        byCompany[cid].push(d);
-      });
-
-      // Also render company sections for companies that have no docs yet (so upload button appears)
-      (_companies || []).forEach(co => {
-        const cid = String(co.id || co.company_id);
-        if (!byCompany[cid]) byCompany[cid] = [];
-      });
-
-      Object.entries(byCompany).forEach(([cid, docs]) => {
-        const co = _companies.find(c => String(c.id || c.company_id) === String(cid));
-        const coName = co ? (co.company_name || co.name) : `Company #${cid}`;
-        html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin:1.5rem 0 0.75rem;">🏢 ${escHtml(coName)}</div>`;
-        html += renderSideBySide(docs, true, parseInt(cid));
-      });
 
       container.innerHTML = html;
 
