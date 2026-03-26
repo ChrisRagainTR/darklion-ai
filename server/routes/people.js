@@ -70,6 +70,7 @@ router.post('/', async (req, res) => {
   } = req.body;
 
   if (!relationship_id) return res.status(400).json({ error: 'relationship_id is required' });
+  if (!email) return res.status(400).json({ error: 'Email is required' });
 
   try {
     // Verify relationship belongs to this firm
@@ -78,6 +79,30 @@ router.post('/', async (req, res) => {
       [relationship_id, firmId]
     );
     if (relRows.length === 0) return res.status(404).json({ error: 'Relationship not found' });
+
+    // Email uniqueness check — across people.email AND people.spouse_email
+    const { rows: emailCheck } = await pool.query(
+      `SELECT id, first_name, last_name FROM people
+       WHERE firm_id = $1 AND (LOWER(email) = LOWER($2) OR LOWER(spouse_email) = LOWER($2))`,
+      [firmId, email]
+    );
+    if (emailCheck.length > 0) {
+      const clash = emailCheck[0];
+      return res.status(409).json({ error: `That email is already in use by ${clash.first_name} ${clash.last_name}` });
+    }
+
+    // Spouse email uniqueness check
+    if (spouse_email) {
+      const { rows: spouseEmailCheck } = await pool.query(
+        `SELECT id, first_name, last_name FROM people
+         WHERE firm_id = $1 AND (LOWER(email) = LOWER($2) OR LOWER(spouse_email) = LOWER($2))`,
+        [firmId, spouse_email]
+      );
+      if (spouseEmailCheck.length > 0) {
+        const clash = spouseEmailCheck[0];
+        return res.status(409).json({ error: `Spouse email is already in use by ${clash.first_name} ${clash.last_name}` });
+      }
+    }
 
     const date_of_birth_encrypted = date_of_birth ? encrypt(date_of_birth) : '';
 
@@ -180,6 +205,30 @@ router.put('/:id', async (req, res) => {
         [relationship_id, firmId]
       );
       if (relRows.length === 0) return res.status(404).json({ error: 'Relationship not found' });
+    }
+
+    // Email uniqueness check (exclude self)
+    if (email) {
+      const { rows: emailCheck } = await pool.query(
+        `SELECT id, first_name, last_name FROM people
+         WHERE firm_id = $1 AND id != $2 AND (LOWER(email) = LOWER($3) OR LOWER(spouse_email) = LOWER($3))`,
+        [firmId, id, email]
+      );
+      if (emailCheck.length > 0) {
+        const clash = emailCheck[0];
+        return res.status(409).json({ error: `That email is already in use by ${clash.first_name} ${clash.last_name}` });
+      }
+    }
+    if (spouse_email) {
+      const { rows: spouseEmailCheck } = await pool.query(
+        `SELECT id, first_name, last_name FROM people
+         WHERE firm_id = $1 AND id != $2 AND (LOWER(email) = LOWER($3) OR LOWER(spouse_email) = LOWER($3))`,
+        [firmId, id, spouse_email]
+      );
+      if (spouseEmailCheck.length > 0) {
+        const clash = spouseEmailCheck[0];
+        return res.status(409).json({ error: `Spouse email is already in use by ${clash.first_name} ${clash.last_name}` });
+      }
     }
 
     const date_of_birth_encrypted = date_of_birth !== undefined ? encrypt(date_of_birth) : undefined;

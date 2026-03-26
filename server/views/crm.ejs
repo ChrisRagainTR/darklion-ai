@@ -393,7 +393,7 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Email</label>
+          <label class="form-label">Email <span class="req">*</span></label>
           <input type="email" class="form-control" id="person-form-email" placeholder="email@example.com">
         </div>
         <div class="form-group">
@@ -1080,6 +1080,8 @@ async function submitPersonForm() {
   const relId = document.getElementById('person-form-rel-id').value;
   if (!fname || !lname) { showFormError('person-form-error', 'First and last name are required.'); return; }
   if (!relId) { showFormError('person-form-error', 'Please select a relationship.'); return; }
+  const emailVal = document.getElementById('person-form-email').value.trim();
+  if (!emailVal) { showFormError('person-form-error', 'Email is required.'); return; }
   const body = {
     first_name: fname,
     last_name: lname,

@@ -8,7 +8,10 @@ const { auditLog } = require('./firms');
 const { requireFirm } = require('../middleware/requireFirm');
 const { sendPortalInvite, sendPasswordReset } = require('../services/email');
 
+// PORTAL_URL is used for client-facing invite/reset links — can differ from APP_URL in dev
+// Set PORTAL_URL in Railway dev to https://darklion-ai-development.up.railway.app
 const APP_URL = (process.env.APP_URL || 'https://darklion.ai').replace(/\/+$/, '');
+const PORTAL_URL = (process.env.PORTAL_URL || process.env.APP_URL || 'https://darklion.ai').replace(/\/+$/, '');
 
 const router = Router();
 
@@ -331,7 +334,7 @@ router.post('/forgot-password', async (req, res) => {
       try {
         const { rows: firmRows } = await pool.query('SELECT name FROM firms WHERE id = $1', [person.firm_id]);
         const firmName = firmRows[0]?.name || 'Your Advisory Firm';
-        const resetUrl = `${APP_URL}/portal-login?reset=${resetToken}`;
+        const resetUrl = `${PORTAL_URL}/portal-login?reset=${resetToken}`;
         const toEmail = signerRole === 'spouse' ? person.spouse_email : person.email;
         const toName = signerRole === 'spouse'
           ? (person.spouse_name || 'Spouse')
@@ -516,7 +519,7 @@ router.post('/send-invite', requireFirm, async (req, res) => {
 
       await auditLog(firmId, 'portal_invite_sent', `Spouse portal invite sent to ${person.spouse_email}`, ip);
 
-      const inviteUrl = `${APP_URL}/portal-login?invite=${token}`;
+      const inviteUrl = `${PORTAL_URL}/portal-login?invite=${token}`;
 
       try {
         await sendPortalInvite({
@@ -546,7 +549,7 @@ router.post('/send-invite', requireFirm, async (req, res) => {
 
       await auditLog(firmId, 'portal_invite_sent', `Portal invite sent to ${person.email}`, ip);
 
-      const inviteUrl = `${APP_URL}/portal-login?invite=${token}`;
+      const inviteUrl = `${PORTAL_URL}/portal-login?invite=${token}`;
 
       try {
         await sendPortalInvite({
