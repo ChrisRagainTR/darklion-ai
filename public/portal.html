@@ -2046,7 +2046,7 @@
       if (!wrap) return;
       const year = '2025';
       try {
-        const data = await api(`/portal/organizer/portal/${year}`);
+        const data = await api(`/portal/organizer/client/${year}`);
         renderOrganizerDashboard(wrap, data, year);
       } catch (e) {
         console.warn('[organizer] API error:', e.message);

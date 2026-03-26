@@ -1258,7 +1258,7 @@
   async function apiUpdateItem(itemId, status) {
     if (!token) return;
     try {
-      await fetch(`/portal/organizer/portal/${YEAR}/item/${itemId}`, {
+      await fetch(`/portal/organizer/client/${YEAR}/item/${itemId}`, {
         method: 'PUT',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -1335,7 +1335,7 @@
       populatePersonInfo(me);
 
       // Load organizer items for Step 3
-      const orgData = await portalApi(`/portal/organizer/portal/${YEAR}`);
+      const orgData = await portalApi(`/portal/organizer/client/${YEAR}`);
       if (orgData.items && orgData.items.length) {
         // Clear existing hardcoded itemStates
         Object.keys(itemStates).forEach(k => delete itemStates[k]);

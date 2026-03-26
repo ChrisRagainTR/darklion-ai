@@ -188,35 +188,9 @@ router.post('/upload/:personId', requireFirm, upload.single('file'), async (req,
 });
 
 // ─────────────────────────────────────────────────────────────
-// STAFF: Get organizer + items for a person/year
-// ─────────────────────────────────────────────────────────────
-router.get('/:personId/:year', requireFirm, async (req, res) => {
-  const { personId, year } = req.params;
-  const firmId = req.firm.id;
-
-  try {
-    const orgRes = await pool.query(
-      'SELECT * FROM tax_organizers WHERE person_id = $1 AND tax_year = $2 AND firm_id = $3',
-      [personId, year, firmId]
-    );
-    if (!orgRes.rows.length) return res.status(404).json({ error: 'No organizer found' });
-    const organizer = orgRes.rows[0];
-
-    const itemsRes = await pool.query(
-      'SELECT * FROM tax_organizer_items WHERE organizer_id = $1 ORDER BY display_order',
-      [organizer.id]
-    );
-
-    res.json({ organizer, items: itemsRes.rows });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ─────────────────────────────────────────────────────────────
 // PORTAL: Get organizer for the logged-in client
 // ─────────────────────────────────────────────────────────────
-router.get('/portal/:year', requirePortal, async (req, res) => {
+router.get('/client/:year', requirePortal, async (req, res) => {
   const { year } = req.params;
   const personId = req.portal.personId;
 
@@ -254,9 +228,35 @@ router.get('/portal/:year', requirePortal, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
+// STAFF: Get organizer + items for a person/year
+// ─────────────────────────────────────────────────────────────
+router.get('/:personId/:year', requireFirm, async (req, res) => {
+  const { personId, year } = req.params;
+  const firmId = req.firm.id;
+
+  try {
+    const orgRes = await pool.query(
+      'SELECT * FROM tax_organizers WHERE person_id = $1 AND tax_year = $2 AND firm_id = $3',
+      [personId, year, firmId]
+    );
+    if (!orgRes.rows.length) return res.status(404).json({ error: 'No organizer found' });
+    const organizer = orgRes.rows[0];
+
+    const itemsRes = await pool.query(
+      'SELECT * FROM tax_organizer_items WHERE organizer_id = $1 ORDER BY display_order',
+      [organizer.id]
+    );
+
+    res.json({ organizer, items: itemsRes.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
 // PORTAL: Update a checklist item status
 // ─────────────────────────────────────────────────────────────
-router.put('/portal/:year/item/:itemId', requirePortal, async (req, res) => {
+router.put('/client/:year/item/:itemId', requirePortal, async (req, res) => {
   const { year, itemId } = req.params;
   const { status, document_id } = req.body;
   const personId = req.portal.personId;
@@ -298,7 +298,7 @@ router.put('/portal/:year/item/:itemId', requirePortal, async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 // PORTAL: Save question answers
 // ─────────────────────────────────────────────────────────────
-router.post('/portal/:year/answers', requirePortal, async (req, res) => {
+router.post('/client/:year/answers', requirePortal, async (req, res) => {
   const { year } = req.params;
   const { answers } = req.body; // { crypto: false, foreign_accounts: false, ... }
   const personId = req.portal.personId;
@@ -319,7 +319,7 @@ router.post('/portal/:year/answers', requirePortal, async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 // PORTAL: Submit organizer — build workpaper PDF
 // ─────────────────────────────────────────────────────────────
-router.post('/portal/:year/submit', requirePortal, async (req, res) => {
+router.post('/client/:year/submit', requirePortal, async (req, res) => {
   const { year } = req.params;
   const personId = req.portal.personId;
 
