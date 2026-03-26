@@ -530,7 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Show/hide spouse section when filing status changes
   document.getElementById('person-form-filing').addEventListener('change', function() {
-    document.getElementById('person-form-spouse-section').style.display = this.value === 'mfj' ? '' : 'none';
+    document.getElementById('person-form-spouse-section').style.display = ['mfj','mfs'].includes(this.value) ? '' : 'none';
   });
 
   loadRelationships();
@@ -875,7 +875,7 @@ async function loadPersonOverview() {
     const res = await apiFetch(`/api/people/${currentPersonId}`);
     const p = await res.json();
     populatePersonPanelHeader(p);
-    const spouseHtml = p.filing_status === 'mfj' && p.spouse_name ? esc(p.spouse_name) : '—';
+    const spouseHtml = ['mfj','mfs'].includes(p.filing_status) && p.spouse_name ? esc(p.spouse_name) : '—';
     c.innerHTML = `
       <div class="info-card">
         <div class="panel-section-title">Contact Info</div>
@@ -1056,7 +1056,7 @@ async function openEditPerson(id) {
   document.getElementById('person-form-email').value = p.email || '';
   document.getElementById('person-form-phone').value = p.phone || '';
   document.getElementById('person-form-filing').value = p.filing_status || '';
-  document.getElementById('person-form-spouse-section').style.display = p.filing_status === 'mfj' ? '' : 'none';
+  document.getElementById('person-form-spouse-section').style.display = ['mfj','mfs'].includes(p.filing_status) ? '' : 'none';
   document.getElementById('person-form-dob').value = p.date_of_birth ? p.date_of_birth.slice(0,10) : '';
   document.getElementById('person-form-stanford').value = p.stanford_tax_url || '';
   document.getElementById('person-form-notes').value = p.notes || '';

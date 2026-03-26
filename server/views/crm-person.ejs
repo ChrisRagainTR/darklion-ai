@@ -908,7 +908,7 @@
     const fsLabel = { mfj:'MFJ', single:'Single', hoh:'Head of Household', mfs:'MFS' }[p.filing_status] || (p.filing_status||'').replace(/_/g,' ');
     const fsColors = { MFJ:'rgba(74,144,217,0.15)', Single:'rgba(143,163,184,0.15)', HOH:'rgba(237,137,54,0.15)', MFS:'rgba(138,99,241,0.15)' };
     const fsTextColors = { MFJ:'#4a90d9', Single:'#8fa3b8', HOH:'#ed8936', MFS:'#a78bfa' };
-    const fsKey = p.filing_status === 'mfj' ? 'MFJ' : p.filing_status === 'single' ? 'Single' : p.filing_status === 'hoh' ? 'HOH' : p.filing_status === 'mfs' ? 'MFS' : null;
+    const fsKey = ['mfj','mfs'].includes(p.filing_status) ? 'MFJ' : p.filing_status === 'single' ? 'Single' : p.filing_status === 'hoh' ? 'HOH' : p.filing_status === 'mfs' ? 'MFS' : null;
     const fsBg = fsColors[fsKey] || 'rgba(143,163,184,0.15)';
     const fsTc = fsTextColors[fsKey] || '#8fa3b8';
     const personBmLabel = p.billing_method === 'monthly_billing' ? 'Monthly Billing' : p.billing_method === 'client_invoice' ? 'Client Invoice' : (p.billing_method || '—');
@@ -971,7 +971,7 @@
 
     // Spouse row (MFJ only)
     let spouseRow = '';
-    if (p.filing_status === 'mfj') {
+    if (['mfj','mfs'].includes(p.filing_status)) {
       if (p.spouse_name || p.spouse_email) {
         spouseRow = `
           <div style="display:flex;align-items:center;gap:0.65rem;padding:0.65rem 0;">
@@ -1473,14 +1473,14 @@
     document.getElementById('ef-spouse-email').value = personData.spouse_email || '';
     document.getElementById('ef-spouse-portal-enabled').checked = !!personData.spouse_portal_enabled;
     // Show/hide spouse section based on filing status
-    document.getElementById('ef-spouse-section').style.display = filingVal === 'mfj' ? '' : 'none';
+    document.getElementById('ef-spouse-section').style.display = ['mfj','mfs'].includes(filingVal) ? '' : 'none';
     const m = document.getElementById('edit-modal');
     m.classList.remove('hidden');
     m.style.display = 'flex';
   }
 
   function efFilingChanged(val) {
-    document.getElementById('ef-spouse-section').style.display = val === 'mfj' ? '' : 'none';
+    document.getElementById('ef-spouse-section').style.display = ['mfj','mfs'].includes(val) ? '' : 'none';
   }
   function closeModal() {
     const m = document.getElementById('edit-modal');
