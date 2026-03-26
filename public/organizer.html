@@ -170,6 +170,15 @@
     }
 
     /* === CHECKLIST === */
+    .checklist-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 1.25rem;
+      align-items: start;
+    }
+    @media (max-width: 640px) {
+      .checklist-grid { grid-template-columns: 1fr; }
+    }
     .checklist-section { margin-bottom: 1.5rem; }
     .checklist-section-title {
       font-size: 0.75rem; font-weight: 700;
@@ -631,6 +640,10 @@
       <div class="bu-sub">Upload one file and check off what's inside — no need to separate each document.</div>
     </div>
 
+    <div class="checklist-grid">
+    <!-- LEFT COLUMN -->
+    <div>
+
     <!-- W-2s -->
     <div class="checklist-section">
       <div class="checklist-section-title">W-2 · Wages</div>
@@ -778,6 +791,10 @@
       </div>
     </div>
 
+    </div><!-- /left column -->
+    <!-- RIGHT COLUMN -->
+    <div>
+
     <!-- K-1s -->
     <div class="checklist-section">
       <div class="checklist-section-title">Schedule K-1 · Partnerships &amp; S-Corps</div>
@@ -891,6 +908,9 @@
         </div>
       </div>
     </div>
+
+    </div><!-- /right column -->
+    </div><!-- /checklist-grid -->
 
     <div class="org-nav">
       <button class="btn-secondary" onclick="goStep(2)">← Back</button>
