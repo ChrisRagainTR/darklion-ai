@@ -143,8 +143,13 @@
     .empty-state { text-align: center; padding: 3rem 2rem; color: var(--muted); }
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 1000; display: none; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
-    .modal { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; max-width: 480px; width: calc(100% - 2rem); }
+    .modal { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; max-width: 480px; width: calc(100% - 2rem); }
     .modal h2 { font-size: 1.1rem; margin-bottom: 1.25rem; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+    .modal-header .modal-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .modal-close { background: none; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0.1rem 0.25rem; border-radius: 4px; }
+    .modal-close:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+    .modal-body { margin-bottom: 1.25rem; }
     .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.25rem; }
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
