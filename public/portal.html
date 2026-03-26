@@ -1965,13 +1965,23 @@
           : '✓ File uploaded successfully!';
         msgEl.style.display = 'block';
 
-        // Close modal immediately and refresh
+        // Close modal immediately and refresh whatever tab is currently visible
         modal.classList.add('hidden');
         _docs = await api('/portal/documents').catch(() => _docs);
-        renderDocuments();
 
-        // Also bust company tab cache so it shows fresh data on next click
-        document.querySelectorAll('[id^="co-docs-"]').forEach(el => delete el.dataset.loaded);
+        if (_uploadCompanyId) {
+          // Bust cache and force re-render the company tab that's open
+          const coContainer = document.getElementById(`co-docs-${_uploadCompanyId}`);
+          if (coContainer) {
+            delete coContainer.dataset.loaded;
+            loadCompanyDocs(_uploadCompanyId);
+          }
+          // Also bust all other company tab caches
+          document.querySelectorAll('[id^="co-docs-"]').forEach(el => delete el.dataset.loaded);
+        } else {
+          // Personal tab
+          renderDocuments();
+        }
       } catch (err) {
         errEl.textContent = err.message;
         errEl.style.display = 'block';
@@ -2017,8 +2027,18 @@
         if (!res.ok) throw new Error(data.error || 'Move failed');
 
         _docs = await api('/portal/documents').catch(() => _docs);
-        renderDocuments();
         moveModal.classList.add('hidden');
+
+        // Refresh the currently visible tab
+        const activePanel = document.querySelector('.tab-panel.active');
+        const coMatch = activePanel && activePanel.id.match(/^tab-co-(\d+)$/);
+        if (coMatch) {
+          const coId = parseInt(coMatch[1]);
+          const coContainer = document.getElementById(`co-docs-${coId}`);
+          if (coContainer) { delete coContainer.dataset.loaded; loadCompanyDocs(coId); }
+        } else {
+          renderDocuments();
+        }
       } catch (err) {
         errEl.textContent = err.message;
         errEl.style.display = 'block';
