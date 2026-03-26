@@ -2660,11 +2660,16 @@
         const res = await fetch('/portal/tax-deliveries', { headers: authHeader() });
         if (!res.ok) return;
         _taxDeliveries = await res.json();
-        if (_taxDeliveries.length > 0) {
-          const tab = document.getElementById('review-sign-tab');
-          const badge = document.getElementById('review-sign-badge');
+        // Only show tab for deliveries the current user hasn't signed yet
+        const pending = _taxDeliveries.filter(d => !d.signed_at);
+        const tab = document.getElementById('review-sign-tab');
+        const badge = document.getElementById('review-sign-badge');
+        if (pending.length > 0) {
           if (tab) { tab.style.display = ''; }
-          if (badge) { badge.textContent = _taxDeliveries.length; badge.style.display = ''; }
+          if (badge) { badge.textContent = pending.length; badge.style.display = ''; }
+        } else {
+          if (tab) tab.style.display = 'none';
+          if (badge) badge.style.display = 'none';
         }
       } catch(e) { console.error('[tax-delivery] loadTaxDeliveriesInit error:', e); }
     }
