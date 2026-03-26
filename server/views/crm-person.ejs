@@ -1613,13 +1613,14 @@
             '<span style="color:var(--text);">' + esc(changeNoteText) + '</span>' +
           '</div>'
         : '';
-      // Doc links for signed/sent deliveries
-      const signedDocs = signers.filter(s => s.signed_doc_id).map(s =>
-        `<button class="btn btn-outline btn-sm" onclick="downloadDeliveryDoc(${s.signed_doc_id})" title="Signed by ${esc(s.person_name)}">⬇ Signed (${esc((s.person_name||'').split(' ')[0])})</button>`
-      ).join('');
+      // Doc links — review copy and combined signed PDF (on delivery, not individual signers)
+      const signedDocBtn = d.signed_doc_id
+        ? `<button class="btn btn-gold btn-sm" onclick="downloadDeliveryDoc(${d.signed_doc_id})">✅ Signed Copy</button>`
+        : '';
       const reviewDocLink = d.review_doc_id && d.status !== 'draft'
         ? `<button class="btn btn-outline btn-sm" onclick="downloadDeliveryDoc(${d.review_doc_id})">📄 Review Copy</button>`
         : '';
+      const signedDocs = signedDocBtn; // keep variable name for template below
 
       return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:0.75rem;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:${(signedDocs||reviewDocLink)?'0.75rem':'0'}">
