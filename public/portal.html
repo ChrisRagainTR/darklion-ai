@@ -173,6 +173,11 @@
       max-width: 1200px;
       margin: 0 auto;
       padding: 1.75rem 1.25rem 4rem;
+      transition: max-width 0.2s ease, padding 0.2s ease;
+    }
+    main.wide-mode {
+      max-width: 98vw;
+      padding: 1.75rem 0.75rem 4rem;
     }
 
     .tab-panel { display: none; }
@@ -1183,6 +1188,8 @@
         if (tab === 'organizers' && _stanford === null) loadOrganizers();
         if (tab === 'messages') initChat();
         if (tab === 'review-sign') loadTaxDeliveries();
+        // Leave wide-mode only when on a company bookkeeping subtab
+        document.querySelector('main').classList.remove('wide-mode');
       });
     });
 
@@ -1374,6 +1381,8 @@
           panelContainer.querySelectorAll(`.co-subtab-panel[id^="co-subtab-"][id$="-${coId}"]`).forEach(p => {
             p.style.display = p.id === `co-subtab-${subtab}-${coId}` ? '' : 'none';
           });
+          // Wide mode for bookkeeping (lots of columns), normal for docs
+          document.querySelector('main').classList.toggle('wide-mode', subtab === 'bookkeeping');
           // Lazy-load bookkeeping on first open
           if (subtab === 'bookkeeping') loadCompanyBookkeeping(parseInt(coId));
         });
