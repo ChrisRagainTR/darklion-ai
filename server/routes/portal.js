@@ -50,7 +50,8 @@ router.get('/me', async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT id, firm_id, relationship_id, first_name, last_name, email, phone,
-              filing_status, portal_enabled, portal_last_login_at, created_at
+              filing_status, portal_enabled, portal_last_login_at, created_at,
+              spouse_name, spouse_email
        FROM people
        WHERE id = $1`,
       [req.portal.personId]
@@ -58,19 +59,26 @@ router.get('/me', async (req, res) => {
 
     if (!rows[0]) return res.status(404).json({ error: 'Person not found' });
     const person = rows[0];
+    const isSpouse = (req.portal.signerRole || 'taxpayer') === 'spouse';
+
+    // When spouse logs in, show their name/email not the primary person's
+    const displayFirst = isSpouse ? (person.spouse_name || '').split(' ')[0] || person.first_name : person.first_name;
+    const displayLast  = isSpouse ? (person.spouse_name || '').split(' ').slice(1).join(' ') || person.last_name : person.last_name;
+    const displayEmail = isSpouse ? (person.spouse_email || person.email) : person.email;
 
     res.json({
       id: person.id,
       firmId: person.firm_id,
       relationshipId: person.relationship_id,
-      firstName: person.first_name,
-      lastName: person.last_name,
-      email: person.email,
+      firstName: displayFirst,
+      lastName: displayLast,
+      email: displayEmail,
       phone: person.phone,
       filingStatus: person.filing_status,
       portalEnabled: person.portal_enabled,
       lastLogin: person.portal_last_login_at,
       createdAt: person.created_at,
+      signerRole: req.portal.signerRole || 'taxpayer',
     });
   } catch (err) {
     console.error('Portal /me error:', err);
@@ -695,9 +703,19 @@ router.get('/attachments/:documentId/download', async (req, res) => {
 // ── TAX DELIVERY PORTAL ENDPOINTS ────────────────────────────────────────
 
 // ── Helper: verify signer access ─────────────────────────────────────────
-async function getSignerForDelivery(deliveryId, personId) {
+async function getSignerForDelivery(deliveryId, personId, signerRole) {
+  // If signerRole provided, match it specifically (handles MFJ with two rows per person)
+  if (signerRole && signerRole !== 'taxpayer') {
+    const { rows } = await pool.query(
+      'SELECT * FROM tax_delivery_signers WHERE delivery_id = $1 AND person_id = $2 AND signer_role = $3',
+      [deliveryId, personId, signerRole]
+    );
+    if (rows[0]) return rows[0];
+  }
+  // Default: taxpayer role or any row for this person
   const { rows } = await pool.query(
-    'SELECT * FROM tax_delivery_signers WHERE delivery_id = $1 AND person_id = $2',
+    `SELECT * FROM tax_delivery_signers WHERE delivery_id = $1 AND person_id = $2
+     ORDER BY CASE WHEN signer_role = 'taxpayer' THEN 0 ELSE 1 END LIMIT 1`,
     [deliveryId, personId]
   );
   return rows[0] || null;
@@ -719,16 +737,16 @@ router.get('/tax-deliveries', async (req, res) => {
               tds.approved_at, tds.signed_at, tds.needs_changes_at, tds.needs_changes_note
        FROM tax_deliveries td
        LEFT JOIN companies co ON co.id = td.company_id
-       LEFT JOIN tax_delivery_signers tds ON tds.delivery_id = td.id AND tds.person_id = $1
+       LEFT JOIN tax_delivery_signers tds ON tds.delivery_id = td.id AND tds.person_id = $1 AND tds.signer_role = $2
        WHERE td.status IN ('sent','approved','needs_changes','signed')
          AND (
-           tds.person_id = $1
+           EXISTS (SELECT 1 FROM tax_delivery_signers WHERE delivery_id = td.id AND person_id = $1)
            OR td.company_id IN (
              SELECT company_id FROM person_company_access WHERE person_id = $1
            )
          )
        ORDER BY td.id, td.created_at DESC`,
-      [personId]
+      [personId, req.portal.signerRole || 'taxpayer']
     );
     res.json(rows);
   } catch (err) {
@@ -742,7 +760,7 @@ router.get('/tax-deliveries/:id/summary', async (req, res) => {
   const personId = req.portal.personId;
   const id = parseInt(req.params.id);
   try {
-    const signer = await getSignerForDelivery(id, personId);
+    const signer = await getSignerForDelivery(id, personId, req.portal.signerRole);
     if (!signer) return res.status(403).json({ error: 'Access denied' });
     const { rows } = await pool.query(
       'SELECT tax_report_data, tax_report_status FROM tax_deliveries WHERE id = $1',
@@ -761,7 +779,7 @@ router.get('/tax-deliveries/:id/download-review', async (req, res) => {
   const personId = req.portal.personId;
   const id = parseInt(req.params.id);
   try {
-    const signer = await getSignerForDelivery(id, personId);
+    const signer = await getSignerForDelivery(id, personId, req.portal.signerRole);
     if (!signer) return res.status(403).json({ error: 'Access denied' });
 
     const { rows } = await pool.query(
@@ -785,7 +803,7 @@ router.get('/tax-deliveries/:id/download-signature', async (req, res) => {
   const personId = req.portal.personId;
   const id = parseInt(req.params.id);
   try {
-    const signer = await getSignerForDelivery(id, personId);
+    const signer = await getSignerForDelivery(id, personId, req.portal.signerRole);
     if (!signer) return res.status(403).json({ error: 'Access denied' });
 
     const { rows } = await pool.query(
@@ -809,13 +827,13 @@ router.post('/tax-deliveries/:id/approve', async (req, res) => {
   const personId = req.portal.personId;
   const id = parseInt(req.params.id);
   try {
-    const signer = await getSignerForDelivery(id, personId);
+    const signer = await getSignerForDelivery(id, personId, req.portal.signerRole);
     if (!signer) return res.status(403).json({ error: 'Access denied' });
 
     await pool.query(
       `UPDATE tax_delivery_signers SET approved_at = NOW(), approved_ip = $1
-       WHERE delivery_id = $2 AND person_id = $3`,
-      [req.ip, id, personId]
+       WHERE delivery_id = $2 AND person_id = $3 AND signer_role = $4`,
+      [req.ip, id, personId, signer.signer_role]
     );
 
     await pool.query(
@@ -852,13 +870,13 @@ router.post('/tax-deliveries/:id/needs-changes', async (req, res) => {
   if (!note) return res.status(400).json({ error: 'note is required' });
 
   try {
-    const signer = await getSignerForDelivery(id, personId);
+    const signer = await getSignerForDelivery(id, personId, req.portal.signerRole);
     if (!signer) return res.status(403).json({ error: 'Access denied' });
 
     await pool.query(
       `UPDATE tax_delivery_signers SET needs_changes_at = NOW(), needs_changes_note = $1
-       WHERE delivery_id = $2 AND person_id = $3`,
-      [note, id, personId]
+       WHERE delivery_id = $2 AND person_id = $3 AND signer_role = $4`,
+      [note, id, personId, signer.signer_role]
     );
 
     await pool.query(
@@ -883,16 +901,7 @@ router.post('/tax-deliveries/:id/needs-changes', async (req, res) => {
       const clientName = `${d.first_name} ${d.last_name}`.trim();
       const entityLabel = d.company_name || clientName;
 
-      // Email firm
-      try {
-        await sendEmail({
-          to: d.firm_email,
-          subject: `Changes Requested: ${d.tax_year} Return for ${entityLabel}`,
-          html: `<p><strong>${clientName}</strong> has requested changes to their ${d.tax_year} tax return for ${entityLabel}:</p><blockquote>${note}</blockquote><p>Log in to DarkLion to review.</p>`,
-        });
-      } catch (emailErr) {
-        console.error('[portal] needs-changes email error:', emailErr);
-      }
+      // Firm is notified via staff message thread (below) — no separate email
 
       // Create a staff message thread so it appears in team inbox
       try {
@@ -930,77 +939,22 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
   if (!signature_data) return res.status(400).json({ error: 'signature_data is required' });
 
   try {
-    const signer = await getSignerForDelivery(id, personId);
+    const signer = await getSignerForDelivery(id, personId, req.portal.signerRole);
     if (!signer) return res.status(403).json({ error: 'Access denied' });
     if (!signer.approved_at) return res.status(400).json({ error: 'You must approve the return before signing' });
 
     await pool.query(
       `UPDATE tax_delivery_signers SET
          signed_at = NOW(), signed_ip = $1, signature_data = $2, signature_type = $3
-       WHERE delivery_id = $4 AND person_id = $5`,
-      [req.ip, signature_data, signature_type, id, personId]
+       WHERE delivery_id = $4 AND person_id = $5 AND signer_role = $6`,
+      [req.ip, signature_data, signature_type, id, personId, signer.signer_role]
     );
 
-    // Generate signed PDF for this signer
-    try {
-      const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
-      // Get delivery + person info
-      const { rows: [delivInfo] } = await pool.query(
-        `SELECT td.signature_doc_id, td.tax_year, td.firm_id, td.company_id, f.name AS firm_name,
-                p.first_name, p.last_name, p.email AS person_email
-         FROM tax_deliveries td
-         JOIN firms f ON f.id = td.firm_id
-         JOIN people p ON p.id = $2
-         WHERE td.id = $1`,
-        [id, personId]
-      );
-      if (delivInfo && delivInfo.signature_doc_id) {
-        const { rows: [sigDoc] } = await pool.query(
-          'SELECT s3_key, s3_bucket FROM documents WHERE id = $1', [delivInfo.signature_doc_id]
-        );
-        if (sigDoc) {
-          const originalPdf = await downloadFile({ key: sigDoc.s3_key, bucket: sigDoc.s3_bucket || bucket });
-          const signedPdf = await embedSignature(originalPdf, {
-            name: `${delivInfo.first_name} ${delivInfo.last_name}`.trim(),
-            email: delivInfo.person_email,
-            signedAt: new Date().toISOString(),
-            signedIp: req.ip,
-            signatureData: signature_data,
-            signatureType: signature_type,
-            taxYear: delivInfo.tax_year,
-            firmName: delivInfo.firm_name,
-          });
-          // Store signed PDF as new document
-          const signedKey = buildKey(delivInfo.firm_id, 'tax_signed', `signed_${Date.now()}.pdf`);
-          await uploadFile({ buffer: signedPdf, key: signedKey, mimeType: 'application/pdf', bucket });
-          // For company deliveries, store signed doc on the company; otherwise on the person
-          const docOwnerType = delivInfo.company_id ? 'company' : 'person';
-          const docOwnerId = delivInfo.company_id || personId;
-          const { rows: [newDoc] } = await pool.query(
-            `INSERT INTO documents (firm_id, owner_type, owner_id, doc_type, display_name, mime_type,
-               size_bytes, s3_key, s3_bucket, folder_section, folder_category, year, is_delivered, delivered_at)
-             VALUES ($1, $2, $3, 'signed_return', $4, 'application/pdf', $5, $6, $7,
-                     'firm_uploaded', 'tax', $8, true, NOW())
-             RETURNING id`,
-            [delivInfo.firm_id, docOwnerType, docOwnerId,
-             `${delivInfo.tax_year} Tax Return — Signed by ${delivInfo.first_name} ${delivInfo.last_name}.pdf`,
-             signedPdf.length, signedKey, bucket, delivInfo.tax_year]
-          );
-          // Link signed doc to the signer record
-          await pool.query(
-            'UPDATE tax_delivery_signers SET signed_doc_id = $1 WHERE delivery_id = $2 AND person_id = $3',
-            [newDoc.id, id, personId]
-          );
-        }
-      }
-    } catch(pdfErr) {
-      console.error('[portal] sign PDF embed error (non-fatal):', pdfErr);
-      // Non-fatal — signature is still recorded even if PDF embed fails
-    }
+    // Signed PDF is generated only when ALL signers have signed (see below)
 
     // Check if ALL signers have now signed
     const { rows: allSigners } = await pool.query(
-      'SELECT signed_at FROM tax_delivery_signers WHERE delivery_id = $1',
+      'SELECT signed_at, person_id, signer_role, signature_data, signature_type, signed_ip FROM tax_delivery_signers WHERE delivery_id = $1',
       [id]
     );
     const allSigned = allSigners.every(s => s.signed_at);
@@ -1011,12 +965,16 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
         [id]
       );
 
-      // Fetch delivery info for notifications and pipeline advance
+      // Fetch delivery info — get person via taxpayer signer row (td has no person_id column)
       const { rows: deliveryRows } = await pool.query(
-        `SELECT td.*, co.company_name, f.email AS firm_email, f.name AS firm_name
+        `SELECT td.*, co.company_name, f.email AS firm_email, f.name AS firm_name,
+                p.first_name, p.last_name, p.email AS person_email,
+                p.spouse_name, p.spouse_email
          FROM tax_deliveries td
          LEFT JOIN companies co ON co.id = td.company_id
          JOIN firms f ON f.id = td.firm_id
+         LEFT JOIN tax_delivery_signers tds_p ON tds_p.delivery_id = td.id AND tds_p.signer_role = 'taxpayer'
+         LEFT JOIN people p ON p.id = tds_p.person_id
          WHERE td.id = $1`,
         [id]
       );
@@ -1029,24 +987,64 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
           await advancePipelineJob(d.pipeline_job_id);
         }
 
-        // Notify firm
+        // Generate one combined signed PDF with all signatures
         try {
-          await sendEmail({
-            to: d.firm_email,
-            subject: `All Signed: ${d.tax_year} Return for ${d.company_name}`,
-            html: `<p>All parties have signed the ${d.tax_year} tax return for <strong>${d.company_name}</strong>. Ready to e-file.</p>`,
-          });
-        } catch (emailErr) {
-          console.error('[portal] sign complete email error:', emailErr);
+          if (d.signature_doc_id) {
+            const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
+            const { rows: [sigDoc] } = await pool.query('SELECT s3_key, s3_bucket FROM documents WHERE id = $1', [d.signature_doc_id]);
+            if (sigDoc) {
+              let pdfBuffer = await downloadFile({ key: sigDoc.s3_key, bucket: sigDoc.s3_bucket || bucket });
+              // Embed each signer's signature in sequence
+              for (const s of allSigners) {
+                const isSpouse = s.signer_role === 'spouse';
+                const signerName = isSpouse
+                  ? (d.spouse_name || 'Spouse')
+                  : `${d.first_name || ''} ${d.last_name || ''}`.trim();
+                const signerEmail = isSpouse ? (d.spouse_email || '') : (d.person_email || '');
+                pdfBuffer = await embedSignature(pdfBuffer, {
+                  name: signerName,
+                  email: signerEmail,
+                  signedAt: s.signed_at,
+                  signedIp: s.signed_ip || '',
+                  signatureData: s.signature_data,
+                  signatureType: s.signature_type || 'drawn',
+                  taxYear: d.tax_year,
+                  firmName: d.firm_name,
+                });
+              }
+              const signedKey = buildKey({ firmId: d.firm_id, ownerType: 'tax_signed', ownerId: 0, year: String(d.tax_year || ''), docType: 'signed_return', filename: `signed_${Date.now()}.pdf` });
+              await uploadFile({ buffer: pdfBuffer, key: signedKey, mimeType: 'application/pdf', bucket });
+              const clientName = `${d.first_name || ''} ${d.last_name || ''}`.trim();
+              const docOwnerType = d.company_id ? 'company' : 'person';
+              const docOwnerId = d.company_id || (allSigners.find(s => s.signer_role === 'taxpayer') || allSigners[0])?.person_id;
+              const { rows: [finalDoc] } = await pool.query(
+                `INSERT INTO documents (firm_id, owner_type, owner_id, doc_type, display_name, mime_type,
+                   size_bytes, s3_key, s3_bucket, folder_section, folder_category, year, is_delivered, delivered_at)
+                 VALUES ($1, $2, $3, 'signed_return', $4, 'application/pdf', $5, $6, $7,
+                         'firm_uploaded', 'tax', $8, true, NOW())
+                 RETURNING id`,
+                [d.firm_id, docOwnerType, docOwnerId,
+                 `${d.tax_year} Tax Return — Fully Signed (${clientName}).pdf`,
+                 pdfBuffer.length, signedKey, bucket, String(d.tax_year)]
+              );
+              // Link final doc to the delivery
+              await pool.query('UPDATE tax_deliveries SET signed_doc_id = $1 WHERE id = $2', [finalDoc.id, id]);
+            }
+          }
+        } catch(pdfErr) {
+          console.error('[portal] combined signed PDF error (non-fatal):', pdfErr);
         }
 
-        // Fire smart pipeline trigger for all signers (non-blocking)
-        const { rows: allSignerIds } = await pool.query(
-          'SELECT person_id FROM tax_delivery_signers WHERE delivery_id = $1',
+        // Firm is notified via pipeline task (fireTrigger below) — no separate email
+
+        // Fire smart pipeline trigger once — on the taxpayer (primary signer) only
+        const { rows: primarySignerRows } = await pool.query(
+          `SELECT person_id FROM tax_delivery_signers WHERE delivery_id = $1
+           ORDER BY CASE WHEN signer_role = 'taxpayer' THEN 0 ELSE 1 END LIMIT 1`,
           [id]
         );
-        for (const s of allSignerIds) {
-          fireTrigger(d.firm_id, 'tax_return_signed', s.person_id, {
+        if (primarySignerRows[0]) {
+          fireTrigger(d.firm_id, 'tax_return_signed', primarySignerRows[0].person_id, {
             delivery_id: id,
             tax_year: d.tax_year,
           }).catch(e => console.error('[portal] fireTrigger tax_return_signed non-fatal:', e));

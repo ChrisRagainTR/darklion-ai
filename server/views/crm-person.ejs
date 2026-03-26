@@ -250,8 +250,8 @@
         <select class="form-control" id="pd-sig-doc"><option value="">— Select document —</option></select>
       </div>
       <div class="form-group">
-        <label>Signers <span style="font-weight:400;color:var(--muted);">(who needs to sign — e.g. both spouses)</span></label>
-        <div id="pd-signers-list" style="display:flex;flex-direction:column;gap:0.4rem;margin-top:0.25rem;"></div>
+        <label>Signers</label>
+        <div id="pd-signers-list" style="display:flex;flex-direction:column;gap:0.3rem;margin-top:0.25rem;"></div>
       </div>
       <div class="modal-actions">
         <button class="btn btn-outline" onclick="closePersonDeliveryModal()">Cancel</button>
@@ -571,19 +571,31 @@
       </select>
     </div>
     <div class="form-group"><label>Filing Status</label>
-      <select class="form-control" id="ef-filing">
+      <select class="form-control" id="ef-filing" onchange="efFilingChanged(this.value)">
         <option value="">— Select —</option>
-        <option value="single">Single</option><option value="married_joint">Married Filing Jointly</option>
+        <option value="single">Single</option><option value="mfj">Married Filing Jointly</option>
         <option value="married_separate">Married Filing Separately</option><option value="head_household">Head of Household</option>
         <option value="widow">Qualifying Widow(er)</option>
       </select>
     </div>
-    <div class="form-group" style="position:relative;">
-      <label>Spouse <span style="font-weight:400;color:var(--muted);font-size:0.78rem;">(must be in same relationship)</span></label>
-      <input type="text" class="form-control" id="ef-spouse-search" placeholder="Search by name…" autocomplete="off"
-        oninput="efSpouseFilter(this.value)" onfocus="efSpouseOpen()" onblur="setTimeout(efSpouseClose,150)">
-      <input type="hidden" id="ef-spouse-id">
-      <div id="ef-spouse-options" style="display:none;position:absolute;z-index:200;background:var(--charcoal);border:1px solid var(--border);border-radius:8px;width:100%;max-height:180px;overflow-y:auto;top:calc(100% - 2px);box-shadow:0 4px 16px rgba(0,0,0,0.4);"></div>
+    <!-- Spouse section - shown only when filing_status = mfj -->
+    <div id="ef-spouse-section" style="display:none;">
+      <div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin:1rem 0 0.5rem;text-transform:uppercase;letter-spacing:0.05em;">Spouse / MFJ</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Spouse Name</label>
+          <input type="text" class="form-control" id="ef-spouse-name" placeholder="Full name">
+        </div>
+        <div class="form-group">
+          <label>Spouse Email</label>
+          <input type="email" class="form-control" id="ef-spouse-email" placeholder="spouse@email.com">
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+          <input type="checkbox" id="ef-spouse-portal-enabled"> Enable spouse portal access
+        </label>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
@@ -896,7 +908,7 @@
     const fsLabel = { mfj:'MFJ', single:'Single', hoh:'Head of Household', mfs:'MFS' }[p.filing_status] || (p.filing_status||'').replace(/_/g,' ');
     const fsColors = { MFJ:'rgba(74,144,217,0.15)', Single:'rgba(143,163,184,0.15)', HOH:'rgba(237,137,54,0.15)', MFS:'rgba(138,99,241,0.15)' };
     const fsTextColors = { MFJ:'#4a90d9', Single:'#8fa3b8', HOH:'#ed8936', MFS:'#a78bfa' };
-    const fsKey = p.filing_status === 'mfj' ? 'MFJ' : p.filing_status === 'single' ? 'Single' : p.filing_status === 'hoh' ? 'HOH' : p.filing_status === 'mfs' ? 'MFS' : null;
+    const fsKey = ['mfj','mfs'].includes(p.filing_status) ? 'MFJ' : p.filing_status === 'single' ? 'Single' : p.filing_status === 'hoh' ? 'HOH' : p.filing_status === 'mfs' ? 'MFS' : null;
     const fsBg = fsColors[fsKey] || 'rgba(143,163,184,0.15)';
     const fsTc = fsTextColors[fsKey] || '#8fa3b8';
     const personBmLabel = p.billing_method === 'monthly_billing' ? 'Monthly Billing' : p.billing_method === 'client_invoice' ? 'Client Invoice' : (p.billing_method || '—');
@@ -922,36 +934,79 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem 1rem;">${contactRowsHtml}</div>`;
 
     // ── LEFT COL: Client Portal ──
+        // ── Portal Access Panel (taxpayer + spouse) ──
     const portalEl = document.getElementById('overview-portal-panel');
-    portalEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Client Portal</div>
-      <div style="font-size:0.84rem;color:var(--muted);margin-bottom:0.75rem;">
-        ${p.portal_enabled ? '✅ Portal active' : p.portal_invite_token ? '📧 Invite sent' : '⭕ Not set up'}
-      </div>
-      <div class="portal-btn-row">
-        ${!p.portal_enabled ? `<button class="btn btn-gold btn-sm" onclick="sendPortalInvite()">Send Invite</button>` : ''}
-        ${p.portal_enabled ? `<button class="btn btn-outline btn-sm" onclick="resetPortalPassword()">Reset Password</button>` : ''}
-        ${p.portal_enabled ? `<button class="btn btn-outline btn-sm" onclick="disablePortal()">Disable Portal</button>` : ''}
-      </div>`;
 
-    // ── CENTER COL: Spouse ──
-    const spouseEl = document.getElementById('overview-spouse-panel');
-    if (p.spouse) {
-      const sp = p.spouse;
-      const spInitials = ((sp.first_name||'').charAt(0)+(sp.last_name||'').charAt(0)).toUpperCase() || '?';
-      spouseEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Spouse</div>
-        <div style="background:var(--charcoal);border:1px solid var(--border);border-radius:8px;padding:0.75rem;display:flex;align-items:flex-start;gap:0.65rem;">
-          <div style="width:38px;height:38px;border-radius:50%;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:0.95rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${spInitials}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.2rem;"><a href="/crm/person/${sp.id||sp.person_id}" style="color:var(--text);text-decoration:none;">${esc((sp.first_name||'')+' '+(sp.last_name||'')).trim()}</a></div>
-            ${sp.email ? `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.15rem;">${esc(sp.email)}</div>` : ''}
-            ${sp.phone ? `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.15rem;">${fmtPhone(sp.phone)}</div>` : ''}
-            ${sp.portal_enabled ? `<span style="font-size:0.7rem;background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.1rem 0.35rem;font-weight:600;">Portal Active</span>` : ''}
+    function portalStatusBadge(enabled, hasPassword, token) {
+      if (enabled && hasPassword) return `<span style="font-size:0.68rem;background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.1rem 0.4rem;font-weight:600;">● Active</span>`;
+      if (token)   return `<span style="font-size:0.68rem;background:rgba(237,137,54,0.12);color:var(--orange);border-radius:4px;padding:0.1rem 0.4rem;font-weight:600;">⏳ Invite sent</span>`;
+      return `<span style="font-size:0.68rem;background:rgba(143,163,184,0.1);color:var(--muted);border-radius:4px;padding:0.1rem 0.4rem;font-weight:600;">○ Not set up</span>`;
+    }
+
+    // enabled = portal_enabled && portal_has_password (truly active)
+    function portalActionBtns(fullyActive, token, isSpouse) {
+      const inviteFn  = isSpouse ? 'sendSpousePortalInvite()' : 'sendPortalInvite()';
+      const resetFn   = isSpouse ? 'resetSpousePortalPassword()' : 'resetPortalPassword()';
+      const disableFn = isSpouse ? 'disableSpousePortal()' : 'disablePortal()';
+      const inviteLabel = token ? 'Resend Invite' : 'Send Invite';
+      if (fullyActive) {
+        return `<button class="btn btn-outline btn-xs" onclick="${resetFn}">Reset Password</button>
+                <button class="btn btn-xs" style="border:1px solid rgba(229,62,62,0.4);color:var(--red);background:transparent;" onclick="${disableFn}">Disable</button>`;
+      }
+      return `<button class="btn btn-gold btn-sm" onclick="${inviteFn.replace(')', 'this)')}" style="white-space:nowrap;">${inviteLabel}</button>`;
+    }
+
+    function portalPersonRow(initials, avatarBg, avatarColor, name, role, email, enabled, hasPassword, token, hasEmail, isSpouse, borderBottom) {
+      return `
+        <div style="padding:0.75rem 0;${borderBottom ? 'border-bottom:1px solid var(--border);' : ''}">
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;">
+            <div style="width:30px;height:30px;border-radius:50%;background:${avatarBg};color:${avatarColor};font-weight:700;font-size:0.78rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;font-size:0.85rem;line-height:1.2;">${name} <span style="font-size:0.68rem;color:var(--muted);font-weight:400;">${role}</span></div>
+              <div style="font-size:0.73rem;color:var(--muted);">${email}</div>
+            </div>
+            ${portalStatusBadge(enabled, hasPassword, token)}
+          </div>
+          <div style="padding-left:42px;">
+            ${hasEmail ? portalActionBtns(enabled && hasPassword, token, isSpouse) : '<span style="font-size:0.72rem;color:var(--muted);font-style:italic;">Add email to enable portal</span>'}
           </div>
         </div>`;
-    } else {
-      spouseEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Spouse</div>
-        <div style="color:var(--muted);font-size:0.84rem;font-style:italic;">No spouse linked — set via Edit</div>`;
     }
+
+    // Taxpayer row
+    const taxpayerRow = portalPersonRow(
+      (p.first_name||'?').charAt(0).toUpperCase(),
+      'rgba(74,144,217,0.18)', '#4a90d9',
+      `${esc(p.first_name)} ${esc(p.last_name)}`, 'Taxpayer',
+      esc(p.email||'—'),
+      p.portal_enabled, p.portal_has_password, p.portal_invite_token, !!p.email, false,
+      ['mfj','mfs'].includes(p.filing_status) && (p.spouse_name || p.spouse_email)
+    );
+
+    // Spouse row (MFJ/MFS only)
+    let spouseRow = '';
+    if (['mfj','mfs'].includes(p.filing_status)) {
+      if (p.spouse_name || p.spouse_email) {
+        spouseRow = portalPersonRow(
+          (p.spouse_name||'S').charAt(0).toUpperCase(),
+          'rgba(201,168,76,0.18)', 'var(--gold)',
+          esc(p.spouse_name||'—'), 'Spouse',
+          esc(p.spouse_email||'—'),
+          p.spouse_portal_enabled, p.spouse_portal_has_password, p.spouse_portal_invite_token, !!p.spouse_email, true, false
+        );
+      } else {
+        spouseRow = `<div style="padding:0.5rem 0;font-size:0.8rem;color:var(--muted);font-style:italic;">Spouse not set — add name &amp; email via Edit</div>`;
+      }
+    }
+
+    portalEl.innerHTML = `
+      <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.1rem;">Portal Access</div>
+      ${taxpayerRow}
+      ${spouseRow}`;
+
+    // ── CENTER COL: Spouse panel — hide (absorbed into portal panel) ──
+    const spouseEl = document.getElementById('overview-spouse-panel');
+    spouseEl.style.display = 'none';
 
     // ── CENTER COL: Tax Deliveries ──
     const taxEl = document.getElementById('overview-tax-panel');
@@ -1404,64 +1459,6 @@
     } catch(e) { toast('Failed to save notes', 'error'); }
   }
 
-    // ── Spouse search dropdown (edit modal) ──
-  let efSpousePeople = [];
-
-  async function efSpouseLoadPeople() {
-    if (!personData || !personData.relationship_id) { efSpousePeople = []; return; }
-    try {
-      const res = await apiFetch(`/api/relationships/${personData.relationship_id}`);
-      if (!res.ok) { efSpousePeople = []; return; }
-      const data = await res.json();
-      // Exclude self
-      efSpousePeople = (data.people || []).filter(p => p.id !== parseInt(personId));
-    } catch(e) { efSpousePeople = []; }
-  }
-
-  function efSpouseFilter(q) {
-    const filtered = q
-      ? efSpousePeople.filter(p => (`${p.first_name} ${p.last_name}`).toLowerCase().includes(q.toLowerCase()))
-      : efSpousePeople;
-    efSpouseRender(filtered);
-    efSpouseOpen();
-    // If the search box is cleared, also clear the hidden id
-    if (!q.trim()) document.getElementById('ef-spouse-id').value = '';
-  }
-
-  function efSpouseRender(list) {
-    const el = document.getElementById('ef-spouse-options');
-    if (!list.length) {
-      el.innerHTML = `<div style="padding:0.6rem 0.9rem;color:var(--muted);font-size:0.84rem;font-style:italic;">No other people in this relationship</div>`;
-    } else {
-      el.innerHTML = list.map(p =>
-        `<div style="padding:0.55rem 0.9rem;cursor:pointer;font-size:0.88rem;border-bottom:1px solid var(--border);"
-          onmousedown="efSpouseSelect(${p.id},'${esc((p.first_name||'')+' '+(p.last_name||''))}')"
-          onmouseover="this.style.background='rgba(201,168,76,0.1)'" onmouseout="this.style.background=''"
-        >${esc((p.first_name||'')+' '+(p.last_name||''))}</div>`
-      ).join('');
-    }
-  }
-
-  function efSpouseOpen() {
-    const el = document.getElementById('ef-spouse-options');
-    efSpouseRender(efSpousePeople);
-    el.style.display = 'block';
-  }
-
-  function efSpouseClose() {
-    document.getElementById('ef-spouse-options').style.display = 'none';
-  }
-
-  function efSpouseSelect(id, name) {
-    document.getElementById('ef-spouse-id').value = id;
-    document.getElementById('ef-spouse-search').value = name;
-    efSpouseClose();
-  }
-
-  function efSpouseClear() {
-    document.getElementById('ef-spouse-id').value = '';
-    document.getElementById('ef-spouse-search').value = '';
-  }
 
   // Move edit modal to document.body on init so it's outside .main stacking context
   (function() {
@@ -1477,14 +1474,20 @@
     document.getElementById('ef-phone').value = personData.phone || '';
     document.getElementById('ef-dob').value = personData.date_of_birth || '';
     document.getElementById('ef-billing-method').value = personData.billing_method || '';
-    document.getElementById('ef-filing').value = personData.filing_status || '';
-    document.getElementById('ef-spouse-id').value = personData.spouse_id || '';
-    document.getElementById('ef-spouse-search').value = personData.spouse
-      ? `${personData.spouse.first_name||''} ${personData.spouse.last_name||''}`.trim() : '';
+    const filingVal = personData.filing_status || '';
+    document.getElementById('ef-filing').value = filingVal;
+    document.getElementById('ef-spouse-name').value = personData.spouse_name || '';
+    document.getElementById('ef-spouse-email').value = personData.spouse_email || '';
+    document.getElementById('ef-spouse-portal-enabled').checked = !!personData.spouse_portal_enabled;
+    // Show/hide spouse section based on filing status
+    document.getElementById('ef-spouse-section').style.display = ['mfj','mfs'].includes(filingVal) ? '' : 'none';
     const m = document.getElementById('edit-modal');
     m.classList.remove('hidden');
     m.style.display = 'flex';
-    efSpouseLoadPeople().catch(() => {});
+  }
+
+  function efFilingChanged(val) {
+    document.getElementById('ef-spouse-section').style.display = ['mfj','mfs'].includes(val) ? '' : 'none';
   }
   function closeModal() {
     const m = document.getElementById('edit-modal');
@@ -1497,7 +1500,6 @@
     const errEl = document.getElementById('edit-error');
     errEl.style.display = 'none';
     btn.disabled = true; btn.textContent = 'Saving…';
-    const spouseIdRaw = document.getElementById('ef-spouse-id').value;
     const body = {
       first_name: document.getElementById('ef-fname').value.trim(),
       last_name: document.getElementById('ef-lname').value.trim(),
@@ -1506,7 +1508,9 @@
       date_of_birth: document.getElementById('ef-dob').value || null,
       billing_method: document.getElementById('ef-billing-method').value || null,
       filing_status: document.getElementById('ef-filing').value,
-      spouse_id: spouseIdRaw ? parseInt(spouseIdRaw) : null,
+      spouse_name: document.getElementById('ef-spouse-name').value.trim(),
+      spouse_email: document.getElementById('ef-spouse-email').value.trim(),
+      spouse_portal_enabled: document.getElementById('ef-spouse-portal-enabled').checked,
     };
     try {
       const res = await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify(body) });
@@ -1519,13 +1523,24 @@
     }
   }
 
-  async function sendPortalInvite() {
+  async function sendPortalInvite(btn) {
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
     try {
-      const res = await apiFetch('/portal-auth/send-invite', { method: 'POST', body: JSON.stringify({ person_id: parseInt(personId) }) });
+      const res = await apiFetch('/portal-auth/send-invite', { method: 'POST', body: JSON.stringify({ personId: parseInt(personId) }) });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed');
-      toast('Invite sent');
+      toast('✓ Invite sent');
       await loadPerson();
-    } catch(e) { toast(e.message, 'error'); }
+    } catch(e) { toast(e.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Send Invite'; } }
+  }
+
+  async function sendSpousePortalInvite(btn) {
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+    try {
+      const res = await apiFetch('/portal-auth/send-invite', { method: 'POST', body: JSON.stringify({ personId: parseInt(personId), spouse: true }) });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      toast('✓ Spouse invite sent');
+      await loadPerson();
+    } catch(e) { toast(e.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Send Invite'; } }
   }
 
   async function resetPortalPassword() {
@@ -1542,6 +1557,25 @@
       const res = await apiFetch(`/api/people/${personId}/portal-disable`, { method: 'POST', body: '{}' });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed');
       toast('Portal disabled');
+      await loadPerson();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function resetSpousePortalPassword() {
+    try {
+      const res = await apiFetch('/portal-auth/send-invite', { method: 'POST', body: JSON.stringify({ personId: parseInt(personId), spouse: true }) });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      toast('Spouse password reset email sent');
+      await loadPerson();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function disableSpousePortal() {
+    if (!confirm('Disable spouse portal access?')) return;
+    try {
+      const res = await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify({ spouse_portal_enabled: false }) });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      toast('Spouse portal disabled');
       await loadPerson();
     } catch(e) { toast(e.message, 'error'); }
   }
@@ -1579,13 +1613,14 @@
             '<span style="color:var(--text);">' + esc(changeNoteText) + '</span>' +
           '</div>'
         : '';
-      // Doc links for signed/sent deliveries
-      const signedDocs = signers.filter(s => s.signed_doc_id).map(s =>
-        `<button class="btn btn-outline btn-sm" onclick="downloadDeliveryDoc(${s.signed_doc_id})" title="Signed by ${esc(s.person_name)}">⬇ Signed (${esc((s.person_name||'').split(' ')[0])})</button>`
-      ).join('');
+      // Doc links — review copy and combined signed PDF (on delivery, not individual signers)
+      const signedDocBtn = d.signed_doc_id
+        ? `<button class="btn btn-gold btn-sm" onclick="downloadDeliveryDoc(${d.signed_doc_id})">✅ Signed Copy</button>`
+        : '';
       const reviewDocLink = d.review_doc_id && d.status !== 'draft'
         ? `<button class="btn btn-outline btn-sm" onclick="downloadDeliveryDoc(${d.review_doc_id})">📄 Review Copy</button>`
         : '';
+      const signedDocs = signedDocBtn; // keep variable name for template below
 
       return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:0.75rem;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:${(signedDocs||reviewDocLink)?'0.75rem':'0'}">
@@ -1650,23 +1685,34 @@
     // Load relationship members for signer selection
     const signersList = document.getElementById('pd-signers-list');
     signersList.innerHTML = '';
+
+    function makeSignerChip(name, badge) {
+      return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:6px;font-size:0.85rem;">'
+        + '<span style="color:var(--green);font-size:0.8rem;">✓</span> ' + esc(name)
+        + (badge ? ' ' + badge : '') + '</div>';
+    }
+
     try {
+      let html = '';
       if (personData && personData.relationship_id) {
         const relRes = await apiFetch(`/api/relationships/${personData.relationship_id}/people`);
         const relPeople = await relRes.json();
-        relPeople.forEach(function(p) {
-          const div = document.createElement('div');
-          div.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:6px;';
-          const checked = p.id == personId; // current person always checked
-          div.innerHTML = '<input type="checkbox" class="pd-signer-cb" value="' + p.id + '"' + (checked ? ' checked' : '') + (checked ? ' disabled' : '') + ' style="cursor:pointer;width:16px;height:16px;accent-color:var(--gold);"> ' +
-            '<label style="cursor:pointer;font-size:0.88rem;">' + esc((p.first_name || '') + ' ' + (p.last_name || '')) + (p.portal_enabled ? ' <span style="font-size:0.72rem;color:var(--green);">✓ Portal</span>' : ' <span style="font-size:0.72rem;color:var(--orange);">No portal</span>') + '</label>';
-          signersList.appendChild(div);
-        });
+        const currentPerson = relPeople.find(p => p.id == personId);
+        if (currentPerson) {
+          html += makeSignerChip((currentPerson.first_name||'') + ' ' + (currentPerson.last_name||''), '');
+          if (['mfj','mfs'].includes(currentPerson.filing_status) && currentPerson.spouse_name) {
+            const spouseBadge = '<span style="font-size:0.65rem;color:#a78bfa;background:rgba(138,99,241,0.12);border-radius:3px;padding:0.05rem 0.3rem;">Spouse</span>';
+            html += makeSignerChip(currentPerson.spouse_name, spouseBadge);
+          }
+        } else {
+          html = makeSignerChip((personData.first_name||'') + ' ' + (personData.last_name||''), '');
+        }
       } else {
-        signersList.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);">' + esc((personData && (personData.first_name + ' ' + personData.last_name)) || 'This person') + ' <span style="color:var(--green);">✓</span></div>';
+        html = makeSignerChip((personData?.first_name||'') + ' ' + (personData?.last_name||''), '');
       }
+      signersList.innerHTML = html;
     } catch(e) {
-      signersList.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);">Could not load relationship members.</div>';
+      signersList.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);">Could not load signers.</div>';
     }
 
     document.getElementById('pd-error').style.display = 'none';
@@ -1705,11 +1751,7 @@
       intro_note: document.getElementById('pd-intro').value.trim(),
       review_doc_id: document.getElementById('pd-review-doc').value ? parseInt(document.getElementById('pd-review-doc').value) : null,
       signature_doc_id: document.getElementById('pd-sig-doc').value ? parseInt(document.getElementById('pd-sig-doc').value) : null,
-      signer_person_ids: (function() {
-        var checked = Array.from(document.querySelectorAll('.pd-signer-cb:checked')).map(function(cb){ return parseInt(cb.value); });
-        if (checked.length === 0) checked = [parseInt(personId)]; // always include current person
-        return checked;
-      })(),
+      signer_person_ids: [parseInt(personId)],
     };
     try {
       const res = await apiFetch('/api/tax-deliveries', { method: 'POST', body: JSON.stringify(body) });

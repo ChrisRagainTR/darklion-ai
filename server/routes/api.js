@@ -208,7 +208,8 @@ router.get('/companies/:id([0-9]+)', async (req, res) => {
     // Include people with access
     const { rows: peopleRows } = await pool.query(
       `SELECT pca.person_id, pca.access_level, pca.ownership_pct,
-              p.first_name, p.last_name, p.email, p.portal_enabled
+              p.first_name, p.last_name, p.email, p.portal_enabled,
+              p.filing_status, p.spouse_name, p.spouse_email
        FROM person_company_access pca
        JOIN people p ON p.id = pca.person_id
        WHERE pca.company_id = $1

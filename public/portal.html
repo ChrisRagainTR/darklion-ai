@@ -945,8 +945,7 @@
     <!-- ── DOCUMENTS TAB ──────────────────────────────────── -->
     <div class="tab-panel" id="tab-documents">
       <div class="docs-toolbar">
-        <div style="font-size:0.95rem; color:var(--muted);">Your delivered documents</div>
-        <button class="btn-upload" id="openUploadBtn">⬆ Upload Document</button>
+        <div style="font-size:0.95rem; color:var(--muted);">Your documents</div>
       </div>
       <div id="docsContainer">
         <div class="empty-state">
@@ -1914,33 +1913,9 @@
 
       let html = '';
 
-      // Personal docs — no bookkeeping category
+      // Personal docs only — company docs live in their own business tabs
       const personalDocs = (_docs || []).filter(d => d.owner_type === 'person');
-      const companyDocs = (_docs || []).filter(d => d.owner_type === 'company');
-
-      html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.25rem;border-bottom:2px solid var(--border);">👤 My Documents</div>`;
       html += renderSideBySide(personalDocs, false, null);
-
-      // Group company docs by company — include bookkeeping
-      const byCompany = {};
-      companyDocs.forEach(d => {
-        const cid = d.owner_id;
-        if (!byCompany[cid]) byCompany[cid] = [];
-        byCompany[cid].push(d);
-      });
-
-      // Also render company sections for companies that have no docs yet (so upload button appears)
-      (_companies || []).forEach(co => {
-        const cid = String(co.id || co.company_id);
-        if (!byCompany[cid]) byCompany[cid] = [];
-      });
-
-      Object.entries(byCompany).forEach(([cid, docs]) => {
-        const co = _companies.find(c => String(c.id || c.company_id) === String(cid));
-        const coName = co ? (co.company_name || co.name) : `Company #${cid}`;
-        html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin:1.5rem 0 0.75rem;">🏢 ${escHtml(coName)}</div>`;
-        html += renderSideBySide(docs, true, parseInt(cid));
-      });
 
       container.innerHTML = html;
 
@@ -2108,7 +2083,7 @@
       _selectedFile = null;
     }
 
-    document.getElementById('openUploadBtn').addEventListener('click', () => openUploadModal(null));
+    // Upload triggered from inline section headers (⬆ Upload on "Uploaded by You")
     document.getElementById('closeUploadBtn').addEventListener('click', () => modal.classList.add('hidden'));
     modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
 
@@ -2685,11 +2660,16 @@
         const res = await fetch('/portal/tax-deliveries', { headers: authHeader() });
         if (!res.ok) return;
         _taxDeliveries = await res.json();
-        if (_taxDeliveries.length > 0) {
-          const tab = document.getElementById('review-sign-tab');
-          const badge = document.getElementById('review-sign-badge');
+        // Only show tab for deliveries the current user hasn't signed yet
+        const pending = _taxDeliveries.filter(d => !d.signed_at);
+        const tab = document.getElementById('review-sign-tab');
+        const badge = document.getElementById('review-sign-badge');
+        if (pending.length > 0) {
           if (tab) { tab.style.display = ''; }
-          if (badge) { badge.textContent = _taxDeliveries.length; badge.style.display = ''; }
+          if (badge) { badge.textContent = pending.length; badge.style.display = ''; }
+        } else {
+          if (tab) tab.style.display = 'none';
+          if (badge) badge.style.display = 'none';
         }
       } catch(e) { console.error('[tax-delivery] loadTaxDeliveriesInit error:', e); }
     }

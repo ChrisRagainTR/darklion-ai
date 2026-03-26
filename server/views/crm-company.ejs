@@ -1119,12 +1119,20 @@
       people.forEach(p => {
         const initials = ((p.first_name||'').charAt(0)+(p.last_name||'').charAt(0)).toUpperCase() || '?';
         const accessLabel = { full:'Full', view:'View', sign:'Sign' }[p.access_level] || (p.access_level || '');
+        const isMFS = ['mfj','mfs'].includes(p.filing_status);
+        const spouseChip = isMFS && p.spouse_name
+          ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:0.25rem;display:flex;align-items:center;gap:0.3rem;">
+               <span style="background:rgba(138,99,241,0.12);color:#a78bfa;border-radius:4px;padding:0.08rem 0.3rem;font-weight:600;font-size:0.65rem;">+ Spouse</span>
+               <span>${esc(p.spouse_name)}</span>
+             </div>`
+          : '';
         peopleHtml += `<div style="background:var(--charcoal);border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.75rem;display:flex;align-items:flex-start;gap:0.55rem;position:relative;">
           <div style="width:32px;height:32px;border-radius:5px;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:0.88rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
           <div style="min-width:0;flex:1;">
             <div style="font-weight:600;font-size:0.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><a href="/crm/person/${p.person_id}" style="color:var(--text);text-decoration:none;">${esc(p.first_name)} ${esc(p.last_name)}</a></div>
             ${p.email ? `<div style="font-size:0.73rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.email)}</div>` : ''}
             ${accessLabel ? `<div style="font-size:0.68rem;margin-top:0.2rem;"><span style="background:rgba(201,168,76,0.12);color:var(--gold);border-radius:4px;padding:0.1rem 0.35rem;font-weight:600;">${esc(accessLabel)}</span></div>` : ''}
+            ${spouseChip}
           </div>
           <button onclick="detachPerson(${p.person_id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.75rem;padding:0;line-height:1;flex-shrink:0;" title="Remove">✕</button>
         </div>`;

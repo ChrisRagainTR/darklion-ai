@@ -476,7 +476,11 @@ router.get('/:id/people', async (req, res) => {
     if (rel.length === 0) return res.status(404).json({ error: 'Relationship not found' });
 
     const { rows } = await pool.query(`
-      SELECT id, first_name, last_name, email, phone, filing_status, portal_enabled, ssn_last4,
+      SELECT id, first_name, last_name, email, phone, filing_status,
+             portal_enabled, (portal_password_hash IS NOT NULL) AS portal_has_password,
+             spouse_name, spouse_email, spouse_portal_enabled,
+             (spouse_portal_password_hash IS NOT NULL) AS spouse_portal_has_password,
+             ssn_last4,
              (ssn_encrypted IS NOT NULL AND ssn_encrypted != '') AS has_ssn,
              (date_of_birth_encrypted IS NOT NULL AND date_of_birth_encrypted != '') AS has_dob
       FROM people

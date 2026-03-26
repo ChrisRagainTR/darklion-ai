@@ -20,6 +20,7 @@ function requirePortal(req, res, next) {
       relationshipId: payload.relationshipId,
       email: payload.email,
       name: payload.name,
+      signerRole: payload.signerRole || 'taxpayer',
     };
     next();
   } catch (err) {
