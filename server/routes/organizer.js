@@ -14,13 +14,16 @@
  */
 
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const { pool } = require('../db');
 const { parseOrganizerPdf } = require('../services/organizerParser');
 const { requireFirm } = require('../middleware/requireFirm');
 const { requirePortal } = require('../middleware/requirePortal');
-const { uploadFile, downloadFile, buildKey } = require('../services/s3');
+const { uploadFile, downloadFile, buildKey, sanitizeFilename } = require('../services/s3');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 // ─────────────────────────────────────────────────────────────
 // STAFF: Parse a document and create/update organizer + items
@@ -101,6 +104,89 @@ router.post('/parse-document/:documentId', requireFirm, async (req, res) => {
 
   } catch (err) {
     console.error('Organizer parse error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// STAFF: Upload a Drake organizer PDF directly → auto-parse
+// POST /api/organizers/upload/:personId
+// ─────────────────────────────────────────────────────────────
+router.post('/upload/:personId', requireFirm, upload.single('file'), async (req, res) => {
+  const { personId } = req.params;
+  const firmId = req.firm.id;
+  const year = req.body.year || '2025';
+
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  if (req.file.mimetype !== 'application/pdf') return res.status(400).json({ error: 'Must be a PDF' });
+
+  try {
+    // Save to S3 in organizer folder
+    const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
+    const filename = sanitizeFilename(req.file.originalname || 'organizer.pdf');
+    const key = buildKey ? buildKey({ firmId, ownerType: 'person', ownerId: parseInt(personId), year, docType: 'organizer', filename })
+      : `firms/${firmId}/people/${personId}/organizer/${year}/${filename}`;
+
+    await uploadFile({ buffer: req.file.buffer, key, bucket, mimeType: 'application/pdf' });
+
+    // Save document record
+    const docRes = await pool.query(`
+      INSERT INTO documents (firm_id, owner_type, owner_id, year, doc_type, display_name,
+        s3_bucket, s3_key, mime_type, size_bytes, uploaded_by_type, uploaded_by_id,
+        folder_section, folder_category)
+      VALUES ($1,'person',$2,$3,'organizer',$4,$5,$6,'application/pdf',$7,'staff',$8,'firm_uploaded','organizer')
+      RETURNING *
+    `, [firmId, parseInt(personId), year, req.file.originalname || filename,
+        bucket, key, req.file.size, req.firm.userId]);
+    const savedDoc = docRes.rows[0];
+
+    // Get firm companies for Sentinel Provides detection
+    const companiesRes = await pool.query(`
+      SELECT c.name FROM companies c
+      JOIN relationship_companies rc ON rc.company_id = c.id
+      JOIN relationships r ON r.id = rc.relationship_id
+      JOIN relationship_people rp ON rp.relationship_id = r.id
+      WHERE rp.person_id = $1 AND c.firm_id = $2
+    `, [parseInt(personId), firmId]);
+    const firmCompanyNames = companiesRes.rows.map(r => r.name);
+
+    // Parse the PDF
+    const { clientName, items } = await parseOrganizerPdf(req.file.buffer, firmCompanyNames);
+
+    // Upsert organizer
+    const orgRes = await pool.query(`
+      INSERT INTO tax_organizers (firm_id, person_id, tax_year, status, source_document_id)
+      VALUES ($1, $2, $3, 'pending', $4)
+      ON CONFLICT (person_id, tax_year)
+      DO UPDATE SET source_document_id = $4, status = 'pending', updated_at = NOW()
+      RETURNING *
+    `, [firmId, parseInt(personId), year, savedDoc.id]);
+    const organizer = orgRes.rows[0];
+
+    // Replace items
+    await pool.query('DELETE FROM tax_organizer_items WHERE organizer_id = $1', [organizer.id]);
+    for (const item of items) {
+      await pool.query(`
+        INSERT INTO tax_organizer_items
+          (organizer_id, section, payer_name, account_number, owner, prior_year_amount, ein, sentinel_provides, display_order)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      `, [organizer.id, item.section, item.payerName, item.accountNumber || '',
+          item.owner || 'joint', item.prior_year_amount || null,
+          item.ein || '', item.sentinel_provides || false, item.display_order || 0]);
+    }
+
+    res.json({
+      success: true,
+      organizer_id: organizer.id,
+      document_id: savedDoc.id,
+      client_name: clientName,
+      item_count: items.length,
+      sentinel_count: items.filter(i => i.sentinel_provides).length,
+      items: items.map(i => ({ section: i.section, payer: i.payerName, owner: i.owner, sentinel: i.sentinel_provides })),
+    });
+
+  } catch (err) {
+    console.error('Organizer upload+parse error:', err);
     res.status(500).json({ error: err.message });
   }
 });
