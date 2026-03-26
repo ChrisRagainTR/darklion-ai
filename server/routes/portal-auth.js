@@ -158,12 +158,16 @@ router.post('/login', portalLoginLimiter, async (req, res) => {
 router.get('/invite/:token', async (req, res) => {
   try {
     const { token } = req.params;
+    // Check primary invite token first, then spouse invite token
     const { rows } = await pool.query(
       `SELECT p.email, p.first_name, p.last_name, p.portal_enabled,
-              p.portal_invite_expires_at, f.name as firm_name
+              p.portal_invite_expires_at, f.name as firm_name,
+              p.spouse_name, p.spouse_email, p.spouse_portal_enabled,
+              p.spouse_portal_invite_expires_at,
+              CASE WHEN p.portal_invite_token = $1 THEN 'taxpayer' ELSE 'spouse' END as invite_type
        FROM people p
        JOIN firms f ON f.id = p.firm_id
-       WHERE p.portal_invite_token = $1`,
+       WHERE p.portal_invite_token = $1 OR p.spouse_portal_invite_token = $1`,
       [token]
     );
 
@@ -172,14 +176,19 @@ router.get('/invite/:token', async (req, res) => {
     }
 
     const inv = rows[0];
-    const expired = inv.portal_invite_expires_at && new Date(inv.portal_invite_expires_at) < new Date();
-    const alreadyAccepted = !!inv.portal_enabled;
+    const isSpouse = inv.invite_type === 'spouse';
+    const expired = isSpouse
+      ? (inv.spouse_portal_invite_expires_at && new Date(inv.spouse_portal_invite_expires_at) < new Date())
+      : (inv.portal_invite_expires_at && new Date(inv.portal_invite_expires_at) < new Date());
+    const alreadyAccepted = isSpouse ? !!inv.spouse_portal_enabled : !!inv.portal_enabled;
+    const displayEmail = isSpouse ? inv.spouse_email : inv.email;
+    const displayName = isSpouse ? (inv.spouse_name || 'Spouse') : `${inv.first_name} ${inv.last_name}`.trim();
 
     res.json({
       valid: !expired && !alreadyAccepted,
-      email: inv.email,
-      firstName: inv.first_name,
-      lastName: inv.last_name,
+      email: displayEmail,
+      firstName: displayName.split(' ')[0] || inv.first_name,
+      lastName: displayName.split(' ').slice(1).join(' ') || inv.last_name,
       firmName: inv.firm_name,
       expired: !!expired,
       alreadyAccepted,
