@@ -1965,11 +1965,13 @@
           : '✓ File uploaded successfully!';
         msgEl.style.display = 'block';
 
-        // Refresh docs — immediate, no delay
+        // Close modal immediately and refresh
+        modal.classList.add('hidden');
         _docs = await api('/portal/documents').catch(() => _docs);
         renderDocuments();
 
-        setTimeout(() => { modal.classList.add('hidden'); }, 1200);
+        // Also bust company tab cache so it shows fresh data on next click
+        document.querySelectorAll('[id^="co-docs-"]').forEach(el => delete el.dataset.loaded);
       } catch (err) {
         errEl.textContent = err.message;
         errEl.style.display = 'block';
