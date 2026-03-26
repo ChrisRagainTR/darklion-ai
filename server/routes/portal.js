@@ -50,7 +50,8 @@ router.get('/me', async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT id, firm_id, relationship_id, first_name, last_name, email, phone,
-              filing_status, portal_enabled, portal_last_login_at, created_at
+              filing_status, portal_enabled, portal_last_login_at, created_at,
+              spouse_name, spouse_email
        FROM people
        WHERE id = $1`,
       [req.portal.personId]
@@ -58,14 +59,20 @@ router.get('/me', async (req, res) => {
 
     if (!rows[0]) return res.status(404).json({ error: 'Person not found' });
     const person = rows[0];
+    const isSpouse = (req.portal.signerRole || 'taxpayer') === 'spouse';
+
+    // When spouse logs in, show their name/email not the primary person's
+    const displayFirst = isSpouse ? (person.spouse_name || '').split(' ')[0] || person.first_name : person.first_name;
+    const displayLast  = isSpouse ? (person.spouse_name || '').split(' ').slice(1).join(' ') || person.last_name : person.last_name;
+    const displayEmail = isSpouse ? (person.spouse_email || person.email) : person.email;
 
     res.json({
       id: person.id,
       firmId: person.firm_id,
       relationshipId: person.relationship_id,
-      firstName: person.first_name,
-      lastName: person.last_name,
-      email: person.email,
+      firstName: displayFirst,
+      lastName: displayLast,
+      email: displayEmail,
       phone: person.phone,
       filingStatus: person.filing_status,
       portalEnabled: person.portal_enabled,
