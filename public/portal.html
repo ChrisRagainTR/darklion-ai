@@ -682,6 +682,72 @@
       font-style: italic;
     }
 
+    /* === ORGANIZER DASHBOARD === */
+    .org-dashboard { display: flex; flex-direction: column; gap: 1rem; }
+    .org-hero {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.5rem;
+    }
+    .org-hero.all-done { border-color: rgba(62,207,142,0.35); background: rgba(62,207,142,0.04); }
+    .org-hero.submitted { border-color: rgba(62,207,142,0.35); background: rgba(62,207,142,0.04); }
+    .org-hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .org-hero-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .org-hero-sub { font-size: 0.82rem; color: var(--muted); margin-top: 0.25rem; line-height: 1.5; }
+    .org-status-chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em;
+      padding: 0.3rem 0.75rem; border-radius: 20px;
+      white-space: nowrap;
+    }
+    .org-status-chip.pending { background: rgba(201,168,76,0.12); color: var(--gold); }
+    .org-status-chip.in_progress { background: rgba(66,153,225,0.12); color: #63b3ed; }
+    .org-status-chip.submitted { background: rgba(62,207,142,0.12); color: var(--green); }
+    .org-status-chip.reviewed { background: rgba(62,207,142,0.12); color: var(--green); }
+    .org-status-chip.not_started { background: rgba(143,163,184,0.1); color: var(--muted); }
+    .org-progress-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    .org-progress-bar { flex: 1; height: 8px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; }
+    .org-progress-fill { height: 100%; border-radius: 4px; background: var(--green); transition: width 0.4s; }
+    .org-progress-label { font-size: 0.82rem; color: var(--muted); white-space: nowrap; }
+    .org-progress-label strong { color: var(--text); }
+    .org-items-preview { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.9rem; margin-bottom: 1rem; }
+    .org-item-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0; font-size: 0.83rem; }
+    .org-item-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .org-item-dot.uploaded { background: var(--green); }
+    .org-item-dot.not_this_year { background: var(--muted); }
+    .org-item-dot.pending { background: rgba(255,255,255,0.15); border: 1px solid var(--border); }
+    .org-item-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+    .org-item-tag { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* Timeline */
+    .org-timeline { display: flex; gap: 0; align-items: stretch; }
+    .org-timeline-step { flex: 1; text-align: center; position: relative; }
+    .org-timeline-step::before {
+      content: ''; position: absolute; top: 14px; left: 50%; right: -50%;
+      height: 2px; background: rgba(255,255,255,0.08);
+    }
+    .org-timeline-step:last-child::before { display: none; }
+    .org-timeline-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(255,255,255,0.06); border: 2px solid rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; margin: 0 auto 0.5rem;
+      position: relative; z-index: 1;
+      transition: all 0.2s;
+    }
+    .org-timeline-dot.done { background: var(--green); border-color: var(--green); color: white; }
+    .org-timeline-dot.active { background: rgba(201,168,76,0.2); border-color: var(--gold); color: var(--gold); }
+    .org-timeline-label { font-size: 0.7rem; color: var(--muted); line-height: 1.3; }
+    .org-timeline-label strong { display: block; color: var(--text); font-size: 0.72rem; }
+
+    /* No organizer state */
+    .org-not-ready {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 2rem 1.5rem; text-align: center;
+    }
+    .org-not-ready .nr-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .org-not-ready .nr-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 0.4rem; }
+    .org-not-ready .nr-sub { font-size: 0.85rem; color: var(--muted); line-height: 1.6; max-width: 420px; margin: 0 auto; }
+
     /* ── MESSAGES ─────────────────────────────────────────── */
     .chat-layout { display: flex; height: calc(100vh - 160px); }
     .chat-contacts { width: 280px; flex-shrink: 0; border-right: 1px solid var(--border); overflow-y: auto; background: var(--card); border: 1px solid var(--border); border-radius: 12px 0 0 12px; }
@@ -957,14 +1023,8 @@
 
     <!-- ── ORGANIZERS TAB ─────────────────────────────────── -->
     <div class="tab-panel" id="tab-organizers">
-      <!-- DarkLion organizer status card (loaded from API) -->
-      <div id="dlOrganizerWrap" style="margin-bottom:1.5rem;"></div>
-      <!-- Legacy StanfordTax organizer links -->
-      <div class="organizer-grid" id="organizerGrid">
-        <div class="empty-state">
-          <div class="ei">🔗</div>
-          <div>Loading organizers…</div>
-        </div>
+      <div id="dlOrganizerWrap">
+        <div class="empty-state"><div class="ei">⏳</div><div>Loading your organizer…</div></div>
       </div>
     </div>
 
@@ -1186,7 +1246,7 @@
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById(`tab-${tab}`).classList.add('active');
-        if (tab === 'organizers' && _stanford === null) loadOrganizers();
+        if (tab === 'organizers') loadOrganizers();
         if (tab === 'messages') initChat();
         if (tab === 'review-sign') loadTaxDeliveries();
         // Leave wide-mode only when on a company bookkeeping subtab
@@ -1982,142 +2042,165 @@
 
     // ── ORGANIZERS ────────────────────────────────────────
     async function loadOrganizers() {
-      const grid = document.getElementById('organizerGrid');
-      grid.innerHTML = '<div class="empty-state"><div class="ei">⏳</div><div>Loading…</div></div>';
-      try {
-        _stanford = await api('/portal/stanford-tax');
-      } catch (e) {
-        _stanford = { personal_url: null, companies: [] };
-      }
-      // Load DarkLion organizer status card
-      await loadDLOrganizer();
-      renderOrganizers();
-    }
-
-    async function loadDLOrganizer() {
       const wrap = document.getElementById('dlOrganizerWrap');
       if (!wrap) return;
       const year = '2025';
       try {
         const data = await api(`/portal/organizer/portal/${year}`);
-        renderDLOrganizerCard(wrap, data, year);
+        renderOrganizerDashboard(wrap, data, year);
       } catch (e) {
-        // No organizer yet — show nothing (StanfordTax cards still show below)
-        wrap.innerHTML = '';
+        // No organizer ready yet
+        renderOrganizerNotReady(wrap);
       }
     }
 
-    function renderDLOrganizerCard(wrap, data, year) {
-      const { organizer, items, progress } = data;
-      const statusColors = { pending: 'var(--muted)', in_progress: 'var(--gold)', submitted: 'var(--green)', reviewed: 'var(--green)' };
-      const statusLabels = { pending: 'Not Started', in_progress: 'In Progress', submitted: 'Submitted ✓', reviewed: 'Reviewed ✓' };
-      const color = statusColors[organizer.status] || 'var(--muted)';
-      const label = statusLabels[organizer.status] || organizer.status;
-      const isSubmitted = ['submitted', 'reviewed'].includes(organizer.status);
-
-      // Recent items (last 4 resolved + first 2 pending)
-      const actionable = items.filter(i => !i.sentinel_provides);
-      const recentResolved = actionable.filter(i => i.status !== 'pending').slice(-3);
-      const nextPending = actionable.filter(i => i.status === 'pending').slice(0, 2);
-      const previewItems = [...recentResolved, ...nextPending].slice(0, 5);
-
-      const previewHtml = previewItems.map(item => {
-        const icon = item.status === 'uploaded' ? '✓' : item.status === 'not_this_year' ? '–' : '⏳';
-        const color = item.status === 'uploaded' ? 'var(--green)' : item.status === 'not_this_year' ? 'var(--muted)' : 'var(--orange)';
-        return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;font-size:0.82rem;">
-          <span style="color:${color};font-weight:600;width:16px;text-align:center;">${icon}</span>
-          <span style="color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(item.payer_name)}</span>
-          <span style="color:var(--muted);font-size:0.72rem;">${item.section.toUpperCase()}</span>
-        </div>`;
-      }).join('');
-
+    function renderOrganizerNotReady(wrap) {
       wrap.innerHTML = `
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:0.5rem;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
-            <div>
-              <div style="font-size:1rem;font-weight:700;color:var(--text);">📋 ${year} Tax Organizer</div>
-              <div style="font-size:0.78rem;color:${color};font-weight:600;margin-top:0.2rem;">${label}</div>
-            </div>
-            ${!isSubmitted ? `
-            <div style="display:flex;align-items:center;gap:1rem;">
-              <div style="text-align:right;">
-                <div style="font-size:1.1rem;font-weight:700;color:var(--text);">${progress.resolved}<span style="font-size:0.78rem;font-weight:400;color:var(--muted);"> / ${progress.total}</span></div>
-                <div style="font-size:0.72rem;color:var(--muted);">items resolved</div>
-              </div>
-              <div style="width:90px;">
-                <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
-                  <div style="height:100%;width:${progress.percent}%;background:var(--green);border-radius:3px;transition:width 0.3s;"></div>
-                </div>
-              </div>
-            </div>
-            ` : `<div style="color:var(--green);font-size:0.88rem;">All ${progress.total} items resolved</div>`}
+        <div class="org-not-ready">
+          <div class="nr-icon">📋</div>
+          <div class="nr-title">Your 2025 Tax Organizer Is Almost Ready</div>
+          <div class="nr-sub">
+            We're preparing your personalized document checklist based on last year's return.
+            You'll receive an email once it's ready — usually within a few days of tax season kickoff.
           </div>
-          ${previewItems.length ? `<div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:0.75rem;margin-bottom:0.75rem;">${previewHtml}</div>` : ''}
-          <a href="/organizer.html?year=${year}" class="btn-organizer" style="display:inline-block;text-decoration:none;">
-            ${isSubmitted ? 'View Summary →' : progress.resolved > 0 ? 'Continue Organizer →' : 'Start Organizer →'}
-          </a>
+          <div style="margin-top:1.5rem;">
+            <div class="org-timeline">
+              <div class="org-timeline-step">
+                <div class="org-timeline-dot done">✓</div>
+                <div class="org-timeline-label"><strong>Organizer Prep</strong>Jan – Feb</div>
+              </div>
+              <div class="org-timeline-step">
+                <div class="org-timeline-dot active">→</div>
+                <div class="org-timeline-label"><strong>You Gather Docs</strong>Feb – Mar</div>
+              </div>
+              <div class="org-timeline-step">
+                <div class="org-timeline-dot">3</div>
+                <div class="org-timeline-label"><strong>We Prepare Return</strong>Mar – Apr</div>
+              </div>
+              <div class="org-timeline-step">
+                <div class="org-timeline-dot">4</div>
+                <div class="org-timeline-label"><strong>Review &amp; Sign</strong>Before Apr 15</div>
+              </div>
+            </div>
+          </div>
         </div>
       `;
     }
 
-    function renderOrganizers() {
-      const grid = document.getElementById('organizerGrid');
-      const cards = [];
+    function renderOrganizerDashboard(wrap, data, year) {
+      const { organizer, items, progress } = data;
+      const isSubmitted = ['submitted', 'reviewed'].includes(organizer.status);
+      const firstName = _me?.firstName || 'there';
 
-      // Personal card
-      const firstName = _me?.firstName || 'My';
-      if (_stanford?.personal_url) {
-        cards.push(`
-          <div class="organizer-card">
-            <div class="oc-icon">👤</div>
-            <div>
-              <div class="oc-label">Personal</div>
-              <div class="oc-name">${escHtml(firstName)}'s Tax Organizer</div>
-            </div>
-            <a class="btn-organizer" href="/organizer.html">
-              Start Organizer →
-            </a>
-          </div>
-        `);
-      } else {
-        cards.push(`
-          <div class="organizer-card">
-            <div class="oc-icon">👤</div>
-            <div>
-              <div class="oc-label">Personal</div>
-              <div class="oc-name">${escHtml(firstName)}'s Tax Organizer</div>
-            </div>
-            <a class="btn-organizer" href="/organizer.html">
-              Start Organizer →
-            </a>
-          </div>
-        `);
-      }
+      const statusChipClass = organizer.status || 'not_started';
+      const statusLabel = {
+        pending: 'Not Started',
+        in_progress: `${progress.resolved} of ${progress.total} documents resolved`,
+        submitted: '✓ Submitted to Sentinel',
+        reviewed: '✓ Reviewed by Sentinel',
+        not_started: 'Not Started',
+      }[organizer.status] || organizer.status;
 
-      // Company cards
-      (_stanford?.companies || []).forEach(co => {
-        cards.push(`
-          <div class="organizer-card">
-            <div class="oc-icon">🏢</div>
-            <div>
-              <div class="oc-label">Business</div>
-              <div class="oc-name">${escHtml(co.company_name)}</div>
-            </div>
-            <a class="btn-organizer" href="${escHtml(co.url)}" target="_blank" rel="noopener">
-              Open Organizer →
-            </a>
-          </div>
-        `);
-      });
+      // Timeline step
+      const tlStep = isSubmitted ? 3 : organizer.status === 'in_progress' ? 2 : 1;
 
-      if (!cards.length) {
-        grid.innerHTML = '<div class="empty-state"><div class="ei">🔗</div><div>No organizer links available yet.</div></div>';
-      } else {
-        grid.innerHTML = cards.join('');
-      }
+      // Items preview — mix of resolved and pending
+      const actionable = items.filter(i => !i.sentinel_provides);
+      const uploaded = actionable.filter(i => i.status === 'uploaded');
+      const nty = actionable.filter(i => i.status === 'not_this_year');
+      const pending = actionable.filter(i => i.status === 'pending');
+      const sentinel = items.filter(i => i.sentinel_provides);
+
+      // Show: first 3 pending, then last 2 resolved
+      const previewList = [...pending.slice(0, 3), ...uploaded.slice(-2)];
+
+      const itemsHtml = previewList.length ? previewList.map(item => `
+        <div class="org-item-row">
+          <div class="org-item-dot ${item.status}"></div>
+          <div class="org-item-name">${escHtml(item.payer_name)}</div>
+          <div class="org-item-tag">${item.section}</div>
+        </div>
+      `).join('') + (pending.length > 3 ? `<div style="font-size:0.75rem;color:var(--muted);padding:0.3rem 0;">+${pending.length - 3} more pending…</div>` : '') : '';
+
+      const ctaLabel = isSubmitted ? '📄 View Submitted Organizer' : progress.resolved > 0 ? '▶ Continue Organizer' : '▶ Start Organizer';
+      const heroClass = isSubmitted ? 'org-hero submitted' : progress.percent === 100 ? 'org-hero all-done' : 'org-hero';
+
+      wrap.innerHTML = `
+        <div class="org-dashboard">
+
+          <!-- Hero card -->
+          <div class="${heroClass}">
+            <div class="org-hero-top">
+              <div>
+                <div class="org-hero-title">📋 ${year} Tax Organizer</div>
+                <div class="org-hero-sub">
+                  ${isSubmitted
+                    ? `Submitted on ${new Date(organizer.submitted_at).toLocaleDateString('en-US',{month:'long',day:'numeric'})}. We're reviewing your documents.`
+                    : organizer.status === 'in_progress'
+                      ? `Hi ${escHtml(firstName)}, you've made progress! ${pending.length} item${pending.length !== 1 ? 's' : ''} still need${pending.length === 1 ? 's' : ''} your attention.`
+                      : `Hi ${escHtml(firstName)}, your ${year} document checklist is ready. Complete it to get your return started.`
+                  }
+                </div>
+              </div>
+              <span class="org-status-chip ${statusChipClass}">${statusLabel}</span>
+            </div>
+
+            ${!isSubmitted ? `
+            <div class="org-progress-row">
+              <div class="org-progress-bar"><div class="org-progress-fill" style="width:${progress.percent}%"></div></div>
+              <div class="org-progress-label"><strong>${progress.resolved}</strong> of <strong>${progress.total}</strong> resolved</div>
+            </div>
+            ` : ''}
+
+            ${itemsHtml ? `<div class="org-items-preview">${itemsHtml}</div>` : ''}
+
+            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+              <a href="/organizer.html?year=${year}" class="btn-organizer" style="text-decoration:none;">${ctaLabel}</a>
+              ${sentinel.length ? `<span style="font-size:0.78rem;color:var(--gold);">🏢 ${sentinel.length} item${sentinel.length!==1?'s':''} provided by Sentinel</span>` : ''}
+            </div>
+          </div>
+
+          <!-- Tax season timeline -->
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;">
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:1rem;">2025 Tax Season Timeline</div>
+            <div class="org-timeline">
+              <div class="org-timeline-step">
+                <div class="org-timeline-dot done">✓</div>
+                <div class="org-timeline-label"><strong>Organizer Sent</strong>Jan – Feb</div>
+              </div>
+              <div class="org-timeline-step">
+                <div class="org-timeline-dot ${tlStep >= 2 ? 'done' : tlStep === 2 ? 'active' : ''}">${tlStep > 2 ? '✓' : '2'}</div>
+                <div class="org-timeline-label"><strong>Gather Documents</strong>Feb – Mar</div>
+              </div>
+              <div class="org-timeline-step">
+                <div class="org-timeline-dot ${tlStep >= 3 ? 'done' : tlStep === 3 ? 'active' : ''}">${tlStep > 3 ? '✓' : '3'}</div>
+                <div class="org-timeline-label"><strong>Return Prepared</strong>Mar – Apr</div>
+              </div>
+              <div class="org-timeline-step">
+                <div class="org-timeline-dot ${tlStep >= 4 ? 'done' : ''}">${tlStep >= 4 ? '✓' : '4'}</div>
+                <div class="org-timeline-label"><strong>Review &amp; Sign</strong>Before Apr 15</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- What to have ready -->
+          ${!isSubmitted ? `
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;">
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">Tips for Gathering Your Documents</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem 1.5rem;">
+              <div style="font-size:0.82rem;color:var(--muted);display:flex;gap:0.5rem;"><span style="color:var(--gold);">→</span>W-2s and 1099s usually arrive by Feb 15</div>
+              <div style="font-size:0.82rem;color:var(--muted);display:flex;gap:0.5rem;"><span style="color:var(--gold);">→</span>K-1s from partnerships often arrive later (Mar–Apr)</div>
+              <div style="font-size:0.82rem;color:var(--muted);display:flex;gap:0.5rem;"><span style="color:var(--gold);">→</span>Upload as you go — you don't have to do it all at once</div>
+              <div style="font-size:0.82rem;color:var(--muted);display:flex;gap:0.5rem;"><span style="color:var(--gold);">→</span>Mark items "Not This Year" if they no longer apply</div>
+            </div>
+          </div>
+          ` : ''}
+
+        </div>
+      `;
     }
 
-    // ── UPLOAD ────────────────────────────────────────────
+        // ── UPLOAD ────────────────────────────────────────────
     const modal = document.getElementById('uploadModal');
     const fileInput = document.getElementById('fileInput');
     const fileDrop = document.getElementById('fileDrop');
