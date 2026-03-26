@@ -1,280 +1,239 @@
 /**
  * organizerParser.js
- * Parses a Drake Software tax organizer PDF and returns structured checklist items.
- * Works by extracting text from every page and matching known section patterns.
+ * Parses a Drake Software tax organizer PDF using pdf-lib for structure
+ * and a Python subprocess (pypdf) for text extraction — same approach
+ * proven reliable during development/testing.
+ *
+ * Falls back gracefully if Python unavailable.
  */
 
-const { PdfReader } = require('pdfreader');
+const { execSync, spawnSync } = require('child_process');
+const { writeFileSync, unlinkSync, readFileSync } = require('fs');
+const { tmpdir } = require('os');
+const { join } = require('path');
+const crypto = require('crypto');
 
 // Payer names that Sentinel provides internally (no client upload needed)
-const SENTINEL_PROVIDES_PATTERNS = [
-  /altruist/i,
-];
+const SENTINEL_PROVIDES_PATTERNS = [/altruist/i];
 
-// EIN → entity name mapping from K-1 basis worksheets (populated during parse)
-const SECTION_MAP = {
-  w2: { label: 'W-2 · Wages', section: 'w2' },
-  '1099-r': { label: '1099-R · Retirement', section: '1099-r' },
-  '1099-div': { label: '1099-DIV · Dividends', section: '1099-div' },
-  '1099-int': { label: '1099-INT · Interest', section: '1099-int' },
-  '1099-nec': { label: '1099-NEC · Non-Employee Compensation', section: '1099-nec' },
-  '1099-misc': { label: '1099-MISC · Miscellaneous', section: '1099-misc' },
-  '1099-g': { label: '1099-G · State Refund', section: '1099-g' },
-  'k1': { label: 'Schedule K-1 · Partnerships & S-Corps', section: 'k1' },
-  'schedule-c': { label: 'Schedule C · Business Income', section: 'schedule-c' },
-  '1098': { label: 'Form 1098 · Mortgage Interest', section: '1098' },
-  'childcare': { label: 'Childcare & Dependent Expenses', section: 'childcare' },
-};
+const SECTION_ORDER = ['w2', '1099-r', '1099-div', '1099-int', '1099-nec', '1099-misc', '1099-g', 'k1', 'schedule-c', '1098', 'childcare', 'other'];
 
 /**
- * Extract all text from a PDF buffer, page by page.
- * Returns array of page text strings.
+ * Extract all text from PDF buffer using Python pypdf.
+ * Returns one big string of all pages joined with \n--- PAGE N ---\n
  */
-function extractPdfText(buffer) {
-  return new Promise((resolve, reject) => {
-    const pages = [];
-    let currentPage = [];
-    let currentPageNum = 0;
-
-    new PdfReader().parseBuffer(buffer, (err, item) => {
-      if (err) return reject(err);
-      if (!item) {
-        // EOF
-        if (currentPage.length) pages.push(currentPage.join(' '));
-        return resolve(pages);
-      }
-      if (item.page) {
-        if (currentPage.length) pages.push(currentPage.join(' '));
-        currentPage = [];
-        currentPageNum = item.page;
-      } else if (item.text) {
-        currentPage.push(item.text.trim());
-      }
+function extractTextWithPython(pdfBuffer) {
+  const tmpPath = join(tmpdir(), `org_${crypto.randomBytes(6).toString('hex')}.pdf`);
+  try {
+    writeFileSync(tmpPath, pdfBuffer);
+    const script = `
+import sys
+try:
+    import pypdf
+    reader = pypdf.PdfReader(sys.argv[1])
+    for i, page in enumerate(reader.pages):
+        print(f"--- PAGE {i+1} ---")
+        t = page.extract_text()
+        if t: print(t)
+except Exception as e:
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+`;
+    const result = spawnSync('python3', ['-c', script, tmpPath], {
+      encoding: 'utf8',
+      timeout: 30000,
+      maxBuffer: 10 * 1024 * 1024,
     });
-  });
+
+    if (result.status !== 0) {
+      throw new Error(`Python extraction failed: ${result.stderr}`);
+    }
+    return result.stdout;
+  } finally {
+    try { unlinkSync(tmpPath); } catch (_) {}
+  }
 }
 
 /**
- * Parse the checklist pages (pages 1-2 typically) for named payers.
- * Returns array of { section, payerName, accountNumber, owner }
+ * Split extracted text into page arrays.
+ */
+function splitPages(text) {
+  return text.split(/--- PAGE \d+ ---\n?/).filter(p => p.trim().length > 0);
+}
+
+/**
+ * Parse checklist pages (pages 1-2) for named payers.
  */
 function parseChecklistItems(pageTexts) {
   const items = [];
   const checklistText = pageTexts.slice(0, 3).join('\n');
 
-  // W-2 section
-  const w2Section = checklistText.match(/Wages \(Form W-2\)([\s\S]*?)(?=IRA Distributions|Dividends|Interest|$)/i);
-  if (w2Section) {
-    const lines = w2Section[1].split('\n').map(l => l.trim()).filter(l => l && l !== '[  ]');
-    for (const line of lines) {
-      if (line.length > 2 && !line.startsWith('[')) {
-        // Detect owner hints: lines sometimes have T/S prefix in detail pages
-        items.push({ section: 'w2', payerName: line, accountNumber: '', owner: 'taxpayer', ein: '' });
-      }
-    }
+  // Helper: extract payer lines from a section
+  function extractPayerLines(text, startPattern, endPattern) {
+    const match = text.match(new RegExp(startPattern + '([\\s\\S]*?)(?=' + endPattern + '|$)', 'i'));
+    if (!match) return [];
+    return match[1].split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 2 && !l.match(/^\[/) && !l.match(/^\*+\d+$/) && !l.match(/^Page \d/));
+  }
+
+  // W-2
+  for (const line of extractPayerLines(checklistText, 'Wages \\(Form W-2\\)', 'IRA Distributions|Dividends|Interest')) {
+    items.push({ section: 'w2', payerName: line, accountNumber: '', owner: 'taxpayer', ein: '' });
   }
 
   // 1099-R
-  const r1099Section = checklistText.match(/IRA Distributions.*?Form 1099-R\)([\s\S]*?)(?=Dividends|Interest|$)/i);
-  if (r1099Section) {
-    const lines = r1099Section[1].split('\n').map(l => l.trim()).filter(l => l && l !== '[  ]');
-    for (const line of lines) {
-      if (line.length > 2 && !line.startsWith('[')) {
-        items.push({ section: '1099-r', payerName: line, accountNumber: '', owner: 'taxpayer', ein: '' });
-      }
-    }
+  for (const line of extractPayerLines(checklistText, 'IRA Distributions.*?Form 1099-R\\)', 'Dividends|Interest')) {
+    items.push({ section: '1099-r', payerName: line, accountNumber: '', owner: 'taxpayer', ein: '' });
   }
 
-  // 1099-DIV
-  const divSection = checklistText.match(/Dividends \(Form 1099-DIV\)([\s\S]*?)(?=Interest|State and City|$)/i);
-  if (divSection) {
-    const lines = divSection[1].split('\n').map(l => l.trim()).filter(l => l && l !== '[  ]');
-    let pendingPayer = null;
-    for (const line of lines) {
-      if (line.length > 2 && !line.startsWith('[') && !line.match(/^\*+\d+$/)) {
-        if (pendingPayer) {
-          // Previous line was payer, this might be account number
-          if (line.match(/^\*+\d+$/) || line.match(/^\d{4,}$/)) {
-            items[items.length - 1].accountNumber = line;
-          } else {
-            pendingPayer = line;
-            items.push({ section: '1099-div', payerName: line, accountNumber: '', owner: 'joint', ein: '' });
-          }
-        } else {
-          pendingPayer = line;
-          items.push({ section: '1099-div', payerName: line, accountNumber: '', owner: 'joint', ein: '' });
-        }
-      } else if (line.match(/^\*+\d+$/) && items.length) {
-        items[items.length - 1].accountNumber = line;
-      }
+  // 1099-DIV — handle account numbers on next line
+  const divLines = extractPayerLines(checklistText, 'Dividends \\(Form 1099-DIV\\)', 'Interest \\(Form 1099');
+  for (let i = 0; i < divLines.length; i++) {
+    const line = divLines[i];
+    const nextLine = divLines[i + 1] || '';
+    if (nextLine.match(/^\*+\d+$/) || nextLine.match(/^\d{4,}$/)) {
+      items.push({ section: '1099-div', payerName: line, accountNumber: nextLine, owner: 'joint', ein: '' });
+      i++;
+    } else {
+      items.push({ section: '1099-div', payerName: line, accountNumber: '', owner: 'joint', ein: '' });
     }
   }
 
   // 1099-INT
-  const intSection = checklistText.match(/Interest \(Form 1099-INT\)([\s\S]*?)(?=State and City|Credit Card|Partnerships|$)/i);
-  if (intSection) {
-    const lines = intSection[1].split('\n').map(l => l.trim()).filter(l => l && l !== '[  ]');
-    for (const line of lines) {
-      if (line.length > 2 && !line.startsWith('[') && !line.match(/^\*+\d+$/)) {
-        items.push({ section: '1099-int', payerName: line, accountNumber: '', owner: 'joint', ein: '' });
-      } else if (line.match(/^\*+\d+$/) && items.length) {
-        items[items.length - 1].accountNumber = line;
-      }
+  const intLines = extractPayerLines(checklistText, 'Interest \\(Form 1099-INT\\)', 'State and City|Credit Card|Partnerships|Miscellaneous|Nonemployee');
+  for (let i = 0; i < intLines.length; i++) {
+    const line = intLines[i];
+    const nextLine = intLines[i + 1] || '';
+    if (nextLine.match(/^\*+\d+$/) || nextLine.match(/^\d{4,}$/)) {
+      items.push({ section: '1099-int', payerName: line, accountNumber: nextLine, owner: 'joint', ein: '' });
+      i++;
+    } else {
+      items.push({ section: '1099-int', payerName: line, accountNumber: '', owner: 'joint', ein: '' });
     }
   }
 
   // 1099-NEC
-  const necSection = checklistText.match(/Nonemployee Compensation.*?1099-NEC\)([\s\S]*?)(?=State and City|Credit Card|Partnerships|Self-employed|Other Income|$)/i);
-  if (necSection) {
-    const lines = necSection[1].split('\n').map(l => l.trim()).filter(l => l && l !== '[  ]');
-    for (const line of lines) {
-      if (line.length > 2 && !line.startsWith('[')) {
-        items.push({ section: '1099-nec', payerName: line, accountNumber: '', owner: 'spouse', ein: '' });
-      }
-    }
+  for (const line of extractPayerLines(checklistText, 'Nonemployee Compensation.*?1099-NEC\\)', 'State and City|Credit Card|Partnerships|Self-employed|Other Income')) {
+    items.push({ section: '1099-nec', payerName: line, accountNumber: '', owner: 'spouse', ein: '' });
   }
 
   // 1099-MISC
-  const miscSection = checklistText.match(/Miscellaneous Income.*?1099-MISC\)([\s\S]*?)(?=Nonemployee|1099-NEC|State and City|$)/i);
-  if (miscSection) {
-    const lines = miscSection[1].split('\n').map(l => l.trim()).filter(l => l && l !== '[  ]');
-    for (const line of lines) {
-      if (line.length > 2 && !line.startsWith('[')) {
-        items.push({ section: '1099-misc', payerName: line, accountNumber: '', owner: 'spouse', ein: '' });
-      }
+  for (const line of extractPayerLines(checklistText, 'Miscellaneous Income.*?1099-MISC\\)', 'Nonemployee|1099-NEC|State and City')) {
+    items.push({ section: '1099-misc', payerName: line, accountNumber: '', owner: 'spouse', ein: '' });
+  }
+
+  // 1099-G (skip generic "Unemployment" / "DEPARTMENT")
+  for (const line of extractPayerLines(checklistText, 'State and City.*?1099-G\\)', 'Credit Card|Partnerships')) {
+    if (!line.match(/unemployment/i) && !line.match(/^DEPARTMENT/i)) {
+      items.push({ section: '1099-g', payerName: line, accountNumber: '', owner: 'joint', ein: '' });
     }
   }
 
-  // 1099-G (named only — skip generic "Unemployment compensation" / "DEPARTMENT OF...")
-  const gSection = checklistText.match(/State and City.*?1099-G\)([\s\S]*?)(?=Credit Card|Partnerships|$)/i);
-  if (gSection) {
-    const lines = gSection[1].split('\n').map(l => l.trim()).filter(l => l && l !== '[  ]');
-    for (const line of lines) {
-      if (line.length > 2 && !line.startsWith('[') &&
-          !line.match(/unemployment/i) && !line.match(/^DEPARTMENT/i)) {
-        items.push({ section: '1099-g', payerName: line, accountNumber: '', owner: 'joint', ein: '' });
-      }
-    }
+  // K-1s
+  for (const line of extractPayerLines(checklistText, 'Partnerships.*?Schedule K-1\\)', 'Brokerage|Self-employed|Other Income')) {
+    items.push({ section: 'k1', payerName: line, accountNumber: '', owner: 'taxpayer', ein: '' });
   }
 
-  // K-1s (checklist)
-  const k1Section = checklistText.match(/Partnerships.*?Schedule K-1\)([\s\S]*?)(?=Brokerage|Self-employed|Other Income|$)/i);
-  if (k1Section) {
-    const lines = k1Section[1].split('\n').map(l => l.trim()).filter(l => l && l !== '[  ]');
-    for (const line of lines) {
-      if (line.length > 2 && !line.startsWith('[')) {
-        items.push({ section: 'k1', payerName: line, accountNumber: '', owner: 'taxpayer', ein: '' });
-      }
-    }
-  }
-
-  // Schedule C (checklist page 2)
-  const schedCSection = checklistText.match(/Self-employed Income.*?Schedule C\)([\s\S]*?)(?=Other Income|$)/i);
-  if (schedCSection) {
-    const lines = schedCSection[1].split('\n').map(l => l.trim()).filter(l => l && l !== '[  ]');
-    for (const line of lines) {
-      if (line.length > 2 && !line.startsWith('[')) {
-        items.push({ section: 'schedule-c', payerName: line + ' — Income & Expense Records', accountNumber: '', owner: 'taxpayer', ein: '' });
-      }
-    }
+  // Schedule C
+  for (const line of extractPayerLines(checklistText, 'Self-employed Income.*?Schedule C\\)', 'Other Income')) {
+    items.push({ section: 'schedule-c', payerName: line + ' — Income & Expense Records', accountNumber: '', owner: 'taxpayer', ein: '' });
   }
 
   return items;
 }
 
 /**
- * Parse income detail pages (pages 9-16) for amounts, EINs, owner (T/S/J).
- * Returns enriched items with prior_year_amount, ein, owner overrides.
+ * Parse detail/income pages for amounts, EINs, owner.
  */
 function parseDetailPages(pageTexts) {
   const enriched = [];
 
   for (const pageText of pageTexts) {
-    // W-2 detail page
-    if (pageText.includes('Wages & Salaries') || pageText.includes('S_INC.LD')) {
-      const lines = pageText.split('\n');
-      for (const line of lines) {
+    // W-2 detail (S_INC.LD page)
+    if (pageText.includes('S_INC.LD') || pageText.includes('Wages & Salaries')) {
+      for (const line of pageText.split('\n')) {
         const m = line.match(/^([TS])\s+(.+?)\s+(\d[\d,]+)\s*$/);
-        if (m) {
-          enriched.push({
-            section: 'w2',
-            payerName: m[2].trim(),
-            owner: m[1] === 'T' ? 'taxpayer' : 'spouse',
-            prior_year_amount: parseFloat(m[3].replace(/,/g, '')),
-          });
+        if (m && !m[2].match(/^(Payer|Employer|Distribution)/i)) {
+          enriched.push({ section: 'w2', payerName: m[2].trim(), owner: m[1] === 'T' ? 'taxpayer' : 'spouse', prior_year_amount: parseFloat(m[3].replace(/,/g, '')) });
         }
       }
     }
 
-    // 1099-R detail
-    if (pageText.includes('GE AVIATION') || pageText.includes('S_INC.LD')) {
-      const lines = pageText.split('\n');
-      for (const line of lines) {
-        const m = line.match(/^([TS])\s+(.+?)\s+(\d[\d,]+)\s*$/);
-        if (m && (line.includes('PENSION') || line.includes('ANNUITY') || line.includes('IRA'))) {
-          enriched.push({
-            section: '1099-r',
-            payerName: m[2].trim(),
-            owner: m[1] === 'T' ? 'taxpayer' : 'spouse',
-            prior_year_amount: parseFloat(m[3].replace(/,/g, '')),
-          });
-        }
-      }
-    }
-
-    // K-1 detail page — get EINs
+    // K-1 detail (S_E2.LD page) — get EINs and owner
     if (pageText.includes('S_E2.LD') || pageText.includes('Schedule K-1 from Partnerships')) {
-      const lines = pageText.split('\n');
-      for (const line of lines) {
-        const m = line.match(/^([TS])\s+([\d-]{9,11})\s+(.+)$/);
+      for (const line of pageText.split('\n')) {
+        const m = line.match(/^([TS])\s+([\d-]{9,12})\s+(.+)$/);
         if (m) {
-          enriched.push({
-            section: 'k1',
-            payerName: m[3].trim(),
-            ein: m[2].trim(),
-            owner: m[1] === 'T' ? 'taxpayer' : 'spouse',
-          });
+          enriched.push({ section: 'k1', payerName: m[3].trim(), ein: m[2].trim(), owner: m[1] === 'T' ? 'taxpayer' : 'spouse' });
         }
       }
     }
 
-    // 1098 mortgage — Other Information page
-    if (pageText.includes('S_OTHER.LD') || pageText.includes('Lender') || pageText.includes('Mortgage Interest')) {
+    // 1098 — Other Information page (S_OTHER.LD)
+    if (pageText.includes('S_OTHER.LD') || (pageText.includes('Lender') && pageText.includes('Mortgage Interest'))) {
       const lines = pageText.split('\n');
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        // Look for lender name followed by an amount
-        if (line.match(/BANK|MORTGAGE|FINANCIAL|CREDIT|LOAN|TRUST|SAVINGS/i)) {
-          const nextNums = lines.slice(i + 1, i + 4).map(l => l.trim()).join(' ');
-          const amtMatch = nextNums.match(/(\d[\d,]+)/);
+        if (line.match(/\b(BANK|MORTGAGE|FINANCIAL|CREDIT|LOAN|TRUST|SAVINGS|FEDERAL)\b/i) && line.length < 60) {
+          // Look ahead for an amount
+          const nearby = lines.slice(i + 1, i + 5).join(' ');
+          const amtMatch = nearby.match(/(\d[\d,]{2,})/);
           if (amtMatch) {
-            enriched.push({
-              section: '1098',
-              payerName: line,
-              owner: 'joint',
-              prior_year_amount: parseFloat(amtMatch[1].replace(/,/g, '')),
-            });
+            enriched.push({ section: '1098', payerName: line, owner: 'joint', prior_year_amount: parseFloat(amtMatch[1].replace(/,/g, '')) });
+            break;
           }
         }
       }
     }
 
-    // Childcare — dependent page
+    // Childcare — dependent/info page (S_TPINFO.LD2)
     if (pageText.includes('S_TPINFO.LD2') || pageText.includes('Child and Other Dependent')) {
       const lines = pageText.split('\n');
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        // Care provider lines: name followed by address and amount
-        if (line.length > 3 && lines[i + 1] && lines[i + 1].match(/\d{3,}/)) {
-          const amtMatch = pageText.match(/(\d[\d,]+)\s*$/m);
+        // Care provider name — typically followed by address then EIN then amount
+        if (line.length > 4 && line.match(/^[A-Z]/) && lines[i + 1] && lines[i + 1].match(/\d{4,}/)) {
+          const nearby = lines.slice(i, i + 8).join(' ');
+          const amtMatch = nearby.match(/(\d[\d,]{3,})\s*$/);
           if (amtMatch) {
+            enriched.push({ section: 'childcare', payerName: line + ' — Childcare/Tuition Statement', owner: 'joint', prior_year_amount: parseFloat(amtMatch[1].replace(/,/g, '')) });
+            break;
+          }
+        }
+      }
+    }
+
+    // 1099-R detail (income page)
+    if (pageText.includes('GE AVIATION') || (pageText.includes('PENSION') && pageText.match(/\d[\d,]{3,}/))) {
+      for (const line of pageText.split('\n')) {
+        const m = line.match(/^([TS])\s+(.+?(?:PENSION|ANNUITY|MASTER).+?)\s+(\d[\d,]+)\s*$/i);
+        if (m) {
+          enriched.push({ section: '1099-r', payerName: m[2].trim(), owner: m[1] === 'T' ? 'taxpayer' : 'spouse', prior_year_amount: parseFloat(m[3].replace(/,/g, '')) });
+        }
+      }
+    }
+
+    // Interest detail (S_INC2.LD)
+    if (pageText.includes('S_INC2.LD') || pageText.includes('Interest Income')) {
+      const lines = pageText.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        const m = line.match(/^([TSJ])\s+(.+?)\s*$/);
+        if (m && m[2].length > 3) {
+          const nextLine = (lines[i + 1] || '').trim();
+          const amtLine = (lines[i + 2] || '').trim();
+          const acct = nextLine.match(/^\*+\d+$/) ? nextLine : '';
+          const amt = (acct ? amtLine : nextLine).match(/^(\d[\d,]+)$/);
+          if (amt) {
             enriched.push({
-              section: 'childcare',
-              payerName: line + ' — Childcare/Tuition Statement',
-              owner: 'joint',
-              prior_year_amount: parseFloat(amtMatch[1].replace(/,/g, '')),
+              section: '1099-int',
+              payerName: m[2].trim(),
+              accountNumber: acct,
+              owner: m[1] === 'T' ? 'taxpayer' : m[1] === 'S' ? 'spouse' : 'joint',
+              prior_year_amount: parseFloat(amt[1].replace(/,/g, '')),
             });
-            break; // one childcare entry per page
           }
         }
       }
@@ -286,27 +245,26 @@ function parseDetailPages(pageTexts) {
 
 /**
  * Merge checklist items with enriched detail data.
- * Detail data wins for EIN, amount, owner.
  */
 function mergeItems(checklistItems, detailItems) {
   const merged = [...checklistItems];
 
   for (const detail of detailItems) {
-    // Try to find matching checklist item by payer name similarity
     const idx = merged.findIndex(item =>
-      item.section === detail.section &&
-      (item.payerName.toLowerCase().includes(detail.payerName.toLowerCase().slice(0, 8)) ||
-       detail.payerName.toLowerCase().includes(item.payerName.toLowerCase().slice(0, 8)))
+      item.section === detail.section && (
+        item.payerName.toLowerCase().slice(0, 10) === detail.payerName.toLowerCase().slice(0, 10) ||
+        detail.payerName.toLowerCase().slice(0, 10) === item.payerName.toLowerCase().slice(0, 10)
+      )
     );
 
     if (idx >= 0) {
       if (detail.ein) merged[idx].ein = detail.ein;
-      if (detail.owner) merged[idx].owner = detail.owner;
+      if (detail.owner && detail.owner !== 'joint') merged[idx].owner = detail.owner;
       if (detail.prior_year_amount) merged[idx].prior_year_amount = detail.prior_year_amount;
-    } else if (detail.section === '1098' || detail.section === 'childcare') {
-      // These often don't appear in checklist — add directly from detail
+      if (detail.accountNumber) merged[idx].accountNumber = detail.accountNumber;
+    } else if (['1098', 'childcare'].includes(detail.section)) {
       const exists = merged.some(m => m.section === detail.section &&
-        m.payerName.toLowerCase().includes(detail.payerName.toLowerCase().slice(0, 6)));
+        m.payerName.toLowerCase().slice(0, 8) === detail.payerName.toLowerCase().slice(0, 8));
       if (!exists) merged.push(detail);
     }
   }
@@ -315,22 +273,19 @@ function mergeItems(checklistItems, detailItems) {
 }
 
 /**
- * Flag items that Sentinel provides internally.
+ * Flag Altruist and firm-company K-1s as Sentinel Provides.
  */
 function flagSentinelItems(items, firmCompanyNames = []) {
-  return items.map(item => {
-    const isSentinel =
+  return items.map(item => ({
+    ...item,
+    sentinel_provides:
       SENTINEL_PROVIDES_PATTERNS.some(p => p.test(item.payerName)) ||
       (item.section === 'k1' && firmCompanyNames.some(name =>
-        item.payerName.toLowerCase().includes(name.toLowerCase().slice(0, 6))
-      ));
-    return { ...item, sentinel_provides: isSentinel };
-  });
+        item.payerName.toLowerCase().includes(name.toLowerCase().slice(0, 8))
+      )),
+  }));
 }
 
-/**
- * Deduplicate items — remove exact payer+section duplicates, keep first.
- */
 function deduplicateItems(items) {
   const seen = new Set();
   return items.filter(item => {
@@ -344,37 +299,34 @@ function deduplicateItems(items) {
 /**
  * Main export: parse a Drake organizer PDF buffer.
  * @param {Buffer} pdfBuffer
- * @param {string[]} firmCompanyNames - company names in the relationship (for Sentinel Provides)
+ * @param {string[]} firmCompanyNames
  * @returns {Promise<{ clientName: string, taxYear: string, items: Array }>}
  */
 async function parseOrganizerPdf(pdfBuffer, firmCompanyNames = []) {
-  const pageTexts = await extractPdfText(pdfBuffer);
+  const fullText = extractTextWithPython(pdfBuffer);
+  const pageTexts = splitPages(fullText);
 
-  // Extract client name and tax year from first page
+  // Client name + year from first page
   const firstPage = pageTexts[0] || '';
   const nameMatch = firstPage.match(/([A-Z][A-Z\s&]+(?:LLC|INC|LP)?)\s+\*{3}-\*{2}-\*{4}/);
   const clientName = nameMatch ? nameMatch[1].trim() : 'Unknown Client';
   const yearMatch = firstPage.match(/\b(202\d)\b/);
   const taxYear = yearMatch ? yearMatch[1] : '2025';
 
-  // Parse checklist pages
   const checklistItems = parseChecklistItems(pageTexts);
-
-  // Parse detail pages for enrichment
   const detailItems = parseDetailPages(pageTexts);
 
-  // Merge and clean up
   let items = mergeItems(checklistItems, detailItems);
   items = deduplicateItems(items);
   items = flagSentinelItems(items, firmCompanyNames);
 
-  // Add display order
-  const sectionOrder = ['w2', '1099-r', '1099-div', '1099-int', '1099-nec', '1099-misc', '1099-g', 'k1', 'schedule-c', '1098', 'childcare', 'other'];
-  items = items.sort((a, b) => {
-    const ai = sectionOrder.indexOf(a.section);
-    const bi = sectionOrder.indexOf(b.section);
-    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-  }).map((item, i) => ({ ...item, display_order: i }));
+  items = items
+    .sort((a, b) => {
+      const ai = SECTION_ORDER.indexOf(a.section);
+      const bi = SECTION_ORDER.indexOf(b.section);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    })
+    .map((item, i) => ({ ...item, display_order: i }));
 
   return { clientName, taxYear, items };
 }
