@@ -1548,8 +1548,8 @@
       const genDate = pkg.generated_at ? new Date(pkg.generated_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '';
       let html = `<div style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;">Period: <strong>${escHtml(pkg.period || label)}</strong>${genDate ? ' · Generated ' + genDate : ''}</div>`;
       if (rd.pnl)          html += `<div class="report-section"><h3 style="font-size:0.88rem;font-weight:700;margin:0 0 0.6rem;color:var(--text);">Profit &amp; Loss</h3>${portalRenderQBReport(rd.pnl)}</div>`;
-      if (rd.balanceSheet) html += `<div class="report-section"><h3 style="font-size:0.88rem;font-weight:700;margin:1.5rem 0 0.6rem;color:var(--text);">Balance Sheet</h3>${portalRenderQBReport(rd.balanceSheet)}</div>`;
-      if (rd.trialBalance) html += `<div class="report-section"><h3 style="font-size:0.88rem;font-weight:700;margin:1.5rem 0 0.6rem;color:var(--text);">Trial Balance</h3>${portalRenderQBReport(rd.trialBalance)}</div>`;
+      if (rd.balanceSheet) html += `<div style="max-width:520px;"><div class="report-section"><h3 style="font-size:0.88rem;font-weight:700;margin:1.5rem 0 0.6rem;color:var(--text);">Balance Sheet</h3>${portalRenderQBReport(rd.balanceSheet)}</div></div>`;
+      if (rd.trialBalance) html += `<div style="max-width:520px;"><div class="report-section"><h3 style="font-size:0.88rem;font-weight:700;margin:1.5rem 0 0.6rem;color:var(--text);">Trial Balance</h3>${portalRenderQBReport(rd.trialBalance)}</div></div>`;
       if (!rd.pnl && !rd.balanceSheet && !rd.trialBalance) {
         html += `<div style="color:var(--muted);padding:1rem;text-align:center;">No report data available.</div>`;
       }
