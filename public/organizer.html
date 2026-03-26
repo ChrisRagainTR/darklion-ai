@@ -214,7 +214,7 @@
     }
     .ci-btn.upload { border-color: rgba(201,168,76,0.4); color: var(--gold); }
     .ci-btn.upload:hover { background: rgba(201,168,76,0.12); }
-    .ci-btn.na-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .ci-btn.nty-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
     .ci-btn.undo { color: var(--muted); }
 
     /* === SENTINEL PROVIDES === */
@@ -609,19 +609,19 @@
   <!-- ═══════════════════════════════════════════════ -->
   <div class="step-panel" id="step-3">
     <div class="section-title">Your 2025 Documents</div>
-    <div class="section-sub">Based on your 2024 return, here's what we're expecting. Upload each item, mark it N/A if it no longer applies, or come back later — your progress is saved automatically.</div>
+    <div class="section-sub">Based on your 2024 return, here's what we're expecting. Upload each item or mark it "Not This Year" if it no longer applies. Every item must be resolved before you can submit.</div>
 
-    <div class="banner-note">
-      ℹ️ <span>You can return to this page any time. Your uploads and checkmarks are saved as you go. Hit <strong>Submit</strong> when you're ready — even if a few items are still pending.</span>
+    <div class="banner-note" id="checklist-banner">
+      ℹ️ <span>You can return to this page any time. Every item must be either <strong>uploaded</strong> or marked <strong>Not This Year</strong> before you can submit.</span>
     </div>
 
     <!-- Progress Summary -->
-    <div class="progress-summary">
+    <div class="progress-summary" id="progress-summary-card">
       <div class="ps-bar-wrap">
-        <div class="ps-label">Documents collected</div>
-        <div class="ps-bar"><div class="ps-fill" id="progress-fill" style="width:23%"></div></div>
+        <div class="ps-label" id="progress-label">Items resolved</div>
+        <div class="ps-bar"><div class="ps-fill" id="progress-fill" style="width:0%"></div></div>
       </div>
-      <div class="ps-count" id="progress-count">3 <span>of 13 complete</span></div>
+      <div class="ps-count" id="progress-count">0 <span>of 13 resolved</span></div>
     </div>
 
     <!-- Bulk Upload Option -->
@@ -643,7 +643,7 @@
         <div class="ci-status pending" id="ci-w2-1-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-w2-1')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-w2-1')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-w2-1')">Not This Year</button>
         </div>
       </div>
       <div class="checklist-item uploaded" id="ci-w2-2">
@@ -682,7 +682,7 @@
         <div class="ci-status pending" id="ci-misc-1-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-misc-1')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-misc-1')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-misc-1')">Not This Year</button>
         </div>
       </div>
     </div>
@@ -709,7 +709,7 @@
         <div class="ci-status pending" id="ci-div-1-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-div-1')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-div-1')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-div-1')">Not This Year</button>
         </div>
       </div>
       <div class="checklist-item" id="ci-div-2">
@@ -721,7 +721,7 @@
         <div class="ci-status pending" id="ci-div-2-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-div-2')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-div-2')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-div-2')">Not This Year</button>
         </div>
       </div>
     </div>
@@ -738,7 +738,7 @@
         <div class="ci-status pending" id="ci-int-1-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-int-1')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-int-1')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-int-1')">Not This Year</button>
         </div>
       </div>
       <div class="checklist-item" id="ci-int-2">
@@ -750,7 +750,7 @@
         <div class="ci-status pending" id="ci-int-2-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-int-2')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-int-2')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-int-2')">Not This Year</button>
         </div>
       </div>
       <div class="checklist-item na" id="ci-int-3">
@@ -759,7 +759,7 @@
           <div class="ci-payer">Northwestern Mutual Life Insurance</div>
           <div class="ci-type">Form 1099-INT · Jacob</div>
         </div>
-        <div class="ci-status na" id="ci-int-3-status">Not applicable</div>
+        <div class="ci-status na" id="ci-int-3-status">Not This Year</div>
         <div class="ci-actions">
           <button class="ci-btn undo" onclick="undoItem('ci-int-3')">Undo</button>
         </div>
@@ -773,7 +773,7 @@
         <div class="ci-status pending" id="ci-int-4-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-int-4')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-int-4')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-int-4')">Not This Year</button>
         </div>
       </div>
     </div>
@@ -790,7 +790,7 @@
         <div class="ci-status pending" id="ci-k1-1-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-k1-1')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-k1-1')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-k1-1')">Not This Year</button>
         </div>
       </div>
       <div class="checklist-item" id="ci-k1-2">
@@ -802,7 +802,7 @@
         <div class="ci-status pending" id="ci-k1-2-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-k1-2')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-k1-2')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-k1-2')">Not This Year</button>
         </div>
       </div>
       <div class="checklist-item" id="ci-k1-3">
@@ -814,7 +814,7 @@
         <div class="ci-status pending" id="ci-k1-3-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-k1-3')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-k1-3')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-k1-3')">Not This Year</button>
         </div>
       </div>
       <div class="checklist-item sentinel-provides" id="ci-k1-4">
@@ -836,7 +836,7 @@
         <div class="ci-status pending" id="ci-k1-5-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-k1-5')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-k1-5')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-k1-5')">Not This Year</button>
         </div>
       </div>
     </div>
@@ -853,7 +853,7 @@
         <div class="ci-status pending" id="ci-c-1-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-c-1')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-c-1')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-c-1')">Not This Year</button>
         </div>
       </div>
     </div>
@@ -870,7 +870,7 @@
         <div class="ci-status pending" id="ci-1098-1-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-1098-1')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-1098-1')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-1098-1')">Not This Year</button>
         </div>
       </div>
     </div>
@@ -887,14 +887,14 @@
         <div class="ci-status pending" id="ci-care-1-status">Pending</div>
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-care-1')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-care-1')">N/A</button>
+          <button class="ci-btn nty-btn" onclick="markNTY('ci-care-1')">Not This Year</button>
         </div>
       </div>
     </div>
 
     <div class="org-nav">
       <button class="btn-secondary" onclick="goStep(2)">← Back</button>
-      <button class="btn-primary" onclick="goStep(4)">Review &amp; Submit →</button>
+      <button class="btn-primary" id="go-submit-btn" onclick="goStep(4);updateSummary();" disabled style="opacity:0.4;cursor:not-allowed;" title="Resolve all items to continue">Review &amp; Submit →</button>
     </div>
   </div>
 
@@ -910,16 +910,16 @@
       <div class="org-card-title">Summary</div>
       <div style="display:flex; gap:2rem; flex-wrap:wrap; padding:0.5rem 0;">
         <div>
-          <div style="font-size:1.8rem; font-weight:700; color:var(--green)">3</div>
+          <div style="font-size:1.8rem; font-weight:700; color:var(--green)" id="summary-uploaded">0</div>
           <div style="font-size:0.8rem; color:var(--muted)">Documents Uploaded</div>
         </div>
         <div>
-          <div style="font-size:1.8rem; font-weight:700; color:var(--muted)">1</div>
-          <div style="font-size:0.8rem; color:var(--muted)">Marked N/A</div>
+          <div style="font-size:1.8rem; font-weight:700; color:var(--muted)" id="summary-nty">0</div>
+          <div style="font-size:0.8rem; color:var(--muted)">Not This Year</div>
         </div>
         <div>
-          <div style="font-size:1.8rem; font-weight:700; color:var(--orange)">9</div>
-          <div style="font-size:0.8rem; color:var(--muted)">Still Pending</div>
+          <div style="font-size:1.8rem; font-weight:700; color:var(--gold)" id="summary-sentinel">0</div>
+          <div style="font-size:0.8rem; color:var(--muted)">Sentinel Provides</div>
         </div>
       </div>
     </div>
@@ -930,10 +930,6 @@
         ✓ No major life changes &nbsp;·&nbsp; ✓ Address unchanged &nbsp;·&nbsp; ✓ No crypto transactions<br>
         ✓ No real estate transactions &nbsp;·&nbsp; ✓ No foreign accounts &nbsp;·&nbsp; ⚠️ Freelance income (Jennifer) — 1099-NEC from Amherst uploaded
       </div>
-    </div>
-
-    <div class="banner-note">
-      ℹ️ <span>You still have <strong>9 pending documents</strong>. You can submit now and we'll follow up on what's missing, or go back and upload more first.</span>
     </div>
 
     <div class="org-nav">
@@ -967,9 +963,22 @@
   }
 
   // === CHECKLIST ITEMS ===
+  const TOTAL_ITEMS = 13;
   let itemStates = {};
 
   function fakeUpload(id) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,.jpg,.jpeg,.png,.heic';
+    input.onchange = () => {
+      if (!input.files.length) return;
+      const fname = input.files[0].name;
+      _setUploaded(id, fname);
+    };
+    input.click();
+  }
+
+  function _setUploaded(id, fname) {
     const item = document.getElementById(id);
     item.className = 'checklist-item uploaded';
     const check = item.querySelector('.ci-check');
@@ -977,14 +986,14 @@
     check.textContent = '✓';
     const status = document.getElementById(id + '-status');
     status.className = 'ci-status uploaded';
-    status.textContent = '✓ Uploaded';
+    status.textContent = '✓ ' + (fname || 'Uploaded');
     const actions = item.querySelector('.ci-actions');
-    actions.innerHTML = `<button class="ci-btn undo" onclick="undoItem('${id}')">Undo</button>`;
+    actions.innerHTML = `<button class="ci-btn undo" onclick="undoItem('${id}')">Remove</button>`;
     itemStates[id] = 'uploaded';
     updateProgress();
   }
 
-  function markNA(id) {
+  function markNTY(id) {
     const item = document.getElementById(id);
     item.className = 'checklist-item na';
     const check = item.querySelector('.ci-check');
@@ -992,10 +1001,10 @@
     check.textContent = '–';
     const status = document.getElementById(id + '-status');
     status.className = 'ci-status na';
-    status.textContent = 'Not applicable';
+    status.textContent = 'Not This Year';
     const actions = item.querySelector('.ci-actions');
     actions.innerHTML = `<button class="ci-btn undo" onclick="undoItem('${id}')">Undo</button>`;
-    itemStates[id] = 'na';
+    itemStates[id] = 'nty';
     updateProgress();
   }
 
@@ -1009,24 +1018,53 @@
     status.className = 'ci-status pending';
     status.textContent = 'Pending';
     const actions = item.querySelector('.ci-actions');
-    actions.innerHTML = `<button class="ci-btn upload" onclick="fakeUpload('${id}')">⬆ Upload</button><button class="ci-btn na-btn" onclick="markNA('${id}')">N/A</button>`;
+    actions.innerHTML = `<button class="ci-btn upload" onclick="fakeUpload(\'${id}\')">⬆ Upload</button><button class="ci-btn nty-btn" onclick="markNTY(\'${id}\')">Not This Year</button>`;
     delete itemStates[id];
     updateProgress();
   }
 
   function cycleItem(id) {
-    const state = itemStates[id];
-    if (state === 'uploaded') undoItem(id);
-    else if (state === 'na') undoItem(id);
+    if (itemStates[id]) undoItem(id);
     else fakeUpload(id);
   }
 
   function updateProgress() {
-    const total = 13;
-    const done = Object.keys(itemStates).length;
-    const pct = Math.round((done / total) * 100);
-    document.getElementById('progress-fill').style.width = pct + '%';
-    document.getElementById('progress-count').innerHTML = `${done} <span>of ${total} complete</span>`;
+    const resolved = Object.keys(itemStates).length;
+    const pct = Math.round((resolved / TOTAL_ITEMS) * 100);
+    const fill = document.getElementById('progress-fill');
+    const count = document.getElementById('progress-count');
+    const label = document.getElementById('progress-label');
+    const banner = document.getElementById('checklist-banner');
+    const submitBtn = document.getElementById('go-submit-btn');
+    const summaryCard = document.getElementById('progress-summary-card');
+
+    fill.style.width = pct + '%';
+    count.innerHTML = `${resolved} <span>of ${TOTAL_ITEMS} resolved</span>`;
+    const allDone = resolved >= TOTAL_ITEMS;
+
+    if (allDone) {
+      label.textContent = '✓ All items resolved — ready to submit!';
+      label.style.color = 'var(--green)';
+      count.style.color = 'var(--green)';
+      summaryCard.style.borderColor = 'rgba(62,207,142,0.4)';
+      banner.innerHTML = `<span style="color:var(--green)">✓ <strong>You\'re all set!</strong> Every item has been resolved. Click "Review &amp; Submit" when you\'re ready.</span>`;
+      banner.style.background = 'rgba(62,207,142,0.08)';
+      banner.style.borderColor = 'rgba(62,207,142,0.3)';
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '1';
+      submitBtn.style.cursor = 'pointer';
+    } else {
+      label.textContent = 'Items resolved';
+      label.style.color = 'var(--muted)';
+      count.style.color = 'var(--text)';
+      summaryCard.style.borderColor = 'var(--border)';
+      banner.innerHTML = `ℹ️ <span>Every item must be <strong>uploaded</strong> or marked <strong>Not This Year</strong> before you can submit. <strong>${TOTAL_ITEMS - resolved} remaining.</strong></span>`;
+      banner.style.background = '';
+      banner.style.borderColor = '';
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.4';
+      submitBtn.style.cursor = 'not-allowed';
+    }
   }
 
   function addDependent() {
@@ -1056,10 +1094,7 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // Initialize pre-existing states
-  itemStates['ci-w2-2'] = 'uploaded';
-  itemStates['ci-nec-1'] = 'uploaded';
-  itemStates['ci-int-3'] = 'na';
+  // Initialize — everything starts pending
   updateProgress();
 </script>
 
