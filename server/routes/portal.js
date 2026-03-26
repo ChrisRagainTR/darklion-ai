@@ -1058,13 +1058,14 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
           console.error('[portal] sign complete email error:', emailErr);
         }
 
-        // Fire smart pipeline trigger for all signers (non-blocking)
-        const { rows: allSignerIds } = await pool.query(
-          'SELECT person_id FROM tax_delivery_signers WHERE delivery_id = $1',
+        // Fire smart pipeline trigger once — on the taxpayer (primary signer) only
+        const { rows: primarySignerRows } = await pool.query(
+          `SELECT person_id FROM tax_delivery_signers WHERE delivery_id = $1
+           ORDER BY CASE WHEN signer_role = 'taxpayer' THEN 0 ELSE 1 END LIMIT 1`,
           [id]
         );
-        for (const s of allSignerIds) {
-          fireTrigger(d.firm_id, 'tax_return_signed', s.person_id, {
+        if (primarySignerRows[0]) {
+          fireTrigger(d.firm_id, 'tax_return_signed', primarySignerRows[0].person_id, {
             delivery_id: id,
             tax_year: d.tax_year,
           }).catch(e => console.error('[portal] fireTrigger tax_return_signed non-fatal:', e));

@@ -355,13 +355,16 @@ router.post('/:id/send', async (req, res) => {
       }
     }
 
-    // Fire smart pipeline trigger — company delivery fires on company, personal on person (non-blocking)
+    // Fire smart pipeline trigger — personal delivery fires once on the primary person only
+    // (never fires on company for personal returns; deduplicate to avoid double-cards for MFJ)
     const triggerCtx = { delivery_id: id, tax_year: delivery.tax_year, triggered_by_user_id: req.firm.userId || null };
     if (delivery.company_id) {
       fireTrigger(firmId, 'tax_return_deployed', delivery.company_id, triggerCtx, 'company').catch(e => console.error('[tax-delivery] fireTrigger non-fatal:', e));
     } else {
-      for (const signer of signers) {
-        fireTrigger(firmId, 'tax_return_deployed', signer.person_id, triggerCtx, 'person').catch(e => console.error('[tax-delivery] fireTrigger non-fatal:', e));
+      // Fire only once — use the taxpayer signer row (signer_role='taxpayer'), not spouse
+      const primarySigner = signers.find(s => s.signer_role === 'taxpayer') || signers[0];
+      if (primarySigner) {
+        fireTrigger(firmId, 'tax_return_deployed', primarySigner.person_id, triggerCtx, 'person').catch(e => console.error('[tax-delivery] fireTrigger non-fatal:', e));
       }
     }
 
