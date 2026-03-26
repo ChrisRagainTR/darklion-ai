@@ -945,8 +945,7 @@
     <!-- ── DOCUMENTS TAB ──────────────────────────────────── -->
     <div class="tab-panel" id="tab-documents">
       <div class="docs-toolbar">
-        <div style="font-size:0.95rem; color:var(--muted);">Your delivered documents</div>
-        <button class="btn-upload" id="openUploadBtn">⬆ Upload Document</button>
+        <div style="font-size:0.95rem; color:var(--muted);">Your documents</div>
       </div>
       <div id="docsContainer">
         <div class="empty-state">
@@ -2108,7 +2107,7 @@
       _selectedFile = null;
     }
 
-    document.getElementById('openUploadBtn').addEventListener('click', () => openUploadModal(null));
+    // Upload triggered from inline section headers (⬆ Upload on "Uploaded by You")
     document.getElementById('closeUploadBtn').addEventListener('click', () => modal.classList.add('hidden'));
     modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
 
