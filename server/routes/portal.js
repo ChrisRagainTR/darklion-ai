@@ -894,16 +894,7 @@ router.post('/tax-deliveries/:id/needs-changes', async (req, res) => {
       const clientName = `${d.first_name} ${d.last_name}`.trim();
       const entityLabel = d.company_name || clientName;
 
-      // Email firm
-      try {
-        await sendEmail({
-          to: d.firm_email,
-          subject: `Changes Requested: ${d.tax_year} Return for ${entityLabel}`,
-          html: `<p><strong>${clientName}</strong> has requested changes to their ${d.tax_year} tax return for ${entityLabel}:</p><blockquote>${note}</blockquote><p>Log in to DarkLion to review.</p>`,
-        });
-      } catch (emailErr) {
-        console.error('[portal] needs-changes email error:', emailErr);
-      }
+      // Firm is notified via staff message thread (below) — no separate email
 
       // Create a staff message thread so it appears in team inbox
       try {
@@ -1036,16 +1027,7 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
           console.error('[portal] combined signed PDF error (non-fatal):', pdfErr);
         }
 
-        // Notify firm
-        try {
-          await sendEmail({
-            to: d.firm_email,
-            subject: `All Signed: ${d.tax_year} Return for ${d.company_name || clientName}`,
-            html: `<p>All parties have signed the ${d.tax_year} tax return. Ready to e-file.</p>`,
-          });
-        } catch (emailErr) {
-          console.error('[portal] sign complete email error:', emailErr);
-        }
+        // Firm is notified via pipeline task (fireTrigger below) — no separate email
 
         // Fire smart pipeline trigger once — on the taxpayer (primary signer) only
         const { rows: primarySignerRows } = await pool.query(
