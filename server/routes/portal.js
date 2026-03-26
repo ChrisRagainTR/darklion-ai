@@ -1004,7 +1004,7 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
                   firmName: d.firm_name,
                 });
               }
-              const signedKey = buildKey(d.firm_id, 'tax_signed', `signed_${Date.now()}.pdf`);
+              const signedKey = buildKey({ firmId: d.firm_id, ownerType: 'tax_signed', ownerId: 0, year: String(d.tax_year || ''), docType: 'signed_return', filename: `signed_${Date.now()}.pdf` });
               await uploadFile({ buffer: pdfBuffer, key: signedKey, mimeType: 'application/pdf', bucket });
               const clientName = `${d.first_name || ''} ${d.last_name || ''}`.trim();
               const docOwnerType = d.company_id ? 'company' : 'person';
