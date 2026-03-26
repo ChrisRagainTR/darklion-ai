@@ -932,6 +932,44 @@ async function initDB() {
       ALTER TABLE companies ADD COLUMN IF NOT EXISTS billing_method TEXT DEFAULT NULL;
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
+
+    -- ===================== TAX ORGANIZERS =====================
+    -- One organizer session per person per tax year
+    CREATE TABLE IF NOT EXISTS tax_organizers (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER NOT NULL REFERENCES firms(id),
+      person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+      tax_year TEXT NOT NULL DEFAULT '2025',
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK(status IN ('pending','in_progress','submitted','reviewed')),
+      source_document_id INTEGER REFERENCES documents(id), -- the uploaded Drake organizer PDF
+      workpaper_document_id INTEGER REFERENCES documents(id), -- the compiled workpaper PDF
+      question_answers JSONB DEFAULT '{}',  -- { crypto: false, foreign_accounts: false, ... }
+      submitted_at TIMESTAMPTZ,
+      reviewed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(person_id, tax_year)
+    );
+
+    -- Individual checklist items parsed from the Drake organizer
+    CREATE TABLE IF NOT EXISTS tax_organizer_items (
+      id SERIAL PRIMARY KEY,
+      organizer_id INTEGER NOT NULL REFERENCES tax_organizers(id) ON DELETE CASCADE,
+      section TEXT NOT NULL,        -- 'w2', '1099-int', '1099-div', '1099-r', 'k1', 'schedule-c', '1098', 'childcare', 'other'
+      payer_name TEXT NOT NULL,
+      account_number TEXT DEFAULT '',
+      owner TEXT DEFAULT 'joint',   -- 'taxpayer', 'spouse', 'joint'
+      prior_year_amount NUMERIC,
+      ein TEXT DEFAULT '',
+      sentinel_provides BOOLEAN DEFAULT FALSE,  -- Altruist or firm-prepared entity
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK(status IN ('pending','uploaded','not_this_year')),
+      document_id INTEGER REFERENCES documents(id),  -- the uploaded file
+      display_order INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
 }
 

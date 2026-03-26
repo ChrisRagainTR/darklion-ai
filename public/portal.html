@@ -957,7 +957,9 @@
 
     <!-- ── ORGANIZERS TAB ─────────────────────────────────── -->
     <div class="tab-panel" id="tab-organizers">
-      <div style="font-size:0.95rem; color:var(--muted); margin-bottom:1.25rem;">Tax organizer links from your advisory team</div>
+      <!-- DarkLion organizer status card (loaded from API) -->
+      <div id="dlOrganizerWrap" style="margin-bottom:1.5rem;"></div>
+      <!-- Legacy StanfordTax organizer links -->
       <div class="organizer-grid" id="organizerGrid">
         <div class="empty-state">
           <div class="ei">🔗</div>
@@ -1987,7 +1989,75 @@
       } catch (e) {
         _stanford = { personal_url: null, companies: [] };
       }
+      // Load DarkLion organizer status card
+      await loadDLOrganizer();
       renderOrganizers();
+    }
+
+    async function loadDLOrganizer() {
+      const wrap = document.getElementById('dlOrganizerWrap');
+      if (!wrap) return;
+      const year = '2025';
+      try {
+        const data = await api(`/portal/organizer/portal/${year}`);
+        renderDLOrganizerCard(wrap, data, year);
+      } catch (e) {
+        // No organizer yet — show nothing (StanfordTax cards still show below)
+        wrap.innerHTML = '';
+      }
+    }
+
+    function renderDLOrganizerCard(wrap, data, year) {
+      const { organizer, items, progress } = data;
+      const statusColors = { pending: 'var(--muted)', in_progress: 'var(--gold)', submitted: 'var(--green)', reviewed: 'var(--green)' };
+      const statusLabels = { pending: 'Not Started', in_progress: 'In Progress', submitted: 'Submitted ✓', reviewed: 'Reviewed ✓' };
+      const color = statusColors[organizer.status] || 'var(--muted)';
+      const label = statusLabels[organizer.status] || organizer.status;
+      const isSubmitted = ['submitted', 'reviewed'].includes(organizer.status);
+
+      // Recent items (last 4 resolved + first 2 pending)
+      const actionable = items.filter(i => !i.sentinel_provides);
+      const recentResolved = actionable.filter(i => i.status !== 'pending').slice(-3);
+      const nextPending = actionable.filter(i => i.status === 'pending').slice(0, 2);
+      const previewItems = [...recentResolved, ...nextPending].slice(0, 5);
+
+      const previewHtml = previewItems.map(item => {
+        const icon = item.status === 'uploaded' ? '✓' : item.status === 'not_this_year' ? '–' : '⏳';
+        const color = item.status === 'uploaded' ? 'var(--green)' : item.status === 'not_this_year' ? 'var(--muted)' : 'var(--orange)';
+        return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;font-size:0.82rem;">
+          <span style="color:${color};font-weight:600;width:16px;text-align:center;">${icon}</span>
+          <span style="color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(item.payer_name)}</span>
+          <span style="color:var(--muted);font-size:0.72rem;">${item.section.toUpperCase()}</span>
+        </div>`;
+      }).join('');
+
+      wrap.innerHTML = `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:0.5rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
+            <div>
+              <div style="font-size:1rem;font-weight:700;color:var(--text);">📋 ${year} Tax Organizer</div>
+              <div style="font-size:0.78rem;color:${color};font-weight:600;margin-top:0.2rem;">${label}</div>
+            </div>
+            ${!isSubmitted ? `
+            <div style="display:flex;align-items:center;gap:1rem;">
+              <div style="text-align:right;">
+                <div style="font-size:1.1rem;font-weight:700;color:var(--text);">${progress.resolved}<span style="font-size:0.78rem;font-weight:400;color:var(--muted);"> / ${progress.total}</span></div>
+                <div style="font-size:0.72rem;color:var(--muted);">items resolved</div>
+              </div>
+              <div style="width:90px;">
+                <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+                  <div style="height:100%;width:${progress.percent}%;background:var(--green);border-radius:3px;transition:width 0.3s;"></div>
+                </div>
+              </div>
+            </div>
+            ` : `<div style="color:var(--green);font-size:0.88rem;">All ${progress.total} items resolved</div>`}
+          </div>
+          ${previewItems.length ? `<div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:0.75rem;margin-bottom:0.75rem;">${previewHtml}</div>` : ''}
+          <a href="/organizer.html?year=${year}" class="btn-organizer" style="display:inline-block;text-decoration:none;">
+            ${isSubmitted ? 'View Summary →' : progress.resolved > 0 ? 'Continue Organizer →' : 'Start Organizer →'}
+          </a>
+        </div>
+      `;
     }
 
     function renderOrganizers() {

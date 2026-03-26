@@ -154,7 +154,64 @@ router.post('/upload', (req, res, next) => {
       ]
     );
 
-    res.status(201).json(rows[0]);
+    const savedDoc = rows[0];
+    res.status(201).json(savedDoc);
+
+    // === ORGANIZER AUTO-PARSE TRIGGER ===
+    // If this upload lands in the 'organizer' folder category and belongs to a person,
+    // automatically kick off the parser to build their digital checklist.
+    if (
+      (folder_category === 'organizer' || doc_type === 'organizer') &&
+      owner_type === 'person' &&
+      savedDoc.mime_type === 'application/pdf'
+    ) {
+      setImmediate(async () => {
+        try {
+          const { parseOrganizerPdf } = require('../services/organizerParser');
+          const { downloadFile } = require('../services/s3');
+          const pdfBuffer = await downloadFile({ key: savedDoc.s3_key, bucket: savedDoc.s3_bucket });
+
+          // Get firm companies for Sentinel Provides detection
+          const companiesRes = await pool.query(`
+            SELECT c.name FROM companies c
+            JOIN relationship_companies rc ON rc.company_id = c.id
+            JOIN relationships r ON r.id = rc.relationship_id
+            JOIN relationship_people rp ON rp.relationship_id = r.id
+            WHERE rp.person_id = $1 AND c.firm_id = $2
+          `, [parseInt(owner_id), firmId]);
+          const firmCompanyNames = companiesRes.rows.map(r => r.name);
+
+          const taxYear = savedDoc.year || year || '2025';
+          const { clientName, items } = await parseOrganizerPdf(pdfBuffer, firmCompanyNames);
+
+          // Upsert organizer
+          const orgRes = await pool.query(`
+            INSERT INTO tax_organizers (firm_id, person_id, tax_year, status, source_document_id)
+            VALUES ($1, $2, $3, 'pending', $4)
+            ON CONFLICT (person_id, tax_year)
+            DO UPDATE SET source_document_id = $4, status = 'pending', updated_at = NOW()
+            RETURNING *
+          `, [firmId, parseInt(owner_id), taxYear, savedDoc.id]);
+          const organizer = orgRes.rows[0];
+
+          // Replace items
+          await pool.query('DELETE FROM tax_organizer_items WHERE organizer_id = $1', [organizer.id]);
+          for (const item of items) {
+            await pool.query(`
+              INSERT INTO tax_organizer_items
+                (organizer_id, section, payer_name, account_number, owner, prior_year_amount, ein, sentinel_provides, display_order)
+              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+            `, [organizer.id, item.section, item.payerName, item.accountNumber || '',
+                item.owner || 'joint', item.prior_year_amount || null,
+                item.ein || '', item.sentinel_provides || false, item.display_order || 0]);
+          }
+          console.log(`[organizer] Auto-parsed ${items.length} items for ${clientName} (person ${owner_id}, year ${taxYear})`);
+        } catch (parseErr) {
+          console.error('[organizer] Auto-parse failed:', parseErr.message);
+        }
+      });
+    }
+
   } catch (err) {
     console.error('POST /documents/upload error:', err);
     res.status(500).json({ error: err.message || 'Failed to upload document' });

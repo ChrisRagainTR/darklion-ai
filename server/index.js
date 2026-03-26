@@ -310,6 +310,11 @@ app.get('/forecast', (req, res) => res.render('forecast', { title: 'Revenue Fore
 const taxDeliveryRouter = require('./routes/tax-delivery');
 app.use('/api/tax-deliveries', requireFirm, apiLimiter, taxDeliveryRouter);
 
+const organizerRouter = require('./routes/organizer');
+app.use('/api/organizers', requireFirm, apiLimiter, organizerRouter);
+// Portal organizer routes (authenticated via requirePortal)
+app.use('/portal/organizer', requirePortal, apiLimiter, organizerRouter);
+
 // Proposals — staff (auth required)
 const proposalsRouter = require('./routes/proposals');
 app.use('/api/proposals', requireFirm, apiLimiter, proposalsRouter);
