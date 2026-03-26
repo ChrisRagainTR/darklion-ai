@@ -40,8 +40,13 @@
 
     /* === MAIN LAYOUT === */
     .org-wrap {
-      max-width: 720px; margin: 0 auto;
-      padding: 2rem 1.5rem 4rem;
+      max-width: 1200px; margin: 0 auto;
+      padding: 2rem 2.5rem 4rem;
+    }
+    /* Constrain non-checklist steps to readable width */
+    #step-1 .section-content,
+    #step-2 .section-content {
+      max-width: 720px;
     }
 
     /* === PROGRESS BAR === */
@@ -173,10 +178,10 @@
     .checklist-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 0 1.25rem;
+      gap: 0 2rem;
       align-items: start;
     }
-    @media (max-width: 640px) {
+    @media (max-width: 900px) {
       .checklist-grid { grid-template-columns: 1fr; }
     }
     .checklist-section { margin-bottom: 1.5rem; }
@@ -188,14 +193,14 @@
       border-bottom: 1px solid var(--border);
     }
     .checklist-item {
-      display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.7rem 0.9rem;
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.55rem 0.75rem;
       border-radius: 8px;
       transition: background 0.15s;
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.2rem;
+      min-width: 0;
     }
     .checklist-item:hover { background: rgba(255,255,255,0.03); }
-    .checklist-item.done { opacity: 0.6; }
     .ci-check {
       width: 20px; height: 20px; flex-shrink: 0;
       border-radius: 50%;
@@ -206,14 +211,20 @@
     }
     .ci-check.uploaded { background: var(--green); border-color: var(--green); color: white; }
     .ci-check.na { background: var(--muted); border-color: var(--muted); color: white; }
-    .ci-info { flex: 1; }
-    .ci-payer { font-size: 0.9rem; font-weight: 500; color: var(--text); }
-    .ci-type { font-size: 0.76rem; color: var(--muted); margin-top: 0.1rem; }
-    .ci-status { font-size: 0.75rem; }
+    .ci-info { flex: 1; min-width: 0; overflow: hidden; }
+    .ci-payer {
+      font-size: 0.88rem; font-weight: 500; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .ci-type {
+      font-size: 0.73rem; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .ci-status { font-size: 0.73rem; white-space: nowrap; flex-shrink: 0; }
     .ci-status.uploaded { color: var(--green); }
     .ci-status.pending { color: var(--muted); }
-    .ci-status.na { color: var(--muted); text-decoration: line-through; }
-    .ci-actions { display: flex; gap: 0.4rem; align-items: center; }
+    .ci-status.na { color: var(--muted); }
+    .ci-actions { display: flex; gap: 0.35rem; align-items: center; flex-shrink: 0; }
     .ci-btn {
       font-size: 0.75rem; padding: 0.28rem 0.7rem;
       border-radius: 5px; border: 1px solid var(--border);
@@ -332,8 +343,8 @@
 
 <div class="org-wrap">
 
-  <!-- PROGRESS STEPS -->
-  <div class="progress-bar-wrap">
+  <!-- PROGRESS STEPS — constrained width for readability -->
+  <div class="progress-bar-wrap" style="max-width:860px; margin-left:auto; margin-right:auto;">
     <div class="progress-steps">
       <div class="progress-step active" id="pstep-1">1 · Confirm Info</div>
       <div class="progress-step" id="pstep-2">2 · Quick Questions</div>
@@ -345,7 +356,7 @@
   <!-- ═══════════════════════════════════════════════ -->
   <!-- STEP 1 — CONFIRM YOUR INFO                      -->
   <!-- ═══════════════════════════════════════════════ -->
-  <div class="step-panel active" id="step-1">
+  <div class="step-panel active" id="step-1" style="max-width:760px; margin:0 auto;">
     <div class="section-title">Confirm Your Information</div>
     <div class="section-sub">We've pre-filled this from your file. Please review and correct anything that's changed.</div>
 
@@ -461,7 +472,7 @@
   <!-- ═══════════════════════════════════════════════ -->
   <!-- STEP 2 — QUICK QUESTIONS                        -->
   <!-- ═══════════════════════════════════════════════ -->
-  <div class="step-panel" id="step-2">
+  <div class="step-panel" id="step-2" style="max-width:760px; margin:0 auto;">
     <div class="section-title">A Few Quick Questions</div>
     <div class="section-sub">These help us make sure we're asking for the right documents. Answer honestly — no wrong answers.</div>
 
@@ -922,7 +933,7 @@
   <!-- ═══════════════════════════════════════════════ -->
   <!-- STEP 4 — SUBMIT                                 -->
   <!-- ═══════════════════════════════════════════════ -->
-  <div class="step-panel" id="step-4">
+  <div class="step-panel" id="step-4" style="max-width:760px; margin:0 auto;">
     <div class="section-title">Review &amp; Submit</div>
     <div class="section-sub">Here's a summary of what you're sending us. You can go back and add more if needed.</div>
 
