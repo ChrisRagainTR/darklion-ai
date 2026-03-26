@@ -1199,4 +1199,64 @@ router.put('/documents/:id', async (req, res) => {
   }
 });
 
+// --- GET /portal/companies/:companyId/close-packages ---
+// Returns cached close packages for YTD (current year) and prior year.
+// Client must have access to the company via person_company_access.
+router.get('/companies/:companyId/close-packages', async (req, res) => {
+  const personId = req.portal.personId;
+  const companyId = parseInt(req.params.companyId);
+
+  try {
+    // Verify client has access to this company
+    const { rows: access } = await pool.query(
+      'SELECT 1 FROM person_company_access WHERE person_id = $1 AND company_id = $2',
+      [personId, companyId]
+    );
+    if (!access.length) return res.status(403).json({ error: 'Access denied' });
+
+    // Look up realm_id for the company
+    const { rows: coRows } = await pool.query(
+      'SELECT realm_id, company_name FROM companies WHERE id = $1',
+      [companyId]
+    );
+    if (!coRows[0] || !coRows[0].realm_id) {
+      return res.json({ ytd: null, priorYear: null, company_name: coRows[0]?.company_name || null });
+    }
+    const realmId = coRows[0].realm_id;
+    const coName = coRows[0].company_name;
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const priorYear = currentYear - 1;
+
+    // YTD: any package whose period starts with the current year
+    // Prior year: any package whose period starts with prior year (prefer annual, else latest month)
+    const { rows: packages } = await pool.query(
+      `SELECT id, period, status, report_data, generated_at
+       FROM close_packages WHERE realm_id = $1
+       ORDER BY generated_at DESC`,
+      [realmId]
+    );
+
+    // YTD: find a package for current year — prefer period = 'YYYY' (annual), else latest YYYY-MM
+    const ytdPkgs = packages.filter(p => p.period && p.period.startsWith(String(currentYear)));
+    const ytd = ytdPkgs.find(p => p.period === String(currentYear)) || ytdPkgs[0] || null;
+
+    // Prior year: prefer period = 'YYYY', else latest YYYY-MM of that year
+    const priorPkgs = packages.filter(p => p.period && p.period.startsWith(String(priorYear)));
+    const prior = priorPkgs.find(p => p.period === String(priorYear)) || priorPkgs[0] || null;
+
+    res.json({
+      company_name: coName,
+      currentYear,
+      priorYearNum: priorYear,
+      ytd: ytd ? { id: ytd.id, period: ytd.period, status: ytd.status, report_data: ytd.report_data, generated_at: ytd.generated_at } : null,
+      prior: prior ? { id: prior.id, period: prior.period, status: prior.status, report_data: prior.report_data, generated_at: prior.generated_at } : null,
+    });
+  } catch (err) {
+    console.error('Portal /companies/:id/close-packages error:', err);
+    res.status(500).json({ error: 'Failed to load close package' });
+  }
+});
+
 module.exports = router;
