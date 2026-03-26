@@ -1684,17 +1684,44 @@
     // Load relationship members for signer selection
     const signersList = document.getElementById('pd-signers-list');
     signersList.innerHTML = '';
+
+    function makeSignerRow(id, name, portalActive, checked, disabled) {
+      const div = document.createElement('div');
+      div.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:6px;';
+      const portalBadge = portalActive
+        ? '<span style="font-size:0.72rem;color:var(--green);">✓ Portal</span>'
+        : '<span style="font-size:0.72rem;color:var(--orange);">No portal</span>';
+      div.innerHTML = '<input type="checkbox" class="pd-signer-cb" value="' + id + '"'
+        + (checked ? ' checked' : '') + (disabled ? ' disabled' : '')
+        + ' style="cursor:pointer;width:16px;height:16px;accent-color:var(--gold);"> '
+        + '<label style="cursor:pointer;font-size:0.88rem;">' + esc(name) + ' ' + portalBadge + '</label>';
+      return div;
+    }
+
     try {
       if (personData && personData.relationship_id) {
         const relRes = await apiFetch(`/api/relationships/${personData.relationship_id}/people`);
         const relPeople = await relRes.json();
         relPeople.forEach(function(p) {
-          const div = document.createElement('div');
-          div.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:6px;';
-          const checked = p.id == personId; // current person always checked
-          div.innerHTML = '<input type="checkbox" class="pd-signer-cb" value="' + p.id + '"' + (checked ? ' checked' : '') + (checked ? ' disabled' : '') + ' style="cursor:pointer;width:16px;height:16px;accent-color:var(--gold);"> ' +
-            '<label style="cursor:pointer;font-size:0.88rem;">' + esc((p.first_name || '') + ' ' + (p.last_name || '')) + (p.portal_enabled ? ' <span style="font-size:0.72rem;color:var(--green);">✓ Portal</span>' : ' <span style="font-size:0.72rem;color:var(--orange);">No portal</span>') + '</label>';
-          signersList.appendChild(div);
+          const checked = p.id == personId;
+          const portalActive = p.portal_enabled && p.portal_has_password;
+          signersList.appendChild(makeSignerRow(p.id, (p.first_name||'') + ' ' + (p.last_name||''), portalActive, checked, checked));
+
+          // If this person is MFJ/MFS with spouse portal enabled, show spouse as a second signer
+          if (p.id == personId && ['mfj','mfs'].includes(p.filing_status) && p.spouse_name) {
+            const spouseActive = p.spouse_portal_enabled && p.spouse_portal_has_password;
+            // Spouse shares the same person_id — we use a special value 'spouse:{id}' that the submit handler converts
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:6px;';
+            const portalBadge = spouseActive
+              ? '<span style="font-size:0.72rem;color:var(--green);">✓ Portal</span>'
+              : '<span style="font-size:0.72rem;color:var(--orange);">No portal</span>';
+            const spouseLabel = esc(p.spouse_name) + ' <span style="font-size:0.68rem;color:#a78bfa;background:rgba(138,99,241,0.12);border-radius:3px;padding:0.05rem 0.3rem;">Spouse</span> ' + portalBadge;
+            div.innerHTML = '<input type="checkbox" class="pd-signer-cb pd-signer-spouse-cb" value="' + p.id + '" data-spouse="true" checked'
+              + ' style="cursor:pointer;width:16px;height:16px;accent-color:var(--gold);"> '
+              + '<label style="cursor:pointer;font-size:0.88rem;">' + spouseLabel + '</label>';
+            signersList.appendChild(div);
+          }
         });
       } else {
         signersList.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);">' + esc((personData && (personData.first_name + ' ' + personData.last_name)) || 'This person') + ' <span style="color:var(--green);">✓</span></div>';
