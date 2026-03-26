@@ -1299,11 +1299,30 @@
         btn.title = coName;
         tabBar.appendChild(btn);
 
-        // Tab panel
+        // Tab panel — contains subtabs (Docs / Bookkeeping)
         const panel = document.createElement('div');
         panel.className = 'tab-panel';
         panel.id = `tab-${tabKey}`;
-        panel.innerHTML = `<div id="co-docs-${coId}"><div class="loading-state"><div class="loading-spinner"></div><div>Loading documents…</div></div></div>`;
+        panel.innerHTML = `
+          <div class="co-subtab-bar" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.25rem;">
+            <button class="co-subtab-btn active" data-co="${coId}" data-subtab="docs"
+              style="padding:0.5rem 1.1rem;font-size:0.82rem;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--gold,#c9a84c);border-bottom:2px solid var(--gold,#c9a84c);margin-bottom:-2px;transition:color 0.15s;">
+              📁 Documents
+            </button>
+            <button class="co-subtab-btn" data-co="${coId}" data-subtab="bookkeeping"
+              style="padding:0.5rem 1.1rem;font-size:0.82rem;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color 0.15s;">
+              📒 Bookkeeping
+            </button>
+          </div>
+          <div id="co-subtab-docs-${coId}" class="co-subtab-panel">
+            <div id="co-docs-${coId}"><div class="loading-state"><div class="loading-spinner"></div><div>Loading documents…</div></div></div>
+          </div>
+          <div id="co-subtab-bookkeeping-${coId}" class="co-subtab-panel" style="display:none;">
+            <div style="color:var(--muted);font-size:0.9rem;padding:2rem;text-align:center;">
+              <div style="font-size:2rem;margin-bottom:0.5rem;">📒</div>
+              Bookkeeping coming soon.
+            </div>
+          </div>`;
         panelContainer.appendChild(panel);
       });
 
@@ -1318,6 +1337,24 @@
           // Load company docs if not yet loaded
           const coId = parseInt(tab.replace('co-', ''));
           loadCompanyDocs(coId);
+        });
+      });
+
+      // Wire subtab clicks (Docs / Bookkeeping) inside each company panel
+      panelContainer.querySelectorAll('.co-subtab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const coId = btn.dataset.co;
+          const subtab = btn.dataset.subtab;
+          // Update button styles
+          panelContainer.querySelectorAll(`.co-subtab-btn[data-co="${coId}"]`).forEach(b => {
+            const active = b.dataset.subtab === subtab;
+            b.style.color = active ? 'var(--gold,#c9a84c)' : 'var(--muted)';
+            b.style.borderBottomColor = active ? 'var(--gold,#c9a84c)' : 'transparent';
+          });
+          // Show/hide panels
+          panelContainer.querySelectorAll(`.co-subtab-panel[id^="co-subtab-"][id$="-${coId}"]`).forEach(p => {
+            p.style.display = p.id === `co-subtab-${subtab}-${coId}` ? '' : 'none';
+          });
         });
       });
     }
