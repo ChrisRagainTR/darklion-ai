@@ -805,17 +805,22 @@
   /* Close package report styles */
   .report-section { margin-bottom:1.5rem; }
   .report-section .table-wrap {
-    overflow-x: auto;
     border: 1px solid var(--border,#2a2d3a);
     border-radius: 6px;
-    /* Break out of main's max-width so wide tables scroll freely */
-    margin-left: calc(-1 * (100vw - 100%) / 2 - 1.25rem);
-    margin-right: calc(-1 * (100vw - 100%) / 2 - 1.25rem);
-    width: calc(100vw - 2.5rem);
-    max-width: calc(100vw - 2.5rem);
+    width: 100%;
+    overflow: hidden;
   }
-  .report-section table { border-collapse:collapse; font-size:0.82rem; table-layout:auto !important; width:auto !important; min-width:100%; }
-  .report-section td, .report-section th { white-space:nowrap; }
+  .report-section table {
+    border-collapse: collapse;
+    font-size: 0.72rem;
+    table-layout: fixed;
+    width: 100%;
+  }
+  .report-section td, .report-section th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   .tsm-stat-val { font-size:1.35rem; font-weight:800; color:#c9a84c; }
   .tsm-stat-label { font-size:0.68rem; font-weight:700; color:#8fa3b8; text-transform:uppercase; letter-spacing:0.06em; margin-top:0.2rem; }
@@ -1552,7 +1557,14 @@
       const firstColPct = dataCols <= 1 ? 60 : dataCols <= 3 ? 40 : 30;
       const restPct = (100 - firstColPct) / dataCols;
 
-      let html = '<div class="table-wrap"><table style="border-collapse:collapse;font-size:0.82rem;">';
+      // Account name col: 40% if few data cols, shrink for many
+      const namePct = dataCols <= 2 ? 45 : dataCols <= 5 ? 38 : dataCols <= 9 ? 30 : 24;
+      const dataPct = ((100 - namePct) / dataCols).toFixed(2);
+      let html = '<div class="table-wrap"><table style="border-collapse:collapse;font-size:0.72rem;table-layout:fixed;width:100%;">';
+      html += '<colgroup>';
+      html += `<col style="width:${namePct}%">`;
+      for (let i = 0; i < dataCols; i++) html += `<col style="width:${dataPct}%">`;
+      html += '</colgroup>';
       html += '<thead><tr>';
       for (let i = 0; i < colCount; i++) {
         const title = columns[i]?.ColTitle || '';
