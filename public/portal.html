@@ -1005,9 +1005,12 @@
   </div>
 
   <!-- UPLOAD MODAL -->
+  <!-- UPLOAD MODAL -->
   <div class="modal-overlay hidden" id="uploadModal">
     <div class="modal">
       <h2>Upload a Document</h2>
+      <!-- context label shown when uploading to a company -->
+      <div id="uploadContextLabel" style="display:none;font-size:0.82rem;color:var(--gold,#c9a84c);margin-bottom:0.75rem;font-weight:600;"></div>
       <div class="form-group">
         <label>Tax Year</label>
         <select id="uploadYear"></select>
@@ -1016,6 +1019,7 @@
         <label>Category</label>
         <select id="uploadCategory">
           <option value="tax">Tax</option>
+          <option value="bookkeeping">Bookkeeping</option>
           <option value="other">Other</option>
         </select>
       </div>
@@ -1032,6 +1036,31 @@
       <div class="modal-actions">
         <button class="btn-cancel" id="closeUploadBtn">Cancel</button>
         <button class="btn-submit" id="doUploadBtn" disabled>Upload</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOVE MODAL (re-year / re-category for client_uploaded docs) -->
+  <div class="modal-overlay hidden" id="moveModal">
+    <div class="modal">
+      <h2>Move Document</h2>
+      <div id="moveDocName" style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;"></div>
+      <div class="form-group">
+        <label>Tax Year</label>
+        <select id="moveYear"></select>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="moveCategory">
+          <option value="tax">🧾 Tax</option>
+          <option value="bookkeeping">📒 Bookkeeping</option>
+          <option value="other">📎 Other</option>
+        </select>
+      </div>
+      <div class="move-err" id="moveErr" style="display:none;color:#e53e3e;font-size:0.82rem;margin-bottom:0.5rem;"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="closeMoveBtn">Cancel</button>
+        <button class="btn-submit" id="doMoveBtn">Move</button>
       </div>
     </div>
   </div>
@@ -1320,9 +1349,13 @@
         ];
 
         function renderCoSection(sectionKey, sectionLabel, sectionIcon) {
+          const isClientSection = sectionKey === 'client_uploaded';
           const secDocs = coDocs.filter(d => (d.folder_section || '') === sectionKey);
+          const uploadBtn = isClientSection
+            ? `<button class="btn-section-upload" data-company-id="${coId}" style="font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:5px;border:1px solid var(--gold,#c9a84c);background:transparent;color:var(--gold,#c9a84c);cursor:pointer;font-weight:600;margin-left:auto;">⬆ Upload</button>`
+            : '';
           let s = `<div style="margin-bottom:1.5rem;">
-            <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${secDocs.length})</span></div>`;
+            <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.5rem;">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${secDocs.length})</span>${uploadBtn}</div>`;
 
           function renderCoYear(yr) {
             const yrDocs = secDocs.filter(d => (d.year||'') === yr);
@@ -1339,7 +1372,10 @@
                 catDocs.forEach(doc => {
                   const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
                   const isNew = isDocNew(doc);
-                  y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
+                  const moveBtn = isClientSection
+                    ? `<button class="btn-move" data-docid="${doc.id}" data-docname="${escHtml(doc.display_name||'Document')}" data-year="${doc.year||''}" data-cat="${doc.folder_category||'other'}" style="font-size:0.65rem;padding:0.15rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;margin-left:0.25rem;" title="Move to different year/category">✎ Move</button>`
+                    : '';
+                  y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button>${moveBtn}</div>`;
                 });
               }
               y += `</div></div>`;
@@ -1371,6 +1407,12 @@
         });
         container.querySelectorAll('.btn-dl').forEach(btn => {
           btn.addEventListener('click', e => { e.stopPropagation(); downloadDoc(parseInt(btn.dataset.docid), btn); });
+        });
+        container.querySelectorAll('.btn-section-upload').forEach(btn => {
+          btn.addEventListener('click', e => { e.stopPropagation(); openUploadModal(parseInt(btn.dataset.companyId)); });
+        });
+        container.querySelectorAll('.btn-move').forEach(btn => {
+          btn.addEventListener('click', e => { e.stopPropagation(); openMoveModal(parseInt(btn.dataset.docid), btn.dataset.docname, btn.dataset.year, btn.dataset.cat); });
         });
       } catch(e) {
         container.innerHTML = `<div style="color:var(--muted);padding:2rem;text-align:center;">Failed to load documents.</div>`;
@@ -1585,20 +1627,29 @@
       }
 
       // Render two sections side-by-side
+      // companyId: null for personal docs, number for company docs
       const PERSONAL_CATS = [{ key: 'tax', label: 'Tax', icon: '🧾' }, { key: 'other', label: 'Other', icon: '📎' }];
       const COMPANY_CATS = [{ key: 'tax', label: 'Tax', icon: '🧾' }, { key: 'bookkeeping', label: 'Bookkeeping', icon: '📒' }, { key: 'other', label: 'Other', icon: '📎' }];
 
-      function renderSideBySide(sourceDocs, includeBookkeeping) {
+      function renderSideBySide(sourceDocs, includeBookkeeping, companyId) {
         const cats = includeBookkeeping ? COMPANY_CATS : PERSONAL_CATS;
-        const left = renderSectionWithCats('firm_uploaded', 'Delivered by Your Advisor', '📁', sourceDocs, cats);
-        const right = renderSectionWithCats('client_uploaded', 'Uploaded by You', '📤', sourceDocs, cats);
+        const left = renderSectionWithCats('firm_uploaded', 'Delivered by Your Advisor', '📁', sourceDocs, cats, null);
+        const right = renderSectionWithCats('client_uploaded', 'Uploaded by You', '📤', sourceDocs, cats, companyId);
         return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">${left}${right}</div>`;
       }
 
-      function renderSectionWithCats(sectionKey, sectionLabel, sectionIcon, sourceDocs, cats) {
+      // uploadContext: null = personal, number = company_id
+      function renderSectionWithCats(sectionKey, sectionLabel, sectionIcon, sourceDocs, cats, uploadContext) {
+        const isClientSection = sectionKey === 'client_uploaded';
         const sectionDocs = (sourceDocs || []).filter(d => (d.folder_section || '') === sectionKey);
+
+        // Upload button in section header (client_uploaded only)
+        const uploadBtn = isClientSection
+          ? `<button class="btn-section-upload" data-company-id="${uploadContext || ''}" style="font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:5px;border:1px solid var(--gold,#c9a84c);background:transparent;color:var(--gold,#c9a84c);cursor:pointer;font-weight:600;margin-left:auto;">⬆ Upload</button>`
+          : '';
+
         let s = `<div style="margin-bottom:1.5rem;">
-          <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
+          <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.5rem;">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span>${uploadBtn}</div>`;
 
         const recentYears = years.slice(0, 2);
         const prevYears = years.slice(2);
@@ -1622,7 +1673,10 @@
               catDocs.forEach(doc => {
                 const isNew = isDocNew(doc);
                 const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
-                y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
+                const moveBtn = isClientSection
+                  ? `<button class="btn-move" data-docid="${doc.id}" data-docname="${escHtml(doc.display_name||'Document')}" data-year="${doc.year||''}" data-cat="${doc.folder_category||'other'}" style="font-size:0.65rem;padding:0.15rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;margin-left:0.25rem;" title="Move to different year/category">✎ Move</button>`
+                  : '';
+                y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button>${moveBtn}</div>`;
               });
             }
             y += `</div></div>`;
@@ -1651,7 +1705,7 @@
       const companyDocs = (_docs || []).filter(d => d.owner_type === 'company');
 
       html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.25rem;border-bottom:2px solid var(--border);">👤 My Documents</div>`;
-      html += renderSideBySide(personalDocs, false);
+      html += renderSideBySide(personalDocs, false, null);
 
       // Group company docs by company — include bookkeeping
       const byCompany = {};
@@ -1661,11 +1715,17 @@
         byCompany[cid].push(d);
       });
 
+      // Also render company sections for companies that have no docs yet (so upload button appears)
+      (_companies || []).forEach(co => {
+        const cid = String(co.id || co.company_id);
+        if (!byCompany[cid]) byCompany[cid] = [];
+      });
+
       Object.entries(byCompany).forEach(([cid, docs]) => {
-        const co = _companies.find(c => c.id == cid || c.company_id == cid);
+        const co = _companies.find(c => String(c.id || c.company_id) === String(cid));
         const coName = co ? (co.company_name || co.name) : `Company #${cid}`;
         html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin:1.5rem 0 0.75rem;">🏢 ${escHtml(coName)}</div>`;
-        html += renderSideBySide(docs, true);
+        html += renderSideBySide(docs, true, parseInt(cid));
       });
 
       container.innerHTML = html;
@@ -1685,11 +1745,26 @@
           downloadDoc(parseInt(nameEl.dataset.docid), btn || { disabled: false, textContent: '' });
         });
       });
-      // Clicking download button downloads it
+      // Clicking download button
       container.querySelectorAll('.btn-dl').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           downloadDoc(parseInt(btn.dataset.docid), btn);
+        });
+      });
+      // Section-level upload buttons
+      container.querySelectorAll('.btn-section-upload').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const coId = btn.dataset.companyId || '';
+          openUploadModal(coId ? parseInt(coId) : null);
+        });
+      });
+      // Move buttons on client_uploaded docs
+      container.querySelectorAll('.btn-move').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openMoveModal(parseInt(btn.dataset.docid), btn.dataset.docname, btn.dataset.year, btn.dataset.cat);
         });
       });
     }
@@ -1785,36 +1860,45 @@
     const modal = document.getElementById('uploadModal');
     const fileInput = document.getElementById('fileInput');
     const fileDrop = document.getElementById('fileDrop');
+    let _uploadCompanyId = null; // null = personal, number = company
 
-    // Populate year select
+    // Populate year selects
     const yearSel = document.getElementById('uploadYear');
+    const moveYearSel = document.getElementById('moveYear');
     const curYear = new Date().getFullYear();
     for (let y = curYear; y >= 2018; y--) {
-      const opt = document.createElement('option');
-      opt.value = y;
-      opt.textContent = y;
-      yearSel.appendChild(opt);
+      [yearSel, moveYearSel].forEach(sel => {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        sel.appendChild(opt);
+      });
     }
 
-    document.getElementById('openUploadBtn').addEventListener('click', () => {
+    function openUploadModal(companyId) {
+      _uploadCompanyId = companyId || null;
+      const ctxLabel = document.getElementById('uploadContextLabel');
+      if (_uploadCompanyId) {
+        const co = (_companies || []).find(c => (c.id || c.company_id) === _uploadCompanyId);
+        const coName = co ? (co.company_name || co.name) : `Company #${_uploadCompanyId}`;
+        ctxLabel.textContent = `Uploading to: 🏢 ${coName}`;
+        ctxLabel.style.display = 'block';
+      } else {
+        ctxLabel.style.display = 'none';
+      }
       modal.classList.remove('hidden');
       document.getElementById('uploadErr').style.display = 'none';
       document.getElementById('uploadMsg').style.display = 'none';
       document.getElementById('selectedFileName').textContent = '';
       document.getElementById('doUploadBtn').disabled = true;
       _selectedFile = null;
-    });
+    }
 
-    document.getElementById('closeUploadBtn').addEventListener('click', () => {
-      modal.classList.add('hidden');
-    });
-
-    modal.addEventListener('click', e => {
-      if (e.target === modal) modal.classList.add('hidden');
-    });
+    document.getElementById('openUploadBtn').addEventListener('click', () => openUploadModal(null));
+    document.getElementById('closeUploadBtn').addEventListener('click', () => modal.classList.add('hidden'));
+    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
 
     fileDrop.addEventListener('click', () => fileInput.click());
-
     fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('drag-over'); });
     fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('drag-over'));
     fileDrop.addEventListener('drop', e => {
@@ -1855,6 +1939,7 @@
         fd.append('file', _selectedFile);
         fd.append('year', yearSel.value);
         fd.append('folder_category', document.getElementById('uploadCategory').value);
+        if (_uploadCompanyId) fd.append('company_id', _uploadCompanyId);
 
         const res = await fetch('/portal/upload', {
           method: 'POST',
@@ -1884,14 +1969,60 @@
         _docs = await api('/portal/documents').catch(() => _docs);
         renderDocuments();
 
-        setTimeout(async () => {
-          modal.classList.add('hidden');
-        }, 1200);
+        setTimeout(() => { modal.classList.add('hidden'); }, 1200);
       } catch (err) {
         errEl.textContent = err.message;
         errEl.style.display = 'block';
         btn.disabled = false;
         btn.textContent = 'Upload';
+      }
+    });
+
+    // ── MOVE MODAL ────────────────────────────────────────
+    const moveModal = document.getElementById('moveModal');
+    let _moveDocId = null;
+
+    function openMoveModal(docId, docName, currentYear, currentCat) {
+      _moveDocId = docId;
+      document.getElementById('moveDocName').textContent = `"${docName}"`;
+      moveYearSel.value = currentYear || String(curYear);
+      document.getElementById('moveCategory').value = currentCat || 'other';
+      document.getElementById('moveErr').style.display = 'none';
+      moveModal.classList.remove('hidden');
+    }
+
+    document.getElementById('closeMoveBtn').addEventListener('click', () => moveModal.classList.add('hidden'));
+    moveModal.addEventListener('click', e => { if (e.target === moveModal) moveModal.classList.add('hidden'); });
+
+    document.getElementById('doMoveBtn').addEventListener('click', async () => {
+      if (!_moveDocId) return;
+      const btn = document.getElementById('doMoveBtn');
+      const errEl = document.getElementById('moveErr');
+      btn.disabled = true;
+      btn.textContent = 'Moving…';
+      errEl.style.display = 'none';
+
+      try {
+        const res = await fetch(`/portal/documents/${_moveDocId}`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            year: moveYearSel.value,
+            folder_category: document.getElementById('moveCategory').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Move failed');
+
+        _docs = await api('/portal/documents').catch(() => _docs);
+        renderDocuments();
+        moveModal.classList.add('hidden');
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Move';
       }
     });
 
