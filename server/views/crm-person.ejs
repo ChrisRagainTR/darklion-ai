@@ -943,12 +943,13 @@
       return `<span style="font-size:0.68rem;background:rgba(143,163,184,0.1);color:var(--muted);border-radius:4px;padding:0.1rem 0.4rem;font-weight:600;">○ Not set up</span>`;
     }
 
-    function portalActionBtns(enabled, token, isSpouse) {
+    // enabled = portal_enabled && portal_has_password (truly active)
+    function portalActionBtns(fullyActive, token, isSpouse) {
       const inviteFn  = isSpouse ? 'sendSpousePortalInvite()' : 'sendPortalInvite()';
       const resetFn   = isSpouse ? 'resetSpousePortalPassword()' : 'resetPortalPassword()';
       const disableFn = isSpouse ? 'disableSpousePortal()' : 'disablePortal()';
-      const inviteLabel = (token && !enabled) ? 'Resend Invite' : 'Send Invite';
-      if (enabled) {
+      const inviteLabel = token ? 'Resend Invite' : 'Send Invite';
+      if (fullyActive) {
         return `<button class="btn btn-outline btn-xs" onclick="${resetFn}">Reset Password</button>
                 <button class="btn btn-xs" style="border:1px solid rgba(229,62,62,0.4);color:var(--red);background:transparent;" onclick="${disableFn}">Disable</button>`;
       }

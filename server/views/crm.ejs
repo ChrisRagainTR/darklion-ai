@@ -442,11 +442,7 @@
             <input type="email" class="form-control" id="person-form-spouse-email" placeholder="spouse@email.com">
           </div>
         </div>
-        <div class="form-group">
-          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;color:var(--text);">
-            <input type="checkbox" id="person-form-spouse-portal"> Enable spouse portal access
-          </label>
-        </div>
+        <!-- Spouse portal access is enabled via Send Invite on the person CRM page -->
       </div>
       <div class="form-group">
         <label class="form-label">Notes</label>
@@ -1032,7 +1028,7 @@ function openNewPerson(prefilledRelId = null, prefilledRelName = null) {
   document.getElementById('person-form-rel-search').value = prefilledRelName || '';
   document.getElementById('person-form-spouse-name').value = '';
   document.getElementById('person-form-spouse-email').value = '';
-  document.getElementById('person-form-spouse-portal').checked = false;
+  // spouse_portal_enabled not set at creation — use Send Invite on the person CRM page
   document.getElementById('person-form-error').style.display = 'none';
   openModal('person-modal');
   setTimeout(() => document.getElementById('person-form-fname').focus(), 100);
@@ -1094,7 +1090,7 @@ async function submitPersonForm() {
     notes: document.getElementById('person-form-notes').value || null,
     spouse_name: document.getElementById('person-form-spouse-name').value.trim() || null,
     spouse_email: document.getElementById('person-form-spouse-email').value.trim() || null,
-    spouse_portal_enabled: document.getElementById('person-form-spouse-portal').checked,
+    // spouse_portal_enabled only set via the portal invite flow, not creation form
   };
   const btn = document.getElementById('person-form-submit');
   btn.disabled = true;
