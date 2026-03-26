@@ -110,6 +110,12 @@ router.post('/upload', (req, res, next) => {
     return res.status(400).json({ error: 'owner_type and owner_id are required' });
   }
 
+  // Organizer folder is locked — staff cannot upload or overwrite directly.
+  // Writes come exclusively from the backend auto-trigger on organizer submission.
+  if (folder_category === 'organizer' || doc_type === 'organizer') {
+    return res.status(403).json({ error: 'Organizer folder is managed automatically. Staff cannot upload directly.' });
+  }
+
   const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
   const filename = sanitizeFilename(req.file.originalname || 'upload');
   const key = buildKey({
@@ -301,6 +307,15 @@ router.put('/:id', async (req, res) => {
   params.push(firmId);
 
   try {
+    // Check if this is an organizer doc — locked from staff edits
+    const lockCheck = await pool.query(
+      'SELECT folder_category FROM documents WHERE id = $1 AND firm_id = $2',
+      [parseInt(id), firmId]
+    );
+    if (lockCheck.rows[0]?.folder_category === 'organizer') {
+      return res.status(403).json({ error: 'Organizer documents cannot be edited by staff.' });
+    }
+
     const { rows } = await pool.query(
       `UPDATE documents SET ${sets.join(', ')} WHERE id = $${params.length - 1} AND firm_id = $${params.length} RETURNING ${SAFE_COLUMNS}`,
       params
@@ -320,10 +335,15 @@ router.delete('/:id', async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      'SELECT s3_key, s3_bucket FROM documents WHERE id = $1 AND firm_id = $2',
+      'SELECT s3_key, s3_bucket, folder_category FROM documents WHERE id = $1 AND firm_id = $2',
       [parseInt(id), firmId]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Document not found' });
+
+    // Organizer docs are locked — staff cannot delete
+    if (rows[0].folder_category === 'organizer') {
+      return res.status(403).json({ error: 'Organizer documents cannot be deleted by staff.' });
+    }
 
     // Delete from S3
     try {
