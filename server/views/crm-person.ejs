@@ -934,40 +934,72 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem 1rem;">${contactRowsHtml}</div>`;
 
     // ── LEFT COL: Client Portal ──
+        // ── Portal Access Panel (taxpayer + spouse) ──
     const portalEl = document.getElementById('overview-portal-panel');
-    portalEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Client Portal</div>
-      <div style="font-size:0.84rem;color:var(--muted);margin-bottom:0.75rem;">
-        ${p.portal_enabled ? '✅ Portal active' : p.portal_invite_token ? '📧 Invite sent' : '⭕ Not set up'}
-      </div>
-      <div class="portal-btn-row">
-        ${!p.portal_enabled ? `<button class="btn btn-gold btn-sm" onclick="sendPortalInvite()">Send Invite</button>` : ''}
-        ${p.portal_enabled ? `<button class="btn btn-outline btn-sm" onclick="resetPortalPassword()">Reset Password</button>` : ''}
-        ${p.portal_enabled ? `<button class="btn btn-outline btn-sm" onclick="disablePortal()">Disable Portal</button>` : ''}
+
+    function portalStatusBadge(enabled, token) {
+      if (enabled) return `<span style="font-size:0.7rem;background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.15rem 0.45rem;font-weight:600;">● Active</span>`;
+      if (token)   return `<span style="font-size:0.7rem;background:rgba(237,137,54,0.12);color:var(--orange);border-radius:4px;padding:0.15rem 0.45rem;font-weight:600;">⏳ Invite sent</span>`;
+      return `<span style="font-size:0.7rem;background:rgba(143,163,184,0.12);color:var(--muted);border-radius:4px;padding:0.15rem 0.45rem;font-weight:600;">○ Not set up</span>`;
+    }
+
+    function portalActionBtns(enabled, token, isSpouse) {
+      const inviteFn = isSpouse ? 'sendSpousePortalInvite()' : 'sendPortalInvite()';
+      const resetFn  = isSpouse ? 'resetSpousePortalPassword()' : 'resetPortalPassword()';
+      const disableFn = isSpouse ? 'disableSpousePortal()' : 'disablePortal()';
+      const inviteLabel = token && !enabled ? 'Resend Invite' : 'Send Invite';
+      if (enabled) return `<button class="btn btn-outline btn-xs" onclick="${resetFn}">Reset Password</button>
+        <button class="btn btn-outline btn-xs" style="color:var(--red);" onclick="${disableFn}">Disable</button>`;
+      return `<button class="btn btn-gold btn-xs" onclick="${inviteFn}">${inviteLabel}</button>`;
+    }
+
+    // Taxpayer row
+    const taxpayerRow = `
+      <div style="display:flex;align-items:center;gap:0.65rem;padding:0.65rem 0;border-bottom:1px solid var(--border);">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(74,144,217,0.18);color:#4a90d9;font-weight:700;font-size:0.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          ${(p.first_name||'?').charAt(0).toUpperCase()}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:0.85rem;">${esc(p.first_name)} ${esc(p.last_name)} <span style="font-size:0.7rem;color:var(--muted);font-weight:400;">Taxpayer</span></div>
+          <div style="font-size:0.75rem;color:var(--muted);">${esc(p.email||'—')}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
+          ${portalStatusBadge(p.portal_enabled, p.portal_invite_token)}
+          ${portalActionBtns(p.portal_enabled, p.portal_invite_token, false)}
+        </div>
       </div>`;
 
-    // ── CENTER COL: Spouse ──
-    const spouseEl = document.getElementById('overview-spouse-panel');
-    if (p.filing_status === 'mfj' && p.spouse_name) {
-      const spInitials = p.spouse_name.split(' ').map(w => w.charAt(0)).join('').toUpperCase().slice(0,2) || '?';
-      const portalBadge = p.spouse_portal_enabled
-        ? `<span style="font-size:0.7rem;background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.1rem 0.35rem;font-weight:600;">Portal Active</span>`
-        : `<button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:0.2rem 0.6rem;" onclick="sendSpousePortalInvite()">Send Spouse Invite</button>`;
-      spouseEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Spouse / MFJ</div>
-        <div style="background:var(--charcoal);border:1px solid var(--border);border-radius:8px;padding:0.75rem;display:flex;align-items:flex-start;gap:0.65rem;">
-          <div style="width:38px;height:38px;border-radius:50%;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:0.95rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${spInitials}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.2rem;">${esc(p.spouse_name)}</div>
-            ${p.spouse_email ? `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.3rem;">${esc(p.spouse_email)}</div>` : ''}
-            ${portalBadge}
-          </div>
-        </div>`;
-    } else if (p.filing_status === 'mfj') {
-      spouseEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Spouse / MFJ</div>
-        <div style="color:var(--muted);font-size:0.84rem;font-style:italic;">No spouse info — add via Edit</div>`;
-    } else {
-      spouseEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Spouse</div>
-        <div style="color:var(--muted);font-size:0.84rem;font-style:italic;">N/A — not filing MFJ</div>`;
+    // Spouse row (MFJ only)
+    let spouseRow = '';
+    if (p.filing_status === 'mfj') {
+      if (p.spouse_name || p.spouse_email) {
+        spouseRow = `
+          <div style="display:flex;align-items:center;gap:0.65rem;padding:0.65rem 0;">
+            <div style="width:32px;height:32px;border-radius:50%;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:0.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              ${(p.spouse_name||'S').charAt(0).toUpperCase()}
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;font-size:0.85rem;">${esc(p.spouse_name||'—')} <span style="font-size:0.7rem;color:var(--muted);font-weight:400;">Spouse</span></div>
+              <div style="font-size:0.75rem;color:var(--muted);">${esc(p.spouse_email||'—')}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
+              ${portalStatusBadge(p.spouse_portal_enabled, p.spouse_portal_invite_token)}
+              ${p.spouse_email ? portalActionBtns(p.spouse_portal_enabled, p.spouse_portal_invite_token, true) : '<span style="font-size:0.72rem;color:var(--muted);">Add email first</span>'}
+            </div>
+          </div>`;
+      } else {
+        spouseRow = `<div style="padding:0.6rem 0;font-size:0.8rem;color:var(--muted);font-style:italic;">Spouse info not set — add via Edit</div>`;
+      }
     }
+
+    portalEl.innerHTML = `
+      <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Portal Access</div>
+      ${taxpayerRow}
+      ${spouseRow}`;
+
+    // ── CENTER COL: Spouse panel — hide (absorbed into portal panel) ──
+    const spouseEl = document.getElementById('overview-spouse-panel');
+    spouseEl.style.display = 'none';
 
     // ── CENTER COL: Tax Deliveries ──
     const taxEl = document.getElementById('overview-tax-panel');
@@ -1516,6 +1548,25 @@
       const res = await apiFetch(`/api/people/${personId}/portal-disable`, { method: 'POST', body: '{}' });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed');
       toast('Portal disabled');
+      await loadPerson();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function resetSpousePortalPassword() {
+    try {
+      const res = await apiFetch('/portal-auth/send-invite', { method: 'POST', body: JSON.stringify({ personId: parseInt(personId), spouse: true }) });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      toast('Spouse password reset email sent');
+      await loadPerson();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function disableSpousePortal() {
+    if (!confirm('Disable spouse portal access?')) return;
+    try {
+      const res = await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify({ spouse_portal_enabled: false }) });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+      toast('Spouse portal disabled');
       await loadPerson();
     } catch(e) { toast(e.message, 'error'); }
   }
