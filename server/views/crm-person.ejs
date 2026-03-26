@@ -1456,7 +1456,9 @@
     if (!wrap) return;
     const year = '2025';
     try {
-      const data = await apiFetch(`/api/organizers/${personId}/${year}`);
+      const res = await apiFetch(`/api/organizers/${personId}/${year}`);
+      if (!res.ok) throw new Error('Not found');
+      const data = await res.json();
       renderAdvisorOrganizer(wrap, data, year);
     } catch(e) {
       wrap.innerHTML = `
