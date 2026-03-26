@@ -217,6 +217,17 @@
     .ci-btn.na-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
     .ci-btn.undo { color: var(--muted); }
 
+    /* === SENTINEL PROVIDES === */
+    .checklist-item.sentinel-provides { opacity: 0.75; }
+    .ci-sentinel-badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.75rem; font-weight: 600;
+      color: var(--gold); background: rgba(201,168,76,0.1);
+      border: 1px solid rgba(201,168,76,0.3);
+      border-radius: 5px; padding: 0.25rem 0.6rem;
+      white-space: nowrap;
+    }
+
     /* === PROGRESS SUMMARY === */
     .progress-summary {
       background: var(--card); border: 1px solid var(--border);
@@ -679,6 +690,16 @@
     <!-- 1099-DIV -->
     <div class="checklist-section">
       <div class="checklist-section-title">1099-DIV · Dividends</div>
+      <div class="checklist-item sentinel-provides">
+        <div class="ci-check uploaded" style="background:var(--gold);border-color:var(--gold);">🏢</div>
+        <div class="ci-info">
+          <div class="ci-payer">Altruist Financial LLC</div>
+          <div class="ci-type">Form 1099-DIV · Joint · Managed by Sentinel</div>
+        </div>
+        <div class="ci-actions">
+          <span class="ci-sentinel-badge">🏢 Sentinel Provides</span>
+        </div>
+      </div>
       <div class="checklist-item" id="ci-div-1">
         <div class="ci-check" onclick="cycleItem('ci-div-1')"></div>
         <div class="ci-info">
@@ -796,16 +817,14 @@
           <button class="ci-btn na-btn" onclick="markNA('ci-k1-3')">N/A</button>
         </div>
       </div>
-      <div class="checklist-item" id="ci-k1-4">
-        <div class="ci-check" onclick="cycleItem('ci-k1-4')"></div>
+      <div class="checklist-item sentinel-provides" id="ci-k1-4">
+        <div class="ci-check uploaded" style="background:var(--gold);border-color:var(--gold);">🏢</div>
         <div class="ci-info">
           <div class="ci-payer">Skaled Consulting LLC</div>
           <div class="ci-type">Schedule K-1 · Jacob · EIN 46-1995048</div>
         </div>
-        <div class="ci-status pending" id="ci-k1-4-status">Pending</div>
         <div class="ci-actions">
-          <button class="ci-btn upload" onclick="fakeUpload('ci-k1-4')">⬆ Upload</button>
-          <button class="ci-btn na-btn" onclick="markNA('ci-k1-4')">N/A</button>
+          <span class="ci-sentinel-badge">🏢 Sentinel Provides</span>
         </div>
       </div>
       <div class="checklist-item" id="ci-k1-5">
