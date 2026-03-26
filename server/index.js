@@ -355,8 +355,7 @@ function serveClientLogin(req, res) {
 app.get('/client-login', serveClientLogin);
 app.get('/portal-login', serveClientLogin); // alias — don't break existing links
 
-// Portal organizer routes
-const organizerRouter = require('./routes/organizer');
+// Portal organizer routes (organizerRouter already required above)
 app.use('/portal/organizer', requirePortal, apiLimiter, organizerRouter);
 
 // Protected portal API routes (sub-paths like /portal/me, /portal/documents, etc.)
