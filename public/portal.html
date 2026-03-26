@@ -173,6 +173,11 @@
       max-width: 1200px;
       margin: 0 auto;
       padding: 1.75rem 1.25rem 4rem;
+      transition: max-width 0.2s ease, padding 0.2s ease;
+    }
+    main.wide-mode {
+      max-width: 98vw;
+      padding: 1.75rem 0.75rem 4rem;
     }
 
     .tab-panel { display: none; }
@@ -802,6 +807,26 @@
   /* ── Tax Summary (tsm) classes — identical to staff modal ── */
   .tsm-stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:0.75rem; }
   .tsm-stat { background:rgba(255,255,255,0.04); border:1px solid var(--border,#2a2d3a); border-radius:10px; padding:0.85rem 1rem; }
+  /* Close package report styles */
+  .report-section { margin-bottom:1.5rem; }
+  .report-section .table-wrap {
+    border: 1px solid var(--border,#2a2d3a);
+    border-radius: 6px;
+    width: 100%;
+    overflow: hidden;
+  }
+  .report-section table {
+    border-collapse: collapse;
+    font-size: 0.72rem;
+    table-layout: fixed;
+    width: 100%;
+  }
+  .report-section td, .report-section th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .tsm-stat-val { font-size:1.35rem; font-weight:800; color:#c9a84c; }
   .tsm-stat-label { font-size:0.68rem; font-weight:700; color:#8fa3b8; text-transform:uppercase; letter-spacing:0.06em; margin-top:0.2rem; }
   .tsm-section-title { font-size:0.72rem; font-weight:700; color:#8fa3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.6rem; }
@@ -1005,9 +1030,12 @@
   </div>
 
   <!-- UPLOAD MODAL -->
+  <!-- UPLOAD MODAL -->
   <div class="modal-overlay hidden" id="uploadModal">
     <div class="modal">
       <h2>Upload a Document</h2>
+      <!-- context label shown when uploading to a company -->
+      <div id="uploadContextLabel" style="display:none;font-size:0.82rem;color:var(--gold,#c9a84c);margin-bottom:0.75rem;font-weight:600;"></div>
       <div class="form-group">
         <label>Tax Year</label>
         <select id="uploadYear"></select>
@@ -1016,6 +1044,7 @@
         <label>Category</label>
         <select id="uploadCategory">
           <option value="tax">Tax</option>
+          <option value="bookkeeping">Bookkeeping</option>
           <option value="other">Other</option>
         </select>
       </div>
@@ -1032,6 +1061,31 @@
       <div class="modal-actions">
         <button class="btn-cancel" id="closeUploadBtn">Cancel</button>
         <button class="btn-submit" id="doUploadBtn" disabled>Upload</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOVE MODAL (re-year / re-category for client_uploaded docs) -->
+  <div class="modal-overlay hidden" id="moveModal">
+    <div class="modal">
+      <h2>Move Document</h2>
+      <div id="moveDocName" style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;"></div>
+      <div class="form-group">
+        <label>Tax Year</label>
+        <select id="moveYear"></select>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="moveCategory">
+          <option value="tax">🧾 Tax</option>
+          <option value="bookkeeping">📒 Bookkeeping</option>
+          <option value="other">📎 Other</option>
+        </select>
+      </div>
+      <div class="move-err" id="moveErr" style="display:none;color:#e53e3e;font-size:0.82rem;margin-bottom:0.5rem;"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="closeMoveBtn">Cancel</button>
+        <button class="btn-submit" id="doMoveBtn">Move</button>
       </div>
     </div>
   </div>
@@ -1134,6 +1188,8 @@
         if (tab === 'organizers' && _stanford === null) loadOrganizers();
         if (tab === 'messages') initChat();
         if (tab === 'review-sign') loadTaxDeliveries();
+        // Leave wide-mode only when on a company bookkeeping subtab
+        document.querySelector('main').classList.remove('wide-mode');
       });
     });
 
@@ -1270,11 +1326,29 @@
         btn.title = coName;
         tabBar.appendChild(btn);
 
-        // Tab panel
+        // Tab panel — contains subtabs (Docs / Bookkeeping)
         const panel = document.createElement('div');
         panel.className = 'tab-panel';
         panel.id = `tab-${tabKey}`;
-        panel.innerHTML = `<div id="co-docs-${coId}"><div class="loading-state"><div class="loading-spinner"></div><div>Loading documents…</div></div></div>`;
+        panel.innerHTML = `
+          <div class="co-subtab-bar" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.25rem;">
+            <button class="co-subtab-btn active" data-co="${coId}" data-subtab="docs"
+              style="padding:0.5rem 1.1rem;font-size:0.82rem;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--gold,#c9a84c);border-bottom:2px solid var(--gold,#c9a84c);margin-bottom:-2px;transition:color 0.15s;">
+              📁 Documents
+            </button>
+            <button class="co-subtab-btn" data-co="${coId}" data-subtab="bookkeeping"
+              style="padding:0.5rem 1.1rem;font-size:0.82rem;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color 0.15s;">
+              📒 Bookkeeping
+            </button>
+          </div>
+          <div id="co-subtab-docs-${coId}" class="co-subtab-panel">
+            <div id="co-docs-${coId}"><div class="loading-state"><div class="loading-spinner"></div><div>Loading documents…</div></div></div>
+          </div>
+          <div id="co-subtab-bookkeeping-${coId}" class="co-subtab-panel" style="display:none;">
+            <div id="co-bk-${coId}">
+              <div class="loading-state"><div class="loading-spinner"></div><div>Loading close package…</div></div>
+            </div>
+          </div>`;
         panelContainer.appendChild(panel);
       });
 
@@ -1289,6 +1363,28 @@
           // Load company docs if not yet loaded
           const coId = parseInt(tab.replace('co-', ''));
           loadCompanyDocs(coId);
+        });
+      });
+
+      // Wire subtab clicks (Docs / Bookkeeping) inside each company panel
+      panelContainer.querySelectorAll('.co-subtab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const coId = btn.dataset.co;
+          const subtab = btn.dataset.subtab;
+          // Update button styles
+          panelContainer.querySelectorAll(`.co-subtab-btn[data-co="${coId}"]`).forEach(b => {
+            const active = b.dataset.subtab === subtab;
+            b.style.color = active ? 'var(--gold,#c9a84c)' : 'var(--muted)';
+            b.style.borderBottomColor = active ? 'var(--gold,#c9a84c)' : 'transparent';
+          });
+          // Show/hide panels
+          panelContainer.querySelectorAll(`.co-subtab-panel[id^="co-subtab-"][id$="-${coId}"]`).forEach(p => {
+            p.style.display = p.id === `co-subtab-${subtab}-${coId}` ? '' : 'none';
+          });
+          // Wide mode for bookkeeping (lots of columns), normal for docs
+          document.querySelector('main').classList.toggle('wide-mode', subtab === 'bookkeeping');
+          // Lazy-load bookkeeping on first open
+          if (subtab === 'bookkeeping') loadCompanyBookkeeping(parseInt(coId));
         });
       });
     }
@@ -1320,9 +1416,13 @@
         ];
 
         function renderCoSection(sectionKey, sectionLabel, sectionIcon) {
+          const isClientSection = sectionKey === 'client_uploaded';
           const secDocs = coDocs.filter(d => (d.folder_section || '') === sectionKey);
+          const uploadBtn = isClientSection
+            ? `<button class="btn-section-upload" data-company-id="${coId}" style="font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:5px;border:1px solid var(--gold,#c9a84c);background:transparent;color:var(--gold,#c9a84c);cursor:pointer;font-weight:600;margin-left:auto;">⬆ Upload</button>`
+            : '';
           let s = `<div style="margin-bottom:1.5rem;">
-            <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${secDocs.length})</span></div>`;
+            <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.5rem;">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${secDocs.length})</span>${uploadBtn}</div>`;
 
           function renderCoYear(yr) {
             const yrDocs = secDocs.filter(d => (d.year||'') === yr);
@@ -1339,7 +1439,10 @@
                 catDocs.forEach(doc => {
                   const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
                   const isNew = isDocNew(doc);
-                  y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
+                  const moveBtn = isClientSection
+                    ? `<button class="btn-move" data-docid="${doc.id}" data-docname="${escHtml(doc.display_name||'Document')}" data-year="${doc.year||''}" data-cat="${doc.folder_category||'other'}" style="font-size:0.65rem;padding:0.15rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;margin-left:0.25rem;" title="Move to different year/category">✎ Move</button>`
+                    : '';
+                  y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button>${moveBtn}</div>`;
                 });
               }
               y += `</div></div>`;
@@ -1372,9 +1475,162 @@
         container.querySelectorAll('.btn-dl').forEach(btn => {
           btn.addEventListener('click', e => { e.stopPropagation(); downloadDoc(parseInt(btn.dataset.docid), btn); });
         });
+        container.querySelectorAll('.btn-section-upload').forEach(btn => {
+          btn.addEventListener('click', e => { e.stopPropagation(); openUploadModal(parseInt(btn.dataset.companyId)); });
+        });
+        container.querySelectorAll('.btn-move').forEach(btn => {
+          btn.addEventListener('click', e => { e.stopPropagation(); openMoveModal(parseInt(btn.dataset.docid), btn.dataset.docname, btn.dataset.year, btn.dataset.cat); });
+        });
       } catch(e) {
         container.innerHTML = `<div style="color:var(--muted);padding:2rem;text-align:center;">Failed to load documents.</div>`;
       }
+    }
+
+    // ── BOOKKEEPING / CLOSE PACKAGE ──────────────────────
+    async function loadCompanyBookkeeping(coId) {
+      const container = document.getElementById(`co-bk-${coId}`);
+      if (!container || container.dataset.loaded) return;
+      container.dataset.loaded = '1';
+
+      try {
+        const data = await api(`/portal/companies/${coId}/close-packages`);
+        const currentYear = data.currentYear || new Date().getFullYear();
+        const priorYearNum = data.priorYearNum || (currentYear - 1);
+
+        // Build two-tab close package viewer
+        let html = `
+          <div style="margin-bottom:1rem;">
+            <h2 style="font-size:1rem;font-weight:800;margin-bottom:0.1rem;">Close Package</h2>
+            <div style="font-size:0.78rem;color:var(--muted);">Financial summary from your advisor</div>
+          </div>
+          <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.25rem;" id="co-bk-tabs-${coId}">
+            <button class="co-bk-tab active" data-co="${coId}" data-bktab="ytd"
+              style="padding:0.45rem 1rem;font-size:0.82rem;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--gold,#c9a84c);border-bottom:2px solid var(--gold,#c9a84c);margin-bottom:-2px;">
+              📅 ${currentYear} YTD
+            </button>
+            <button class="co-bk-tab" data-co="${coId}" data-bktab="prior"
+              style="padding:0.45rem 1rem;font-size:0.82rem;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;">
+              📋 ${priorYearNum}
+            </button>
+          </div>
+          <div id="co-bk-panel-ytd-${coId}" class="co-bk-panel">${renderClosePackagePanel(data.ytd, currentYear + ' YTD')}</div>
+          <div id="co-bk-panel-prior-${coId}" class="co-bk-panel" style="display:none;">${renderClosePackagePanel(data.prior, String(priorYearNum))}</div>
+        `;
+        container.innerHTML = html;
+
+        // Wire tab clicks
+        container.querySelectorAll('.co-bk-tab').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const bktab = btn.dataset.bktab;
+            container.querySelectorAll('.co-bk-tab').forEach(b => {
+              const isActive = b.dataset.bktab === bktab;
+              b.style.color = isActive ? 'var(--gold,#c9a84c)' : 'var(--muted)';
+              b.style.borderBottomColor = isActive ? 'var(--gold,#c9a84c)' : 'transparent';
+            });
+            container.querySelectorAll('.co-bk-panel').forEach(p => {
+              p.style.display = p.id === `co-bk-panel-${bktab}-${coId}` ? '' : 'none';
+            });
+          });
+        });
+      } catch(e) {
+        container.innerHTML = `<div style="color:var(--muted);padding:2rem;text-align:center;">Failed to load bookkeeping data.</div>`;
+      }
+    }
+
+    function renderClosePackagePanel(pkg, label) {
+      if (!pkg || !pkg.report_data) {
+        return `<div style="text-align:center;padding:3rem;color:var(--muted);">
+          <div style="font-size:2rem;margin-bottom:0.5rem;">📒</div>
+          No close package available for ${escHtml(label)} yet.
+        </div>`;
+      }
+      const rd = typeof pkg.report_data === 'string' ? JSON.parse(pkg.report_data) : pkg.report_data;
+      const genDate = pkg.generated_at ? new Date(pkg.generated_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '';
+      let html = `<div style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;">Period: <strong>${escHtml(pkg.period || label)}</strong>${genDate ? ' · Generated ' + genDate : ''}</div>`;
+      if (rd.pnl)          html += `<div class="report-section"><h3 style="font-size:0.88rem;font-weight:700;margin:0 0 0.6rem;color:var(--text);">Profit &amp; Loss</h3>${portalRenderQBReport(rd.pnl)}</div>`;
+      if (rd.balanceSheet) html += `<div style="max-width:720px;margin:0 auto;"><div class="report-section"><h3 style="font-size:0.88rem;font-weight:700;margin:1.5rem 0 0.6rem;color:var(--text);">Balance Sheet</h3>${portalRenderQBReport(rd.balanceSheet)}</div></div>`;
+      if (rd.trialBalance) html += `<div style="max-width:720px;margin:0 auto;"><div class="report-section"><h3 style="font-size:0.88rem;font-weight:700;margin:1.5rem 0 0.6rem;color:var(--text);">Trial Balance</h3>${portalRenderQBReport(rd.trialBalance)}</div></div>`;
+      if (!rd.pnl && !rd.balanceSheet && !rd.trialBalance) {
+        html += `<div style="color:var(--muted);padding:1rem;text-align:center;">No report data available.</div>`;
+      }
+      return html;
+    }
+
+    function portalRenderQBReport(report) {
+      if (!report?.Rows?.Row) {
+        return '<div style="text-align:center;padding:1.5rem;color:var(--muted);">No report data available.</div>';
+      }
+      const columns = report.Columns?.Column || [];
+      const colCount = Math.max(columns.length, 2);
+      const dataCols = colCount - 1;
+      const firstColPct = dataCols <= 1 ? 60 : dataCols <= 3 ? 40 : 30;
+      const restPct = (100 - firstColPct) / dataCols;
+
+      // Account name col: 40% if few data cols, shrink for many
+      const namePct = dataCols <= 2 ? 45 : dataCols <= 5 ? 38 : dataCols <= 9 ? 30 : 24;
+      const dataPct = ((100 - namePct) / dataCols).toFixed(2);
+      let html = '<div class="table-wrap"><table style="border-collapse:collapse;font-size:0.72rem;table-layout:fixed;width:100%;">';
+      html += '<colgroup>';
+      html += `<col style="width:${namePct}%">`;
+      for (let i = 0; i < dataCols; i++) html += `<col style="width:${dataPct}%">`;
+      html += '</colgroup>';
+      html += '<thead><tr>';
+      for (let i = 0; i < colCount; i++) {
+        const title = columns[i]?.ColTitle || '';
+        html += i === 0
+          ? `<th style="text-align:left;padding:0.3rem 0.5rem;color:var(--muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);">${escHtml(title)}</th>`
+          : `<th style="text-align:right;padding:0.3rem 0.5rem;color:var(--muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);padding-right:1rem;">${escHtml(title)}</th>`;
+      }
+      html += '</tr></thead><tbody>';
+      html += portalRenderRows(report.Rows.Row, 0, colCount);
+      html += '</tbody></table></div>';
+      return html;
+    }
+
+    function portalRenderRows(rows, depth, colCount) {
+      let html = '';
+      for (const row of rows) {
+        if (row.type === 'Section' || row.group) {
+          if (row.Header?.ColData) {
+            const name = row.Header.ColData[0]?.value || '';
+            const pad = (depth * 1.2) + 0.5;
+            html += `<tr><td colspan="${colCount}" style="padding:0.45rem 0.5rem 0.2rem ${pad}rem;font-size:0.78rem;font-weight:700;color:var(--text);background:rgba(255,255,255,0.03);">${escHtml(name)}</td></tr>`;
+          }
+          if (row.Rows?.Row) html += portalRenderRows(row.Rows.Row, depth + 1, colCount);
+          if (row.Summary?.ColData) html += portalRenderDataRow(row.Summary.ColData, depth, true, colCount);
+        } else if (row.ColData) {
+          html += portalRenderDataRow(row.ColData, depth, false, colCount);
+        }
+      }
+      return html;
+    }
+
+    function portalRenderDataRow(colData, depth, isTotal, colCount) {
+      const rowStyle = isTotal
+        ? 'border-top:1px solid var(--border);font-weight:700;background:rgba(201,168,76,0.04);'
+        : 'border-bottom:1px solid rgba(255,255,255,0.03);';
+      let html = `<tr style="${rowStyle}">`;
+      for (let i = 0; i < colCount; i++) {
+        const val = colData[i]?.value ?? '';
+        if (i === 0) {
+          const pad = (depth * 1.2) + 0.5;
+          html += `<td style="padding:0.3rem 0.5rem 0.3rem ${pad}rem;color:var(--text);">${escHtml(val)}</td>`;
+        } else {
+          const num = parseFloat(val);
+          const display = isNaN(num) ? escHtml(val) : portalFmtCurrency(num);
+          const color = isTotal ? '' : (num < 0 ? 'color:#e53e3e;' : '');
+          html += `<td style="text-align:right;padding:0.3rem 1rem 0.3rem 0.5rem;${color}">${display}</td>`;
+        }
+      }
+      html += '</tr>';
+      return html;
+    }
+
+    function portalFmtCurrency(n) {
+      if (isNaN(n)) return '';
+      const abs = Math.abs(n);
+      const fmt = abs >= 1000 ? abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : abs.toFixed(2);
+      return n < 0 ? `(${fmt})` : fmt;
     }
 
     function renderOverview() {
@@ -1585,20 +1841,29 @@
       }
 
       // Render two sections side-by-side
+      // companyId: null for personal docs, number for company docs
       const PERSONAL_CATS = [{ key: 'tax', label: 'Tax', icon: '🧾' }, { key: 'other', label: 'Other', icon: '📎' }];
       const COMPANY_CATS = [{ key: 'tax', label: 'Tax', icon: '🧾' }, { key: 'bookkeeping', label: 'Bookkeeping', icon: '📒' }, { key: 'other', label: 'Other', icon: '📎' }];
 
-      function renderSideBySide(sourceDocs, includeBookkeeping) {
+      function renderSideBySide(sourceDocs, includeBookkeeping, companyId) {
         const cats = includeBookkeeping ? COMPANY_CATS : PERSONAL_CATS;
-        const left = renderSectionWithCats('firm_uploaded', 'Delivered by Your Advisor', '📁', sourceDocs, cats);
-        const right = renderSectionWithCats('client_uploaded', 'Uploaded by You', '📤', sourceDocs, cats);
+        const left = renderSectionWithCats('firm_uploaded', 'Delivered by Your Advisor', '📁', sourceDocs, cats, null);
+        const right = renderSectionWithCats('client_uploaded', 'Uploaded by You', '📤', sourceDocs, cats, companyId);
         return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">${left}${right}</div>`;
       }
 
-      function renderSectionWithCats(sectionKey, sectionLabel, sectionIcon, sourceDocs, cats) {
+      // uploadContext: null = personal, number = company_id
+      function renderSectionWithCats(sectionKey, sectionLabel, sectionIcon, sourceDocs, cats, uploadContext) {
+        const isClientSection = sectionKey === 'client_uploaded';
         const sectionDocs = (sourceDocs || []).filter(d => (d.folder_section || '') === sectionKey);
+
+        // Upload button in section header (client_uploaded only)
+        const uploadBtn = isClientSection
+          ? `<button class="btn-section-upload" data-company-id="${uploadContext || ''}" style="font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:5px;border:1px solid var(--gold,#c9a84c);background:transparent;color:var(--gold,#c9a84c);cursor:pointer;font-weight:600;margin-left:auto;">⬆ Upload</button>`
+          : '';
+
         let s = `<div style="margin-bottom:1.5rem;">
-          <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
+          <div style="font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.5rem;">${sectionIcon} ${sectionLabel} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span>${uploadBtn}</div>`;
 
         const recentYears = years.slice(0, 2);
         const prevYears = years.slice(2);
@@ -1622,7 +1887,10 @@
               catDocs.forEach(doc => {
                 const isNew = isDocNew(doc);
                 const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
-                y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button></div>`;
+                const moveBtn = isClientSection
+                  ? `<button class="btn-move" data-docid="${doc.id}" data-docname="${escHtml(doc.display_name||'Document')}" data-year="${doc.year||''}" data-cat="${doc.folder_category||'other'}" style="font-size:0.65rem;padding:0.15rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;margin-left:0.25rem;" title="Move to different year/category">✎ Move</button>`
+                  : '';
+                y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button>${moveBtn}</div>`;
               });
             }
             y += `</div></div>`;
@@ -1651,7 +1919,7 @@
       const companyDocs = (_docs || []).filter(d => d.owner_type === 'company');
 
       html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;padding-bottom:0.25rem;border-bottom:2px solid var(--border);">👤 My Documents</div>`;
-      html += renderSideBySide(personalDocs, false);
+      html += renderSideBySide(personalDocs, false, null);
 
       // Group company docs by company — include bookkeeping
       const byCompany = {};
@@ -1661,11 +1929,17 @@
         byCompany[cid].push(d);
       });
 
+      // Also render company sections for companies that have no docs yet (so upload button appears)
+      (_companies || []).forEach(co => {
+        const cid = String(co.id || co.company_id);
+        if (!byCompany[cid]) byCompany[cid] = [];
+      });
+
       Object.entries(byCompany).forEach(([cid, docs]) => {
-        const co = _companies.find(c => c.id == cid || c.company_id == cid);
+        const co = _companies.find(c => String(c.id || c.company_id) === String(cid));
         const coName = co ? (co.company_name || co.name) : `Company #${cid}`;
         html += `<div style="font-size:1rem;font-weight:700;color:var(--text);margin:1.5rem 0 0.75rem;">🏢 ${escHtml(coName)}</div>`;
-        html += renderSideBySide(docs, true);
+        html += renderSideBySide(docs, true, parseInt(cid));
       });
 
       container.innerHTML = html;
@@ -1685,11 +1959,26 @@
           downloadDoc(parseInt(nameEl.dataset.docid), btn || { disabled: false, textContent: '' });
         });
       });
-      // Clicking download button downloads it
+      // Clicking download button
       container.querySelectorAll('.btn-dl').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           downloadDoc(parseInt(btn.dataset.docid), btn);
+        });
+      });
+      // Section-level upload buttons
+      container.querySelectorAll('.btn-section-upload').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const coId = btn.dataset.companyId || '';
+          openUploadModal(coId ? parseInt(coId) : null);
+        });
+      });
+      // Move buttons on client_uploaded docs
+      container.querySelectorAll('.btn-move').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openMoveModal(parseInt(btn.dataset.docid), btn.dataset.docname, btn.dataset.year, btn.dataset.cat);
         });
       });
     }
@@ -1785,36 +2074,45 @@
     const modal = document.getElementById('uploadModal');
     const fileInput = document.getElementById('fileInput');
     const fileDrop = document.getElementById('fileDrop');
+    let _uploadCompanyId = null; // null = personal, number = company
 
-    // Populate year select
+    // Populate year selects
     const yearSel = document.getElementById('uploadYear');
+    const moveYearSel = document.getElementById('moveYear');
     const curYear = new Date().getFullYear();
     for (let y = curYear; y >= 2018; y--) {
-      const opt = document.createElement('option');
-      opt.value = y;
-      opt.textContent = y;
-      yearSel.appendChild(opt);
+      [yearSel, moveYearSel].forEach(sel => {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        sel.appendChild(opt);
+      });
     }
 
-    document.getElementById('openUploadBtn').addEventListener('click', () => {
+    function openUploadModal(companyId) {
+      _uploadCompanyId = companyId || null;
+      const ctxLabel = document.getElementById('uploadContextLabel');
+      if (_uploadCompanyId) {
+        const co = (_companies || []).find(c => (c.id || c.company_id) === _uploadCompanyId);
+        const coName = co ? (co.company_name || co.name) : `Company #${_uploadCompanyId}`;
+        ctxLabel.textContent = `Uploading to: 🏢 ${coName}`;
+        ctxLabel.style.display = 'block';
+      } else {
+        ctxLabel.style.display = 'none';
+      }
       modal.classList.remove('hidden');
       document.getElementById('uploadErr').style.display = 'none';
       document.getElementById('uploadMsg').style.display = 'none';
       document.getElementById('selectedFileName').textContent = '';
       document.getElementById('doUploadBtn').disabled = true;
       _selectedFile = null;
-    });
+    }
 
-    document.getElementById('closeUploadBtn').addEventListener('click', () => {
-      modal.classList.add('hidden');
-    });
-
-    modal.addEventListener('click', e => {
-      if (e.target === modal) modal.classList.add('hidden');
-    });
+    document.getElementById('openUploadBtn').addEventListener('click', () => openUploadModal(null));
+    document.getElementById('closeUploadBtn').addEventListener('click', () => modal.classList.add('hidden'));
+    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
 
     fileDrop.addEventListener('click', () => fileInput.click());
-
     fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('drag-over'); });
     fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('drag-over'));
     fileDrop.addEventListener('drop', e => {
@@ -1855,6 +2153,7 @@
         fd.append('file', _selectedFile);
         fd.append('year', yearSel.value);
         fd.append('folder_category', document.getElementById('uploadCategory').value);
+        if (_uploadCompanyId) fd.append('company_id', _uploadCompanyId);
 
         const res = await fetch('/portal/upload', {
           method: 'POST',
@@ -1880,18 +2179,86 @@
           : '✓ File uploaded successfully!';
         msgEl.style.display = 'block';
 
-        // Refresh docs — immediate, no delay
+        // Close modal immediately and refresh whatever tab is currently visible
+        modal.classList.add('hidden');
         _docs = await api('/portal/documents').catch(() => _docs);
-        renderDocuments();
 
-        setTimeout(async () => {
-          modal.classList.add('hidden');
-        }, 1200);
+        if (_uploadCompanyId) {
+          // Bust cache and force re-render the company tab that's open
+          const coContainer = document.getElementById(`co-docs-${_uploadCompanyId}`);
+          if (coContainer) {
+            delete coContainer.dataset.loaded;
+            loadCompanyDocs(_uploadCompanyId);
+          }
+          // Also bust all other company tab caches
+          document.querySelectorAll('[id^="co-docs-"]').forEach(el => delete el.dataset.loaded);
+        } else {
+          // Personal tab
+          renderDocuments();
+        }
       } catch (err) {
         errEl.textContent = err.message;
         errEl.style.display = 'block';
         btn.disabled = false;
         btn.textContent = 'Upload';
+      }
+    });
+
+    // ── MOVE MODAL ────────────────────────────────────────
+    const moveModal = document.getElementById('moveModal');
+    let _moveDocId = null;
+
+    function openMoveModal(docId, docName, currentYear, currentCat) {
+      _moveDocId = docId;
+      document.getElementById('moveDocName').textContent = `"${docName}"`;
+      moveYearSel.value = currentYear || String(curYear);
+      document.getElementById('moveCategory').value = currentCat || 'other';
+      document.getElementById('moveErr').style.display = 'none';
+      moveModal.classList.remove('hidden');
+    }
+
+    document.getElementById('closeMoveBtn').addEventListener('click', () => moveModal.classList.add('hidden'));
+    moveModal.addEventListener('click', e => { if (e.target === moveModal) moveModal.classList.add('hidden'); });
+
+    document.getElementById('doMoveBtn').addEventListener('click', async () => {
+      if (!_moveDocId) return;
+      const btn = document.getElementById('doMoveBtn');
+      const errEl = document.getElementById('moveErr');
+      btn.disabled = true;
+      btn.textContent = 'Moving…';
+      errEl.style.display = 'none';
+
+      try {
+        const res = await fetch(`/portal/documents/${_moveDocId}`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            year: moveYearSel.value,
+            folder_category: document.getElementById('moveCategory').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Move failed');
+
+        _docs = await api('/portal/documents').catch(() => _docs);
+        moveModal.classList.add('hidden');
+
+        // Refresh the currently visible tab
+        const activePanel = document.querySelector('.tab-panel.active');
+        const coMatch = activePanel && activePanel.id.match(/^tab-co-(\d+)$/);
+        if (coMatch) {
+          const coId = parseInt(coMatch[1]);
+          const coContainer = document.getElementById(`co-docs-${coId}`);
+          if (coContainer) { delete coContainer.dataset.loaded; loadCompanyDocs(coId); }
+        } else {
+          renderDocuments();
+        }
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Move';
       }
     });
 

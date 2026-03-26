@@ -115,17 +115,15 @@ router.get('/documents', async (req, res) => {
       let query;
       let params;
 
-      // Show: delivered docs from advisor (firm_uploaded/private) + ALL client-uploaded docs
+      // Show all docs EXCEPT private (staff-only). No is_delivered gate —
+      // advisor and client portals share the same document bucket.
       if (companyIds.length > 0) {
         query = `
           SELECT id, firm_id, owner_type, owner_id, doc_type,
                  display_name, mime_type, size_bytes, is_delivered,
                  delivered_at, viewed_at, year, folder_section, folder_category, created_at
           FROM documents
-          WHERE (
-            (is_delivered = true AND folder_section != 'client_uploaded')
-            OR folder_section = 'client_uploaded'
-          )
+          WHERE folder_section != 'private'
             AND (
               (owner_type = 'person' AND owner_id = $1)
               OR (owner_type = 'company' AND owner_id = ANY($2))
@@ -139,10 +137,7 @@ router.get('/documents', async (req, res) => {
                  display_name, mime_type, size_bytes, is_delivered,
                  delivered_at, viewed_at, year, folder_section, folder_category, created_at
           FROM documents
-          WHERE (
-            (is_delivered = true AND folder_section != 'client_uploaded')
-            OR folder_section = 'client_uploaded'
-          )
+          WHERE folder_section != 'private'
             AND owner_type = 'person'
             AND owner_id = $1
           ORDER BY created_at DESC
@@ -174,7 +169,8 @@ router.get('/documents/:id/download', async (req, res) => {
 
   try {
     const { rows: docRows } = await pool.query(
-      'SELECT id, owner_type, owner_id, s3_key, s3_bucket, is_delivered, viewed_at, display_name FROM documents WHERE id = $1 AND is_delivered = true',
+      `SELECT id, owner_type, owner_id, s3_key, s3_bucket, is_delivered, viewed_at, display_name,
+              folder_section FROM documents WHERE id = $1 AND folder_section != 'private'`,
       [docId]
     );
     if (!docRows[0]) return res.status(404).json({ error: 'Document not found' });
@@ -1076,7 +1072,21 @@ router.post('/upload', (req, res, next) => {
 
   const personId = req.portal.personId;
   const firmId = req.portal.firmId;
-  const { year, folder_category } = req.body;
+  const { year, folder_category, company_id } = req.body;
+
+  // Optional company upload — verify person has access to that company
+  let ownerType = 'person';
+  let ownerId = personId;
+  if (company_id) {
+    const coId = parseInt(company_id);
+    const { rows: accessCheck } = await pool.query(
+      'SELECT 1 FROM person_company_access WHERE person_id = $1 AND company_id = $2',
+      [personId, coId]
+    );
+    if (!accessCheck.length) return res.status(403).json({ error: 'No access to that company' });
+    ownerType = 'company';
+    ownerId = coId;
+  }
 
   const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
   const filename = sanitizeFilename(req.file.originalname || 'upload');
@@ -1085,8 +1095,8 @@ router.post('/upload', (req, res, next) => {
   const safeYear = year || String(new Date().getFullYear());
   const key = buildKey({
     firmId,
-    ownerType: 'person',
-    ownerId: personId,
+    ownerType,
+    ownerId,
     year: safeYear,
     docType,
     filename,
@@ -1108,11 +1118,11 @@ router.post('/upload', (req, res, next) => {
           mime_type, size_bytes, s3_key, s3_bucket, year,
           folder_section, folder_category, uploaded_by_type, uploaded_by_id,
           is_delivered, created_at)
-       VALUES ($1, 'person', $2, $3, $4, $5, $6, $7, $8, $9, 'client_uploaded', $10, 'client', $2, false, NOW())
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'client_uploaded', $11, 'client', $12, false, NOW())
        RETURNING id, firm_id, owner_type, owner_id, doc_type, display_name,
                  mime_type, size_bytes, year, folder_section, folder_category, is_delivered, created_at`,
-      [firmId, personId, docType, displayName,
-       req.file.mimetype, req.file.size, key, bucket, safeYear, docType]
+      [firmId, ownerType, ownerId, docType, displayName,
+       req.file.mimetype, req.file.size, key, bucket, safeYear, docType, personId]
     );
 
     // Fire smart pipeline trigger (non-blocking)
@@ -1125,6 +1135,127 @@ router.post('/upload', (req, res, next) => {
   } catch (err) {
     console.error('Portal /upload error:', err);
     res.status(500).json({ error: 'Upload failed' });
+  }
+});
+
+// --- PUT /portal/documents/:id --- (move: year/category only, client_uploaded docs only)
+router.put('/documents/:id', async (req, res) => {
+  const personId = req.portal.personId;
+  const docId = parseInt(req.params.id);
+  const { year, folder_category } = req.body;
+
+  if (!year && !folder_category) return res.status(400).json({ error: 'Nothing to update' });
+
+  try {
+    // Fetch doc and verify ownership — must be client_uploaded + belong to this person or their company
+    const { rows: docRows } = await pool.query(
+      `SELECT id, owner_type, owner_id, folder_section FROM documents WHERE id = $1`,
+      [docId]
+    );
+    if (!docRows[0]) return res.status(404).json({ error: 'Document not found' });
+    const doc = docRows[0];
+
+    // Only allow moving client_uploaded docs
+    if (doc.folder_section !== 'client_uploaded') {
+      return res.status(403).json({ error: 'You can only move documents you uploaded' });
+    }
+
+    // Verify access
+    let hasAccess = false;
+    if (doc.owner_type === 'person' && doc.owner_id === personId) {
+      hasAccess = true;
+    } else if (doc.owner_type === 'company') {
+      const { rows: accessRows } = await pool.query(
+        'SELECT 1 FROM person_company_access WHERE person_id = $1 AND company_id = $2',
+        [personId, doc.owner_id]
+      );
+      hasAccess = accessRows.length > 0;
+    }
+    if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
+
+    // Apply updates
+    const sets = [];
+    const params = [];
+    if (year !== undefined) { params.push(year); sets.push(`year = $${params.length}`); }
+    if (folder_category !== undefined) {
+      const safecat = ['tax', 'bookkeeping', 'other'].includes(folder_category) ? folder_category : 'other';
+      params.push(safecat);
+      sets.push(`folder_category = $${params.length}`);
+      params.push(safecat);
+      sets.push(`doc_type = $${params.length}`);
+    }
+
+    params.push(docId);
+    const { rows: updated } = await pool.query(
+      `UPDATE documents SET ${sets.join(', ')} WHERE id = $${params.length}
+       RETURNING id, owner_type, owner_id, doc_type, display_name, year, folder_section, folder_category`,
+      params
+    );
+
+    res.json({ ok: true, document: updated[0] });
+  } catch (err) {
+    console.error('Portal PUT /documents/:id error:', err);
+    res.status(500).json({ error: 'Failed to update document' });
+  }
+});
+
+// --- GET /portal/companies/:companyId/close-packages ---
+// Returns cached close packages for YTD (current year) and prior year.
+// Client must have access to the company via person_company_access.
+router.get('/companies/:companyId/close-packages', async (req, res) => {
+  const personId = req.portal.personId;
+  const companyId = parseInt(req.params.companyId);
+
+  try {
+    // Verify client has access to this company
+    const { rows: access } = await pool.query(
+      'SELECT 1 FROM person_company_access WHERE person_id = $1 AND company_id = $2',
+      [personId, companyId]
+    );
+    if (!access.length) return res.status(403).json({ error: 'Access denied' });
+
+    // Look up realm_id for the company
+    const { rows: coRows } = await pool.query(
+      'SELECT realm_id, company_name FROM companies WHERE id = $1',
+      [companyId]
+    );
+    if (!coRows[0] || !coRows[0].realm_id) {
+      return res.json({ ytd: null, priorYear: null, company_name: coRows[0]?.company_name || null });
+    }
+    const realmId = coRows[0].realm_id;
+    const coName = coRows[0].company_name;
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const priorYear = currentYear - 1;
+
+    // YTD: any package whose period starts with the current year
+    // Prior year: any package whose period starts with prior year (prefer annual, else latest month)
+    const { rows: packages } = await pool.query(
+      `SELECT id, period, status, report_data, generated_at
+       FROM close_packages WHERE realm_id = $1
+       ORDER BY generated_at DESC`,
+      [realmId]
+    );
+
+    // YTD: find a package for current year — prefer period = 'YYYY' (annual), else latest YYYY-MM
+    const ytdPkgs = packages.filter(p => p.period && p.period.startsWith(String(currentYear)));
+    const ytd = ytdPkgs.find(p => p.period === String(currentYear)) || ytdPkgs[0] || null;
+
+    // Prior year: prefer period = 'YYYY', else latest YYYY-MM of that year
+    const priorPkgs = packages.filter(p => p.period && p.period.startsWith(String(priorYear)));
+    const prior = priorPkgs.find(p => p.period === String(priorYear)) || priorPkgs[0] || null;
+
+    res.json({
+      company_name: coName,
+      currentYear,
+      priorYearNum: priorYear,
+      ytd: ytd ? { id: ytd.id, period: ytd.period, status: ytd.status, report_data: ytd.report_data, generated_at: ytd.generated_at } : null,
+      prior: prior ? { id: prior.id, period: prior.period, status: prior.status, report_data: prior.report_data, generated_at: prior.generated_at } : null,
+    });
+  } catch (err) {
+    console.error('Portal /companies/:id/close-packages error:', err);
+    res.status(500).json({ error: 'Failed to load close package' });
   }
 });
 
