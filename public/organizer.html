@@ -344,7 +344,7 @@
 <div class="org-wrap">
 
   <!-- PROGRESS STEPS — constrained width for readability -->
-  <div class="progress-bar-wrap" style="max-width:860px; margin-left:auto; margin-right:auto;">
+  <div class="progress-bar-wrap">
     <div class="progress-steps">
       <div class="progress-step active" id="pstep-1">1 · Confirm Info</div>
       <div class="progress-step" id="pstep-2">2 · Quick Questions</div>
@@ -356,7 +356,7 @@
   <!-- ═══════════════════════════════════════════════ -->
   <!-- STEP 1 — CONFIRM YOUR INFO                      -->
   <!-- ═══════════════════════════════════════════════ -->
-  <div class="step-panel active" id="step-1" style="max-width:760px; margin:0 auto;">
+  <div class="step-panel active" id="step-1">
     <div class="section-title">Confirm Your Information</div>
     <div class="section-sub">We've pre-filled this from your file. Please review and correct anything that's changed.</div>
 
@@ -472,7 +472,7 @@
   <!-- ═══════════════════════════════════════════════ -->
   <!-- STEP 2 — QUICK QUESTIONS                        -->
   <!-- ═══════════════════════════════════════════════ -->
-  <div class="step-panel" id="step-2" style="max-width:760px; margin:0 auto;">
+  <div class="step-panel" id="step-2">
     <div class="section-title">A Few Quick Questions</div>
     <div class="section-sub">These help us make sure we're asking for the right documents. Answer honestly — no wrong answers.</div>
 
@@ -631,17 +631,16 @@
     <div class="section-title">Your 2025 Documents</div>
     <div class="section-sub">Based on your 2024 return, here's what we're expecting. Upload each item or mark it "Not This Year" if it no longer applies. Every item must be resolved before you can submit.</div>
 
-    <div class="banner-note" id="checklist-banner">
-      ℹ️ <span>You can return to this page any time. Every item must be either <strong>uploaded</strong> or marked <strong>Not This Year</strong> before you can submit.</span>
-    </div>
-
-    <!-- Progress Summary -->
-    <div class="progress-summary" id="progress-summary-card">
-      <div class="ps-bar-wrap">
-        <div class="ps-label" id="progress-label">Items resolved</div>
+    <!-- Combined status bar -->
+    <div class="progress-summary" id="progress-summary-card" style="align-items:center; gap:1.5rem; flex-wrap:wrap;">
+      <div id="checklist-banner" style="display:flex; align-items:center; gap:0.5rem; font-size:0.83rem; color:var(--muted); flex-shrink:0; max-width:420px;">
+        ℹ️ <span>Every item must be <strong>uploaded</strong> or marked <strong>Not This Year</strong> before you can submit. <strong id="remaining-count">13 remaining.</strong></span>
+      </div>
+      <div class="ps-bar-wrap" style="min-width:160px;">
+        <div class="ps-label" id="progress-label" style="font-size:0.73rem; color:var(--muted); margin-bottom:0.3rem;">Items resolved</div>
         <div class="ps-bar"><div class="ps-fill" id="progress-fill" style="width:0%"></div></div>
       </div>
-      <div class="ps-count" id="progress-count">0 <span>of 13 resolved</span></div>
+      <div class="ps-count" id="progress-count" style="flex-shrink:0;">0 <span>of 13 resolved</span></div>
     </div>
 
     <!-- Bulk Upload Option -->
@@ -933,7 +932,7 @@
   <!-- ═══════════════════════════════════════════════ -->
   <!-- STEP 4 — SUBMIT                                 -->
   <!-- ═══════════════════════════════════════════════ -->
-  <div class="step-panel" id="step-4" style="max-width:760px; margin:0 auto;">
+  <div class="step-panel" id="step-4">
     <div class="section-title">Review &amp; Submit</div>
     <div class="section-sub">Here's a summary of what you're sending us. You can go back and add more if needed.</div>
 
@@ -1061,11 +1060,12 @@
 
   function updateProgress() {
     const resolved = Object.keys(itemStates).length;
+    const remaining = TOTAL_ITEMS - resolved;
     const pct = Math.round((resolved / TOTAL_ITEMS) * 100);
     const fill = document.getElementById('progress-fill');
     const count = document.getElementById('progress-count');
     const label = document.getElementById('progress-label');
-    const banner = document.getElementById('checklist-banner');
+    const remainingEl = document.getElementById('remaining-count');
     const submitBtn = document.getElementById('go-submit-btn');
     const summaryCard = document.getElementById('progress-summary-card');
 
@@ -1074,13 +1074,14 @@
     const allDone = resolved >= TOTAL_ITEMS;
 
     if (allDone) {
-      label.textContent = '✓ All items resolved — ready to submit!';
+      label.textContent = '✓ All resolved!';
       label.style.color = 'var(--green)';
       count.style.color = 'var(--green)';
+      fill.style.background = 'var(--green)';
       summaryCard.style.borderColor = 'rgba(62,207,142,0.4)';
-      banner.innerHTML = `<span style="color:var(--green)">✓ <strong>You\'re all set!</strong> Every item has been resolved. Click "Review &amp; Submit" when you\'re ready.</span>`;
-      banner.style.background = 'rgba(62,207,142,0.08)';
-      banner.style.borderColor = 'rgba(62,207,142,0.3)';
+      summaryCard.style.background = 'rgba(62,207,142,0.06)';
+      const banner = document.getElementById('checklist-banner');
+      if (banner) banner.innerHTML = '<span style=\"color:var(--green); font-size:0.83rem;\">✓ <strong>You\'re all set!</strong> Every item resolved. Click \"Review &amp; Submit\".</span>';
       submitBtn.disabled = false;
       submitBtn.style.opacity = '1';
       submitBtn.style.cursor = 'pointer';
@@ -1089,9 +1090,8 @@
       label.style.color = 'var(--muted)';
       count.style.color = 'var(--text)';
       summaryCard.style.borderColor = 'var(--border)';
-      banner.innerHTML = `ℹ️ <span>Every item must be <strong>uploaded</strong> or marked <strong>Not This Year</strong> before you can submit. <strong>${TOTAL_ITEMS - resolved} remaining.</strong></span>`;
-      banner.style.background = '';
-      banner.style.borderColor = '';
+      summaryCard.style.background = '';
+      if (remainingEl) remainingEl.textContent = remaining + ' remaining.';
       submitBtn.disabled = true;
       submitBtn.style.opacity = '0.4';
       submitBtn.style.cursor = 'not-allowed';
