@@ -110,7 +110,8 @@ router.post('/', async (req, res) => {
   const userId = req.firm.userId;
   const {
     company_id, person_id, tax_year, title, intro_note, tax_summary,
-    review_doc_id, signature_doc_id, signer_person_ids = [], pipeline_job_id
+    review_doc_id, signature_doc_id, signer_person_ids = [], pipeline_job_id,
+    include_spouse = true  // default true; pass false to suppress spouse auto-add
   } = req.body;
 
   if (!tax_year) {
@@ -160,7 +161,8 @@ router.post('/', async (req, res) => {
       );
     }
 
-    // Auto-add spouse signer for MFJ with active spouse portal
+    // Auto-add spouse signer for MFJ with active spouse portal (unless advisor explicitly unchecked spouse)
+    if (!include_spouse) { /* skip spouse auto-add */ } else
     for (const pid of allSigners) {
       const { rows: [person] } = await pool.query(
         'SELECT filing_status, spouse_portal_enabled, spouse_email FROM people WHERE id = $1',

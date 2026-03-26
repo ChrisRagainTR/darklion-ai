@@ -1767,10 +1767,11 @@
       review_doc_id: document.getElementById('pd-review-doc').value ? parseInt(document.getElementById('pd-review-doc').value) : null,
       signature_doc_id: document.getElementById('pd-sig-doc').value ? parseInt(document.getElementById('pd-sig-doc').value) : null,
       signer_person_ids: (function() {
-        var checked = Array.from(document.querySelectorAll('.pd-signer-cb:checked')).map(function(cb){ return parseInt(cb.value); });
-        if (checked.length === 0) checked = [parseInt(personId)]; // always include current person
+        var checked = Array.from(document.querySelectorAll('.pd-signer-cb:checked:not(.pd-signer-spouse-cb)')).map(function(cb){ return parseInt(cb.value); });
+        if (checked.length === 0) checked = [parseInt(personId)];
         return checked;
       })(),
+      include_spouse: !!document.querySelector('.pd-signer-spouse-cb:checked'),
     };
     try {
       const res = await apiFetch('/api/tax-deliveries', { method: 'POST', body: JSON.stringify(body) });
