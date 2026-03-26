@@ -250,8 +250,8 @@
         <select class="form-control" id="pd-sig-doc"><option value="">— Select document —</option></select>
       </div>
       <div class="form-group">
-        <label>Signers <span style="font-weight:400;color:var(--muted);">(who needs to sign — e.g. both spouses)</span></label>
-        <div id="pd-signers-list" style="display:flex;flex-direction:column;gap:0.4rem;margin-top:0.25rem;"></div>
+        <label>Signers</label>
+        <div id="pd-signers-list" style="display:flex;flex-direction:column;gap:0.3rem;margin-top:0.25rem;"></div>
       </div>
       <div class="modal-actions">
         <button class="btn btn-outline" onclick="closePersonDeliveryModal()">Cancel</button>
@@ -1685,49 +1685,33 @@
     const signersList = document.getElementById('pd-signers-list');
     signersList.innerHTML = '';
 
-    function makeSignerRow(id, name, portalActive, checked, disabled) {
-      const div = document.createElement('div');
-      div.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:6px;';
-      const portalBadge = portalActive
-        ? '<span style="font-size:0.72rem;color:var(--green);">✓ Portal</span>'
-        : '<span style="font-size:0.72rem;color:var(--orange);">No portal</span>';
-      div.innerHTML = '<input type="checkbox" class="pd-signer-cb" value="' + id + '"'
-        + (checked ? ' checked' : '') + (disabled ? ' disabled' : '')
-        + ' style="cursor:pointer;width:16px;height:16px;accent-color:var(--gold);"> '
-        + '<label style="cursor:pointer;font-size:0.88rem;">' + esc(name) + ' ' + portalBadge + '</label>';
-      return div;
+    function makeSignerChip(name, badge) {
+      return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:6px;font-size:0.85rem;">'
+        + '<span style="color:var(--green);font-size:0.8rem;">✓</span> ' + esc(name)
+        + (badge ? ' ' + badge : '') + '</div>';
     }
 
     try {
+      let html = '';
       if (personData && personData.relationship_id) {
         const relRes = await apiFetch(`/api/relationships/${personData.relationship_id}/people`);
         const relPeople = await relRes.json();
-        relPeople.forEach(function(p) {
-          const checked = p.id == personId;
-          const portalActive = p.portal_enabled && p.portal_has_password;
-          signersList.appendChild(makeSignerRow(p.id, (p.first_name||'') + ' ' + (p.last_name||''), portalActive, checked, checked));
-
-          // If this person is MFJ/MFS with spouse portal enabled, show spouse as a second signer
-          if (p.id == personId && ['mfj','mfs'].includes(p.filing_status) && p.spouse_name) {
-            const spouseActive = p.spouse_portal_enabled && p.spouse_portal_has_password;
-            // Spouse shares the same person_id — we use a special value 'spouse:{id}' that the submit handler converts
-            const div = document.createElement('div');
-            div.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:6px;';
-            const portalBadge = spouseActive
-              ? '<span style="font-size:0.72rem;color:var(--green);">✓ Portal</span>'
-              : '<span style="font-size:0.72rem;color:var(--orange);">No portal</span>';
-            const spouseLabel = esc(p.spouse_name) + ' <span style="font-size:0.68rem;color:#a78bfa;background:rgba(138,99,241,0.12);border-radius:3px;padding:0.05rem 0.3rem;">Spouse</span> ' + portalBadge;
-            div.innerHTML = '<input type="checkbox" class="pd-signer-cb pd-signer-spouse-cb" value="' + p.id + '" data-spouse="true" checked'
-              + ' style="cursor:pointer;width:16px;height:16px;accent-color:var(--gold);"> '
-              + '<label style="cursor:pointer;font-size:0.88rem;">' + spouseLabel + '</label>';
-            signersList.appendChild(div);
+        const currentPerson = relPeople.find(p => p.id == personId);
+        if (currentPerson) {
+          html += makeSignerChip((currentPerson.first_name||'') + ' ' + (currentPerson.last_name||''), '');
+          if (['mfj','mfs'].includes(currentPerson.filing_status) && currentPerson.spouse_name) {
+            const spouseBadge = '<span style="font-size:0.65rem;color:#a78bfa;background:rgba(138,99,241,0.12);border-radius:3px;padding:0.05rem 0.3rem;">Spouse</span>';
+            html += makeSignerChip(currentPerson.spouse_name, spouseBadge);
           }
-        });
+        } else {
+          html = makeSignerChip((personData.first_name||'') + ' ' + (personData.last_name||''), '');
+        }
       } else {
-        signersList.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);">' + esc((personData && (personData.first_name + ' ' + personData.last_name)) || 'This person') + ' <span style="color:var(--green);">✓</span></div>';
+        html = makeSignerChip((personData?.first_name||'') + ' ' + (personData?.last_name||''), '');
       }
+      signersList.innerHTML = html;
     } catch(e) {
-      signersList.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);">Could not load relationship members.</div>';
+      signersList.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);">Could not load signers.</div>';
     }
 
     document.getElementById('pd-error').style.display = 'none';
@@ -1766,12 +1750,7 @@
       intro_note: document.getElementById('pd-intro').value.trim(),
       review_doc_id: document.getElementById('pd-review-doc').value ? parseInt(document.getElementById('pd-review-doc').value) : null,
       signature_doc_id: document.getElementById('pd-sig-doc').value ? parseInt(document.getElementById('pd-sig-doc').value) : null,
-      signer_person_ids: (function() {
-        var checked = Array.from(document.querySelectorAll('.pd-signer-cb:checked:not(.pd-signer-spouse-cb)')).map(function(cb){ return parseInt(cb.value); });
-        if (checked.length === 0) checked = [parseInt(personId)];
-        return checked;
-      })(),
-      include_spouse: !!document.querySelector('.pd-signer-spouse-cb:checked'),
+      signer_person_ids: [parseInt(personId)],
     };
     try {
       const res = await apiFetch('/api/tax-deliveries', { method: 'POST', body: JSON.stringify(body) });
