@@ -115,17 +115,15 @@ router.get('/documents', async (req, res) => {
       let query;
       let params;
 
-      // Show: delivered docs from advisor (firm_uploaded/private) + ALL client-uploaded docs
+      // Show all docs EXCEPT private (staff-only). No is_delivered gate —
+      // advisor and client portals share the same document bucket.
       if (companyIds.length > 0) {
         query = `
           SELECT id, firm_id, owner_type, owner_id, doc_type,
                  display_name, mime_type, size_bytes, is_delivered,
                  delivered_at, viewed_at, year, folder_section, folder_category, created_at
           FROM documents
-          WHERE (
-            (is_delivered = true AND folder_section != 'client_uploaded')
-            OR folder_section = 'client_uploaded'
-          )
+          WHERE folder_section != 'private'
             AND (
               (owner_type = 'person' AND owner_id = $1)
               OR (owner_type = 'company' AND owner_id = ANY($2))
@@ -139,10 +137,7 @@ router.get('/documents', async (req, res) => {
                  display_name, mime_type, size_bytes, is_delivered,
                  delivered_at, viewed_at, year, folder_section, folder_category, created_at
           FROM documents
-          WHERE (
-            (is_delivered = true AND folder_section != 'client_uploaded')
-            OR folder_section = 'client_uploaded'
-          )
+          WHERE folder_section != 'private'
             AND owner_type = 'person'
             AND owner_id = $1
           ORDER BY created_at DESC
@@ -174,7 +169,8 @@ router.get('/documents/:id/download', async (req, res) => {
 
   try {
     const { rows: docRows } = await pool.query(
-      'SELECT id, owner_type, owner_id, s3_key, s3_bucket, is_delivered, viewed_at, display_name FROM documents WHERE id = $1 AND is_delivered = true',
+      `SELECT id, owner_type, owner_id, s3_key, s3_bucket, is_delivered, viewed_at, display_name,
+              folder_section FROM documents WHERE id = $1 AND folder_section != 'private'`,
       [docId]
     );
     if (!docRows[0]) return res.status(404).json({ error: 'Document not found' });
