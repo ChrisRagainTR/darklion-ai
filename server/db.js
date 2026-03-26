@@ -609,7 +609,7 @@ async function initDB() {
       needs_changes_at TIMESTAMPTZ,
       needs_changes_note TEXT DEFAULT '',
       signer_role TEXT DEFAULT 'taxpayer',
-      UNIQUE(delivery_id, person_id)
+      UNIQUE(delivery_id, person_id, signer_role)
     );
 
     -- ===================== MESSAGE TEMPLATES =====================

@@ -696,9 +696,19 @@ router.get('/attachments/:documentId/download', async (req, res) => {
 // ── TAX DELIVERY PORTAL ENDPOINTS ────────────────────────────────────────
 
 // ── Helper: verify signer access ─────────────────────────────────────────
-async function getSignerForDelivery(deliveryId, personId) {
+async function getSignerForDelivery(deliveryId, personId, signerRole) {
+  // If signerRole provided, match it specifically (handles MFJ with two rows per person)
+  if (signerRole && signerRole !== 'taxpayer') {
+    const { rows } = await pool.query(
+      'SELECT * FROM tax_delivery_signers WHERE delivery_id = $1 AND person_id = $2 AND signer_role = $3',
+      [deliveryId, personId, signerRole]
+    );
+    if (rows[0]) return rows[0];
+  }
+  // Default: taxpayer role or any row for this person
   const { rows } = await pool.query(
-    'SELECT * FROM tax_delivery_signers WHERE delivery_id = $1 AND person_id = $2',
+    `SELECT * FROM tax_delivery_signers WHERE delivery_id = $1 AND person_id = $2
+     ORDER BY CASE WHEN signer_role = 'taxpayer' THEN 0 ELSE 1 END LIMIT 1`,
     [deliveryId, personId]
   );
   return rows[0] || null;
@@ -743,7 +753,7 @@ router.get('/tax-deliveries/:id/summary', async (req, res) => {
   const personId = req.portal.personId;
   const id = parseInt(req.params.id);
   try {
-    const signer = await getSignerForDelivery(id, personId);
+    const signer = await getSignerForDelivery(id, personId, req.portal.signerRole);
     if (!signer) return res.status(403).json({ error: 'Access denied' });
     const { rows } = await pool.query(
       'SELECT tax_report_data, tax_report_status FROM tax_deliveries WHERE id = $1',
@@ -762,7 +772,7 @@ router.get('/tax-deliveries/:id/download-review', async (req, res) => {
   const personId = req.portal.personId;
   const id = parseInt(req.params.id);
   try {
-    const signer = await getSignerForDelivery(id, personId);
+    const signer = await getSignerForDelivery(id, personId, req.portal.signerRole);
     if (!signer) return res.status(403).json({ error: 'Access denied' });
 
     const { rows } = await pool.query(
@@ -786,7 +796,7 @@ router.get('/tax-deliveries/:id/download-signature', async (req, res) => {
   const personId = req.portal.personId;
   const id = parseInt(req.params.id);
   try {
-    const signer = await getSignerForDelivery(id, personId);
+    const signer = await getSignerForDelivery(id, personId, req.portal.signerRole);
     if (!signer) return res.status(403).json({ error: 'Access denied' });
 
     const { rows } = await pool.query(
@@ -810,13 +820,13 @@ router.post('/tax-deliveries/:id/approve', async (req, res) => {
   const personId = req.portal.personId;
   const id = parseInt(req.params.id);
   try {
-    const signer = await getSignerForDelivery(id, personId);
+    const signer = await getSignerForDelivery(id, personId, req.portal.signerRole);
     if (!signer) return res.status(403).json({ error: 'Access denied' });
 
     await pool.query(
       `UPDATE tax_delivery_signers SET approved_at = NOW(), approved_ip = $1
-       WHERE delivery_id = $2 AND person_id = $3`,
-      [req.ip, id, personId]
+       WHERE delivery_id = $2 AND person_id = $3 AND signer_role = $4`,
+      [req.ip, id, personId, signer.signer_role]
     );
 
     await pool.query(
@@ -853,13 +863,13 @@ router.post('/tax-deliveries/:id/needs-changes', async (req, res) => {
   if (!note) return res.status(400).json({ error: 'note is required' });
 
   try {
-    const signer = await getSignerForDelivery(id, personId);
+    const signer = await getSignerForDelivery(id, personId, req.portal.signerRole);
     if (!signer) return res.status(403).json({ error: 'Access denied' });
 
     await pool.query(
       `UPDATE tax_delivery_signers SET needs_changes_at = NOW(), needs_changes_note = $1
-       WHERE delivery_id = $2 AND person_id = $3`,
-      [note, id, personId]
+       WHERE delivery_id = $2 AND person_id = $3 AND signer_role = $4`,
+      [note, id, personId, signer.signer_role]
     );
 
     await pool.query(
@@ -931,15 +941,15 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
   if (!signature_data) return res.status(400).json({ error: 'signature_data is required' });
 
   try {
-    const signer = await getSignerForDelivery(id, personId);
+    const signer = await getSignerForDelivery(id, personId, req.portal.signerRole);
     if (!signer) return res.status(403).json({ error: 'Access denied' });
     if (!signer.approved_at) return res.status(400).json({ error: 'You must approve the return before signing' });
 
     await pool.query(
       `UPDATE tax_delivery_signers SET
          signed_at = NOW(), signed_ip = $1, signature_data = $2, signature_type = $3
-       WHERE delivery_id = $4 AND person_id = $5`,
-      [req.ip, signature_data, signature_type, id, personId]
+       WHERE delivery_id = $4 AND person_id = $5 AND signer_role = $6`,
+      [req.ip, signature_data, signature_type, id, personId, signer.signer_role]
     );
 
     // Generate signed PDF for this signer
@@ -948,13 +958,20 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
       // Get delivery + person info
       const { rows: [delivInfo] } = await pool.query(
         `SELECT td.signature_doc_id, td.tax_year, td.firm_id, td.company_id, f.name AS firm_name,
-                p.first_name, p.last_name, p.email AS person_email
+                p.first_name, p.last_name, p.email AS person_email,
+                p.spouse_name, p.spouse_email
          FROM tax_deliveries td
          JOIN firms f ON f.id = td.firm_id
          JOIN people p ON p.id = $2
          WHERE td.id = $1`,
         [id, personId]
       );
+      // Use spouse name/email when the signer is the spouse
+      if (delivInfo && signer.signer_role === 'spouse') {
+        delivInfo.first_name = (delivInfo.spouse_name || '').split(' ')[0] || delivInfo.first_name;
+        delivInfo.last_name = (delivInfo.spouse_name || '').split(' ').slice(1).join(' ') || delivInfo.last_name;
+        delivInfo.person_email = delivInfo.spouse_email || delivInfo.person_email;
+      }
       if (delivInfo && delivInfo.signature_doc_id) {
         const { rows: [sigDoc] } = await pool.query(
           'SELECT s3_key, s3_bucket FROM documents WHERE id = $1', [delivInfo.signature_doc_id]
@@ -989,8 +1006,8 @@ router.post('/tax-deliveries/:id/sign', async (req, res) => {
           );
           // Link signed doc to the signer record
           await pool.query(
-            'UPDATE tax_delivery_signers SET signed_doc_id = $1 WHERE delivery_id = $2 AND person_id = $3',
-            [newDoc.id, id, personId]
+            'UPDATE tax_delivery_signers SET signed_doc_id = $1 WHERE delivery_id = $2 AND person_id = $3 AND signer_role = $4',
+            [newDoc.id, id, personId, signer.signer_role]
           );
         }
       }
