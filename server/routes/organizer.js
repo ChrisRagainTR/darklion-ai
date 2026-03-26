@@ -54,8 +54,7 @@ router.post('/parse-document/:documentId', requireFirm, async (req, res) => {
     // Get company names in the relationship for Sentinel Provides detection
     const companiesRes = await pool.query(`
       SELECT c.name FROM companies c
-      JOIN relationship_companies rc ON rc.company_id = c.id
-      JOIN relationships r ON r.id = rc.relationship_id
+      JOIN relationships r ON r.id = c.relationship_id
       JOIN relationship_people rp ON rp.relationship_id = r.id
       WHERE rp.person_id = $1 AND c.firm_id = $2
     `, [personId, firmId]);
@@ -143,8 +142,7 @@ router.post('/upload/:personId', requireFirm, upload.single('file'), async (req,
     // Get firm companies for Sentinel Provides detection
     const companiesRes = await pool.query(`
       SELECT c.name FROM companies c
-      JOIN relationship_companies rc ON rc.company_id = c.id
-      JOIN relationships r ON r.id = rc.relationship_id
+      JOIN relationships r ON r.id = c.relationship_id
       JOIN relationship_people rp ON rp.relationship_id = r.id
       WHERE rp.person_id = $1 AND c.firm_id = $2
     `, [parseInt(personId), firmId]);

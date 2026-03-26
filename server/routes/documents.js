@@ -180,8 +180,7 @@ router.post('/upload', (req, res, next) => {
           // Get firm companies for Sentinel Provides detection
           const companiesRes = await pool.query(`
             SELECT c.name FROM companies c
-            JOIN relationship_companies rc ON rc.company_id = c.id
-            JOIN relationships r ON r.id = rc.relationship_id
+            JOIN relationships r ON r.id = c.relationship_id
             JOIN relationship_people rp ON rp.relationship_id = r.id
             WHERE rp.person_id = $1 AND c.firm_id = $2
           `, [parseInt(owner_id), firmId]);
