@@ -597,5 +597,60 @@ router.get('/:id/summary', async (req, res) => {
   }
 });
 
+// ── POST /tax-deliveries/:id/regenerate-signed-pdf ───────────────────────
+// Re-generates the combined signed PDF from stored signature data (all signers must have signed)
+router.post('/:id/regenerate-signed-pdf', async (req, res) => {
+  const firmId = req.firm.id;
+  const id = parseInt(req.params.id);
+  try {
+    const { rows: [d] } = await pool.query(
+      `SELECT td.*, f.name as firm_name FROM tax_deliveries td JOIN firms f ON f.id = td.firm_id WHERE td.id = $1 AND td.firm_id = $2`,
+      [id, firmId]
+    );
+    if (!d) return res.status(404).json({ error: 'Delivery not found' });
+    if (!d.signature_doc_id) return res.status(400).json({ error: 'No signature document on this delivery' });
+
+    const { rows: signers } = await pool.query(
+      `SELECT tds.*, p.first_name, p.last_name, p.email as person_email, p.spouse_name, p.spouse_email
+       FROM tax_delivery_signers tds JOIN people p ON p.id = tds.person_id
+       WHERE tds.delivery_id = $1 AND tds.signed_at IS NOT NULL
+       ORDER BY CASE WHEN tds.signer_role = 'taxpayer' THEN 0 ELSE 1 END`,
+      [id]
+    );
+    if (!signers.length) return res.status(400).json({ error: 'No signed signers found' });
+
+    const { rows: [sigDoc] } = await pool.query('SELECT * FROM documents WHERE id = $1', [d.signature_doc_id]);
+    const bucket = process.env.AWS_S3_BUCKET || 'darklion-s3';
+    const { downloadFile, uploadFile, buildKey } = require('../services/s3');
+    const { embedSignature } = require('../services/sign-pdf');
+
+    let pdfBuffer = await downloadFile({ key: sigDoc.s3_key, bucket: sigDoc.s3_bucket || bucket });
+    for (const s of signers) {
+      const isSpouse = s.signer_role === 'spouse';
+      const name = isSpouse ? (s.spouse_name || 'Spouse') : `${s.first_name} ${s.last_name}`.trim();
+      const email = isSpouse ? (s.spouse_email || '') : (s.person_email || '');
+      pdfBuffer = await embedSignature(pdfBuffer, { name, email, signedAt: s.signed_at, signedIp: s.signed_ip || '', signatureData: s.signature_data, signatureType: s.signature_type || 'drawn', taxYear: d.tax_year, firmName: d.firm_name });
+    }
+
+    const signedKey = buildKey({ firmId: d.firm_id, ownerType: 'tax_signed', ownerId: 0, year: String(d.tax_year), docType: 'signed_return', filename: `signed_${Date.now()}.pdf` });
+    await uploadFile({ buffer: pdfBuffer, key: signedKey, mimeType: 'application/pdf', bucket });
+
+    const taxpayer = signers.find(s => s.signer_role === 'taxpayer') || signers[0];
+    const clientName = `${taxpayer.first_name} ${taxpayer.last_name}`.trim();
+    const docOwnerType = d.company_id ? 'company' : 'person';
+    const docOwnerId = d.company_id || taxpayer.person_id;
+    const { rows: [newDoc] } = await pool.query(
+      `INSERT INTO documents (firm_id, owner_type, owner_id, doc_type, display_name, mime_type, size_bytes, s3_key, s3_bucket, folder_section, folder_category, year, is_delivered, delivered_at)
+       VALUES ($1, $2, $3, 'signed_return', $4, 'application/pdf', $5, $6, $7, 'firm_uploaded', 'tax', $8, true, NOW()) RETURNING id`,
+      [d.firm_id, docOwnerType, docOwnerId, `${d.tax_year} Tax Return — Fully Signed (${clientName}).pdf`, pdfBuffer.length, signedKey, bucket, String(d.tax_year)]
+    );
+    await pool.query('UPDATE tax_deliveries SET signed_doc_id = $1 WHERE id = $2', [newDoc.id, id]);
+    res.json({ ok: true, documentId: newDoc.id });
+  } catch (err) {
+    console.error('[tax-delivery] regenerate-signed-pdf error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
 module.exports.advancePipelineJob = advancePipelineJob;
