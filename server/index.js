@@ -312,8 +312,6 @@ app.use('/api/tax-deliveries', requireFirm, apiLimiter, taxDeliveryRouter);
 
 const organizerRouter = require('./routes/organizer');
 app.use('/api/organizers', requireFirm, apiLimiter, organizerRouter);
-// Portal organizer routes (authenticated via requirePortal)
-app.use('/portal/organizer', requirePortal, apiLimiter, organizerRouter);
 
 // Proposals — staff (auth required)
 const proposalsRouter = require('./routes/proposals');
@@ -356,6 +354,10 @@ function serveClientLogin(req, res) {
 }
 app.get('/client-login', serveClientLogin);
 app.get('/portal-login', serveClientLogin); // alias — don't break existing links
+
+// Portal organizer routes
+const organizerRouter = require('./routes/organizer');
+app.use('/portal/organizer', requirePortal, apiLimiter, organizerRouter);
 
 // Protected portal API routes (sub-paths like /portal/me, /portal/documents, etc.)
 app.use('/portal', requirePortal, apiLimiter, portalRouter);
