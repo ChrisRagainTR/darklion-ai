@@ -482,9 +482,16 @@
 </div>
 
 <div id="tab-organizers" class="tab-content">
-  <div style="max-width:700px;padding:1.5rem;">
-    <div class="card">
-      <div class="card-title">Stanford Tax Organizer</div>
+  <div style="max-width:1100px;padding:1.5rem 2rem;">
+
+    <!-- DarkLion Organizer Status (advisor view) -->
+    <div id="adv-organizer-wrap" style="margin-bottom:1.5rem;">
+      <div style="color:var(--muted);font-size:0.85rem;padding:1rem 0;">Loading organizer status…</div>
+    </div>
+
+    <!-- Stanford Tax link (legacy) -->
+    <div class="card" style="max-width:700px;">
+      <div class="card-title">Stanford Tax Organizer (Legacy)</div>
       <div id="org-stanford-link" style="margin-bottom:1rem;"></div>
       <div style="display:flex;gap:0.75rem;align-items:flex-end;">
         <div class="form-group" style="flex:1;margin:0;">
@@ -677,6 +684,7 @@
           orgLinkEl.innerHTML = '';
         }
       }
+      loadAdvisorOrganizer();
     }
     if (name === 'notes') {
       const notesEl = document.getElementById('notes-ta-full');
@@ -1436,6 +1444,126 @@
       window.openUploadModal(file);
     });
   })();
+
+  const SECTION_LABELS_ADV = {
+    'w2':'W-2','1099-r':'1099-R','1099-div':'1099-DIV','1099-int':'1099-INT',
+    '1099-nec':'1099-NEC','1099-misc':'1099-MISC','1099-g':'1099-G',
+    'k1':'K-1','schedule-c':'Sch C','1098':'1098','childcare':'Childcare','other':'Other'
+  };
+
+  async function loadAdvisorOrganizer() {
+    const wrap = document.getElementById('adv-organizer-wrap');
+    if (!wrap) return;
+    const year = '2025';
+    try {
+      const data = await apiFetch(`/api/organizers/${personId}/${year}`);
+      renderAdvisorOrganizer(wrap, data, year);
+    } catch(e) {
+      wrap.innerHTML = `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.3rem;">📋 ${year} Tax Organizer</div>
+            <div style="font-size:0.82rem;color:var(--muted);">No organizer loaded yet. Upload the Drake organizer PDF to generate this client's checklist.</div>
+          </div>
+          <label style="cursor:pointer;">
+            <input type="file" accept=".pdf" style="display:none;" onchange="uploadOrganizerFile(this,${personId},'${year}')">
+            <span class="btn btn-gold btn-sm">⬆ Upload Drake Organizer</span>
+          </label>
+        </div>`;
+    }
+  }
+
+  async function uploadOrganizerFile(input, pid, year) {
+    if (!input.files.length) return;
+    const wrap = document.getElementById('adv-organizer-wrap');
+    wrap.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:0.75rem 0;">⏳ Parsing organizer…</div>';
+    const fd = new FormData();
+    fd.append('file', input.files[0]);
+    fd.append('year', year);
+    try {
+      const res = await fetch(`/api/organizers/upload/${pid}`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('dl_token') || '') },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      // Reload
+      loadAdvisorOrganizer();
+    } catch(e) {
+      wrap.innerHTML = `<div style="color:var(--red);font-size:0.85rem;padding:0.75rem 0;">❌ ${esc(e.message)}</div>`;
+    }
+  }
+
+  function renderAdvisorOrganizer(wrap, data, year) {
+    const { organizer, items } = data;
+    const actionable = items.filter(i => !i.sentinel_provides);
+    const uploaded = actionable.filter(i => i.status === 'uploaded').length;
+    const nty = actionable.filter(i => i.status === 'not_this_year').length;
+    const pending = actionable.filter(i => i.status === 'pending').length;
+    const sentinel = items.filter(i => i.sentinel_provides).length;
+    const total = actionable.length;
+    const pct = total ? Math.round(((uploaded + nty) / total) * 100) : 0;
+
+    const statusLabel = { pending: 'Not Started', in_progress: 'In Progress', submitted: '✓ Submitted', reviewed: '✓ Reviewed' }[organizer.status] || organizer.status;
+    const statusColor = { pending: 'var(--muted)', in_progress: 'var(--gold)', submitted: 'var(--green)', reviewed: 'var(--green)' }[organizer.status] || 'var(--muted)';
+
+    // Item list grouped by section
+    const bySection = {};
+    for (const item of items) { if (!bySection[item.section]) bySection[item.section] = []; bySection[item.section].push(item); }
+    const sectionOrder = ['w2','1099-r','1099-div','1099-int','1099-nec','1099-misc','1099-g','k1','schedule-c','1098','childcare','other'];
+
+    const itemRowsHtml = sectionOrder.flatMap(sec => {
+      const secItems = bySection[sec]; if (!secItems) return [];
+      return secItems.map(item => {
+        const icon = item.sentinel_provides ? '🏢' : item.status === 'uploaded' ? '✓' : item.status === 'not_this_year' ? '–' : '⏳';
+        const color = item.sentinel_provides ? 'var(--gold)' : item.status === 'uploaded' ? 'var(--green)' : item.status === 'not_this_year' ? 'var(--muted)' : 'rgba(255,255,255,0.2)';
+        const statusText = item.sentinel_provides ? 'Sentinel' : item.status === 'uploaded' ? 'Uploaded' : item.status === 'not_this_year' ? 'Not This Year' : 'Pending';
+        return `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.35rem 0.5rem;border-radius:6px;font-size:0.82rem;transition:background 0.1s;" onmouseenter="this.style.background='rgba(255,255,255,0.03)'" onmouseleave="this.style.background=''">
+          <span style="font-size:0.75rem;color:${color};width:14px;text-align:center;font-weight:700;">${icon}</span>
+          <span style="flex:1;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(item.payer_name)}</span>
+          <span style="font-size:0.65rem;color:var(--muted);background:rgba(255,255,255,0.05);padding:0.1rem 0.4rem;border-radius:3px;">${SECTION_LABELS_ADV[item.section]||item.section}</span>
+          <span style="font-size:0.72rem;color:${color};min-width:70px;text-align:right;">${statusText}</span>
+        </div>`;
+      });
+    }).join('');
+
+    wrap.innerHTML = `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:0.75rem;">
+        <!-- Header row -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+          <div>
+            <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.25rem;">📋 ${year} Tax Organizer</div>
+            <div style="font-size:0.78rem;color:${statusColor};font-weight:600;">${statusLabel}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+            <div style="display:flex;gap:1rem;font-size:0.8rem;text-align:center;">
+              <div><div style="font-size:1.1rem;font-weight:700;color:var(--green);">${uploaded}</div><div style="color:var(--muted);">Uploaded</div></div>
+              <div><div style="font-size:1.1rem;font-weight:700;color:var(--muted);">${nty}</div><div style="color:var(--muted);">Not This Year</div></div>
+              <div><div style="font-size:1.1rem;font-weight:700;color:var(--orange);">${pending}</div><div style="color:var(--muted);">Pending</div></div>
+              ${sentinel ? `<div><div style="font-size:1.1rem;font-weight:700;color:var(--gold);">${sentinel}</div><div style="color:var(--muted);">Sentinel</div></div>` : ''}
+            </div>
+            <label style="cursor:pointer;" title="Re-upload Drake organizer to re-parse">
+              <input type="file" accept=".pdf" style="display:none;" onchange="uploadOrganizerFile(this,${personId},'${year}')">
+              <span class="btn btn-outline btn-sm" style="font-size:0.75rem;">↻ Re-parse</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;margin-bottom:1.25rem;">
+          <div style="height:100%;width:${pct}%;background:var(--green);border-radius:3px;transition:width 0.4s;"></div>
+        </div>
+
+        <!-- Item list (2 columns) -->
+        <div style="columns:2;column-gap:1rem;max-height:320px;overflow-y:auto;">
+          ${itemRowsHtml}
+        </div>
+
+        ${organizer.submitted_at ? `<div style="margin-top:0.75rem;font-size:0.75rem;color:var(--muted);border-top:1px solid rgba(255,255,255,0.06);padding-top:0.75rem;">Submitted by client ${new Date(organizer.submitted_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>` : ''}
+      </div>
+    `;
+  }
 
   async function saveStanfordUrl() {
     const url = document.getElementById('stanford-url-input').value.trim();
