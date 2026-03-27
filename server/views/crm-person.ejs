@@ -1508,11 +1508,8 @@
     const closedDate = org.closed_at ? new Date(org.closed_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : null;
 
     let actionBtns = `<label style="cursor:pointer;" title="Re-upload Drake organizer"><input type="file" accept=".pdf" style="display:none;" onchange="uploadOrganizerFile(this,${personId},'${esc(org.tax_year)}')"><span class="btn btn-outline btn-sm" style="font-size:0.72rem;">↻ Re-parse</span></label>`;
-    if (['submitted','reviewed','closed'].includes(org.status)) {
+    if (['closed','reviewed','reopened'].includes(org.status)) {
       actionBtns += `<button class="btn btn-outline btn-sm" onclick="reopenOrganizer('${esc(org.tax_year)}')">🔄 Request More Docs</button>`;
-    }
-    if (['submitted','reviewed','reopened','in_progress'].includes(org.status)) {
-      actionBtns += `<button class="btn btn-outline btn-sm" style="color:var(--muted);" onclick="closeOrganizer('${esc(org.tax_year)}')">✓ Close Season</button>`;
     }
 
     // Item list — reuse existing renderAdvisorOrganizer logic but inline here

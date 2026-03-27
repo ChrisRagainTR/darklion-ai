@@ -2065,12 +2065,11 @@
         renderOrganizerNoRecord(wrap, year, priorYears);
       } else {
         const { organizer } = activeResult;
-        if (organizer.status === 'closed') {
-          renderOrganizerClosed(wrap, year, priorYears);
+        if (['closed', 'submitted', 'reviewed'].includes(organizer.status)) {
+          // submitted now auto-closes — treat submitted/reviewed same as closed
+          renderOrganizerClosed(wrap, year, priorYears, organizer);
         } else if (organizer.status === 'reopened') {
           renderOrganizerDashboard(wrap, activeResult, year, priorYears, true);
-        } else if (['submitted', 'reviewed'].includes(organizer.status)) {
-          renderOrganizerSubmitted(wrap, organizer, year, priorYears);
         } else {
           // pending or in_progress
           renderOrganizerDashboard(wrap, activeResult, year, priorYears, false);
@@ -2184,19 +2183,22 @@
       `;
     }
 
-    function renderOrganizerClosed(wrap, year, priorYears) {
+    function renderOrganizerClosed(wrap, year, priorYears, organizer) {
       const nextYear = String(parseInt(year) + 1);
+      const submittedDate = organizer?.submitted_at
+        ? new Date(organizer.submitted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+        : null;
       wrap.innerHTML = `
         <div class="org-dashboard">
           <div class="org-hero submitted">
             <div class="org-hero-top">
               <div>
-                <div class="org-hero-title">🎉 See You for ${escHtml(nextYear)}!</div>
+                <div class="org-hero-title">✅ Organizer Submitted!</div>
                 <div class="org-hero-sub">
-                  Your ${escHtml(year)} tax season is complete. We'll reach out when your ${escHtml(nextYear)} organizer is ready.
+                  ${submittedDate ? `Received on ${escHtml(submittedDate)}. ` : ''}We're reviewing your documents and will be in touch when your ${escHtml(year)} return is ready.
                 </div>
               </div>
-              <span class="org-status-chip reviewed">✓ Season Closed</span>
+              <span class="org-status-chip submitted">✓ Submitted</span>
             </div>
           </div>
           ${renderPriorYearsAccordion(priorYears)}

@@ -691,10 +691,10 @@ router.post('/client/:year/submit', requirePortal, async (req, res) => {
       bucket, s3Key, workpaperBuffer.length
     ]);
 
-    // Update organizer to submitted
+    // Update organizer to closed — submit = done unless staff reopens
     await pool.query(`
       UPDATE tax_organizers
-      SET status = 'submitted', submitted_at = NOW(), workpaper_document_id = $1, updated_at = NOW()
+      SET status = 'closed', submitted_at = NOW(), closed_at = NOW(), workpaper_document_id = $1, updated_at = NOW()
       WHERE id = $2
     `, [wpDocRes.rows[0].id, organizer.id]);
 
