@@ -198,29 +198,28 @@
 
   <!-- ============ TAX SEASON ============ -->
   <div class="settings-tab-panel" id="tab-tax-season">
-    <div class="settings-section">
+    <div class="settings-section" style="max-width:560px;">
       <h2>🗓 Tax Season</h2>
-      <p>Control which tax year is currently open for client organizers. Clients see the active year's organizer tab based on this setting. Change it when you're ready to open a new season — no code deploy needed.</p>
+      <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.5rem;">Set the active tax year for client organizers. When you flip this, the client portal immediately shows the new year's organizer. No deploy needed.</p>
 
-      <div style="max-width:400px;">
-        <label class="form-label" style="display:block;margin-bottom:0.5rem;">Active Tax Year</label>
-        <div style="display:flex;gap:0.75rem;align-items:center;">
-          <select id="active-tax-year-select" class="form-control" style="max-width:160px;">
-            <option value="2024">2024</option>
-            <option value="2025" selected>2025</option>
-            <option value="2026">2026</option>
-            <option value="2027">2027</option>
-          </select>
-          <button class="btn btn-gold btn-sm" onclick="saveTaxYear()">Save</button>
-        </div>
-        <div id="tax-year-save-msg" style="font-size:0.8rem;color:var(--green);margin-top:0.5rem;display:none;">✓ Saved</div>
-        <div id="tax-year-err-msg" style="font-size:0.8rem;color:var(--red);margin-top:0.5rem;display:none;"></div>
-        <p style="margin-top:0.75rem;font-size:0.82rem;">
-          <strong>What this controls:</strong><br>
-          • The organizer tab in the client portal shows the active year<br>
-          • New organizer uploads are tagged with this year by default<br>
-          • Prior year organizers move to the "Prior Years" section automatically
-        </p>
+      <label class="form-label" style="display:block;margin-bottom:0.5rem;font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);">Active Tax Year</label>
+      <div style="display:flex;gap:0.75rem;align-items:center;">
+        <select id="active-tax-year-select" class="form-control" style="width:120px;">
+          <option value="2024">2024</option>
+          <option value="2025" selected>2025</option>
+          <option value="2026">2026</option>
+          <option value="2027">2027</option>
+        </select>
+        <button class="btn btn-gold btn-sm" onclick="saveTaxYear()">Save</button>
+        <span id="tax-year-save-msg" style="font-size:0.82rem;color:var(--green);display:none;">✓ Saved</span>
+        <span id="tax-year-err-msg" style="font-size:0.82rem;color:var(--red);display:none;"></span>
+      </div>
+
+      <div style="margin-top:1.25rem;padding:1rem 1.25rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;font-size:0.82rem;color:var(--muted);line-height:1.8;">
+        <div style="font-weight:600;color:var(--text);margin-bottom:0.4rem;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;">What this controls</div>
+        <div>→ Client portal Organizers tab shows the active year</div>
+        <div>→ New Drake organizer uploads default to this year</div>
+        <div>→ Prior years move to the "Prior Years" section on the client portal</div>
       </div>
     </div>
   </div><!-- end tab-tax-season -->
