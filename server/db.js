@@ -945,6 +945,13 @@ async function initDB() {
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
 
+    -- ===================== TAX SEASON LIFECYCLE =====================
+    -- active_tax_year: the year currently open for organizer submissions
+    DO $$ BEGIN
+      ALTER TABLE firms ADD COLUMN IF NOT EXISTS active_tax_year TEXT DEFAULT '2025';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
     -- ===================== TAX ORGANIZERS =====================
     -- One organizer session per person per tax year
     CREATE TABLE IF NOT EXISTS tax_organizers (
@@ -953,16 +960,36 @@ async function initDB() {
       person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
       tax_year TEXT NOT NULL DEFAULT '2025',
       status TEXT NOT NULL DEFAULT 'pending'
-        CHECK(status IN ('pending','in_progress','submitted','reviewed')),
+        CHECK(status IN ('pending','in_progress','submitted','reviewed','closed','reopened')),
       source_document_id INTEGER REFERENCES documents(id), -- the uploaded Drake organizer PDF
       workpaper_document_id INTEGER REFERENCES documents(id), -- the compiled workpaper PDF
       question_answers JSONB DEFAULT '{}',  -- { crypto: false, foreign_accounts: false, ... }
       submitted_at TIMESTAMPTZ,
       reviewed_at TIMESTAMPTZ,
+      closed_at TIMESTAMPTZ,
+      reopen_note TEXT DEFAULT '',
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(person_id, tax_year)
     );
+
+    -- Expand CHECK constraint to include closed/reopened (if table already exists)
+    DO $$ BEGIN
+      ALTER TABLE tax_organizers DROP CONSTRAINT IF EXISTS tax_organizers_status_check;
+      ALTER TABLE tax_organizers ADD CONSTRAINT tax_organizers_status_check
+        CHECK(status IN ('pending','in_progress','submitted','reviewed','closed','reopened'));
+    EXCEPTION WHEN others THEN NULL;
+    END $$;
+
+    -- Add new columns to existing tax_organizers table (migrations)
+    DO $$ BEGIN
+      ALTER TABLE tax_organizers ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+    DO $$ BEGIN
+      ALTER TABLE tax_organizers ADD COLUMN IF NOT EXISTS reopen_note TEXT DEFAULT '';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
 
     -- Individual checklist items parsed from the Drake organizer
     CREATE TABLE IF NOT EXISTS tax_organizer_items (

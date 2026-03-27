@@ -191,6 +191,31 @@ router.post('/upload/:personId', requireFirm, upload.single('file'), async (req,
 });
 
 // ─────────────────────────────────────────────────────────────
+// PORTAL: List all organizers (all years) — for Prior Years accordion
+// GET /portal/organizer/all-years
+// ─────────────────────────────────────────────────────────────
+router.get('/all-years', requirePortal, async (req, res) => {
+  const personId = req.portal.personId;
+  try {
+    const { rows } = await pool.query(
+      `SELECT o.id, o.tax_year, o.status, o.submitted_at, o.closed_at, o.reopen_note,
+              o.workpaper_document_id,
+              d.display_name AS workpaper_name,
+              (SELECT COUNT(*) FROM tax_organizer_items WHERE organizer_id = o.id) AS item_count,
+              (SELECT COUNT(*) FROM tax_organizer_items WHERE organizer_id = o.id AND status = 'uploaded') AS uploaded_count
+       FROM tax_organizers o
+       LEFT JOIN documents d ON d.id = o.workpaper_document_id
+       WHERE o.person_id = $1
+       ORDER BY o.tax_year DESC`,
+      [personId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
 // PORTAL: Get organizer for the logged-in client
 // ─────────────────────────────────────────────────────────────
 router.get('/client/:year', requirePortal, async (req, res) => {
@@ -434,13 +459,29 @@ router.post('/client/:year/upload-item/:itemId', requirePortal, upload.single('f
     const key = `firms/${firm_id}/people/${personId}/organizer/${year}/items/${itemId}-${Date.now()}.${ext}`;
     await uploadFile({ buffer: req.file.buffer, key, bucket, mimeType: req.file.mimetype });
 
+    // Build a meaningful display name: "PayerName — Section (year).ext"
+    // Use the item's payer_name so staff can see what it is at a glance.
+    // Exception: if the client gave the file a real name (not a UUID/generic), append it in parens.
+    const itemRes = await pool.query('SELECT payer_name, section FROM tax_organizer_items WHERE id = $1', [itemId]);
+    const itemRow = itemRes.rows[0];
+    const SECTION_LABELS = {
+      'w2':'W-2','1099-r':'1099-R','1099-div':'1099-DIV','1099-int':'1099-INT',
+      'k1':'K-1','schedule-c':'Sch-C','1098':'1098','1099-nec':'1099-NEC',
+      'childcare':'Childcare','other':'Other','1099-misc':'1099-MISC','1099-g':'1099-G',
+    };
+    const sectionLabel = itemRow ? (SECTION_LABELS[itemRow.section] || itemRow.section) : '';
+    const payerName = itemRow ? itemRow.payer_name : '';
+    const isGenericName = /^[0-9a-f-]{30,}$/i.test(req.file.originalname.replace(/\.[^.]+$/, ''));
+    const clientOriginal = isGenericName ? '' : req.file.originalname.replace(/\.[^.]+$/, '');
+    const displayName = `${payerName}${sectionLabel ? ` — ${sectionLabel}` : ''}${clientOriginal ? ` (${clientOriginal})` : ''}.${ext}`;
+
     // Save document record
     const docRes = await pool.query(`
       INSERT INTO documents (firm_id, owner_type, owner_id, year, doc_type, display_name,
         s3_bucket, s3_key, mime_type, size_bytes, uploaded_by_type, folder_section, folder_category)
       VALUES ($1, 'person', $2, $3, 'organizer_item', $4, $5, $6, $7, $8, 'client', 'client_uploaded', 'organizer')
       RETURNING id
-    `, [firm_id, personId, year, safeFilename, bucket, key, req.file.mimetype, req.file.size]);
+    `, [firm_id, personId, year, displayName, bucket, key, req.file.mimetype, req.file.size]);
     const documentId = docRes.rows[0].id;
 
     // Update item status to uploaded with document_id
@@ -657,6 +698,113 @@ router.post('/client/:year/submit', requirePortal, async (req, res) => {
 
   } catch (err) {
     console.error('Organizer submit error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// STAFF: Reopen an organizer (submitted/reviewed → reopened)
+// POST /api/organizers/:personId/:year/reopen
+// ─────────────────────────────────────────────────────────────
+router.post('/:personId/:year/reopen', requireFirm, async (req, res) => {
+  const { personId, year } = req.params;
+  const firmId = req.firm.id;
+  const { note } = req.body; // optional message to client
+
+  try {
+    const orgRes = await pool.query(
+      `SELECT id, status FROM tax_organizers WHERE person_id = $1 AND tax_year = $2 AND firm_id = $3`,
+      [parseInt(personId), year, firmId]
+    );
+    if (!orgRes.rows.length) return res.status(404).json({ error: 'No organizer found' });
+    const org = orgRes.rows[0];
+
+    if (!['submitted', 'reviewed', 'closed'].includes(org.status)) {
+      return res.status(400).json({ error: `Cannot reopen organizer with status '${org.status}'` });
+    }
+
+    await pool.query(
+      `UPDATE tax_organizers SET status = 'reopened', reopen_note = $1, updated_at = NOW() WHERE id = $2`,
+      [note || '', org.id]
+    );
+
+    // Fire portal notification if portal exists (non-fatal)
+    try {
+      const personRes = await pool.query(
+        `SELECT first_name, last_name FROM people WHERE id = $1`,
+        [parseInt(personId)]
+      );
+      const person = personRes.rows[0];
+      const clientName = person ? `${person.first_name} ${person.last_name}` : 'Client';
+
+      await pool.query(
+        `INSERT INTO portal_notifications (firm_id, person_id, message, type, created_at)
+         VALUES ($1, $2, $3, 'organizer_reopened', NOW())
+         ON CONFLICT DO NOTHING`,
+        [firmId, parseInt(personId),
+         note
+           ? `Your advisor has requested additional documents for your ${year} organizer: "${note}"`
+           : `Your advisor has reopened your ${year} tax organizer for additional documents.`]
+      );
+    } catch (_) { /* portal_notifications table may not exist yet */ }
+
+    res.json({ success: true, status: 'reopened' });
+  } catch (err) {
+    console.error('Organizer reopen error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// STAFF: Close an organizer (any status → closed)
+// POST /api/organizers/:personId/:year/close
+// ─────────────────────────────────────────────────────────────
+router.post('/:personId/:year/close', requireFirm, async (req, res) => {
+  const { personId, year } = req.params;
+  const firmId = req.firm.id;
+
+  try {
+    const orgRes = await pool.query(
+      `SELECT id, status FROM tax_organizers WHERE person_id = $1 AND tax_year = $2 AND firm_id = $3`,
+      [parseInt(personId), year, firmId]
+    );
+    if (!orgRes.rows.length) return res.status(404).json({ error: 'No organizer found' });
+
+    await pool.query(
+      `UPDATE tax_organizers SET status = 'closed', closed_at = NOW(), updated_at = NOW() WHERE id = $1`,
+      [orgRes.rows[0].id]
+    );
+
+    res.json({ success: true, status: 'closed' });
+  } catch (err) {
+    console.error('Organizer close error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// STAFF: List all organizers for a person (all years)
+// GET /api/organizers/:personId/all
+// ─────────────────────────────────────────────────────────────
+router.get('/:personId/all', requireFirm, async (req, res) => {
+  const { personId } = req.params;
+  const firmId = req.firm.id;
+
+  try {
+    const orgRes = await pool.query(
+      `SELECT o.*,
+              d.s3_key AS workpaper_key, d.s3_bucket AS workpaper_bucket, d.display_name AS workpaper_name,
+              (SELECT COUNT(*) FROM tax_organizer_items WHERE organizer_id = o.id) AS item_count,
+              (SELECT COUNT(*) FROM tax_organizer_items WHERE organizer_id = o.id AND status = 'uploaded') AS uploaded_count,
+              (SELECT COUNT(*) FROM tax_organizer_items WHERE organizer_id = o.id AND sentinel_provides = TRUE) AS sentinel_count
+       FROM tax_organizers o
+       LEFT JOIN documents d ON d.id = o.workpaper_document_id
+       WHERE o.person_id = $1 AND o.firm_id = $2
+       ORDER BY o.tax_year DESC`,
+      [parseInt(personId), firmId]
+    );
+    res.json(orgRes.rows);
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
