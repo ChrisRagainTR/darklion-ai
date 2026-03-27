@@ -340,6 +340,45 @@ router.put('/:personId/:year/questions', requireFirm, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// STAFF: List all organizers for a person (all years)
+// GET /api/organizers/:personId/all
+// ─────────────────────────────────────────────────────────────
+router.get('/:personId/all', requireFirm, async (req, res) => {
+  const { personId } = req.params;
+  const firmId = req.firm.id;
+
+  try {
+    const orgRes = await pool.query(
+      `SELECT o.*,
+              d.s3_key AS workpaper_key, d.s3_bucket AS workpaper_bucket, d.display_name AS workpaper_name,
+              (SELECT COUNT(*) FROM tax_organizer_items WHERE organizer_id = o.id) AS item_count,
+              (SELECT COUNT(*) FROM tax_organizer_items WHERE organizer_id = o.id AND status = 'uploaded') AS uploaded_count,
+              (SELECT COUNT(*) FROM tax_organizer_items WHERE organizer_id = o.id AND sentinel_provides = TRUE) AS sentinel_count
+       FROM tax_organizers o
+       LEFT JOIN documents d ON d.id = o.workpaper_document_id
+       WHERE o.person_id = $1 AND o.firm_id = $2
+       ORDER BY o.tax_year DESC`,
+      [parseInt(personId), firmId]
+    );
+    const organizers = orgRes.rows;
+
+    // Attach items to each organizer for the CRM advisor view
+    for (const org of organizers) {
+      const itemsRes = await pool.query(
+        'SELECT * FROM tax_organizer_items WHERE organizer_id = $1 ORDER BY display_order',
+        [org.id]
+      );
+      org.items = itemsRes.rows;
+    }
+
+    res.json(organizers);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // STAFF: Get organizer + items for a person/year
 // ─────────────────────────────────────────────────────────────
 router.get('/:personId/:year', requireFirm, async (req, res) => {
@@ -794,42 +833,5 @@ router.post('/:personId/:year/close', requireFirm, async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────
-// STAFF: List all organizers for a person (all years)
-// GET /api/organizers/:personId/all
-// ─────────────────────────────────────────────────────────────
-router.get('/:personId/all', requireFirm, async (req, res) => {
-  const { personId } = req.params;
-  const firmId = req.firm.id;
-
-  try {
-    const orgRes = await pool.query(
-      `SELECT o.*,
-              d.s3_key AS workpaper_key, d.s3_bucket AS workpaper_bucket, d.display_name AS workpaper_name,
-              (SELECT COUNT(*) FROM tax_organizer_items WHERE organizer_id = o.id) AS item_count,
-              (SELECT COUNT(*) FROM tax_organizer_items WHERE organizer_id = o.id AND status = 'uploaded') AS uploaded_count,
-              (SELECT COUNT(*) FROM tax_organizer_items WHERE organizer_id = o.id AND sentinel_provides = TRUE) AS sentinel_count
-       FROM tax_organizers o
-       LEFT JOIN documents d ON d.id = o.workpaper_document_id
-       WHERE o.person_id = $1 AND o.firm_id = $2
-       ORDER BY o.tax_year DESC`,
-      [parseInt(personId), firmId]
-    );
-    const organizers = orgRes.rows;
-
-    // Attach items to each organizer for the CRM advisor view
-    for (const org of organizers) {
-      const itemsRes = await pool.query(
-        'SELECT * FROM tax_organizer_items WHERE organizer_id = $1 ORDER BY display_order',
-        [org.id]
-      );
-      org.items = itemsRes.rows;
-    }
-
-    res.json(organizers);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 module.exports = router;
