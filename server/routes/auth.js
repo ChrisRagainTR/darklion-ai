@@ -99,11 +99,13 @@ router.get('/callback', async (req, res) => {
       await auditLog(firmId, 'company_connect', `Connected: ${companyName || realmId} (realm: ${realmId})`, req.ip);
     } catch (e) { /* non-fatal */ }
 
-    // Redirect back to the company page if we know which one, else show success
+    // Redirect back to the company page if we know which one, else redirect to CRM
+    const appBase = process.env.APP_URL ? process.env.APP_URL.replace(/\/$/, '') : '';
     if (darklionCompanyId) {
-      return res.redirect(`/crm/company/${darklionCompanyId}?connected=1`);
+      return res.redirect(`${appBase}/crm/company/${darklionCompanyId}?connected=1`);
     }
-    res.json({ ok: true, company: companyName || realmId });
+    // No specific company — redirect to CRM list with success flag
+    return res.redirect(`${appBase}/crm?qbo=connected`);
 
     // Run initial scans in background (non-blocking)
     runInitialScans(realmId).catch(e => console.error('Initial scan error:', e));
