@@ -71,6 +71,21 @@ router.get('/callback', async (req, res) => {
 
     // If we have a specific DarkLion company_id, update that record with the realm/tokens
     if (darklionCompanyId) {
+      // Get current realm_id so we can clean up FK-referencing rows if it's changing
+      const { rows: curRows } = await pool.query('SELECT realm_id FROM companies WHERE id = $1', [darklionCompanyId]);
+      const oldRealmId = curRows[0]?.realm_id;
+
+      if (oldRealmId && oldRealmId !== realmId) {
+        // Old realm_id is changing — delete orphaned child rows that FK-reference it
+        // These are all fake/empty if the old realm was a placeholder
+        await pool.query('DELETE FROM scan_results WHERE realm_id = $1', [oldRealmId]).catch(() => {});
+        await pool.query('DELETE FROM close_packages WHERE realm_id = $1', [oldRealmId]).catch(() => {});
+        await pool.query('DELETE FROM category_rules WHERE realm_id = $1', [oldRealmId]).catch(() => {});
+        await pool.query('DELETE FROM jobs WHERE realm_id = $1', [oldRealmId]).catch(() => {});
+        await pool.query('DELETE FROM statement_schedules WHERE realm_id = $1', [oldRealmId]).catch(() => {});
+        await pool.query('DELETE FROM employee_metadata WHERE realm_id = $1', [oldRealmId]).catch(() => {});
+      }
+
       await pool.query(`
         UPDATE companies SET
           realm_id = $1, company_name = COALESCE(NULLIF($2,''), company_name),
