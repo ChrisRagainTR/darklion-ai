@@ -330,11 +330,9 @@
 
   <!-- ── Tab: Organizers ── -->
   <div id="tab-organizers" class="tab-content">
-    <div class="placeholder-section">
-      <div class="ph-icon">📝</div>
-      <div class="ph-title">Tax Organizers</div>
-      <div class="ph-desc">Tax organizers coming soon.</div>
-      <div id="org-stanford-link" style="margin-top:1rem;"></div>
+    <div style="max-width:900px;">
+      <div id="org-tab-loading" style="color:var(--muted);padding:2rem 0;">Loading organizers…</div>
+      <div id="org-tab-content" style="display:none;"></div>
     </div>
   </div>
 
@@ -478,10 +476,7 @@
     if (name === 'communication' && personData) {
       initComm(personData.id || personId);
     }
-    if (name === 'organizers' && personData && personData.stanford_tax_url) {
-      const el = document.getElementById('org-stanford-link');
-      if (el) el.innerHTML = `<a href="${esc(personData.stanford_tax_url)}" target="_blank" rel="noopener" class="btn btn-gold btn-sm">🔗 Open Stanford Tax Organizer →</a>`;
-    }
+    if (name === 'organizers') loadOrganizersTab();
     if (name === 'notes' && personData) {
       const ta = document.getElementById('notes-ta-full');
       if (ta) ta.value = personData.notes || '';
@@ -498,6 +493,121 @@
     if (p.portal_enabled) return { label: 'Portal Enabled', cls: 'badge-green' };
     if (p.portal_invite_token) return { label: 'Invited', cls: 'badge-orange' };
     return { label: 'Not Set Up', cls: 'badge-muted' };
+  }
+
+  // ─── ORGANIZERS TAB ──────────────────────────────────────────────────────────
+  async function loadOrganizersTab() {
+    const loading = document.getElementById('org-tab-loading');
+    const content = document.getElementById('org-tab-content');
+    if (!loading || !content) return;
+    loading.style.display = '';
+    content.style.display = 'none';
+
+    try {
+      const organizers = await apiFetch(`/api/organizers/${personId}/all`).then(r => r.json());
+      loading.style.display = 'none';
+      content.style.display = '';
+
+      if (!organizers.length) {
+        content.innerHTML = `
+          <div style="color:var(--muted);padding:2rem 0;text-align:center;">
+            <div style="font-size:2rem;margin-bottom:0.5rem;">📝</div>
+            <div style="font-size:0.95rem;font-weight:600;">No organizers yet</div>
+            <div style="font-size:0.82rem;margin-top:0.25rem;">Upload a Drake PDF in the Docs tab to create one.</div>
+          </div>`;
+        return;
+      }
+
+      content.innerHTML = organizers.map(org => renderOrgCard(org)).join('');
+    } catch (err) {
+      loading.style.display = 'none';
+      content.style.display = '';
+      content.innerHTML = `<div style="color:var(--red);padding:1rem;">Error loading organizers: ${esc(err.message)}</div>`;
+    }
+  }
+
+  function renderOrgCard(org) {
+    const statusColors = {
+      pending: 'var(--muted)',
+      in_progress: 'var(--orange)',
+      submitted: 'var(--green)',
+      reviewed: 'var(--green)',
+      closed: 'var(--muted)',
+      reopened: '#f5a623',
+    };
+    const statusLabels = {
+      pending: 'Not Started',
+      in_progress: 'In Progress',
+      submitted: 'Submitted',
+      reviewed: 'Reviewed',
+      closed: 'Closed',
+      reopened: 'Reopened',
+    };
+    const color = statusColors[org.status] || 'var(--muted)';
+    const label = statusLabels[org.status] || org.status;
+    const submittedDate = org.submitted_at
+      ? new Date(org.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : null;
+    const closedDate = org.closed_at
+      ? new Date(org.closed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : null;
+
+    // Action buttons based on status
+    let actionBtns = '';
+    if (['submitted', 'reviewed', 'closed'].includes(org.status)) {
+      actionBtns += `<button class="btn btn-outline btn-sm" onclick="reopenOrganizer('${org.tax_year}')">🔄 Request More Docs</button>`;
+    }
+    if (['submitted', 'reviewed', 'reopened', 'in_progress'].includes(org.status)) {
+      actionBtns += `<button class="btn btn-outline btn-sm" style="color:var(--muted);" onclick="closeOrganizer('${org.tax_year}')">✓ Close Season</button>`;
+    }
+
+    return `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1rem;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+          <div>
+            <div style="font-weight:700;font-size:1rem;">${esc(org.tax_year)} Tax Organizer</div>
+            <div style="font-size:0.78rem;color:${color};font-weight:600;margin-top:0.15rem;">${label}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+            ${actionBtns}
+          </div>
+        </div>
+        <div style="display:flex;gap:2rem;flex-wrap:wrap;font-size:0.8rem;color:var(--muted);margin-bottom:${org.reopen_note ? '0.75rem' : '0'};">
+          <span>📄 ${org.uploaded_count || 0} uploaded</span>
+          <span>📋 ${org.item_count || 0} total items</span>
+          ${submittedDate ? `<span>📅 Submitted ${esc(submittedDate)}</span>` : ''}
+          ${closedDate ? `<span>🔒 Closed ${esc(closedDate)}</span>` : ''}
+          ${org.workpaper_document_id ? `<a href="/api/documents/${org.workpaper_document_id}/download" target="_blank" style="color:var(--gold);text-decoration:none;">📥 Workpaper</a>` : ''}
+        </div>
+        ${org.reopen_note ? `<div style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:0.5rem 0.75rem;font-size:0.8rem;color:var(--text);">⚠️ Reopen note: "${esc(org.reopen_note)}"</div>` : ''}
+      </div>`;
+  }
+
+  async function reopenOrganizer(year) {
+    const note = prompt(`Optional: add a note for the client about what's needed for ${year} organizer:`);
+    if (note === null) return; // cancelled
+    try {
+      const res = await apiFetch(`/api/organizers/${personId}/${year}/reopen`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      loadOrganizersTab();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  }
+
+  async function closeOrganizer(year) {
+    if (!confirm(`Close the ${year} tax season for this client? They won't see the organizer as active anymore.`)) return;
+    try {
+      const res = await apiFetch(`/api/organizers/${personId}/${year}/close`, { method: 'POST' });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      loadOrganizersTab();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   }
 
   async function loadWorkflow() {

@@ -659,6 +659,18 @@ router.post('/client/:year/submit', requirePortal, async (req, res) => {
       WHERE id = $2
     `, [wpDocRes.rows[0].id, organizer.id]);
 
+    // ── Reclassify individual uploads → client_uploaded/tax ─
+    // Move the source docs out of the organizer holding area so they appear
+    // normally in the Docs tab after submit. Workpaper stays firm_uploaded/tax.
+    await pool.query(`
+      UPDATE documents
+      SET folder_category = 'tax', folder_section = 'client_uploaded', updated_at = NOW()
+      WHERE owner_type = 'person' AND owner_id = $1
+        AND folder_category = 'organizer'
+        AND doc_type = 'organizer_item'
+        AND year = $2
+    `, [personId, year]);
+
     // ── Fire pipeline trigger (non-fatal) ──────────────────
     fireTrigger(organizer.firm_id, 'organizer_submitted', personId, { organizer_id: organizer.id })
       .catch(e => console.error('[organizer] fireTrigger organizer_submitted non-fatal:', e));

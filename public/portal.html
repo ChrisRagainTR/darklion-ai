@@ -2044,80 +2044,182 @@
     async function loadOrganizers() {
       const wrap = document.getElementById('dlOrganizerWrap');
       if (!wrap) return;
-      const year = '2025';
-      try {
-        const data = await api(`/portal/organizer/client/${year}`);
-        renderOrganizerDashboard(wrap, data, year);
-      } catch (e) {
-        console.warn('[organizer] API error:', e.message);
-        // Show what error we got in the UI temporarily for debugging
-        if (e.message && e.message !== 'No organizer available yet') {
-          wrap.innerHTML = `<div style="color:var(--red);font-size:0.8rem;padding:0.5rem 0;">Debug: ${e.message}</div>`;
-          setTimeout(() => renderOrganizerNotReady(wrap), 3000);
+
+      // Use firm's active tax year (from /portal/me), fall back to 2025
+      const year = _me?.activeTaxYear || '2025';
+
+      // Load active organizer + all years in parallel
+      const [activeResult, allYears] = await Promise.all([
+        api(`/portal/organizer/client/${year}`).catch(e => ({ _error: e.message })),
+        api('/portal/organizer/all-years').catch(() => []),
+      ]);
+
+      // Separate prior years (all years except active)
+      const priorYears = Array.isArray(allYears)
+        ? allYears.filter(o => o.tax_year !== year)
+        : [];
+
+      // Determine which state to show for the active year
+      if (activeResult._error) {
+        // No organizer for active year yet
+        renderOrganizerNoRecord(wrap, year, priorYears);
+      } else {
+        const { organizer } = activeResult;
+        if (organizer.status === 'closed') {
+          renderOrganizerClosed(wrap, year, priorYears);
+        } else if (organizer.status === 'reopened') {
+          renderOrganizerDashboard(wrap, activeResult, year, priorYears, true);
+        } else if (['submitted', 'reviewed'].includes(organizer.status)) {
+          renderOrganizerSubmitted(wrap, organizer, year, priorYears);
         } else {
-          renderOrganizerNotReady(wrap);
+          // pending or in_progress
+          renderOrganizerDashboard(wrap, activeResult, year, priorYears, false);
         }
       }
     }
 
-    function renderOrganizerNotReady(wrap) {
+    function renderPriorYearsAccordion(priorYears) {
+      if (!priorYears || !priorYears.length) return '';
+      const rows = priorYears.map(o => {
+        const submittedDate = o.submitted_at
+          ? new Date(o.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : '—';
+        const statusBadge = {
+          closed: '<span style="color:var(--green);font-size:0.75rem;">✓ Closed</span>',
+          submitted: '<span style="color:var(--green);font-size:0.75rem;">✓ Submitted</span>',
+          reviewed: '<span style="color:var(--green);font-size:0.75rem;">✓ Reviewed</span>',
+        }[o.status] || `<span style="color:var(--muted);font-size:0.75rem;">${o.status}</span>`;
+        const downloadLink = o.workpaper_document_id
+          ? `<a href="/portal/documents/${o.workpaper_document_id}/download" target="_blank" style="font-size:0.78rem;color:var(--gold);text-decoration:none;">📄 Download Workpaper</a>`
+          : `<span style="font-size:0.78rem;color:var(--muted);">No workpaper</span>`;
+        return `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.6rem 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+            <div style="font-weight:700;font-size:0.9rem;">${escHtml(o.tax_year)} Tax Year</div>
+            <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+              ${statusBadge}
+              <span style="font-size:0.78rem;color:var(--muted);">Submitted: ${submittedDate}</span>
+              <span style="font-size:0.78rem;color:var(--muted);">${o.uploaded_count || 0} docs</span>
+              ${downloadLink}
+            </div>
+          </div>`;
+      }).join('');
+
+      return `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-top:0.5rem;">
+          <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.py-chevron').textContent=this.nextElementSibling.style.display==='none'?'▸':'▾';"
+            style="background:none;border:none;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:space-between;padding:0;">
+            <span style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Prior Years</span>
+            <span class="py-chevron" style="color:var(--muted);font-size:0.85rem;">▸</span>
+          </button>
+          <div style="display:none;margin-top:0.75rem;">${rows}</div>
+        </div>`;
+    }
+
+    function renderOrganizerNoRecord(wrap, year, priorYears) {
       wrap.innerHTML = `
-        <div class="org-not-ready">
-          <div class="nr-icon">📋</div>
-          <div class="nr-title">Your 2025 Tax Organizer Is Almost Ready</div>
-          <div class="nr-sub">
-            We're preparing your personalized document checklist based on last year's return.
-            You'll receive an email once it's ready — usually within a few days of tax season kickoff.
-          </div>
-          <div style="margin-top:1.5rem;">
-            <div class="org-timeline">
-              <div class="org-timeline-step">
-                <div class="org-timeline-dot done">✓</div>
-                <div class="org-timeline-label"><strong>Organizer Prep</strong>Jan – Feb</div>
-              </div>
-              <div class="org-timeline-step">
-                <div class="org-timeline-dot active">→</div>
-                <div class="org-timeline-label"><strong>You Gather Docs</strong>Feb – Mar</div>
-              </div>
-              <div class="org-timeline-step">
-                <div class="org-timeline-dot">3</div>
-                <div class="org-timeline-label"><strong>We Prepare Return</strong>Mar – Apr</div>
-              </div>
-              <div class="org-timeline-step">
-                <div class="org-timeline-dot">4</div>
-                <div class="org-timeline-label"><strong>Review &amp; Sign</strong>Before Apr 15</div>
+        <div class="org-dashboard">
+          <div class="org-not-ready">
+            <div class="nr-icon">📋</div>
+            <div class="nr-title">Your ${escHtml(year)} Tax Organizer Is Being Prepared</div>
+            <div class="nr-sub">
+              We're working on your personalized document checklist. Check back soon — you'll receive an email once it's ready.
+            </div>
+            <div style="margin-top:1.5rem;">
+              <div class="org-timeline">
+                <div class="org-timeline-step">
+                  <div class="org-timeline-dot active">→</div>
+                  <div class="org-timeline-label"><strong>Organizer Prep</strong>Jan – Feb</div>
+                </div>
+                <div class="org-timeline-step">
+                  <div class="org-timeline-dot">2</div>
+                  <div class="org-timeline-label"><strong>You Gather Docs</strong>Feb – Mar</div>
+                </div>
+                <div class="org-timeline-step">
+                  <div class="org-timeline-dot">3</div>
+                  <div class="org-timeline-label"><strong>We Prepare Return</strong>Mar – Apr</div>
+                </div>
+                <div class="org-timeline-step">
+                  <div class="org-timeline-dot">4</div>
+                  <div class="org-timeline-label"><strong>Review &amp; Sign</strong>Before Apr 15</div>
+                </div>
               </div>
             </div>
           </div>
+          ${renderPriorYearsAccordion(priorYears)}
         </div>
       `;
     }
 
-    function renderOrganizerDashboard(wrap, data, year) {
+    function renderOrganizerSubmitted(wrap, organizer, year, priorYears) {
+      const submittedDate = organizer.submitted_at
+        ? new Date(organizer.submitted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+        : '';
+      wrap.innerHTML = `
+        <div class="org-dashboard">
+          <div class="org-hero submitted">
+            <div class="org-hero-top">
+              <div>
+                <div class="org-hero-title">✅ All Done for ${escHtml(year)}!</div>
+                <div class="org-hero-sub">
+                  ${submittedDate ? `Submitted ${submittedDate}. ` : ''}We have everything we need and are preparing your return. We'll be in touch when it's ready for your review.
+                </div>
+              </div>
+              <span class="org-status-chip submitted">✓ Submitted to Sentinel</span>
+            </div>
+            <a href="/organizer.html?year=${year}" class="btn-organizer" style="text-decoration:none;margin-top:0.5rem;">📄 View Submitted Organizer</a>
+          </div>
+
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;">
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:1rem;">${escHtml(year)} Tax Season Timeline</div>
+            <div class="org-timeline">
+              <div class="org-timeline-step"><div class="org-timeline-dot done">✓</div><div class="org-timeline-label"><strong>Organizer Sent</strong>Jan – Feb</div></div>
+              <div class="org-timeline-step"><div class="org-timeline-dot done">✓</div><div class="org-timeline-label"><strong>Docs Gathered</strong>Feb – Mar</div></div>
+              <div class="org-timeline-step"><div class="org-timeline-dot active">→</div><div class="org-timeline-label"><strong>Return Prepared</strong>Mar – Apr</div></div>
+              <div class="org-timeline-step"><div class="org-timeline-dot">4</div><div class="org-timeline-label"><strong>Review &amp; Sign</strong>Before Apr 15</div></div>
+            </div>
+          </div>
+
+          ${renderPriorYearsAccordion(priorYears)}
+        </div>
+      `;
+    }
+
+    function renderOrganizerClosed(wrap, year, priorYears) {
+      const nextYear = String(parseInt(year) + 1);
+      wrap.innerHTML = `
+        <div class="org-dashboard">
+          <div class="org-hero submitted">
+            <div class="org-hero-top">
+              <div>
+                <div class="org-hero-title">🎉 See You for ${escHtml(nextYear)}!</div>
+                <div class="org-hero-sub">
+                  Your ${escHtml(year)} tax season is complete. We'll reach out when your ${escHtml(nextYear)} organizer is ready.
+                </div>
+              </div>
+              <span class="org-status-chip reviewed">✓ Season Closed</span>
+            </div>
+          </div>
+          ${renderPriorYearsAccordion(priorYears)}
+        </div>
+      `;
+    }
+
+    function renderOrganizerDashboard(wrap, data, year, priorYears, isReopened) {
       const { organizer, items, progress } = data;
-      const isSubmitted = ['submitted', 'reviewed'].includes(organizer.status);
       const firstName = _me?.firstName || 'there';
 
-      const statusChipClass = organizer.status || 'not_started';
-      const statusLabel = {
-        pending: 'Not Started',
-        in_progress: `${progress.resolved} of ${progress.total} documents resolved`,
-        submitted: '✓ Submitted to Sentinel',
-        reviewed: '✓ Reviewed by Sentinel',
-        not_started: 'Not Started',
-      }[organizer.status] || organizer.status;
-
-      // Timeline step
-      const tlStep = isSubmitted ? 3 : organizer.status === 'in_progress' ? 2 : 1;
-
-      // Items preview — mix of resolved and pending
       const actionable = items.filter(i => !i.sentinel_provides);
-      const uploaded = actionable.filter(i => i.status === 'uploaded');
-      const nty = actionable.filter(i => i.status === 'not_this_year');
       const pending = actionable.filter(i => i.status === 'pending');
       const sentinel = items.filter(i => i.sentinel_provides);
 
-      // Show ALL actionable items in a 3-column grid
+      const statusLabel = {
+        pending: 'Not Started',
+        in_progress: `${progress.resolved} of ${progress.total} documents resolved`,
+        reopened: '⚠ Additional Docs Requested',
+      }[organizer.status] || organizer.status;
+
+      const tlStep = organizer.status === 'in_progress' || isReopened ? 2 : 1;
+
       const itemsHtml = actionable.length ? `
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.3rem 1rem;margin-bottom:0.5rem;">
           ${actionable.map(item => `
@@ -2129,35 +2231,42 @@
         </div>
       ` : '';
 
-      const ctaLabel = isSubmitted ? '📄 View Submitted Organizer' : progress.resolved > 0 ? '▶ Continue Organizer' : '▶ Start Organizer';
-      const heroClass = isSubmitted ? 'org-hero submitted' : progress.percent === 100 ? 'org-hero all-done' : 'org-hero';
+      const ctaLabel = progress.resolved > 0 ? '▶ Continue Organizer' : '▶ Start Organizer';
 
       wrap.innerHTML = `
         <div class="org-dashboard">
 
-          <!-- Hero card -->
-          <div class="${heroClass}">
+          ${isReopened && organizer.reopen_note ? `
+          <div style="background:rgba(255,180,0,0.08);border:1.5px solid rgba(255,180,0,0.35);border-radius:12px;padding:1rem 1.25rem;display:flex;align-items:flex-start;gap:0.75rem;">
+            <span style="font-size:1.3rem;flex-shrink:0;">⚠️</span>
+            <div>
+              <div style="font-weight:700;font-size:0.9rem;color:var(--text);margin-bottom:0.2rem;">Your advisor has requested additional documents</div>
+              <div style="font-size:0.84rem;color:var(--muted);">"${escHtml(organizer.reopen_note)}"</div>
+            </div>
+          </div>
+          ` : isReopened ? `
+          <div style="background:rgba(255,180,0,0.08);border:1.5px solid rgba(255,180,0,0.35);border-radius:12px;padding:1rem 1.25rem;">
+            <span style="font-size:0.9rem;font-weight:600;color:var(--text);">⚠️ Your advisor has reopened your organizer for additional documents.</span>
+          </div>
+          ` : ''}
+
+          <div class="org-hero">
             <div class="org-hero-top">
               <div>
-                <div class="org-hero-title">📋 ${year} Tax Organizer</div>
+                <div class="org-hero-title">📋 ${escHtml(year)} Tax Organizer</div>
                 <div class="org-hero-sub">
-                  ${isSubmitted
-                    ? `Submitted on ${new Date(organizer.submitted_at).toLocaleDateString('en-US',{month:'long',day:'numeric'})}. We're reviewing your documents.`
-                    : organizer.status === 'in_progress'
-                      ? `Hi ${escHtml(firstName)}, you've made progress! ${pending.length} item${pending.length !== 1 ? 's' : ''} still need${pending.length === 1 ? 's' : ''} your attention.`
-                      : `Hi ${escHtml(firstName)}, your ${year} document checklist is ready. Complete it to get your return started.`
-                  }
+                  ${organizer.status === 'in_progress' || isReopened
+                    ? `Hi ${escHtml(firstName)}, you've made progress! ${pending.length} item${pending.length !== 1 ? 's' : ''} still need${pending.length === 1 ? 's' : ''} your attention.`
+                    : `Hi ${escHtml(firstName)}, your ${escHtml(year)} document checklist is ready. Complete it to get your return started.`}
                 </div>
               </div>
-              <span class="org-status-chip ${statusChipClass}">${statusLabel}</span>
+              <span class="org-status-chip ${organizer.status}">${statusLabel}</span>
             </div>
 
-            ${!isSubmitted ? `
             <div class="org-progress-row">
               <div class="org-progress-bar"><div class="org-progress-fill" style="width:${progress.percent}%"></div></div>
               <div class="org-progress-label"><strong>${progress.resolved}</strong> of <strong>${progress.total}</strong> resolved</div>
             </div>
-            ` : ''}
 
             ${itemsHtml ? `<div class="org-items-preview">${itemsHtml}</div>` : ''}
 
@@ -2167,31 +2276,19 @@
             </div>
           </div>
 
-          <!-- Tax season timeline -->
           <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;">
-            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:1rem;">2025 Tax Season Timeline</div>
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:1rem;">${escHtml(year)} Tax Season Timeline</div>
             <div class="org-timeline">
+              <div class="org-timeline-step"><div class="org-timeline-dot done">✓</div><div class="org-timeline-label"><strong>Organizer Sent</strong>Jan – Feb</div></div>
               <div class="org-timeline-step">
-                <div class="org-timeline-dot done">✓</div>
-                <div class="org-timeline-label"><strong>Organizer Sent</strong>Jan – Feb</div>
-              </div>
-              <div class="org-timeline-step">
-                <div class="org-timeline-dot ${tlStep >= 2 ? 'done' : tlStep === 2 ? 'active' : ''}">${tlStep > 2 ? '✓' : '2'}</div>
+                <div class="org-timeline-dot ${tlStep >= 2 ? 'active' : ''}">${tlStep >= 2 ? '→' : '2'}</div>
                 <div class="org-timeline-label"><strong>Gather Documents</strong>Feb – Mar</div>
               </div>
-              <div class="org-timeline-step">
-                <div class="org-timeline-dot ${tlStep >= 3 ? 'done' : tlStep === 3 ? 'active' : ''}">${tlStep > 3 ? '✓' : '3'}</div>
-                <div class="org-timeline-label"><strong>Return Prepared</strong>Mar – Apr</div>
-              </div>
-              <div class="org-timeline-step">
-                <div class="org-timeline-dot ${tlStep >= 4 ? 'done' : ''}">${tlStep >= 4 ? '✓' : '4'}</div>
-                <div class="org-timeline-label"><strong>Review &amp; Sign</strong>Before Apr 15</div>
-              </div>
+              <div class="org-timeline-step"><div class="org-timeline-dot">3</div><div class="org-timeline-label"><strong>Return Prepared</strong>Mar – Apr</div></div>
+              <div class="org-timeline-step"><div class="org-timeline-dot">4</div><div class="org-timeline-label"><strong>Review &amp; Sign</strong>Before Apr 15</div></div>
             </div>
           </div>
 
-          <!-- What to have ready -->
-          ${!isSubmitted ? `
           <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;">
             <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">Tips for Gathering Your Documents</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem 1.5rem;">
@@ -2201,7 +2298,8 @@
               <div style="font-size:0.82rem;color:var(--muted);display:flex;gap:0.5rem;"><span style="color:var(--gold);">→</span>Mark items "Not This Year" if they no longer apply</div>
             </div>
           </div>
-          ` : ''}
+
+          ${renderPriorYearsAccordion(priorYears)}
 
         </div>
       `;
