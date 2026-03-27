@@ -632,7 +632,7 @@ router.post('/client/:year/submit', requirePortal, async (req, res) => {
         const ntyCount = items.filter(i => i.status === 'not_this_year').length;
         const sentinelCount = items.filter(i => i.sentinel_provides).length;
         await resend.emails.send({
-          from: `${firm?.name || 'DarkLion'} <messages@sentineltax.co>`,
+          from: process.env.RESEND_FROM || `${firm?.name || 'DarkLion'} <messages@sentineltax.co>`,
           to: notifyEmail,
           subject: `[Organizer Submitted] ${clientName} — ${year}`,
           html: `
