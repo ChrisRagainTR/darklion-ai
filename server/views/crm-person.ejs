@@ -393,8 +393,8 @@
   .tsm-est-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
   .tsm-est-table th { text-align:left; color:var(--muted); font-weight:700; font-size:0.7rem; text-transform:uppercase; padding:0.3rem 0.5rem; border-bottom:1px solid var(--border); }
   .tsm-est-table td { padding:0.35rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.04); }
-  .workflow-job-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; cursor: pointer; transition: border-color 0.15s; }
-  .workflow-job-card:hover { border-color: var(--gold); }
+  .workflow-job-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; cursor: default; }
+  .workflow-job-card:hover { border-color: rgba(201,168,76,0.3); }
   </style>
 
 <div id="tab-communication" class="tab-content" style="padding:0;overflow:hidden;">
@@ -792,10 +792,10 @@
       ? `<button onclick="event.stopPropagation();moveJobStage(${j.id},'${esc(j.pipeline_name)}${j.tax_year?' '+j.tax_year:''}',${nextStage.id},'${esc(nextStage.name)}')" title="Move forward to: ${esc(nextStage.name)}" style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.25);border-radius:6px;padding:0.3rem 0.6rem;cursor:pointer;color:var(--gold);font-size:0.75rem;display:flex;align-items:center;gap:0.3rem;white-space:nowrap;">${esc(nextStage.name)} →</button>`
       : `<span style="font-size:0.72rem;color:rgba(255,255,255,0.2);">Final stage</span>`;
 
-    return `<div class="workflow-job-card" style="flex-direction:column;align-items:stretch;gap:0.75rem;padding:1rem 1.25rem;cursor:default;">
+    return `<div class="workflow-job-card" style="flex-direction:column;align-items:stretch;gap:0.75rem;padding:1rem 1.25rem;cursor:default;" onclick="">
       <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
         <div style="flex:1;min-width:180px;">
-          <div style="font-weight:700;font-size:0.95rem;cursor:pointer;" onclick="window.location.href='/pipelines?job=${j.id}'">${esc(j.pipeline_name)}${yearBadge}</div>
+          <div style="font-weight:700;font-size:0.95rem;">${esc(j.pipeline_name)}${yearBadge}</div>
           ${lastUpdate}
         </div>
         <div style="text-align:center;min-width:130px;">
