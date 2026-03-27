@@ -1526,11 +1526,11 @@
           : item.status === 'not_this_year' ? `<span style="font-size:0.65rem;color:var(--muted);">Not This Year</span>`
           : `<span style="font-size:0.65rem;color:rgba(255,255,255,0.25);">Pending</span>`;
         const acct = item.account_number ? ` <span style="color:var(--muted);font-size:0.72rem;">(···${item.account_number.replace(/\*/g,'').slice(-4)})</span>` : '';
-        return `<div id="adv-item-${item.id}" style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;border-radius:6px;" onmouseenter="this.style.background='rgba(255,255,255,0.03)';this.querySelector('.adv-item-del').style.opacity='1'" onmouseleave="this.style.background='';this.querySelector('.adv-item-del').style.opacity='0'">
+        return `<div id="adv-item-${item.id}" style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;border-radius:6px;" onmouseenter="this.style.background='rgba(255,255,255,0.03)'" onmouseleave="this.style.background=''">
           <span style="color:${color};font-size:0.8rem;width:14px;text-align:center;flex-shrink:0;">${icon}</span>
           <span style="flex:1;font-size:0.83rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(item.payer_name)}${acct}</span>
           ${badge}
-          <button class="adv-item-del" onclick="deleteAdvItem(${item.id},'${year}')" title="Remove item" style="opacity:0;transition:opacity 0.15s;background:none;border:none;cursor:pointer;color:var(--muted);font-size:0.8rem;padding:0.1rem 0.25rem;border-radius:3px;flex-shrink:0;" onmouseenter="this.style.color='var(--red)'" onmouseleave="this.style.color='var(--muted)'">🗑</button>
+          <button class="adv-item-del" onclick="deleteAdvItem(${item.id},'${year}')" title="Remove item" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:0.8rem;padding:0.1rem 0.25rem;border-radius:3px;flex-shrink:0;" onmouseenter="this.style.color='var(--red)'" onmouseleave="this.style.color='var(--muted)'">🗑</button>
         </div>`;
       }).join('');
       return `<div style="margin-bottom:1rem;">
