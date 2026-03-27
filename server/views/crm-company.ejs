@@ -913,6 +913,11 @@
 
 <script>
   const companyId = location.pathname.split('/').pop();
+  // Show success toast if redirected back from QBO connect
+  if (new URLSearchParams(location.search).get('connected') === '1') {
+    history.replaceState({}, '', location.pathname);
+    setTimeout(() => { if (typeof window._shellToast === 'function') window._shellToast('QuickBooks connected successfully!'); }, 800);
+  }
   const token = localStorage.getItem('dl_token');
   if (!token) window.location.href = '/login';
 
@@ -944,9 +949,13 @@
     if (name === 'docs') loadDocs();
     if (name === 'tax') loadTax(true);
     if (name === 'bookkeeping') {
-      if (bookkeepingRealm) bk_initBookkeeping();
-      else { /* wait for company to load, then init */ window._bkPendingInit = true; }
-
+      if (bookkeepingRealm) {
+        bk_initBookkeeping();
+      } else if (companyData) {
+        bk_showConnectCard();
+      } else {
+        window._bkPendingInit = true;
+      }
     }
     if (name === 'communication') initCoComm();
     const mainEl = document.querySelector('.main');
@@ -1046,11 +1055,14 @@
       if (res.status === 404 || res.status === 403) { window.location.href = '/404'; return; }
       if (!res.ok) { document.getElementById('entity-name').textContent = 'Error loading'; return; }
       companyData = await res.json();
-      bookkeepingRealm = companyData.realm_id || null;
+      bookkeepingRealm = companyData.qbo_connected ? (companyData.realm_id || null) : null;
       renderHeader(companyData);
       renderOverview(companyData);
       // If bookkeeping tab was clicked before company loaded, init now
-      if (window._bkPendingInit) { window._bkPendingInit = false; bk_initBookkeeping(); }
+      if (window._bkPendingInit) {
+        window._bkPendingInit = false;
+        if (bookkeepingRealm) bk_initBookkeeping(); else bk_showConnectCard();
+      }
     } catch(e) {
       console.error('loadCompany error:', e);
       document.getElementById('entity-name').textContent = 'Error loading';
@@ -1073,7 +1085,7 @@
     if (c.status === 'active') html += ` <span class="badge badge-green">Active</span>`;
     if (c.status === 'inactive') html += ` <span class="badge badge-muted">Inactive</span>`;
     if (c.status === 'dissolved') html += ` <span class="badge badge-red">Dissolved</span>`;
-    if (c.realm_id) html += ` <span class="badge badge-green">QBO Connected</span>`;
+    if (c.qbo_connected) html += ` <span class="badge badge-green">QBO Connected</span>`;
     if (c.bookkeeping_service && c.bookkeeping_service !== 'none') {
       const bkLabel = { bank_feed: 'Bank Feed', accrual: 'Accrual', client_prepared: 'Client Prepared' }[c.bookkeeping_service] || c.bookkeeping_service;
       html += ` <span class="badge" style="background:rgba(74,144,217,0.15);color:#4a90d9;border:1px solid rgba(74,144,217,0.3);">📒 ${esc(bkLabel)}</span>`;
@@ -1209,7 +1221,7 @@
       <div id="ov-bk-save-msg" style="font-size:0.75rem;color:var(--green);height:1rem;margin-bottom:0.5rem;"></div>
       <div style="border-top:1px solid var(--border);padding-top:0.65rem;margin-top:0.25rem;">
         <div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:0.4rem;">QuickBooks Online</div>
-        ${c.realm_id
+        ${c.qbo_connected
           ? `<div style="display:flex;align-items:center;gap:0.5rem;"><span class="badge badge-green">Connected</span>${c.last_sync_at ? `<span style="font-size:0.75rem;color:var(--muted);">Last sync: ${new Date(c.last_sync_at).toLocaleDateString()}</span>` : ''}</div>`
           : `<span style="font-size:0.82rem;color:var(--muted);">Not connected</span>`
         }
@@ -1235,7 +1247,7 @@
     let qlHtml = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Quick Links</div>`;
     const links = [];
 
-    if (c.realm_id) links.push(`<a href="https://qbo.intuit.com" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.5rem;color:var(--gold);font-size:0.84rem;padding:0.3rem 0;text-decoration:none;">💼 QuickBooks Online</a>`);
+    if (c.qbo_connected) links.push(`<a href="https://qbo.intuit.com" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.5rem;color:var(--gold);font-size:0.84rem;padding:0.3rem 0;text-decoration:none;">💼 QuickBooks Online</a>`);
     if (!links.length) qlHtml += `<div style="color:var(--muted);font-size:0.82rem;font-style:italic;">No quick links configured.</div>`;
     else qlHtml += links.join('');
     qlEl.innerHTML = qlHtml;
@@ -2169,6 +2181,27 @@
     guardEl.innerHTML = '';
     if (mainEl) mainEl.style.display = '';
     return true;
+  }
+
+  function bk_showConnectCard() {
+    const tab = document.getElementById('tab-bookkeeping');
+    if (!tab) return;
+    let firmId = '';
+    try { firmId = JSON.parse(atob(token.split('.')[1])).firmId || ''; } catch(e) {}
+    const connectUrl = `/connect?company_id=${companyId}&firm_id=${firmId}`;
+    tab.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:340px;text-align:center;padding:3rem 2rem;">
+        <div style="font-size:3.5rem;margin-bottom:1rem;line-height:1;">📒</div>
+        <div style="font-size:1.15rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">Connect QuickBooks Online</div>
+        <div style="font-size:0.88rem;color:var(--muted);max-width:420px;line-height:1.6;margin-bottom:1.75rem;">
+          Link this company's QuickBooks Online account to see close packages, uncategorized transactions, variance reports, and more — all inside DarkLion.
+        </div>
+        <a href="${connectUrl}" class="btn btn-gold" style="font-size:0.95rem;padding:0.65rem 1.75rem;text-decoration:none;">
+          🔗 Connect to QuickBooks
+        </a>
+        <div style="font-size:0.75rem;color:rgba(143,163,184,0.5);margin-top:1rem;">You'll be redirected to Intuit to authorize access</div>
+      </div>
+    `;
   }
 
   function bk_initBookkeeping() {

@@ -911,5 +911,35 @@ router.get('/webdav-token', requireFirm, async (req, res) => {
   }
 });
 
+// ── GET /firms/tax-season — get active tax year ────────────────────────────
+router.get('/tax-season', requireFirm, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT active_tax_year FROM firms WHERE id = $1',
+      [req.firm.id]
+    );
+    res.json({ active_tax_year: rows[0]?.active_tax_year || '2025' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch tax season settings' });
+  }
+});
+
+// ── PUT /firms/tax-season — update active tax year ────────────────────────────
+router.put('/tax-season', requireFirm, async (req, res) => {
+  try {
+    const { active_tax_year } = req.body;
+    if (!active_tax_year || !/^\d{4}$/.test(String(active_tax_year))) {
+      return res.status(400).json({ error: 'active_tax_year must be a 4-digit year' });
+    }
+    const { rows } = await pool.query(
+      'UPDATE firms SET active_tax_year = $1 WHERE id = $2 RETURNING active_tax_year',
+      [String(active_tax_year), req.firm.id]
+    );
+    res.json({ active_tax_year: rows[0].active_tax_year });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update tax season settings' });
+  }
+});
+
 module.exports = router;
 module.exports.auditLog = auditLog;

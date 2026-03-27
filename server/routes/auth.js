@@ -56,26 +56,42 @@ router.get('/callback', async (req, res) => {
       // Non-fatal — we just won't have the name
     }
 
-    // Extract firm_id from state parameter (format: "firmId:randomNonce" or just firmId)
+    // Extract firm_id and company_id from state (format: "firmId:companyId:nonce" or "firmId:nonce" or just firmId)
     let firmId = null;
+    let darklionCompanyId = null;
     if (state) {
       const parts = state.split(':');
       const parsed = parseInt(parts[0], 10);
       if (!isNaN(parsed) && parsed > 0) firmId = parsed;
+      if (parts.length >= 3) {
+        const cid = parseInt(parts[1], 10);
+        if (!isNaN(cid) && cid > 0) darklionCompanyId = cid;
+      }
     }
 
-    // Upsert company — associate with firm if firmId present
-    await pool.query(`
-      INSERT INTO companies (realm_id, company_name, access_token, refresh_token, token_expires_at, firm_id)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      ON CONFLICT(realm_id) DO UPDATE SET
-        company_name = EXCLUDED.company_name,
-        access_token = EXCLUDED.access_token,
-        refresh_token = EXCLUDED.refresh_token,
-        token_expires_at = EXCLUDED.token_expires_at,
-        connected_at = NOW(),
-        firm_id = COALESCE(EXCLUDED.firm_id, companies.firm_id)
-    `, [realmId, companyName, tokens.access_token, tokens.refresh_token, expiresAt, firmId]);
+    // If we have a specific DarkLion company_id, update that record with the realm/tokens
+    if (darklionCompanyId) {
+      await pool.query(`
+        UPDATE companies SET
+          realm_id = $1, company_name = COALESCE(NULLIF($2,''), company_name),
+          access_token = $3, refresh_token = $4, token_expires_at = $5,
+          connected_at = NOW(), firm_id = COALESCE($6, firm_id)
+        WHERE id = $7
+      `, [realmId, companyName, tokens.access_token, tokens.refresh_token, expiresAt, firmId, darklionCompanyId]);
+    } else {
+      // No specific company — upsert by realm_id (new connection)
+      await pool.query(`
+        INSERT INTO companies (realm_id, company_name, access_token, refresh_token, token_expires_at, firm_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT(realm_id) DO UPDATE SET
+          company_name = EXCLUDED.company_name,
+          access_token = EXCLUDED.access_token,
+          refresh_token = EXCLUDED.refresh_token,
+          token_expires_at = EXCLUDED.token_expires_at,
+          connected_at = NOW(),
+          firm_id = COALESCE(EXCLUDED.firm_id, companies.firm_id)
+      `, [realmId, companyName, tokens.access_token, tokens.refresh_token, expiresAt, firmId]);
+    }
 
     // Audit log
     try {
@@ -83,6 +99,10 @@ router.get('/callback', async (req, res) => {
       await auditLog(firmId, 'company_connect', `Connected: ${companyName || realmId} (realm: ${realmId})`, req.ip);
     } catch (e) { /* non-fatal */ }
 
+    // Redirect back to the company page if we know which one, else show success
+    if (darklionCompanyId) {
+      return res.redirect(`/crm/company/${darklionCompanyId}?connected=1`);
+    }
     res.json({ ok: true, company: companyName || realmId });
 
     // Run initial scans in background (non-blocking)

@@ -682,6 +682,72 @@
       font-style: italic;
     }
 
+    /* === ORGANIZER DASHBOARD === */
+    .org-dashboard { display: flex; flex-direction: column; gap: 1rem; }
+    .org-hero {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.5rem;
+    }
+    .org-hero.all-done { border-color: rgba(62,207,142,0.35); background: rgba(62,207,142,0.04); }
+    .org-hero.submitted { border-color: rgba(62,207,142,0.35); background: rgba(62,207,142,0.04); }
+    .org-hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .org-hero-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .org-hero-sub { font-size: 0.82rem; color: var(--muted); margin-top: 0.25rem; line-height: 1.5; }
+    .org-status-chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em;
+      padding: 0.3rem 0.75rem; border-radius: 20px;
+      white-space: nowrap;
+    }
+    .org-status-chip.pending { background: rgba(201,168,76,0.12); color: var(--gold); }
+    .org-status-chip.in_progress { background: rgba(66,153,225,0.12); color: #63b3ed; }
+    .org-status-chip.submitted { background: rgba(62,207,142,0.12); color: var(--green); }
+    .org-status-chip.reviewed { background: rgba(62,207,142,0.12); color: var(--green); }
+    .org-status-chip.not_started { background: rgba(143,163,184,0.1); color: var(--muted); }
+    .org-progress-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    .org-progress-bar { flex: 1; height: 8px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; }
+    .org-progress-fill { height: 100%; border-radius: 4px; background: var(--green); transition: width 0.4s; }
+    .org-progress-label { font-size: 0.82rem; color: var(--muted); white-space: nowrap; }
+    .org-progress-label strong { color: var(--text); }
+    .org-items-preview { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.9rem; margin-bottom: 1rem; }
+    .org-item-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0; font-size: 0.83rem; }
+    .org-item-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .org-item-dot.uploaded { background: var(--green); }
+    .org-item-dot.not_this_year { background: var(--muted); }
+    .org-item-dot.pending { background: rgba(255,255,255,0.15); border: 1px solid var(--border); }
+    .org-item-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+    .org-item-tag { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* Timeline */
+    .org-timeline { display: flex; gap: 0; align-items: stretch; }
+    .org-timeline-step { flex: 1; text-align: center; position: relative; }
+    .org-timeline-step::before {
+      content: ''; position: absolute; top: 14px; left: 50%; right: -50%;
+      height: 2px; background: rgba(255,255,255,0.08);
+    }
+    .org-timeline-step:last-child::before { display: none; }
+    .org-timeline-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(255,255,255,0.06); border: 2px solid rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; margin: 0 auto 0.5rem;
+      position: relative; z-index: 1;
+      transition: all 0.2s;
+    }
+    .org-timeline-dot.done { background: var(--green); border-color: var(--green); color: white; }
+    .org-timeline-dot.active { background: rgba(201,168,76,0.2); border-color: var(--gold); color: var(--gold); }
+    .org-timeline-label { font-size: 0.7rem; color: var(--muted); line-height: 1.3; }
+    .org-timeline-label strong { display: block; color: var(--text); font-size: 0.72rem; }
+
+    /* No organizer state */
+    .org-not-ready {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 2rem 1.5rem; text-align: center;
+    }
+    .org-not-ready .nr-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .org-not-ready .nr-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 0.4rem; }
+    .org-not-ready .nr-sub { font-size: 0.85rem; color: var(--muted); line-height: 1.6; max-width: 420px; margin: 0 auto; }
+
     /* ── MESSAGES ─────────────────────────────────────────── */
     .chat-layout { display: flex; height: calc(100vh - 160px); }
     .chat-contacts { width: 280px; flex-shrink: 0; border-right: 1px solid var(--border); overflow-y: auto; background: var(--card); border: 1px solid var(--border); border-radius: 12px 0 0 12px; }
@@ -957,12 +1023,8 @@
 
     <!-- ── ORGANIZERS TAB ─────────────────────────────────── -->
     <div class="tab-panel" id="tab-organizers">
-      <div style="font-size:0.95rem; color:var(--muted); margin-bottom:1.25rem;">Tax organizer links from your advisory team</div>
-      <div class="organizer-grid" id="organizerGrid">
-        <div class="empty-state">
-          <div class="ei">🔗</div>
-          <div>Loading organizers…</div>
-        </div>
+      <div id="dlOrganizerWrap">
+        <div class="empty-state"><div class="ei">⏳</div><div>Loading your organizer…</div></div>
       </div>
     </div>
 
@@ -1184,7 +1246,7 @@
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById(`tab-${tab}`).classList.add('active');
-        if (tab === 'organizers' && _stanford === null) loadOrganizers();
+        if (tab === 'organizers') loadOrganizers();
         if (tab === 'messages') initChat();
         if (tab === 'review-sign') loadTaxDeliveries();
         // Leave wide-mode only when on a company bookkeeping subtab
@@ -1493,6 +1555,21 @@
 
       try {
         const data = await api(`/portal/companies/${coId}/close-packages`);
+
+        // No QBO connection — show connect prompt
+        if (!data.ytd && !data.prior && data.ytd !== undefined) {
+          container.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;text-align:center;padding:3rem 2rem;">
+              <div style="font-size:3rem;margin-bottom:1rem;line-height:1;">📒</div>
+              <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">QuickBooks Not Connected</div>
+              <div style="font-size:0.86rem;color:var(--muted);max-width:380px;line-height:1.6;margin-bottom:1.5rem;">
+                Your advisor hasn't connected QuickBooks Online for this company yet. Once connected, you'll see your financial summaries here.
+              </div>
+              <div style="font-size:0.78rem;color:rgba(143,163,184,0.5);">Contact your advisor to get set up.</div>
+            </div>`;
+          return;
+        }
+
         const currentYear = data.currentYear || new Date().getFullYear();
         const priorYearNum = data.priorYearNum || (currentYear - 1);
 
@@ -1980,72 +2057,272 @@
 
     // ── ORGANIZERS ────────────────────────────────────────
     async function loadOrganizers() {
-      const grid = document.getElementById('organizerGrid');
-      grid.innerHTML = '<div class="empty-state"><div class="ei">⏳</div><div>Loading…</div></div>';
-      try {
-        _stanford = await api('/portal/stanford-tax');
-      } catch (e) {
-        _stanford = { personal_url: null, companies: [] };
-      }
-      renderOrganizers();
-    }
+      const wrap = document.getElementById('dlOrganizerWrap');
+      if (!wrap) return;
 
-    function renderOrganizers() {
-      const grid = document.getElementById('organizerGrid');
-      const cards = [];
+      // Use firm's active tax year (from /portal/me), fall back to 2025
+      const year = _me?.activeTaxYear || '2025';
 
-      // Personal card
-      const firstName = _me?.firstName || 'My';
-      if (_stanford?.personal_url) {
-        cards.push(`
-          <div class="organizer-card">
-            <div class="oc-icon">👤</div>
-            <div>
-              <div class="oc-label">Personal</div>
-              <div class="oc-name">${escHtml(firstName)}'s Tax Organizer</div>
-            </div>
-            <a class="btn-organizer" href="${escHtml(_stanford.personal_url)}" target="_blank" rel="noopener">
-              Open My Organizer →
-            </a>
-          </div>
-        `);
+      // Load active organizer + all years in parallel
+      const [activeResult, allYears] = await Promise.all([
+        api(`/portal/organizer/client/${year}`).catch(e => ({ _error: e.message })),
+        api('/portal/organizer/all-years').catch(() => []),
+      ]);
+
+      // Separate prior years (all years except active)
+      const priorYears = Array.isArray(allYears)
+        ? allYears.filter(o => o.tax_year !== year)
+        : [];
+
+      // Determine which state to show for the active year
+      if (activeResult._error) {
+        // No organizer for active year yet
+        renderOrganizerNoRecord(wrap, year, priorYears);
       } else {
-        cards.push(`
-          <div class="organizer-card">
-            <div class="oc-icon">👤</div>
-            <div>
-              <div class="oc-label">Personal</div>
-              <div class="oc-name">${escHtml(firstName)}'s Tax Organizer</div>
-            </div>
-            <p class="organizer-pending">Your organizer link will appear here when ready.</p>
-          </div>
-        `);
-      }
-
-      // Company cards
-      (_stanford?.companies || []).forEach(co => {
-        cards.push(`
-          <div class="organizer-card">
-            <div class="oc-icon">🏢</div>
-            <div>
-              <div class="oc-label">Business</div>
-              <div class="oc-name">${escHtml(co.company_name)}</div>
-            </div>
-            <a class="btn-organizer" href="${escHtml(co.url)}" target="_blank" rel="noopener">
-              Open Organizer →
-            </a>
-          </div>
-        `);
-      });
-
-      if (!cards.length) {
-        grid.innerHTML = '<div class="empty-state"><div class="ei">🔗</div><div>No organizer links available yet.</div></div>';
-      } else {
-        grid.innerHTML = cards.join('');
+        const { organizer } = activeResult;
+        if (['closed', 'submitted', 'reviewed'].includes(organizer.status)) {
+          // submitted now auto-closes — treat submitted/reviewed same as closed
+          renderOrganizerClosed(wrap, year, priorYears, organizer);
+        } else if (organizer.status === 'reopened') {
+          renderOrganizerDashboard(wrap, activeResult, year, priorYears, true);
+        } else {
+          // pending or in_progress
+          renderOrganizerDashboard(wrap, activeResult, year, priorYears, false);
+        }
       }
     }
 
-    // ── UPLOAD ────────────────────────────────────────────
+    function renderPriorYearsAccordion(priorYears) {
+      if (!priorYears || !priorYears.length) return '';
+      const rows = priorYears.map(o => {
+        const submittedDate = o.submitted_at
+          ? new Date(o.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : '—';
+        const statusBadge = {
+          closed: '<span style="color:var(--green);font-size:0.75rem;">✓ Closed</span>',
+          submitted: '<span style="color:var(--green);font-size:0.75rem;">✓ Submitted</span>',
+          reviewed: '<span style="color:var(--green);font-size:0.75rem;">✓ Reviewed</span>',
+        }[o.status] || `<span style="color:var(--muted);font-size:0.75rem;">${o.status}</span>`;
+        const downloadLink = o.workpaper_document_id
+          ? `<a href="/portal/documents/${o.workpaper_document_id}/download" target="_blank" style="font-size:0.78rem;color:var(--gold);text-decoration:none;">📄 Download Workpaper</a>`
+          : `<span style="font-size:0.78rem;color:var(--muted);">No workpaper</span>`;
+        return `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.6rem 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+            <div style="font-weight:700;font-size:0.9rem;">${escHtml(o.tax_year)} Tax Year</div>
+            <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+              ${statusBadge}
+              <span style="font-size:0.78rem;color:var(--muted);">Submitted: ${submittedDate}</span>
+              <span style="font-size:0.78rem;color:var(--muted);">${o.uploaded_count || 0} docs</span>
+              ${downloadLink}
+            </div>
+          </div>`;
+      }).join('');
+
+      return `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-top:0.5rem;">
+          <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.py-chevron').textContent=this.nextElementSibling.style.display==='none'?'▸':'▾';"
+            style="background:none;border:none;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:space-between;padding:0;">
+            <span style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Prior Years</span>
+            <span class="py-chevron" style="color:var(--muted);font-size:0.85rem;">▸</span>
+          </button>
+          <div style="display:none;margin-top:0.75rem;">${rows}</div>
+        </div>`;
+    }
+
+    function renderOrganizerNoRecord(wrap, year, priorYears) {
+      wrap.innerHTML = `
+        <div class="org-dashboard">
+          <div class="org-not-ready">
+            <div class="nr-icon">📋</div>
+            <div class="nr-title">Your ${escHtml(year)} Tax Organizer Is Being Prepared</div>
+            <div class="nr-sub">
+              We're working on your personalized document checklist. Check back soon — you'll receive an email once it's ready.
+            </div>
+            <div style="margin-top:1.5rem;">
+              <div class="org-timeline">
+                <div class="org-timeline-step">
+                  <div class="org-timeline-dot active">→</div>
+                  <div class="org-timeline-label"><strong>Organizer Prep</strong>Jan – Feb</div>
+                </div>
+                <div class="org-timeline-step">
+                  <div class="org-timeline-dot">2</div>
+                  <div class="org-timeline-label"><strong>You Gather Docs</strong>Feb – Mar</div>
+                </div>
+                <div class="org-timeline-step">
+                  <div class="org-timeline-dot">3</div>
+                  <div class="org-timeline-label"><strong>We Prepare Return</strong>Mar – Apr</div>
+                </div>
+                <div class="org-timeline-step">
+                  <div class="org-timeline-dot">4</div>
+                  <div class="org-timeline-label"><strong>Review &amp; Sign</strong>Before Apr 15</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          ${renderPriorYearsAccordion(priorYears)}
+        </div>
+      `;
+    }
+
+    function renderOrganizerSubmitted(wrap, organizer, year, priorYears) {
+      const submittedDate = organizer.submitted_at
+        ? new Date(organizer.submitted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+        : '';
+      wrap.innerHTML = `
+        <div class="org-dashboard">
+          <div class="org-hero submitted">
+            <div class="org-hero-top">
+              <div>
+                <div class="org-hero-title">✅ All Done for ${escHtml(year)}!</div>
+                <div class="org-hero-sub">
+                  ${submittedDate ? `Submitted ${submittedDate}. ` : ''}We have everything we need and are preparing your return. We'll be in touch when it's ready for your review.
+                </div>
+              </div>
+              <span class="org-status-chip submitted">✓ Submitted to Sentinel</span>
+            </div>
+            <a href="/organizer.html?year=${year}" class="btn-organizer" style="text-decoration:none;margin-top:0.5rem;">📄 View Submitted Organizer</a>
+          </div>
+
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;">
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:1rem;">${escHtml(year)} Tax Season Timeline</div>
+            <div class="org-timeline">
+              <div class="org-timeline-step"><div class="org-timeline-dot done">✓</div><div class="org-timeline-label"><strong>Organizer Sent</strong>Jan – Feb</div></div>
+              <div class="org-timeline-step"><div class="org-timeline-dot done">✓</div><div class="org-timeline-label"><strong>Docs Gathered</strong>Feb – Mar</div></div>
+              <div class="org-timeline-step"><div class="org-timeline-dot active">→</div><div class="org-timeline-label"><strong>Return Prepared</strong>Mar – Apr</div></div>
+              <div class="org-timeline-step"><div class="org-timeline-dot">4</div><div class="org-timeline-label"><strong>Review &amp; Sign</strong>Before Apr 15</div></div>
+            </div>
+          </div>
+
+          ${renderPriorYearsAccordion(priorYears)}
+        </div>
+      `;
+    }
+
+    function renderOrganizerClosed(wrap, year, priorYears, organizer) {
+      const nextYear = String(parseInt(year) + 1);
+      const submittedDate = organizer?.submitted_at
+        ? new Date(organizer.submitted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+        : null;
+      wrap.innerHTML = `
+        <div class="org-dashboard">
+          <div class="org-hero submitted">
+            <div class="org-hero-top">
+              <div>
+                <div class="org-hero-title">✅ Organizer Submitted!</div>
+                <div class="org-hero-sub">
+                  ${submittedDate ? `Received on ${escHtml(submittedDate)}. ` : ''}We're reviewing your documents and will be in touch when your ${escHtml(year)} return is ready.
+                </div>
+              </div>
+              <span class="org-status-chip submitted">✓ Submitted</span>
+            </div>
+          </div>
+          ${renderPriorYearsAccordion(priorYears)}
+        </div>
+      `;
+    }
+
+    function renderOrganizerDashboard(wrap, data, year, priorYears, isReopened) {
+      const { organizer, items, progress } = data;
+      const firstName = _me?.firstName || 'there';
+
+      const actionable = items.filter(i => !i.sentinel_provides);
+      const pending = actionable.filter(i => i.status === 'pending');
+      const sentinel = items.filter(i => i.sentinel_provides);
+
+      const statusLabel = {
+        pending: 'Not Started',
+        in_progress: `${progress.resolved} of ${progress.total} documents resolved`,
+        reopened: '⚠ Additional Docs Requested',
+      }[organizer.status] || organizer.status;
+
+      const tlStep = organizer.status === 'in_progress' || isReopened ? 2 : 1;
+
+      const itemsHtml = actionable.length ? `
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.3rem 1rem;margin-bottom:0.5rem;">
+          ${actionable.map(item => `
+            <div style="display:flex;align-items:center;gap:0.4rem;min-width:0;">
+              <div class="org-item-dot ${item.status}" style="flex-shrink:0;"></div>
+              <span style="font-size:0.78rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(item.payer_name)}">${escHtml(item.payer_name)}</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : '';
+
+      const ctaLabel = progress.resolved > 0 ? '▶ Continue Organizer' : '▶ Start Organizer';
+
+      wrap.innerHTML = `
+        <div class="org-dashboard">
+
+          ${isReopened && organizer.reopen_note ? `
+          <div style="background:rgba(255,180,0,0.08);border:1.5px solid rgba(255,180,0,0.35);border-radius:12px;padding:1rem 1.25rem;display:flex;align-items:flex-start;gap:0.75rem;">
+            <span style="font-size:1.3rem;flex-shrink:0;">⚠️</span>
+            <div>
+              <div style="font-weight:700;font-size:0.9rem;color:var(--text);margin-bottom:0.2rem;">Your advisor has requested additional documents</div>
+              <div style="font-size:0.84rem;color:var(--muted);">"${escHtml(organizer.reopen_note)}"</div>
+            </div>
+          </div>
+          ` : isReopened ? `
+          <div style="background:rgba(255,180,0,0.08);border:1.5px solid rgba(255,180,0,0.35);border-radius:12px;padding:1rem 1.25rem;">
+            <span style="font-size:0.9rem;font-weight:600;color:var(--text);">⚠️ Your advisor has reopened your organizer for additional documents.</span>
+          </div>
+          ` : ''}
+
+          <div class="org-hero">
+            <div class="org-hero-top">
+              <div>
+                <div class="org-hero-title">📋 ${escHtml(year)} Tax Organizer</div>
+                <div class="org-hero-sub">
+                  ${organizer.status === 'in_progress' || isReopened
+                    ? `Hi ${escHtml(firstName)}, you've made progress! ${pending.length} item${pending.length !== 1 ? 's' : ''} still need${pending.length === 1 ? 's' : ''} your attention.`
+                    : `Hi ${escHtml(firstName)}, your ${escHtml(year)} document checklist is ready. Complete it to get your return started.`}
+                </div>
+              </div>
+              <span class="org-status-chip ${organizer.status}">${statusLabel}</span>
+            </div>
+
+            <div class="org-progress-row">
+              <div class="org-progress-bar"><div class="org-progress-fill" style="width:${progress.percent}%"></div></div>
+              <div class="org-progress-label"><strong>${progress.resolved}</strong> of <strong>${progress.total}</strong> resolved</div>
+            </div>
+
+            ${itemsHtml ? `<div class="org-items-preview">${itemsHtml}</div>` : ''}
+
+            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+              <a href="/organizer.html?year=${year}" class="btn-organizer" style="text-decoration:none;">${ctaLabel}</a>
+              ${sentinel.length ? `<span style="font-size:0.78rem;color:var(--gold);">🏢 ${sentinel.length} item${sentinel.length!==1?'s':''} provided by Sentinel</span>` : ''}
+            </div>
+          </div>
+
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;">
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:1rem;">${escHtml(year)} Tax Season Timeline</div>
+            <div class="org-timeline">
+              <div class="org-timeline-step"><div class="org-timeline-dot done">✓</div><div class="org-timeline-label"><strong>Organizer Sent</strong>Jan – Feb</div></div>
+              <div class="org-timeline-step">
+                <div class="org-timeline-dot ${tlStep >= 2 ? 'active' : ''}">${tlStep >= 2 ? '→' : '2'}</div>
+                <div class="org-timeline-label"><strong>Gather Documents</strong>Feb – Mar</div>
+              </div>
+              <div class="org-timeline-step"><div class="org-timeline-dot">3</div><div class="org-timeline-label"><strong>Return Prepared</strong>Mar – Apr</div></div>
+              <div class="org-timeline-step"><div class="org-timeline-dot">4</div><div class="org-timeline-label"><strong>Review &amp; Sign</strong>Before Apr 15</div></div>
+            </div>
+          </div>
+
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;">
+            <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">Tips for Gathering Your Documents</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem 1.5rem;">
+              <div style="font-size:0.82rem;color:var(--muted);display:flex;gap:0.5rem;"><span style="color:var(--gold);">→</span>W-2s and 1099s usually arrive by Feb 15</div>
+              <div style="font-size:0.82rem;color:var(--muted);display:flex;gap:0.5rem;"><span style="color:var(--gold);">→</span>K-1s from partnerships often arrive later (Mar–Apr)</div>
+              <div style="font-size:0.82rem;color:var(--muted);display:flex;gap:0.5rem;"><span style="color:var(--gold);">→</span>Upload as you go — you don't have to do it all at once</div>
+              <div style="font-size:0.82rem;color:var(--muted);display:flex;gap:0.5rem;"><span style="color:var(--gold);">→</span>Mark items "Not This Year" if they no longer apply</div>
+            </div>
+          </div>
+
+          ${renderPriorYearsAccordion(priorYears)}
+
+        </div>
+      `;
+    }
+
+        // ── UPLOAD ────────────────────────────────────────────
     const modal = document.getElementById('uploadModal');
     const fileInput = document.getElementById('fileInput');
     const fileDrop = document.getElementById('fileDrop');

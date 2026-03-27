@@ -66,6 +66,13 @@ router.get('/me', async (req, res) => {
     const displayLast  = isSpouse ? (person.spouse_name || '').split(' ').slice(1).join(' ') || person.last_name : person.last_name;
     const displayEmail = isSpouse ? (person.spouse_email || person.email) : person.email;
 
+    // Get firm's active tax year
+    const firmRes = await pool.query(
+      'SELECT active_tax_year FROM firms WHERE id = $1',
+      [person.firm_id]
+    );
+    const activeTaxYear = firmRes.rows[0]?.active_tax_year || '2025';
+
     res.json({
       id: person.id,
       firmId: person.firm_id,
@@ -79,6 +86,7 @@ router.get('/me', async (req, res) => {
       lastLogin: person.portal_last_login_at,
       createdAt: person.created_at,
       signerRole: req.portal.signerRole || 'taxpayer',
+      activeTaxYear,
     });
   } catch (err) {
     console.error('Portal /me error:', err);

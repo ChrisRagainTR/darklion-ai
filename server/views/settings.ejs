@@ -40,7 +40,7 @@
     <button class="settings-tab-btn" onclick="switchTab('domains')">🌐 Custom Domains</button>
     <button class="settings-tab-btn" onclick="switchTab('api-keys')">🔑 API Keys</button>
     <button class="settings-tab-btn" onclick="switchTab('downloads')">⬇️ Downloads</button>
-
+    <button class="settings-tab-btn" onclick="switchTab('tax-season')">🗓 Tax Season</button>
   </div>
 
   <!-- ============ FIRM BRANDING ============ -->
@@ -177,7 +177,6 @@
           </a>
         </div>
       </div>
-    </div>
 
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;display:flex;align-items:center;gap:1.5rem;margin-top:1rem;">
         <div style="font-size:2.5rem;line-height:1;">🖨️</div>
@@ -192,9 +191,36 @@
           </a>
         </div>
       </div>
-
     </div>
   </div><!-- end tab-downloads -->
+
+  <!-- ============ TAX SEASON ============ -->
+  <div class="settings-tab-panel" id="tab-tax-season">
+    <div class="settings-section" style="max-width:560px;">
+      <h2>🗓 Tax Season</h2>
+      <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.5rem;">Set the active tax year for client organizers. When you flip this, the client portal immediately shows the new year's organizer. No deploy needed.</p>
+
+      <label class="form-label" style="display:block;margin-bottom:0.5rem;font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);">Active Tax Year</label>
+      <div style="display:flex;gap:0.75rem;align-items:center;">
+        <select id="active-tax-year-select" class="form-control" style="width:120px;">
+          <option value="2024">2024</option>
+          <option value="2025" selected>2025</option>
+          <option value="2026">2026</option>
+          <option value="2027">2027</option>
+        </select>
+        <button class="btn btn-gold btn-sm" onclick="saveTaxYear()">Save</button>
+        <span id="tax-year-save-msg" style="font-size:0.82rem;color:var(--green);display:none;">✓ Saved</span>
+        <span id="tax-year-err-msg" style="font-size:0.82rem;color:var(--red);display:none;"></span>
+      </div>
+
+      <div style="margin-top:1.25rem;padding:1rem 1.25rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;font-size:0.82rem;color:var(--muted);line-height:1.8;">
+        <div style="font-weight:600;color:var(--text);margin-bottom:0.4rem;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;">What this controls</div>
+        <div>→ Client portal Organizers tab shows the active year</div>
+        <div>→ New Drake organizer uploads default to this year</div>
+        <div>→ Prior years move to the "Prior Years" section on the client portal</div>
+      </div>
+    </div>
+  </div><!-- end tab-tax-season -->
 
 </div><!-- end settings-wrap -->
 
@@ -389,6 +415,7 @@ function switchTab(tab) {
   });
   if (tab === 'api-keys') loadApiTokens();
   if (tab === 'branding') loadBranding();
+  if (tab === 'tax-season') loadTaxSeason();
 }
 
 // WebDAV token functions removed — replaced by DarkLion Drive desktop app
@@ -550,6 +577,38 @@ async function revokeToken(id) {
   if (!res) return;
   if (res.ok) { toast('API key revoked'); loadApiTokens(); }
   else { const err = await res.json(); toast(err.error || 'Failed to revoke key', true); }
+}
+
+// ==================== TAX SEASON ====================
+async function loadTaxSeason() {
+  const res = await apiFetch('/tax-season');
+  if (!res || !res.ok) return;
+  const data = await res.json();
+  const sel = document.getElementById('active-tax-year-select');
+  if (sel && data.active_tax_year) sel.value = data.active_tax_year;
+}
+
+async function saveTaxYear() {
+  const sel = document.getElementById('active-tax-year-select');
+  const saveMsg = document.getElementById('tax-year-save-msg');
+  const errMsg = document.getElementById('tax-year-err-msg');
+  saveMsg.style.display = 'none';
+  errMsg.style.display = 'none';
+
+  const res = await apiFetch('/tax-season', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ active_tax_year: sel.value }),
+  });
+  if (!res) return;
+  if (res.ok) {
+    saveMsg.style.display = '';
+    setTimeout(() => saveMsg.style.display = 'none', 3000);
+  } else {
+    const d = await res.json();
+    errMsg.textContent = d.error || 'Failed to save';
+    errMsg.style.display = '';
+  }
 }
 
 // Init — branding is default tab

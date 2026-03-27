@@ -310,6 +310,9 @@ app.get('/forecast', (req, res) => res.render('forecast', { title: 'Revenue Fore
 const taxDeliveryRouter = require('./routes/tax-delivery');
 app.use('/api/tax-deliveries', requireFirm, apiLimiter, taxDeliveryRouter);
 
+const organizerRouter = require('./routes/organizer');
+app.use('/api/organizers', requireFirm, apiLimiter, organizerRouter);
+
 // Proposals — staff (auth required)
 const proposalsRouter = require('./routes/proposals');
 app.use('/api/proposals', requireFirm, apiLimiter, proposalsRouter);
@@ -351,6 +354,9 @@ function serveClientLogin(req, res) {
 }
 app.get('/client-login', serveClientLogin);
 app.get('/portal-login', serveClientLogin); // alias — don't break existing links
+
+// Portal organizer routes (organizerRouter already required above)
+app.use('/portal/organizer', requirePortal, apiLimiter, organizerRouter);
 
 // Protected portal API routes (sub-paths like /portal/me, /portal/documents, etc.)
 app.use('/portal', requirePortal, apiLimiter, portalRouter);
