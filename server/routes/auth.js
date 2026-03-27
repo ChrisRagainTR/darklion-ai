@@ -6,7 +6,7 @@ const router = Router();
 
 // Exchange authorization code for tokens
 router.get('/callback', async (req, res) => {
-  const { code, realmId } = req.query;
+  const { code, realmId, state } = req.query;
 
   if (!code || !realmId) {
     return res.status(400).json({ error: 'Missing code or realmId' });
@@ -116,8 +116,8 @@ router.get('/callback', async (req, res) => {
     // Run initial scans in background (non-blocking)
     runInitialScans(realmId).catch(e => console.error('Initial scan error:', e));
   } catch (err) {
-    console.error('OAuth callback error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('OAuth callback error:', err.message, err.stack);
+    res.status(500).json({ error: 'Internal server error', detail: err.message });
   }
 });
 
