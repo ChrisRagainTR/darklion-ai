@@ -1240,6 +1240,7 @@ router.get('/entity-jobs', async (req, res) => {
        JOIN pipeline_stages ps ON ps.id = pj.current_stage_id
        LEFT JOIN firm_users fu ON fu.id = pj.assigned_to
        WHERE pi.firm_id = $1 AND pj.entity_type = $2 AND pj.entity_id = $3
+         AND pj.job_status = 'active'
        ORDER BY pt.name ASC, pi.tax_year DESC`,
       [req.firm.id, entity_type, parseInt(entity_id)]
     );
