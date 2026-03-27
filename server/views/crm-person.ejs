@@ -489,22 +489,10 @@
       <div style="color:var(--muted);font-size:0.85rem;padding:1rem 0;">Loading organizer status…</div>
     </div>
 
-    <!-- Stanford Tax link (legacy) -->
-    <div class="card" style="max-width:700px;">
-      <div class="card-title">Stanford Tax Organizer (Legacy)</div>
-      <div id="org-stanford-link" style="margin-bottom:1rem;"></div>
-      <div style="display:flex;gap:0.75rem;align-items:flex-end;">
-        <div class="form-group" style="flex:1;margin:0;">
-          <label style="font-size:0.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:0.35rem;">Organizer URL</label>
-          <input type="url" id="stanford-url-input" class="form-control" placeholder="https://..." style="font-size:0.88rem;">
-        </div>
-        <button class="btn btn-gold btn-sm" onclick="saveStanfordUrl()">Save</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:1rem;margin-top:0.6rem;">
-        <div style="font-size:0.78rem;color:var(--muted);">Paste the client's Stanford Tax organizer link. It will also appear in their portal.</div>
-        <div class="save-indicator" id="org-save-msg" style="flex-shrink:0;"></div>
-      </div>
-    </div>
+    <!-- Hidden inputs kept for legacy compat, not displayed -->
+    <input type="hidden" id="stanford-url-input">
+    <div id="org-stanford-link" style="display:none;"></div>
+    <div class="save-indicator" id="org-save-msg" style="display:none;"></div>
   </div>
 </div>
 
@@ -1553,22 +1541,43 @@
     const leftHtml = leftSecs.map(buildSectionHtml).join('');
     const rightHtml = rightSecs.map(buildSectionHtml).join('');
 
-    // Question answers
+    // Question answers — show all questions, mark answered ones
     const answers = organizer.question_answers || {};
-    const qLabels = { life_change:'Life change', address_change:'Address changed', investments_sold:'Sold investments',
-      crypto:'Crypto transactions', new_business:'New/closed business', freelance:'Freelance income',
-      real_estate:'Real estate transaction', rental:'Rental income', foreign_accounts:'Foreign accounts >$10k',
-      foreign_income:'Foreign income', irs_notice:'IRS/state notice' };
-    const answeredYes = Object.entries(answers).filter(([,v]) => v === true);
-    const answeredNo = Object.entries(answers).filter(([,v]) => v === false);
-    const answersHtml = Object.keys(answers).length ? `
+    const allQuestions = [
+      { key:'life_change', label:'Major life change (marriage, divorce, new baby, death in family)', required:false },
+      { key:'address_change', label:'Address changed during the year', required:false },
+      { key:'investments_sold', label:'Sold any stocks, bonds, or investments', required:false },
+      { key:'crypto', label:'Cryptocurrency transactions', required:true },
+      { key:'new_business', label:'Started, closed, or sold a business', required:false },
+      { key:'freelance', label:'Freelance, consulting, or side income', required:false },
+      { key:'real_estate', label:'Bought, sold, or refinanced real estate', required:false },
+      { key:'rental', label:'Rental income', required:false },
+      { key:'foreign_accounts', label:'Foreign accounts or assets exceeding $10,000', required:true },
+      { key:'foreign_income', label:'Foreign income or taxes paid to foreign country', required:false },
+      { key:'irs_notice', label:'IRS or state tax notices received', required:false },
+    ];
+    const hasAnswers = Object.keys(answers).length > 0;
+    const answersHtml = `
       <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.06);">
-        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.6rem;">Client Questionnaire</div>
-        <div style="display:flex;gap:2rem;flex-wrap:wrap;">
-          ${answeredYes.length ? `<div><div style="font-size:0.72rem;color:var(--green);font-weight:600;margin-bottom:0.3rem;">YES</div>${answeredYes.map(([k])=>`<div style="font-size:0.78rem;color:var(--text);">✓ ${esc(qLabels[k]||k)}</div>`).join('')}</div>` : ''}
-          ${answeredNo.length ? `<div><div style="font-size:0.72rem;color:var(--muted);font-weight:600;margin-bottom:0.3rem;">NO</div>${answeredNo.map(([k])=>`<div style="font-size:0.78rem;color:var(--muted);">– ${esc(qLabels[k]||k)}</div>`).join('')}</div>` : ''}
+        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">
+          Client Questionnaire ${hasAnswers ? '' : '<span style="color:rgba(255,255,255,0.2);font-weight:400;letter-spacing:0;">— Not yet answered</span>'}
         </div>
-      </div>` : '';
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem 1.5rem;">
+          ${allQuestions.map(q => {
+            const val = answers[q.key];
+            const answered = val !== undefined;
+            const isYes = val === true;
+            const icon = !answered ? '○' : isYes ? '✓' : '–';
+            const color = !answered ? 'rgba(255,255,255,0.2)' : isYes ? 'var(--green)' : 'var(--muted)';
+            const textColor = !answered ? 'rgba(255,255,255,0.35)' : isYes ? 'var(--text)' : 'var(--muted)';
+            const reqBadge = q.required ? '<span style="font-size:0.6rem;color:var(--gold);margin-left:0.3rem;">Required</span>' : '';
+            return `<div style="display:flex;align-items:center;gap:0.45rem;padding:0.25rem 0;">
+              <span style="color:${color};font-size:0.8rem;width:14px;text-align:center;flex-shrink:0;">${icon}</span>
+              <span style="font-size:0.78rem;color:${textColor};">${esc(q.label)}${reqBadge}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
 
     wrap.innerHTML = `
       <div style="background:var(--card);border:1px solid ${isSubmitted?'rgba(62,207,142,0.35)':'var(--border)'};border-radius:12px;padding:1.5rem;margin-bottom:0.75rem;${isSubmitted?'background:rgba(62,207,142,0.03);':''}">
