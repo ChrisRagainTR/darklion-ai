@@ -22,6 +22,9 @@ const { requireFirm } = require('../middleware/requireFirm');
 const { requirePortal } = require('../middleware/requirePortal');
 const { uploadFile, downloadFile, buildKey, sanitizeFilename } = require('../services/s3');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+const { fireTrigger } = require('../services/pipelineTriggers');
+const Resend = require('resend').Resend;
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
@@ -266,7 +269,7 @@ router.post('/:personId/:year/items', requireFirm, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// STAFF: Delete an advisor-added item
+// STAFF: Delete any item from a client's organizer
 // DELETE /api/organizers/:personId/:year/items/:itemId
 // ─────────────────────────────────────────────────────────────
 router.delete('/:personId/:year/items/:itemId', requireFirm, async (req, res) => {
@@ -279,11 +282,10 @@ router.delete('/:personId/:year/items/:itemId', requireFirm, async (req, res) =>
       USING tax_organizers to2
       WHERE toi.id = $1 AND toi.organizer_id = to2.id
         AND to2.person_id = $2 AND to2.tax_year = $3 AND to2.firm_id = $4
-        AND toi.advisor_added = true
       RETURNING toi.id
     `, [parseInt(itemId), parseInt(personId), year, firmId]);
 
-    if (!result.rows.length) return res.status(404).json({ error: 'Item not found or not advisor-added' });
+    if (!result.rows.length) return res.status(404).json({ error: 'Item not found' });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -397,6 +399,65 @@ router.post('/client/:year/answers', requirePortal, async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// PORTAL: Upload a file for a specific checklist item
+// POST /portal/organizer/client/:year/upload-item/:itemId
+// ─────────────────────────────────────────────────────────────
+router.post('/client/:year/upload-item/:itemId', requirePortal, upload.single('file'), async (req, res) => {
+  const { year, itemId } = req.params;
+  const personId = req.portal.personId;
+
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif'];
+  if (!allowedMimes.includes(req.file.mimetype)) {
+    return res.status(400).json({ error: 'Invalid file type. Please upload a PDF or image.' });
+  }
+
+  try {
+    // Verify item belongs to this person's organizer
+    const check = await pool.query(`
+      SELECT toi.id, toi.organizer_id, to2.firm_id FROM tax_organizer_items toi
+      JOIN tax_organizers to2 ON to2.id = toi.organizer_id
+      WHERE toi.id = $1 AND to2.person_id = $2 AND to2.tax_year = $3
+    `, [itemId, personId, year]);
+    if (!check.rows.length) return res.status(403).json({ error: 'Not authorized' });
+    const { firm_id } = check.rows[0];
+
+    // Upload file to S3
+    const bucket = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET || 'darklion-docs';
+    const ext = req.file.originalname.split('.').pop().toLowerCase();
+    const safeFilename = sanitizeFilename ? sanitizeFilename(req.file.originalname) : req.file.originalname;
+    const key = `firms/${firm_id}/people/${personId}/organizer/${year}/items/${itemId}-${Date.now()}.${ext}`;
+    await uploadFile({ buffer: req.file.buffer, key, bucket, mimeType: req.file.mimetype });
+
+    // Save document record
+    const docRes = await pool.query(`
+      INSERT INTO documents (firm_id, owner_type, owner_id, year, doc_type, display_name,
+        s3_bucket, s3_key, mime_type, size_bytes, uploaded_by_type, folder_section, folder_category)
+      VALUES ($1, 'person', $2, $3, 'organizer_item', $4, $5, $6, $7, $8, 'client', 'client_uploaded', 'organizer')
+      RETURNING id
+    `, [firm_id, personId, year, safeFilename, bucket, key, req.file.mimetype, req.file.size]);
+    const documentId = docRes.rows[0].id;
+
+    // Update item status to uploaded with document_id
+    await pool.query(`
+      UPDATE tax_organizer_items SET status = 'uploaded', document_id = $1, updated_at = NOW()
+      WHERE id = $2
+    `, [documentId, itemId]);
+
+    // Bump organizer to in_progress if still pending
+    await pool.query(`
+      UPDATE tax_organizers SET status = 'in_progress', updated_at = NOW()
+      WHERE person_id = $1 AND tax_year = $2 AND status = 'pending'
+    `, [personId, year]);
+
+    res.json({ success: true, document_id: documentId, filename: safeFilename });
+  } catch (err) {
+    console.error('Portal item upload error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -556,6 +617,41 @@ router.post('/client/:year/submit', requirePortal, async (req, res) => {
       SET status = 'submitted', submitted_at = NOW(), workpaper_document_id = $1, updated_at = NOW()
       WHERE id = $2
     `, [wpDocRes.rows[0].id, organizer.id]);
+
+    // ── Fire pipeline trigger (non-fatal) ──────────────────
+    fireTrigger(organizer.firm_id, 'organizer_submitted', personId, { organizer_id: organizer.id })
+      .catch(e => console.error('[organizer] fireTrigger organizer_submitted non-fatal:', e));
+
+    // ── Email notification to firm (non-fatal) ─────────────
+    try {
+      const firmRes = await pool.query('SELECT name, contact_email FROM firms WHERE id = $1', [organizer.firm_id]);
+      const firm = firmRes.rows[0];
+      const notifyEmail = firm?.contact_email || process.env.RESEND_NOTIFY_EMAIL;
+      if (notifyEmail && process.env.RESEND_API_KEY) {
+        const uploadedCount = items.filter(i => i.status === 'uploaded').length;
+        const ntyCount = items.filter(i => i.status === 'not_this_year').length;
+        const sentinelCount = items.filter(i => i.sentinel_provides).length;
+        await resend.emails.send({
+          from: `${firm?.name || 'DarkLion'} <messages@sentineltax.co>`,
+          to: notifyEmail,
+          subject: `[Organizer Submitted] ${clientName} — ${year}`,
+          html: `
+            <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+              <h2 style="color:#0f1926;">Tax Organizer Submitted</h2>
+              <p><strong>${clientName}</strong> has submitted their ${year} tax organizer.</p>
+              <table style="border-collapse:collapse;width:100%;margin:1rem 0;">
+                <tr><td style="padding:0.4rem 0.75rem;border:1px solid #ddd;">Documents uploaded</td><td style="padding:0.4rem 0.75rem;border:1px solid #ddd;font-weight:700;">${uploadedCount}</td></tr>
+                <tr><td style="padding:0.4rem 0.75rem;border:1px solid #ddd;">Marked Not This Year</td><td style="padding:0.4rem 0.75rem;border:1px solid #ddd;">${ntyCount}</td></tr>
+                <tr><td style="padding:0.4rem 0.75rem;border:1px solid #ddd;">Provided by Sentinel</td><td style="padding:0.4rem 0.75rem;border:1px solid #ddd;">${sentinelCount}</td></tr>
+              </table>
+              <p><a href="https://darklion.ai/crm/person/${personId}" style="background:#c9a84c;color:#fff;padding:0.5rem 1rem;border-radius:6px;text-decoration:none;">View in DarkLion →</a></p>
+            </div>
+          `,
+        });
+      }
+    } catch (emailErr) {
+      console.error('[organizer] submit email non-fatal:', emailErr.message);
+    }
 
     res.json({ success: true, workpaper_document_id: wpDocRes.rows[0].id });
 

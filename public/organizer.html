@@ -962,6 +962,7 @@
       </div>
     </div>
 
+    <div id="submit-error" style="display:none;color:#e05a5a;font-size:0.85rem;margin-bottom:0.75rem;padding:0.5rem 0.75rem;background:rgba(224,90,90,0.1);border-radius:6px;border:1px solid rgba(224,90,90,0.3);"></div>
     <div class="org-nav">
       <button class="btn-secondary" onclick="goStep(3)">← Back to Documents</button>
       <button class="btn-submit" onclick="submitOrg()">✓ Send to Sentinel Tax</button>
@@ -1111,7 +1112,33 @@
     list.appendChild(row);
   }
 
-  function submitOrg() {
+  async function submitOrg() {
+    const btn = document.querySelector('.btn-submit');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Submitting…'; }
+
+    if (!token) {
+      // Demo mode — just show success screen
+      _showSubmitSuccess();
+      return;
+    }
+
+    try {
+      const r = await fetch(`/portal/organizer/client/${YEAR}/submit`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Submission failed');
+      _showSubmitSuccess();
+    } catch(e) {
+      if (btn) { btn.disabled = false; btn.textContent = '✓ Send to Sentinel Tax'; }
+      const errEl = document.getElementById('submit-error');
+      if (errEl) { errEl.textContent = '❌ ' + e.message; errEl.style.display = 'block'; }
+      else alert('Submission failed: ' + e.message);
+    }
+  }
+
+  function _showSubmitSuccess() {
     document.querySelector('.org-wrap').innerHTML = `
       <div class="submit-screen">
         <div class="submit-icon">✅</div>
@@ -1273,14 +1300,43 @@
       if (!input.files.length) return;
       const item = document.getElementById(domId);
       if (!item) return;
+      const fname = input.files[0].name;
+
+      // Show uploading state
+      document.getElementById(domId+'-status').className = 'ci-status pending';
+      document.getElementById(domId+'-status').textContent = '⏳ Uploading…';
+      item.querySelector('.ci-actions').innerHTML = '';
+
+      if (token) {
+        // Real upload via portal API
+        try {
+          const fd = new FormData();
+          fd.append('file', input.files[0]);
+          const r = await fetch(`/portal/organizer/client/${YEAR}/upload-item/${itemId}`, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token },
+            body: fd,
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Upload failed');
+        } catch(e) {
+          document.getElementById(domId+'-status').className = 'ci-status pending';
+          document.getElementById(domId+'-status').textContent = '❌ ' + e.message;
+          item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn upload" onclick="fakeUploadById(${itemId},'${domId}')">⬆ Try Again</button><button class="ci-btn nty-btn" onclick="markNTYById(${itemId},'${domId}')">Not This Year</button>`;
+          return;
+        }
+      } else {
+        // Demo mode — just update status locally
+        await apiUpdateItem(itemId, 'uploaded');
+      }
+
       item.className = 'checklist-item uploaded';
       item.querySelector('.ci-check').className = 'ci-check uploaded';
       item.querySelector('.ci-check').textContent = '✓';
       document.getElementById(domId+'-status').className = 'ci-status uploaded';
-      document.getElementById(domId+'-status').textContent = '✓ ' + input.files[0].name;
+      document.getElementById(domId+'-status').textContent = '✓ ' + fname;
       item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn undo" onclick="undoItemById(${itemId},'${domId}')">Remove</button>`;
       itemStates[domId] = 'uploaded';
-      await apiUpdateItem(itemId, 'uploaded');
       updateProgressLive();
     };
     input.click();

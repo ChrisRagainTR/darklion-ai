@@ -6,7 +6,7 @@
 
 const pdfParse = require('pdf-parse');
 
-const SENTINEL_PROVIDES_PATTERNS = [/altruist/i];
+const SENTINEL_PROVIDES_PATTERNS = [/altruist/i, /alpiinrok/i];
 
 const SECTION_ORDER = ['w2', '1099-r', '1099-div', '1099-int', '1099-nec', '1099-misc', '1099-g', 'k1', 'schedule-c', '1098', 'childcare', 'other'];
 
