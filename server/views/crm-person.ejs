@@ -889,6 +889,11 @@
       }
       document.getElementById('create-card-modal').classList.add('hidden');
       toast('Pipeline card created');
+      // Force full reload of workflow tab
+      const wList = document.getElementById('workflow-list');
+      const wLoad = document.getElementById('workflow-loading');
+      if (wList) { wList.innerHTML = ''; wList.style.display = 'none'; }
+      if (wLoad) wLoad.style.display = '';
       loadWorkflow();
     } catch(e) { errEl.textContent = 'Error: ' + e.message; errEl.style.display = 'block'; }
   }
