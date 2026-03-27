@@ -1701,12 +1701,16 @@
       {key:'irs_notice',       label:'IRS or state tax notices received'},
     ];
     const hasAnswers = Object.keys(answers).length > 0;
+    // Merge standard + custom questions for display
+    const customQs = (org.custom_questions || []).map(q => ({ key: q.key, label: q.label, custom: true }));
+    const displayQuestions = [...allQuestions, ...customQs];
+
     const answersHtml = `<div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.06);">
       <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">
         Client Questionnaire ${hasAnswers ? '' : '<span style="color:rgba(255,255,255,0.2);font-weight:400;letter-spacing:0;">— Not yet answered</span>'}
       </div>
       <div style="display:flex;flex-direction:column;gap:0.4rem;">
-        ${allQuestions.map(q => {
+        ${displayQuestions.map(q => {
           const val = answers[q.key];
           const answered = val !== undefined;
           const isYes = val === true;
@@ -1717,12 +1721,13 @@
             ? 'background:rgba(143,163,184,0.12);border-color:var(--muted);color:var(--text);'
             : 'background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.2);';
           const reqBadge = q.required ? `<span style="font-size:0.6rem;color:var(--gold);margin-left:0.35rem;vertical-align:middle;">Required</span>` : '';
-          return `<div style="display:flex;align-items:center;gap:0.75rem;padding:0.3rem 0;">
+          const customBadge = q.custom ? `<span style="font-size:0.6rem;color:rgba(143,163,184,0.6);margin-left:0.35rem;vertical-align:middle;">Custom</span>` : '';
+          return `<div style="display:flex;align-items:center;gap:0.75rem;padding:0.3rem 0;${q.custom?'border-top:1px solid rgba(255,255,255,0.04);padding-top:0.5rem;':''}">
             <div style="display:flex;gap:0.3rem;flex-shrink:0;">
               <span style="font-size:0.72rem;font-weight:700;padding:0.15rem 0.55rem;border-radius:4px;border:1px solid;${yesStyle}">Yes</span>
               <span style="font-size:0.72rem;font-weight:700;padding:0.15rem 0.55rem;border-radius:4px;border:1px solid;${noStyle}">No</span>
             </div>
-            <span style="font-size:0.82rem;color:${answered ? 'var(--text)' : 'rgba(255,255,255,0.35)'};">${esc(q.label)}${reqBadge}</span>
+            <span style="font-size:0.82rem;color:${answered ? 'var(--text)' : 'rgba(255,255,255,0.35)'};">${esc(q.label)}${reqBadge}${customBadge}</span>
           </div>`;
         }).join('')}
       </div>
