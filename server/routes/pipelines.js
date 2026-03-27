@@ -745,6 +745,9 @@ router.post('/instances/:instanceId/jobs', async (req, res) => {
     res.status(201).json(job);
   } catch (e) {
     console.error('POST /instances/:instanceId/jobs error:', e);
+    if (e.code === '23505') {
+      return res.status(409).json({ error: 'This person already has an active card in that pipeline. Move or complete the existing card first.' });
+    }
     res.status(500).json({ error: 'Failed to add job' });
   }
 });
