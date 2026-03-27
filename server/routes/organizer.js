@@ -228,6 +228,91 @@ router.get('/client/:year', requirePortal, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
+// STAFF: Add a custom document item to a client's organizer
+// POST /api/organizers/:personId/:year/items
+// ─────────────────────────────────────────────────────────────
+router.post('/:personId/:year/items', requireFirm, async (req, res) => {
+  const { personId, year } = req.params;
+  const firmId = req.firm.id;
+  const { payer_name, section, owner, note } = req.body;
+
+  if (!payer_name || !section) return res.status(400).json({ error: 'payer_name and section required' });
+
+  try {
+    const orgRes = await pool.query(
+      'SELECT id FROM tax_organizers WHERE person_id = $1 AND tax_year = $2 AND firm_id = $3',
+      [parseInt(personId), year, firmId]
+    );
+    if (!orgRes.rows.length) return res.status(404).json({ error: 'No organizer found' });
+    const organizerId = orgRes.rows[0].id;
+
+    // Get current max display_order
+    const orderRes = await pool.query(
+      'SELECT COALESCE(MAX(display_order),0)+1 as next FROM tax_organizer_items WHERE organizer_id = $1',
+      [organizerId]
+    );
+
+    const result = await pool.query(`
+      INSERT INTO tax_organizer_items
+        (organizer_id, section, payer_name, owner, sentinel_provides, advisor_added, display_order)
+      VALUES ($1, $2, $3, $4, false, true, $5)
+      RETURNING *
+    `, [organizerId, section, payer_name, owner || 'taxpayer', orderRes.rows[0].next]);
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// STAFF: Delete an advisor-added item
+// DELETE /api/organizers/:personId/:year/items/:itemId
+// ─────────────────────────────────────────────────────────────
+router.delete('/:personId/:year/items/:itemId', requireFirm, async (req, res) => {
+  const { personId, year, itemId } = req.params;
+  const firmId = req.firm.id;
+
+  try {
+    const result = await pool.query(`
+      DELETE FROM tax_organizer_items toi
+      USING tax_organizers to2
+      WHERE toi.id = $1 AND toi.organizer_id = to2.id
+        AND to2.person_id = $2 AND to2.tax_year = $3 AND to2.firm_id = $4
+        AND toi.advisor_added = true
+      RETURNING toi.id
+    `, [parseInt(itemId), parseInt(personId), year, firmId]);
+
+    if (!result.rows.length) return res.status(404).json({ error: 'Item not found or not advisor-added' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// STAFF: Add / update custom questions for a client's organizer
+// PUT /api/organizers/:personId/:year/questions
+// ─────────────────────────────────────────────────────────────
+router.put('/:personId/:year/questions', requireFirm, async (req, res) => {
+  const { personId, year } = req.params;
+  const firmId = req.firm.id;
+  const { questions } = req.body; // array of { key, label, required }
+
+  if (!Array.isArray(questions)) return res.status(400).json({ error: 'questions must be an array' });
+
+  try {
+    await pool.query(
+      'UPDATE tax_organizers SET custom_questions = $1, updated_at = NOW() WHERE person_id = $2 AND tax_year = $3 AND firm_id = $4',
+      [JSON.stringify(questions), parseInt(personId), year, firmId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
 // STAFF: Get organizer + items for a person/year
 // ─────────────────────────────────────────────────────────────
 router.get('/:personId/:year', requireFirm, async (req, res) => {

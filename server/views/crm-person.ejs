@@ -1620,8 +1620,123 @@
             <span style="font-size:0.78rem;color:var(--muted);">Workpaper:</span>
             <a href="/api/documents/${organizer.workpaper_document_id}/url" target="_blank" class="btn btn-outline btn-sm" style="font-size:0.75rem;">⬇ Download Workpaper PDF</a>
           </div>` : ''}
+
+        <!-- Add document item -->
+        <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.06);">
+          <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">Add Document Request</div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;">
+            <div style="flex:2;min-width:180px;">
+              <input type="text" id="adv-add-payer" placeholder="Payer / document name" class="form-control" style="font-size:0.83rem;">
+            </div>
+            <div style="flex:1;min-width:130px;">
+              <select id="adv-add-section" class="form-control" style="font-size:0.83rem;">
+                <option value="w2">W-2</option>
+                <option value="1099-r">1099-R</option>
+                <option value="1099-div">1099-DIV</option>
+                <option value="1099-int">1099-INT</option>
+                <option value="1099-nec">1099-NEC</option>
+                <option value="1099-misc">1099-MISC</option>
+                <option value="k1" selected>K-1</option>
+                <option value="schedule-c">Schedule C</option>
+                <option value="1098">1098</option>
+                <option value="childcare">Childcare</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:110px;">
+              <select id="adv-add-owner" class="form-control" style="font-size:0.83rem;">
+                <option value="taxpayer">Taxpayer</option>
+                <option value="spouse">Spouse</option>
+                <option value="joint">Joint</option>
+              </select>
+            </div>
+            <button class="btn btn-gold btn-sm" onclick="addAdvItem(${organizer.id})" style="font-size:0.82rem;white-space:nowrap;">+ Add</button>
+          </div>
+        </div>
+
+        <!-- Add custom question -->
+        <div style="margin-top:0.75rem;">
+          <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">Add Custom Question</div>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <input type="text" id="adv-add-question" placeholder="e.g. Did you receive an inheritance this year?" class="form-control" style="font-size:0.83rem;flex:1;">
+            <button class="btn btn-gold btn-sm" onclick="addAdvQuestion(${organizer.id},'${year}')" style="font-size:0.82rem;white-space:nowrap;">+ Add</button>
+          </div>
+          <div id="adv-custom-questions-list" style="margin-top:0.5rem;"></div>
+        </div>
+
       </div>
     `;
+
+    // Render existing custom questions list
+    renderCustomQuestionsList(organizer, year);
+  }
+
+  function renderCustomQuestionsList(organizer, year) {
+    const list = document.getElementById('adv-custom-questions-list');
+    if (!list) return;
+    const qs = organizer.custom_questions || [];
+    if (!qs.length) { list.innerHTML = ''; return; }
+    list.innerHTML = qs.map((q, i) => `
+      <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:5px;margin-top:0.25rem;font-size:0.82rem;">
+        <span style="flex:1;color:var(--text);">❓ ${esc(q.label)}</span>
+        <button onclick="removeAdvQuestion(${organizer.id},'${year}',${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.75rem;padding:0.1rem 0.3rem;" title="Remove">✕</button>
+      </div>
+    `).join('');
+  }
+
+  async function addAdvItem(organizerId) {
+    const payer = document.getElementById('adv-add-payer').value.trim();
+    const section = document.getElementById('adv-add-section').value;
+    const owner = document.getElementById('adv-add-owner').value;
+    if (!payer) { alert('Enter a payer/document name'); return; }
+    try {
+      const res = await apiFetch(`/api/organizers/${personId}/2025/items`, {
+        method: 'POST',
+        body: JSON.stringify({ payer_name: payer, section, owner }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+      document.getElementById('adv-add-payer').value = '';
+      loadAdvisorOrganizer(); // reload
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function addAdvQuestion(organizerId, year) {
+    const label = document.getElementById('adv-add-question').value.trim();
+    if (!label) { alert('Enter a question'); return; }
+
+    // Get current questions, add new one
+    let questions = [];
+    try {
+      const res = await apiFetch(`/api/organizers/${personId}/${year}`);
+      const data = await res.json();
+      questions = data.organizer.custom_questions || [];
+    } catch(e) {}
+
+    const key = 'custom_' + Date.now();
+    questions.push({ key, label, required: false });
+
+    try {
+      const res = await apiFetch(`/api/organizers/${personId}/${year}/questions`, {
+        method: 'PUT',
+        body: JSON.stringify({ questions }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+      document.getElementById('adv-add-question').value = '';
+      loadAdvisorOrganizer();
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function removeAdvQuestion(organizerId, year, index) {
+    try {
+      const res = await apiFetch(`/api/organizers/${personId}/${year}`);
+      const data = await res.json();
+      const questions = (data.organizer.custom_questions || []).filter((_,i) => i !== index);
+      await apiFetch(`/api/organizers/${personId}/${year}/questions`, {
+        method: 'PUT',
+        body: JSON.stringify({ questions }),
+      });
+      loadAdvisorOrganizer();
+    } catch(e) { alert('Error: ' + e.message); }
   }
 
   async function saveStanfordUrl() {

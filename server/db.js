@@ -905,6 +905,18 @@ async function initDB() {
       archived_at TIMESTAMPTZ
     );
 
+    -- Tax organizer: custom questions per client (advisor-added)
+    DO $$ BEGIN
+      ALTER TABLE tax_organizers ADD COLUMN IF NOT EXISTS custom_questions JSONB DEFAULT '[]';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    -- Tax organizer items: flag advisor-added items
+    DO $$ BEGIN
+      ALTER TABLE tax_organizer_items ADD COLUMN IF NOT EXISTS advisor_added BOOLEAN DEFAULT FALSE;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
     -- is_terminal flag on pipeline_stages
     DO $$ BEGIN
       ALTER TABLE pipeline_stages ADD COLUMN IF NOT EXISTS is_terminal BOOLEAN DEFAULT FALSE;
