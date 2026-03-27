@@ -303,6 +303,16 @@
         const res = await fetch(backendUrl.toString(), { signal: AbortSignal.timeout(15000), headers });
         if (res.ok) {
           autoConnected = true;
+          try {
+            const data = await res.json();
+            // If we know which company was connected, redirect back to it
+            if (data.company_id) {
+              const appBase = window.location.origin.includes('railway.app')
+                ? 'https://darklion.ai'
+                : window.location.origin;
+              setTimeout(() => { window.location.href = `${appBase}/crm/company/${data.company_id}?connected=1`; }, 1500);
+            }
+          } catch(e) { /* non-fatal */ }
         }
       } catch (e) {
         autoConnected = false;
