@@ -2117,16 +2117,17 @@
       const pending = actionable.filter(i => i.status === 'pending');
       const sentinel = items.filter(i => i.sentinel_provides);
 
-      // Show: first 3 pending, then last 2 resolved
-      const previewList = [...pending.slice(0, 3), ...uploaded.slice(-2)];
-
-      const itemsHtml = previewList.length ? previewList.map(item => `
-        <div class="org-item-row">
-          <div class="org-item-dot ${item.status}"></div>
-          <div class="org-item-name">${escHtml(item.payer_name)}</div>
-          <div class="org-item-tag">${item.section}</div>
+      // Show ALL actionable items in a 3-column grid
+      const itemsHtml = actionable.length ? `
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.3rem 1rem;margin-bottom:0.5rem;">
+          ${actionable.map(item => `
+            <div style="display:flex;align-items:center;gap:0.4rem;min-width:0;">
+              <div class="org-item-dot ${item.status}" style="flex-shrink:0;"></div>
+              <span style="font-size:0.78rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(item.payer_name)}">${escHtml(item.payer_name)}</span>
+            </div>
+          `).join('')}
         </div>
-      `).join('') + (pending.length > 3 ? `<div style="font-size:0.75rem;color:var(--muted);padding:0.3rem 0;">+${pending.length - 3} more pending…</div>` : '') : '';
+      ` : '';
 
       const ctaLabel = isSubmitted ? '📄 View Submitted Organizer' : progress.resolved > 0 ? '▶ Continue Organizer' : '▶ Start Organizer';
       const heroClass = isSubmitted ? 'org-hero submitted' : progress.percent === 100 ? 'org-hero all-done' : 'org-hero';
