@@ -617,6 +617,11 @@
       </div>
     </div>
 
+    <div id="custom-questions-card" style="display:none;" class="org-card">
+      <div class="org-card-title">Additional Questions from Your Advisor</div>
+      <div id="custom-questions-rows"></div>
+    </div>
+
     <div class="org-nav">
       <button class="btn-secondary" onclick="goStep(1)">← Back</button>
       <button class="btn-primary" onclick="saveAnswersAndNext()">Next: Your Documents →</button>
@@ -1440,6 +1445,41 @@
         const nameEl = document.querySelector('.section-title');
         if (nameEl && me.firstName) {
           document.querySelector('#step-3 .section-title').textContent = `Your ${YEAR} Documents`;
+        }
+      }
+
+      // Append custom questions to Step 2
+      const customQs = orgData.organizer?.custom_questions || [];
+      if (customQs.length) {
+        const card = document.getElementById('custom-questions-card');
+        const rows = document.getElementById('custom-questions-rows');
+        if (card && rows) {
+          card.style.display = '';
+          rows.innerHTML = customQs.map(q => {
+            const key = q.key || ('custom_' + Math.random().toString(36).slice(2));
+            return `<div class="question-row">
+              <div class="question-text">${escH(q.label)}</div>
+              <div class="yn-btns">
+                <button class="yn-btn" onclick="selectYN(this,'yes','${key}')">Yes</button>
+                <button class="yn-btn" onclick="selectYN(this,'no','${key}')">No</button>
+              </div>
+            </div>`;
+          }).join('');
+        }
+      }
+
+      // Pre-populate answers from DB into _answers and button states
+      const savedAnswers = orgData.organizer?.question_answers || {};
+      for (const [dbKey, val] of Object.entries(savedAnswers)) {
+        _answers[dbKey] = val;
+        // Find the matching button and apply selected class
+        const uiKey = Object.entries(Q_KEY_MAP).find(([k,v]) => v === dbKey)?.[0];
+        if (uiKey) {
+          const btn = document.querySelector(`.yn-btn[onclick*="${uiKey}"][onclick*="${val ? 'yes' : 'no'}"]`);
+          if (btn) {
+            btn.closest('.question-row')?.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('selected-yes','selected-no'));
+            btn.classList.add(val ? 'selected-yes' : 'selected-no');
+          }
         }
       }
     } catch(e) {
