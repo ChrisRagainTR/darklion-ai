@@ -1555,6 +1555,21 @@
 
       try {
         const data = await api(`/portal/companies/${coId}/close-packages`);
+
+        // No QBO connection — show connect prompt
+        if (!data.ytd && !data.prior && data.ytd !== undefined) {
+          container.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;text-align:center;padding:3rem 2rem;">
+              <div style="font-size:3rem;margin-bottom:1rem;line-height:1;">📒</div>
+              <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">QuickBooks Not Connected</div>
+              <div style="font-size:0.86rem;color:var(--muted);max-width:380px;line-height:1.6;margin-bottom:1.5rem;">
+                Your advisor hasn't connected QuickBooks Online for this company yet. Once connected, you'll see your financial summaries here.
+              </div>
+              <div style="font-size:0.78rem;color:rgba(143,163,184,0.5);">Contact your advisor to get set up.</div>
+            </div>`;
+          return;
+        }
+
         const currentYear = data.currentYear || new Date().getFullYear();
         const priorYearNum = data.priorYearNum || (currentYear - 1);
 
