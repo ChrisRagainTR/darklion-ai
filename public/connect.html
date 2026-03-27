@@ -269,13 +269,15 @@
               var params = new URLSearchParams(window.location.search);
               var companyId = params.get('company_id') || '';
               var firmId = params.get('firm_id') || '';
-              var nonce = Math.random().toString(36).substring(2,18);
-              // State format: firmId:companyId:nonce
-              var state = [firmId, companyId, nonce].join(':');
+              var nonce = Math.random().toString(36).substring(2,12);
+              // Encode the return origin so auth callback redirects back to the right domain
+              var returnOrigin = encodeURIComponent(window.location.origin);
+              // State format: firmId:companyId:nonce:returnOrigin
+              var state = [firmId, companyId, nonce, returnOrigin].join(':');
               sessionStorage.setItem('oauth_state', state);
               sessionStorage.setItem('oauth_company_id', companyId);
               var redirectUri = encodeURIComponent(cfg.qb_redirect_uri);
-              window.location.href = 'https://appcenter.intuit.com/connect/oauth2?client_id=' + cfg.qb_client_id + '&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri=' + redirectUri + '&state=' + state;
+              window.location.href = 'https://appcenter.intuit.com/connect/oauth2?client_id=' + cfg.qb_client_id + '&response_type=code&scope=com.intuit.quickbooks.accounting&redirect_uri=' + redirectUri + '&state=' + encodeURIComponent(state);
             };
           } catch(e) {
             document.getElementById('connect-btn').textContent = 'Connection unavailable';
