@@ -133,14 +133,14 @@ router.get('/callback', async (req, res) => {
       return res.json({ ok: true, company: companyName || realmId, company_id: darklionCompanyId });
     }
 
+    // Run initial scans in background (non-blocking)
+    runInitialScans(realmId).catch(e => console.error('Initial scan error:', e));
+
     // Direct browser redirect from Intuit — redirect back to the origin they started from
     if (darklionCompanyId) {
       return res.redirect(`${appBase}/crm/company/${darklionCompanyId}?connected=1`);
     }
     return res.redirect(`${appBase}/crm?qbo=connected`);
-
-    // Run initial scans in background (non-blocking)
-    runInitialScans(realmId).catch(e => console.error('Initial scan error:', e));
   } catch (err) {
     console.error('OAuth callback error:', err.message, err.stack);
     res.status(500).json({ error: 'Internal server error', detail: err.message });
