@@ -55,39 +55,45 @@ async function scanLiabilities(realmId) {
   const flagged = [];
 
   for (const acct of accounts) {
-    const balance = Number(acct.CurrentBalance || acct.CurrentBalanceWithSubAccounts || 0);
-    // Use FullyQualifiedName to match what QBO shows in the UI (e.g. "Liabilities:Accounts Payable")
+    const rawBalance = Number(acct.CurrentBalance || acct.CurrentBalanceWithSubAccounts || 0);
+    // QBO returns liability balances as negative numbers (credit-normal accounts).
+    // Flip the sign so we work with the "balance sheet positive" convention:
+    //   displayBalance > 0 = normal liability (company owes money)
+    //   displayBalance < 0 = unusual debit balance (company is owed money / overpayment)
+    const displayBalance = -rawBalance;
     const name = acct.FullyQualifiedName || acct.Name || '';
-    const displayName = acct.Name || name; // short name for display
+    const displayName = acct.Name || name;
     const subType = acct.AccountSubType || acct.AccountType || '';
     const accountType = acct.AccountType || '';
 
     const issues = [];
 
-    // Check 1: Negative balance (unusual for liability — means the company is owed money)
-    if (balance < 0) {
-      issues.push({ type: 'negative_balance', message: `Negative balance: $${Math.abs(balance).toLocaleString()}`, severity: 'warning' });
+    // Check 1: Debit balance on a liability = unusual (means company is owed money / overpayment)
+    if (displayBalance < 0) {
+      issues.push({ type: 'negative_balance', message: `Debit balance: $${Math.abs(displayBalance).toLocaleString()} — unusual for a liability`, severity: 'warning' });
     }
 
     // Check 2: Zero balance on accounts that typically carry balances
     const expectsBalance = ['CreditCard', 'Credit Card', 'LongTermLiability', 'Long Term Liability'].includes(accountType) ||
                            ['CreditCard', 'LongTermLiability'].includes(subType);
-    if (balance === 0 && expectsBalance) {
+    if (displayBalance === 0 && expectsBalance) {
       issues.push({ type: 'zero_balance', message: 'Zero balance — verify if expected', severity: 'info' });
     }
 
     // Check 3: Very large balance on credit cards (> $50k)
-    if ((accountType === 'Credit Card' || accountType === 'CreditCard' || subType === 'CreditCard') && balance > 50000) {
-      issues.push({ type: 'high_balance', message: `High balance: $${balance.toLocaleString()}`, severity: 'warning' });
+    if ((accountType === 'Credit Card' || accountType === 'CreditCard' || subType === 'CreditCard') && displayBalance > 50000) {
+      issues.push({ type: 'high_balance', message: `High balance: $${displayBalance.toLocaleString()}`, severity: 'warning' });
     }
 
     // Check 4: Stale payroll liabilities (Other Current Liability with payroll-related name)
-    if ((accountType === 'Other Current Liability' || accountType === 'OtherCurrentLiability') && Math.abs(balance) > 0) {
+    if ((accountType === 'Other Current Liability' || accountType === 'OtherCurrentLiability') && displayBalance > 0) {
       const isPayroll = /payroll|tax|withhold|fica|futa|suta|401k|health\s*ins/i.test(name);
       if (isPayroll) {
-        issues.push({ type: 'payroll_liability', message: `Payroll liability balance: $${balance.toLocaleString()} — verify cleared`, severity: 'warning' });
+        issues.push({ type: 'payroll_liability', message: `Payroll liability balance: $${displayBalance.toLocaleString()} — verify cleared`, severity: 'warning' });
       }
     }
+
+    const balance = displayBalance; // use corrected sign from here on
 
     const entry = {
       name: name,           // FullyQualifiedName — matches QBO UI
