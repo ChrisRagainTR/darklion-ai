@@ -99,12 +99,18 @@ router.get('/callback', async (req, res) => {
       await auditLog(firmId, 'company_connect', `Connected: ${companyName || realmId} (realm: ${realmId})`, req.ip);
     } catch (e) { /* non-fatal */ }
 
-    // Redirect back to the company page if we know which one, else redirect to CRM
     const appBase = process.env.APP_URL ? process.env.APP_URL.replace(/\/$/, '') : '';
+    const isXHR = req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers['accept'] || '').includes('application/json') || req.headers['authorization'];
+
+    if (isXHR) {
+      // Called via fetch from callback.html — return JSON so it can show success UI
+      return res.json({ ok: true, company: companyName || realmId, company_id: darklionCompanyId });
+    }
+
+    // Direct browser redirect from Intuit — redirect to the right page
     if (darklionCompanyId) {
       return res.redirect(`${appBase}/crm/company/${darklionCompanyId}?connected=1`);
     }
-    // No specific company — redirect to CRM list with success flag
     return res.redirect(`${appBase}/crm?qbo=connected`);
 
     // Run initial scans in background (non-blocking)
