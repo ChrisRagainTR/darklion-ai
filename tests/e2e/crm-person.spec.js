@@ -113,11 +113,13 @@ test.describe('CRM — Person detail page', () => {
     await expect(page.locator('#tab-overview')).not.toHaveClass(/active/);
   });
 
-  test('"Organizers" tab shows Stanford Tax Organizer card', async ({ page }) => {
+  test('"Organizers" tab shows organizer content area', async ({ page }) => {
     const found = await getPersonPage(page);
     if (!found) return test.skip(true, 'No people in the system');
     await page.locator('.tab-item').filter({ hasText: 'Organizers' }).click();
-    await expect(page.locator('#tab-organizers .card-title')).toContainText('Stanford Tax Organizer', { timeout: TIMEOUTS.element });
+    await expect(page.locator('#tab-organizers')).toHaveClass(/active/, { timeout: TIMEOUTS.element });
+    // Organizer tab shows a dynamic advisor organizer wrap (loading, cards, or empty state)
+    await expect(page.locator('#adv-organizer-wrap')).toBeVisible({ timeout: TIMEOUTS.element });
   });
 
   test('clicking "Workflow" tab switches active tab to #tab-workflow', async ({ page }) => {
