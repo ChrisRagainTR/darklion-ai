@@ -619,7 +619,7 @@
 
     <div class="org-nav">
       <button class="btn-secondary" onclick="goStep(1)">← Back</button>
-      <button class="btn-primary" onclick="goStep(3)">Next: Your Documents →</button>
+      <button class="btn-primary" onclick="saveAnswersAndNext()">Next: Your Documents →</button>
     </div>
   </div>
 
@@ -985,12 +985,42 @@
   }
 
   // === YES/NO QUESTIONS ===
+  // Maps short UI key → DB question key
+  const Q_KEY_MAP = {
+    qlife: 'life_change', qaddr: 'address_change', qinv: 'investments_sold',
+    qcrypto: 'crypto', qbiz: 'new_business', qfreelance: 'freelance',
+    qre: 'real_estate', qrent: 'rental', qfbar: 'foreign_accounts',
+    qforeigninc: 'foreign_income', qnotice: 'irs_notice',
+  };
+
   function selectYN(btn, val, key) {
     const row = btn.closest('.question-row');
     row.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('selected-yes', 'selected-no'));
     btn.classList.add(val === 'yes' ? 'selected-yes' : 'selected-no');
     const followup = document.getElementById(key + '-followup');
     if (followup) followup.classList.toggle('visible', val === 'yes');
+  }
+
+  async function saveAnswersAndNext() {
+    // Collect all answered questions from button state
+    const answers = {};
+    for (const [uiKey, dbKey] of Object.entries(Q_KEY_MAP)) {
+      const yesBtn = document.querySelector(`.yn-btn.selected-yes[onclick*="${uiKey}"]`);
+      const noBtn  = document.querySelector(`.yn-btn.selected-no[onclick*="${uiKey}"]`);
+      if (yesBtn) answers[dbKey] = true;
+      else if (noBtn) answers[dbKey] = false;
+    }
+
+    if (token && Object.keys(answers).length) {
+      try {
+        await fetch(`/portal/organizer/client/${YEAR}/answers`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answers }),
+        });
+      } catch(e) { console.warn('Could not save answers:', e.message); }
+    }
+    goStep(3);
   }
 
   // === CHECKLIST ITEMS ===
