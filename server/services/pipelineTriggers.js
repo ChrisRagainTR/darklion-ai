@@ -64,7 +64,7 @@ async function fireTrigger(firmId, triggerKey, entityId, context = {}, entityTyp
          WHERE pj.instance_id = $1
            AND pj.entity_type = $2
            AND pj.entity_id = $3
-           AND pj.job_status NOT IN ('complete', 'archived')
+           AND pj.job_status NOT IN ('completed', 'archived')
          LIMIT 1`,
         [cfg.pipeline_instance_id, entityType, entityId]
       );
