@@ -993,31 +993,40 @@
     qforeigninc: 'foreign_income', qnotice: 'irs_notice',
   };
 
+  // Store answers in memory as user clicks — don't rely on DOM attribute selectors
+  const _answers = {};
+
+  // Pre-populate from any hardcoded selected-yes/no defaults in HTML
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.yn-btn.selected-yes, .yn-btn.selected-no').forEach(btn => {
+      const match = btn.getAttribute('onclick').match(/'(q[a-z]+)'\)/);
+      if (match) {
+        const dbKey = Q_KEY_MAP[match[1]];
+        if (dbKey) _answers[dbKey] = btn.classList.contains('selected-yes');
+      }
+    });
+  });
+
   function selectYN(btn, val, key) {
     const row = btn.closest('.question-row');
     row.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('selected-yes', 'selected-no'));
     btn.classList.add(val === 'yes' ? 'selected-yes' : 'selected-no');
     const followup = document.getElementById(key + '-followup');
     if (followup) followup.classList.toggle('visible', val === 'yes');
+    // Store in memory
+    const dbKey = Q_KEY_MAP[key];
+    if (dbKey) _answers[dbKey] = (val === 'yes');
   }
 
   async function saveAnswersAndNext() {
-    // Collect all answered questions from button state
-    const answers = {};
-    for (const [uiKey, dbKey] of Object.entries(Q_KEY_MAP)) {
-      const yesBtn = document.querySelector(`.yn-btn.selected-yes[onclick*="${uiKey}"]`);
-      const noBtn  = document.querySelector(`.yn-btn.selected-no[onclick*="${uiKey}"]`);
-      if (yesBtn) answers[dbKey] = true;
-      else if (noBtn) answers[dbKey] = false;
-    }
-
-    if (token && Object.keys(answers).length) {
+    if (token && Object.keys(_answers).length) {
       try {
-        await fetch(`/portal/organizer/client/${YEAR}/answers`, {
+        const r = await fetch(`/portal/organizer/client/${YEAR}/answers`, {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ answers }),
+          body: JSON.stringify({ answers: _answers }),
         });
+        if (!r.ok) console.warn('Answers save returned', r.status, await r.text());
       } catch(e) { console.warn('Could not save answers:', e.message); }
     }
     goStep(3);
