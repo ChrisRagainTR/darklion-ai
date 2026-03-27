@@ -822,9 +822,16 @@
         body: JSON.stringify({ stage_id: stageId, note: `Moved to "${stageName}" from person workflow tab` }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Move failed'); }
-      toast(`Moved to "${stageName}"`);
-      loadWorkflow();
-    } catch(e) { toast('Error: ' + e.message, 'error'); }
+      if (typeof window._shellToast === 'function') window._shellToast(`Moved to "${stageName}"`);
+      const wList = document.getElementById('workflow-list');
+      const wLoad = document.getElementById('workflow-loading');
+      if (wList) { wList.innerHTML = ''; wList.style.display = 'none'; }
+      if (wLoad) wLoad.style.display = '';
+      await loadWorkflow();
+    } catch(e) {
+      if (typeof window._shellToast === 'function') window._shellToast('Error: ' + e.message);
+      else alert('Error: ' + e.message);
+    }
   }
 
   // ── Create Card Modal ─────────────────────────────────
