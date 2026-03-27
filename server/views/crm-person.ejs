@@ -672,7 +672,7 @@
           orgLinkEl.innerHTML = '';
         }
       }
-      loadAdvisorOrganizer();
+      loadOrganizersTab();
     }
     if (name === 'notes') {
       const notesEl = document.getElementById('notes-ta-full');
@@ -1468,28 +1468,205 @@
     'k1':'K-1','schedule-c':'Sch C','1098':'1098','childcare':'Childcare','other':'Other'
   };
 
-  async function loadAdvisorOrganizer() {
+  async function loadOrganizersTab() {
     const wrap = document.getElementById('adv-organizer-wrap');
     if (!wrap) return;
-    const year = '2025';
+    wrap.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0;">Loading organizers…</div>';
     try {
-      const res = await apiFetch(`/api/organizers/${personId}/${year}`);
-      if (!res.ok) throw new Error('Not found');
-      const data = await res.json();
-      renderAdvisorOrganizer(wrap, data, year);
+      const res = await apiFetch(`/api/organizers/${personId}/all`);
+      if (!res.ok) throw new Error('Failed');
+      const organizers = await res.json();
+      if (!organizers.length) {
+        wrap.innerHTML = `
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
+            <div style="flex:1;">
+              <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.3rem;">📋 Tax Organizer</div>
+              <div style="font-size:0.82rem;color:var(--muted);">No organizer loaded yet. Upload the Drake organizer PDF to get started.</div>
+            </div>
+            <label style="cursor:pointer;">
+              <input type="file" accept=".pdf" style="display:none;" onchange="uploadOrganizerFile(this,${personId},'2025')">
+              <span class="btn btn-gold btn-sm">⬆ Upload Drake Organizer</span>
+            </label>
+          </div>`;
+        return;
+      }
+      wrap.innerHTML = organizers.map(org => renderOrgCard(org)).join('');
     } catch(e) {
-      wrap.innerHTML = `
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
-          <div style="flex:1;">
-            <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.3rem;">📋 ${year} Tax Organizer</div>
-            <div style="font-size:0.82rem;color:var(--muted);">No organizer loaded yet. Upload the Drake organizer PDF to generate this client's checklist.</div>
-          </div>
-          <label style="cursor:pointer;">
-            <input type="file" accept=".pdf" style="display:none;" onchange="uploadOrganizerFile(this,${personId},'${year}')">
-            <span class="btn btn-gold btn-sm">⬆ Upload Drake Organizer</span>
-          </label>
-        </div>`;
+      wrap.innerHTML = `<div style="color:var(--red);font-size:0.85rem;padding:0.75rem 0;">Error loading organizers: ${esc(e.message)}</div>`;
     }
+  }
+
+  // Keep legacy alias so uploadOrganizerFile reload still works
+  async function loadAdvisorOrganizer() { return loadOrganizersTab(); }
+
+  function renderOrgCard(org) {
+    const statusColors = { pending:'var(--muted)', in_progress:'var(--gold)', submitted:'var(--green)', reviewed:'var(--green)', closed:'var(--muted)', reopened:'#f5a623' };
+    const statusLabels = { pending:'Not Started', in_progress:'In Progress', submitted:'Submitted', reviewed:'Reviewed', closed:'Closed', reopened:'Reopened' };
+    const color = statusColors[org.status] || 'var(--muted)';
+    const label = statusLabels[org.status] || org.status;
+    const submittedDate = org.submitted_at ? new Date(org.submitted_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : null;
+    const closedDate = org.closed_at ? new Date(org.closed_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : null;
+
+    let actionBtns = `<label style="cursor:pointer;" title="Re-upload Drake organizer"><input type="file" accept=".pdf" style="display:none;" onchange="uploadOrganizerFile(this,${personId},'${esc(org.tax_year)}')"><span class="btn btn-outline btn-sm" style="font-size:0.72rem;">↻ Re-parse</span></label>`;
+    if (['submitted','reviewed','closed'].includes(org.status)) {
+      actionBtns += `<button class="btn btn-outline btn-sm" onclick="reopenOrganizer('${esc(org.tax_year)}')">🔄 Request More Docs</button>`;
+    }
+    if (['submitted','reviewed','reopened','in_progress'].includes(org.status)) {
+      actionBtns += `<button class="btn btn-outline btn-sm" style="color:var(--muted);" onclick="closeOrganizer('${esc(org.tax_year)}')">✓ Close Season</button>`;
+    }
+
+    // Item list — reuse existing renderAdvisorOrganizer logic but inline here
+    const items = org.items || [];
+    const actionable = items.filter(i => !i.sentinel_provides);
+    const uploaded = actionable.filter(i => i.status === 'uploaded').length;
+    const nty = actionable.filter(i => i.status === 'not_this_year').length;
+    const pending = actionable.filter(i => i.status === 'pending').length;
+    const sentinel = items.filter(i => i.sentinel_provides).length;
+    const total = actionable.length;
+    const pct = total ? Math.round(((uploaded + nty) / total) * 100) : 0;
+    const isSubmitted = ['submitted','reviewed','closed'].includes(org.status);
+
+    const FULL_SECTION_LABELS = {
+      'w2':'W-2','1099-r':'1099-R','1099-div':'1099-DIV','1099-int':'1099-INT',
+      'k1':'K-1','schedule-c':'Sch C','1098':'1098','childcare':'Childcare',
+      '1099-nec':'1099-NEC','1099-misc':'1099-MISC','1099-g':'1099-G','other':'Other'
+    };
+    const leftSecs = ['w2','1099-r','1099-div','1099-int','1099-nec','1099-misc','1099-g'];
+    const rightSecs = ['k1','schedule-c','1098','childcare','other'];
+    const bySection = {};
+    for (const item of items) { if (!bySection[item.section]) bySection[item.section] = []; bySection[item.section].push(item); }
+
+    function buildSectionHtml(sec) {
+      const secItems = bySection[sec]; if (!secItems) return '';
+      const rows = secItems.map(item => {
+        const icon = item.sentinel_provides ? '🏢' : item.status === 'uploaded' ? '✓' : item.status === 'not_this_year' ? '–' : '○';
+        const icolor = item.sentinel_provides ? 'var(--gold)' : item.status === 'uploaded' ? 'var(--green)' : item.status === 'not_this_year' ? 'var(--muted)' : 'rgba(255,255,255,0.2)';
+        const badge = item.sentinel_provides ? `<span style="font-size:0.65rem;color:var(--gold);background:rgba(201,168,76,0.1);padding:0.1rem 0.45rem;border-radius:3px;border:1px solid rgba(201,168,76,0.25);">Sentinel</span>`
+          : item.status === 'uploaded' ? `<span style="font-size:0.65rem;color:var(--green);">Uploaded</span>`
+          : item.status === 'not_this_year' ? `<span style="font-size:0.65rem;color:var(--muted);">Not This Year</span>`
+          : `<span style="font-size:0.65rem;color:rgba(255,255,255,0.25);">Pending</span>`;
+        const acct = item.account_number ? ` <span style="color:var(--muted);font-size:0.72rem;">(···${item.account_number.replace(/\*/g,'').slice(-4)})</span>` : '';
+        return `<div id="adv-item-${item.id}" style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;border-radius:6px;" onmouseenter="this.style.background='rgba(255,255,255,0.03)'" onmouseleave="this.style.background=''">
+          <span style="color:${icolor};font-size:0.8rem;width:14px;text-align:center;flex-shrink:0;">${icon}</span>
+          <span style="flex:1;font-size:0.83rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(item.payer_name)}${acct}</span>
+          ${badge}
+          <button class="adv-item-del" onclick="deleteAdvItem(${item.id},'${esc(org.tax_year)}')" title="Remove item" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:0.8rem;padding:0.1rem 0.25rem;border-radius:3px;flex-shrink:0;" onmouseenter="this.style.color='var(--red)'" onmouseleave="this.style.color='var(--muted)'">🗑</button>
+        </div>`;
+      }).join('');
+      return `<div style="margin-bottom:1rem;">
+        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(201,168,76,0.7);margin-bottom:0.35rem;padding-bottom:0.3rem;border-bottom:1px solid rgba(255,255,255,0.06);">${FULL_SECTION_LABELS[sec]||sec}</div>
+        ${rows}
+      </div>`;
+    }
+
+    const answers = org.question_answers || {};
+    const allQuestions = [
+      {key:'life_change',label:'Major life change'},{key:'address_change',label:'Address changed'},
+      {key:'investments_sold',label:'Sold investments'},{key:'crypto',label:'Cryptocurrency',required:true},
+      {key:'new_business',label:'New/closed business'},{key:'freelance',label:'Freelance/side income'},
+      {key:'real_estate',label:'Real estate transaction'},{key:'rental',label:'Rental income'},
+      {key:'foreign_accounts',label:'Foreign accounts >$10k',required:true},{key:'foreign_income',label:'Foreign income'},
+      {key:'irs_notice',label:'IRS/state notices'},
+    ];
+    const hasAnswers = Object.keys(answers).length > 0;
+    const answersHtml = `<div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.06);">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">
+        Client Questionnaire ${hasAnswers ? '' : '<span style="color:rgba(255,255,255,0.2);font-weight:400;letter-spacing:0;">— Not yet answered</span>'}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem 1.5rem;">
+        ${allQuestions.map(q => {
+          const val = answers[q.key];
+          const answered = val !== undefined;
+          const isYes = val === true;
+          const icon = !answered ? '○' : isYes ? '✓' : '–';
+          const ic = !answered ? 'rgba(255,255,255,0.2)' : isYes ? 'var(--green)' : 'var(--muted)';
+          const tc = !answered ? 'rgba(255,255,255,0.35)' : isYes ? 'var(--text)' : 'var(--muted)';
+          return `<div style="display:flex;align-items:center;gap:0.45rem;padding:0.25rem 0;">
+            <span style="color:${ic};font-size:0.8rem;width:14px;text-align:center;flex-shrink:0;">${icon}</span>
+            <span style="font-size:0.78rem;color:${tc};">${esc(q.label)}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+    return `<div style="background:var(--card);border:1px solid ${isSubmitted?'rgba(62,207,142,0.25)':'var(--border)'};border-radius:12px;padding:1.5rem;margin-bottom:1rem;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+        <div>
+          <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.2rem;">📋 ${esc(org.tax_year)} Tax Organizer</div>
+          <div style="font-size:0.78rem;color:${color};font-weight:600;">${label}${org.submitted_at ? ` · ${new Date(org.submitted_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}` : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+          <div style="display:flex;gap:1.25rem;font-size:0.78rem;text-align:center;">
+            <div><div style="font-size:1rem;font-weight:700;color:var(--green);">${uploaded}</div><div style="color:var(--muted);">Uploaded</div></div>
+            <div><div style="font-size:1rem;font-weight:700;color:var(--muted);">${nty}</div><div style="color:var(--muted);">Not This Year</div></div>
+            <div><div style="font-size:1rem;font-weight:700;color:${pending?'var(--orange)':'var(--muted)'};">${pending}</div><div style="color:var(--muted);">Pending</div></div>
+            ${sentinel ? `<div><div style="font-size:1rem;font-weight:700;color:var(--gold);">${sentinel}</div><div style="color:var(--muted);">Sentinel</div></div>` : ''}
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">${actionBtns}</div>
+        </div>
+      </div>
+      ${org.reopen_note ? `<div style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:0.5rem 0.75rem;font-size:0.8rem;color:var(--text);margin-bottom:1rem;">⚠️ Reopen note: "${esc(org.reopen_note)}"</div>` : ''}
+      <div style="height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;margin-bottom:1.5rem;">
+        <div style="height:100%;width:${pct}%;background:var(--green);border-radius:3px;"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 2rem;">
+        <div>${leftSecs.map(buildSectionHtml).join('')}</div>
+        <div>${rightSecs.map(buildSectionHtml).join('')}</div>
+      </div>
+      ${answersHtml}
+      ${isSubmitted && org.workpaper_document_id ? `
+        <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:0.75rem;">
+          <span style="font-size:0.78rem;color:var(--muted);">Workpaper:</span>
+          <a href="/api/documents/${org.workpaper_document_id}/url" target="_blank" class="btn btn-outline btn-sm" style="font-size:0.75rem;">⬇ Download Workpaper PDF</a>
+        </div>` : ''}
+      <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">Add Document Request</div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;">
+          <div style="flex:2;min-width:180px;"><input type="text" id="adv-add-payer" placeholder="Payer / document name" class="form-control" style="font-size:0.83rem;"></div>
+          <div style="flex:1;min-width:130px;"><select id="adv-add-section" class="form-control" style="font-size:0.83rem;">
+            <option value="w2">W-2</option><option value="1099-r">1099-R</option><option value="1099-div">1099-DIV</option>
+            <option value="1099-int">1099-INT</option><option value="1099-nec">1099-NEC</option><option value="1099-misc">1099-MISC</option>
+            <option value="k1" selected>K-1</option><option value="schedule-c">Schedule C</option>
+            <option value="1098">1098</option><option value="childcare">Childcare</option><option value="other">Other</option>
+          </select></div>
+          <div style="flex:1;min-width:110px;"><select id="adv-add-owner" class="form-control" style="font-size:0.83rem;">
+            <option value="taxpayer">Taxpayer</option><option value="spouse">Spouse</option><option value="joint">Joint</option>
+          </select></div>
+          <button class="btn btn-gold btn-sm" onclick="addAdvItem(${org.id})" style="font-size:0.82rem;white-space:nowrap;">+ Add</button>
+        </div>
+      </div>
+      <div style="margin-top:0.75rem;">
+        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">Add Custom Question</div>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <input type="text" id="adv-add-question" placeholder="e.g. Did you receive an inheritance this year?" class="form-control" style="font-size:0.83rem;flex:1;">
+          <button class="btn btn-gold btn-sm" onclick="addAdvQuestion(${org.id},'${esc(org.tax_year)}')" style="font-size:0.82rem;white-space:nowrap;">+ Add</button>
+        </div>
+        <div id="adv-custom-questions-list" style="margin-top:0.5rem;"></div>
+      </div>
+    </div>`;
+  }
+
+  async function reopenOrganizer(year) {
+    const note = prompt(`Optional: add a note for the client about what's needed (${year} organizer):`);
+    if (note === null) return; // cancelled
+    try {
+      const res = await apiFetch(`/api/organizers/${personId}/${year}/reopen`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: note || '' }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      loadOrganizersTab();
+    } catch(err) { alert('Error: ' + err.message); }
+  }
+
+  async function closeOrganizer(year) {
+    if (!confirm(`Close the ${year} tax season for this client? They won't see the organizer as active anymore.`)) return;
+    try {
+      const res = await apiFetch(`/api/organizers/${personId}/${year}/close`, { method: 'POST' });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      loadOrganizersTab();
+    } catch(err) { alert('Error: ' + err.message); }
   }
 
   async function uploadOrganizerFile(input, pid, year) {
@@ -1514,205 +1691,6 @@
     }
   }
 
-  function renderAdvisorOrganizer(wrap, data, year) {
-    const { organizer, items } = data;
-    const actionable = items.filter(i => !i.sentinel_provides);
-    const uploaded = actionable.filter(i => i.status === 'uploaded').length;
-    const nty = actionable.filter(i => i.status === 'not_this_year').length;
-    const pending = actionable.filter(i => i.status === 'pending').length;
-    const sentinel = items.filter(i => i.sentinel_provides).length;
-    const total = actionable.length;
-    const pct = total ? Math.round(((uploaded + nty) / total) * 100) : 0;
-    const isSubmitted = ['submitted','reviewed'].includes(organizer.status);
-
-    const statusLabel = { pending: 'Not Started', in_progress: 'In Progress', submitted: '✓ Submitted', reviewed: '✓ Reviewed' }[organizer.status] || organizer.status;
-    const statusColor = { pending: 'var(--muted)', in_progress: 'var(--gold)', submitted: 'var(--green)', reviewed: 'var(--green)' }[organizer.status] || 'var(--muted)';
-
-    const FULL_SECTION_LABELS = {
-      'w2':'W-2 · Wages','1099-r':'1099-R · Retirement','1099-div':'1099-DIV · Dividends',
-      '1099-int':'1099-INT · Interest','1099-nec':'1099-NEC · Non-Employee','1099-misc':'1099-MISC · Miscellaneous',
-      '1099-g':'1099-G · State Refund','k1':'Schedule K-1 · Partnerships & S-Corps',
-      'schedule-c':'Schedule C · Business Income','1098':'Form 1098 · Mortgage Interest',
-      'childcare':'Childcare & Dependent Expenses','other':'Other'
-    };
-    const sectionOrder = ['w2','1099-r','1099-div','1099-int','1099-nec','1099-misc','1099-g','k1','schedule-c','1098','childcare','other'];
-
-    // Group items by section
-    const bySection = {};
-    for (const item of items) { if (!bySection[item.section]) bySection[item.section] = []; bySection[item.section].push(item); }
-
-    // Build two columns: left=income docs, right=deductions/K-1s
-    const leftSecs = ['w2','1099-r','1099-div','1099-int','1099-nec','1099-misc','1099-g'];
-    const rightSecs = ['k1','schedule-c','1098','childcare','other'];
-
-    function buildSectionHtml(sec) {
-      const secItems = bySection[sec]; if (!secItems) return '';
-      const rows = secItems.map(item => {
-        const icon = item.sentinel_provides ? '🏢' : item.status === 'uploaded' ? '✓' : item.status === 'not_this_year' ? '–' : '○';
-        const color = item.sentinel_provides ? 'var(--gold)' : item.status === 'uploaded' ? 'var(--green)' : item.status === 'not_this_year' ? 'var(--muted)' : 'rgba(255,255,255,0.2)';
-        const badge = item.sentinel_provides ? `<span style="font-size:0.65rem;color:var(--gold);background:rgba(201,168,76,0.1);padding:0.1rem 0.45rem;border-radius:3px;border:1px solid rgba(201,168,76,0.25);">Sentinel</span>`
-          : item.status === 'uploaded' ? `<span style="font-size:0.65rem;color:var(--green);">Uploaded</span>`
-          : item.status === 'not_this_year' ? `<span style="font-size:0.65rem;color:var(--muted);">Not This Year</span>`
-          : `<span style="font-size:0.65rem;color:rgba(255,255,255,0.25);">Pending</span>`;
-        const acct = item.account_number ? ` <span style="color:var(--muted);font-size:0.72rem;">(···${item.account_number.replace(/\*/g,'').slice(-4)})</span>` : '';
-        return `<div id="adv-item-${item.id}" style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;border-radius:6px;" onmouseenter="this.style.background='rgba(255,255,255,0.03)'" onmouseleave="this.style.background=''">
-          <span style="color:${color};font-size:0.8rem;width:14px;text-align:center;flex-shrink:0;">${icon}</span>
-          <span style="flex:1;font-size:0.83rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(item.payer_name)}${acct}</span>
-          ${badge}
-          <button class="adv-item-del" onclick="deleteAdvItem(${item.id},'${year}')" title="Remove item" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:0.8rem;padding:0.1rem 0.25rem;border-radius:3px;flex-shrink:0;" onmouseenter="this.style.color='var(--red)'" onmouseleave="this.style.color='var(--muted)'">🗑</button>
-        </div>`;
-      }).join('');
-      return `<div style="margin-bottom:1rem;">
-        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(201,168,76,0.7);margin-bottom:0.35rem;padding-bottom:0.3rem;border-bottom:1px solid rgba(255,255,255,0.06);">${FULL_SECTION_LABELS[sec]||sec}</div>
-        ${rows}
-      </div>`;
-    }
-
-    const leftHtml = leftSecs.map(buildSectionHtml).join('');
-    const rightHtml = rightSecs.map(buildSectionHtml).join('');
-
-    // Question answers — show all questions, mark answered ones
-    const answers = organizer.question_answers || {};
-    const allQuestions = [
-      { key:'life_change', label:'Major life change (marriage, divorce, new baby, death in family)', required:false },
-      { key:'address_change', label:'Address changed during the year', required:false },
-      { key:'investments_sold', label:'Sold any stocks, bonds, or investments', required:false },
-      { key:'crypto', label:'Cryptocurrency transactions', required:true },
-      { key:'new_business', label:'Started, closed, or sold a business', required:false },
-      { key:'freelance', label:'Freelance, consulting, or side income', required:false },
-      { key:'real_estate', label:'Bought, sold, or refinanced real estate', required:false },
-      { key:'rental', label:'Rental income', required:false },
-      { key:'foreign_accounts', label:'Foreign accounts or assets exceeding $10,000', required:true },
-      { key:'foreign_income', label:'Foreign income or taxes paid to foreign country', required:false },
-      { key:'irs_notice', label:'IRS or state tax notices received', required:false },
-    ];
-    const hasAnswers = Object.keys(answers).length > 0;
-    const answersHtml = `
-      <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.06);">
-        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">
-          Client Questionnaire ${hasAnswers ? '' : '<span style="color:rgba(255,255,255,0.2);font-weight:400;letter-spacing:0;">— Not yet answered</span>'}
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem 1.5rem;">
-          ${allQuestions.map(q => {
-            const val = answers[q.key];
-            const answered = val !== undefined;
-            const isYes = val === true;
-            const icon = !answered ? '○' : isYes ? '✓' : '–';
-            const color = !answered ? 'rgba(255,255,255,0.2)' : isYes ? 'var(--green)' : 'var(--muted)';
-            const textColor = !answered ? 'rgba(255,255,255,0.35)' : isYes ? 'var(--text)' : 'var(--muted)';
-            const reqBadge = q.required ? '<span style="font-size:0.6rem;color:var(--gold);margin-left:0.3rem;">Required</span>' : '';
-            return `<div style="display:flex;align-items:center;gap:0.45rem;padding:0.25rem 0;">
-              <span style="color:${color};font-size:0.8rem;width:14px;text-align:center;flex-shrink:0;">${icon}</span>
-              <span style="font-size:0.78rem;color:${textColor};">${esc(q.label)}${reqBadge}</span>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`;
-
-    wrap.innerHTML = `
-      <div style="background:var(--card);border:1px solid ${isSubmitted?'rgba(62,207,142,0.35)':'var(--border)'};border-radius:12px;padding:1.5rem;margin-bottom:0.75rem;${isSubmitted?'background:rgba(62,207,142,0.03);':''}">
-
-        <!-- Header -->
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
-          <div>
-            <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.2rem;">📋 ${year} Tax Organizer</div>
-            <div style="font-size:0.78rem;color:${statusColor};font-weight:600;">${statusLabel}${organizer.submitted_at ? ` · ${new Date(organizer.submitted_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}` : ''}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-            <div style="display:flex;gap:1.25rem;font-size:0.78rem;text-align:center;">
-              <div><div style="font-size:1rem;font-weight:700;color:var(--green);">${uploaded}</div><div style="color:var(--muted);">Uploaded</div></div>
-              <div><div style="font-size:1rem;font-weight:700;color:var(--muted);">${nty}</div><div style="color:var(--muted);">Not This Year</div></div>
-              <div><div style="font-size:1rem;font-weight:700;color:${pending?'var(--orange)':'var(--muted)'};">${pending}</div><div style="color:var(--muted);">Pending</div></div>
-              ${sentinel ? `<div><div style="font-size:1rem;font-weight:700;color:var(--gold);">${sentinel}</div><div style="color:var(--muted);">Sentinel</div></div>` : ''}
-            </div>
-            <label style="cursor:pointer;" title="Re-upload Drake organizer to re-parse">
-              <input type="file" accept=".pdf" style="display:none;" onchange="uploadOrganizerFile(this,${personId},'${year}')">
-              <span class="btn btn-outline btn-sm" style="font-size:0.72rem;">↻ Re-parse</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Progress bar -->
-        <div style="height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;margin-bottom:1.5rem;">
-          <div style="height:100%;width:${pct}%;background:var(--green);border-radius:3px;"></div>
-        </div>
-
-        <!-- Two-column item list -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 2rem;">
-          <div>${leftHtml}</div>
-          <div>${rightHtml}</div>
-        </div>
-
-        ${answersHtml}
-
-        ${isSubmitted && organizer.workpaper_document_id ? `
-          <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:0.75rem;">
-            <span style="font-size:0.78rem;color:var(--muted);">Workpaper:</span>
-            <a href="/api/documents/${organizer.workpaper_document_id}/url" target="_blank" class="btn btn-outline btn-sm" style="font-size:0.75rem;">⬇ Download Workpaper PDF</a>
-          </div>` : ''}
-
-        <!-- Add document item -->
-        <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.06);">
-          <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">Add Document Request</div>
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;">
-            <div style="flex:2;min-width:180px;">
-              <input type="text" id="adv-add-payer" placeholder="Payer / document name" class="form-control" style="font-size:0.83rem;">
-            </div>
-            <div style="flex:1;min-width:130px;">
-              <select id="adv-add-section" class="form-control" style="font-size:0.83rem;">
-                <option value="w2">W-2</option>
-                <option value="1099-r">1099-R</option>
-                <option value="1099-div">1099-DIV</option>
-                <option value="1099-int">1099-INT</option>
-                <option value="1099-nec">1099-NEC</option>
-                <option value="1099-misc">1099-MISC</option>
-                <option value="k1" selected>K-1</option>
-                <option value="schedule-c">Schedule C</option>
-                <option value="1098">1098</option>
-                <option value="childcare">Childcare</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div style="flex:1;min-width:110px;">
-              <select id="adv-add-owner" class="form-control" style="font-size:0.83rem;">
-                <option value="taxpayer">Taxpayer</option>
-                <option value="spouse">Spouse</option>
-                <option value="joint">Joint</option>
-              </select>
-            </div>
-            <button class="btn btn-gold btn-sm" onclick="addAdvItem(${organizer.id})" style="font-size:0.82rem;white-space:nowrap;">+ Add</button>
-          </div>
-        </div>
-
-        <!-- Add custom question -->
-        <div style="margin-top:0.75rem;">
-          <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem;">Add Custom Question</div>
-          <div style="display:flex;gap:0.5rem;align-items:center;">
-            <input type="text" id="adv-add-question" placeholder="e.g. Did you receive an inheritance this year?" class="form-control" style="font-size:0.83rem;flex:1;">
-            <button class="btn btn-gold btn-sm" onclick="addAdvQuestion(${organizer.id},'${year}')" style="font-size:0.82rem;white-space:nowrap;">+ Add</button>
-          </div>
-          <div id="adv-custom-questions-list" style="margin-top:0.5rem;"></div>
-        </div>
-
-      </div>
-    `;
-
-    // Render existing custom questions list
-    renderCustomQuestionsList(organizer, year);
-  }
-
-  function renderCustomQuestionsList(organizer, year) {
-    const list = document.getElementById('adv-custom-questions-list');
-    if (!list) return;
-    const qs = organizer.custom_questions || [];
-    if (!qs.length) { list.innerHTML = ''; return; }
-    list.innerHTML = qs.map((q, i) => `
-      <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:5px;margin-top:0.25rem;font-size:0.82rem;">
-        <span style="flex:1;color:var(--text);">❓ ${esc(q.label)}</span>
-        <button onclick="removeAdvQuestion(${organizer.id},'${year}',${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.75rem;padding:0.1rem 0.3rem;" title="Remove">✕</button>
-      </div>
-    `).join('');
-  }
 
   async function deleteAdvItem(itemId, year) {
     const el = document.getElementById('adv-item-' + itemId);

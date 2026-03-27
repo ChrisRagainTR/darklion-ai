@@ -815,7 +815,18 @@ router.get('/:personId/all', requireFirm, async (req, res) => {
        ORDER BY o.tax_year DESC`,
       [parseInt(personId), firmId]
     );
-    res.json(orgRes.rows);
+    const organizers = orgRes.rows;
+
+    // Attach items to each organizer for the CRM advisor view
+    for (const org of organizers) {
+      const itemsRes = await pool.query(
+        'SELECT * FROM tax_organizer_items WHERE organizer_id = $1 ORDER BY display_order',
+        [org.id]
+      );
+      org.items = itemsRes.rows;
+    }
+
+    res.json(organizers);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
