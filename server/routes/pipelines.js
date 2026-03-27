@@ -1227,7 +1227,8 @@ router.get('/entity-jobs', async (req, res) => {
       `SELECT
          pj.id, pj.entity_type, pj.entity_id, pj.job_status, pj.priority,
          pj.assigned_to, pj.due_date, pj.created_at,
-         ps.name AS stage_name, ps.color AS stage_color,
+         pj.current_stage_id, pj.instance_id,
+         ps.name AS stage_name, ps.color AS stage_color, ps.position AS stage_position,
          pt.name AS pipeline_name, pt.id AS template_id,
          pi.tax_year,
          COALESCE(fu.display_name, fu.name) AS assigned_name,
@@ -1244,7 +1245,18 @@ router.get('/entity-jobs', async (req, res) => {
        ORDER BY pt.name ASC, pi.tax_year DESC`,
       [req.firm.id, entity_type, parseInt(entity_id)]
     );
-    res.json(rows);
+    // Fetch ordered stages for each unique template so the UI can show prev/next
+    const templateIds = [...new Set(rows.map(r => r.template_id))];
+    const stagesMap = {};
+    for (const tid of templateIds) {
+      const { rows: stages } = await pool.query(
+        'SELECT id, name, color, position FROM pipeline_stages WHERE template_id = $1 ORDER BY position ASC, id ASC',
+        [tid]
+      );
+      stagesMap[tid] = stages;
+    }
+    const result = rows.map(r => ({ ...r, stages: stagesMap[r.template_id] || [] }));
+    res.json(result);
   } catch (e) {
     console.error('GET /entity-jobs error:', e);
     res.status(500).json({ error: e.message });
