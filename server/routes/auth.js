@@ -56,16 +56,27 @@ router.get('/callback', async (req, res) => {
       // Non-fatal — we just won't have the name
     }
 
-    // Extract firm_id and company_id from state (format: "firmId:companyId:nonce" or "firmId:nonce" or just firmId)
+    // Extract firm_id, company_id, and return origin from state
+    // Format: "firmId:companyId:nonce:returnOrigin" (returnOrigin is URL-encoded)
     let firmId = null;
     let darklionCompanyId = null;
+    let returnOrigin = null;
     if (state) {
-      const parts = state.split(':');
+      const decoded = decodeURIComponent(state);
+      const parts = decoded.split(':');
       const parsed = parseInt(parts[0], 10);
       if (!isNaN(parsed) && parsed > 0) firmId = parsed;
       if (parts.length >= 3) {
         const cid = parseInt(parts[1], 10);
         if (!isNaN(cid) && cid > 0) darklionCompanyId = cid;
+      }
+      if (parts.length >= 4) {
+        // returnOrigin may contain colons (https://...) — rejoin from index 3
+        const rawOrigin = parts.slice(3).join(':');
+        // Validate it's a real https origin we control
+        if (/^https?:\/\/[a-zA-Z0-9._-]+/.test(rawOrigin)) {
+          returnOrigin = rawOrigin;
+        }
       }
     }
 
@@ -114,7 +125,7 @@ router.get('/callback', async (req, res) => {
       await auditLog(firmId, 'company_connect', `Connected: ${companyName || realmId} (realm: ${realmId})`, req.ip);
     } catch (e) { /* non-fatal */ }
 
-    const appBase = process.env.APP_URL ? process.env.APP_URL.replace(/\/$/, '') : '';
+    const appBase = returnOrigin || (process.env.APP_URL ? process.env.APP_URL.replace(/\/$/, '') : '');
     const isXHR = req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers['accept'] || '').includes('application/json') || req.headers['authorization'];
 
     if (isXHR) {
@@ -122,7 +133,7 @@ router.get('/callback', async (req, res) => {
       return res.json({ ok: true, company: companyName || realmId, company_id: darklionCompanyId });
     }
 
-    // Direct browser redirect from Intuit — redirect to the right page
+    // Direct browser redirect from Intuit — redirect back to the origin they started from
     if (darklionCompanyId) {
       return res.redirect(`${appBase}/crm/company/${darklionCompanyId}?connected=1`);
     }
