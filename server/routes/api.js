@@ -184,7 +184,8 @@ router.get('/companies/:id([0-9]+)', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT id, company_name, entity_type, ein_encrypted, tax_year_end, stanford_tax_url,
               status, relationship_id, realm_id, connected_at, last_sync_at, notes, firm_id,
-              bookkeeper_id, bookkeeping_service, billing_method
+              bookkeeper_id, bookkeeping_service, billing_method,
+              (realm_id IS NOT NULL AND realm_id != '' AND access_token IS NOT NULL AND access_token != '') AS qbo_connected
        FROM companies
        WHERE id = $1 AND (firm_id = $2 OR firm_id IS NULL)`,
       [id, firmId]
