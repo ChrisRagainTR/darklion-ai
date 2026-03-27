@@ -1650,7 +1650,14 @@
           <input type="text" id="adv-add-question" placeholder="e.g. Did you receive an inheritance this year?" class="form-control" style="font-size:0.83rem;flex:1;">
           <button class="btn btn-gold btn-sm" onclick="addAdvQuestion(${org.id},'${esc(org.tax_year)}')" style="font-size:0.82rem;white-space:nowrap;">+ Add</button>
         </div>
-        <div id="adv-custom-questions-list" style="margin-top:0.5rem;"></div>
+        <div id="adv-custom-questions-list" style="margin-top:0.5rem;">
+          ${(org.custom_questions || []).map((q, i) => `
+            <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:5px;margin-top:0.25rem;font-size:0.82rem;">
+              <span style="flex:1;color:var(--text);">❓ ${esc(q.label)}</span>
+              <button onclick="removeAdvQuestion(${org.id},'${esc(org.tax_year)}',${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.75rem;padding:0.1rem 0.3rem;" title="Remove">✕</button>
+            </div>
+          `).join('')}
+        </div>
       </div>
     </div>`;
   }
