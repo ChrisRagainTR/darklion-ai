@@ -1251,10 +1251,34 @@
     } catch(e) { el.innerHTML = '<div class="empty-state">Failed to load documents.</div>'; }
   }
 
+  function buildOrganizerDocsSection(docs) {
+    const orgDocs = docs.filter(d => d.folder_category === 'organizer');
+    if (!orgDocs.length) return '';
+    const byYear = {};
+    orgDocs.forEach(d => { const y = d.year || 'Unknown'; if (!byYear[y]) byYear[y] = []; byYear[y].push(d); });
+    let html = `<div style="background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem;">
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(201,168,76,0.8);margin-bottom:0.75rem;">📋 Tax Organizer Uploads <span style="font-size:0.68rem;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;">(view only)</span></div>`;
+    Object.keys(byYear).sort((a,b) => b.localeCompare(a)).forEach(yr => {
+      html += `<div style="margin-bottom:0.5rem;"><div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:0.3rem;">📅 ${yr}</div>`;
+      byYear[yr].forEach(doc => {
+        const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
+        const name = (doc.display_name || 'Document').replace(/_/g,' ').trim();
+        html += `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.4rem;border-radius:5px;" onmouseenter="this.style.background='rgba(255,255,255,0.03)'" onmouseleave="this.style.background=''">
+          <span style="flex-shrink:0;padding:0.1rem 0.35rem;border-radius:3px;font-size:0.62rem;font-weight:700;color:#fff;background:${ftb.color};">${ftb.label}</span>
+          <span style="flex:1;font-size:0.8rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(name)}">${esc(name)}</span>
+          <button class="btn-dl" data-docid="${doc.id}" onclick="downloadDoc(${doc.id},this)" style="background:none;border:1px solid var(--border);border-radius:4px;padding:0.1rem 0.45rem;font-size:0.7rem;color:var(--muted);cursor:pointer;">⬇</button>
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    html += `</div>`;
+    return html;
+  }
+
   function renderDocs() {
     const el = document.getElementById('docs-content');
     el.innerHTML = `<div class="docs-layout">
-      <div>${buildDocsSection(docsData, 'firm_uploaded', 'Delivered by Advisor', '📁')}</div>
+      <div>${buildOrganizerDocsSection(docsData)}${buildDocsSection(docsData, 'firm_uploaded', 'Delivered by Advisor', '📁')}</div>
       <div>${buildDocsSection(docsData, 'client_uploaded', 'Uploaded by Client', '📤')}</div>
     </div>`;
     // Wire year folder toggles
