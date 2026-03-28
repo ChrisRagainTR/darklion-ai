@@ -945,6 +945,24 @@ async function initDB() {
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
 
+    -- ===================== ADDRESS FIELDS (people + companies) =====================
+    DO $$ BEGIN
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS address_line1 TEXT DEFAULT '';
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS address_line2 TEXT DEFAULT '';
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS city TEXT DEFAULT '';
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS state TEXT DEFAULT '';
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS zip TEXT DEFAULT '';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+    DO $$ BEGIN
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS address_line1 TEXT DEFAULT '';
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS address_line2 TEXT DEFAULT '';
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS city TEXT DEFAULT '';
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS state TEXT DEFAULT '';
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS zip TEXT DEFAULT '';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
     -- ===================== TAX SEASON LIFECYCLE =====================
     -- active_tax_year: the year currently open for organizer submissions
     DO $$ BEGIN
