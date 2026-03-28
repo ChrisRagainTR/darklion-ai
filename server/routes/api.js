@@ -158,16 +158,16 @@ router.get('/companies', async (req, res) => {
 // POST /api/companies — create a new company (firm-scoped)
 router.post('/companies', async (req, res) => {
   const firmId = req.firm?.id;
-  const { company_name, relationship_id, entity_type } = req.body;
+  const { company_name, relationship_id, entity_type, address_line1 = '', address_line2 = '', city = '', state = '', zip = '' } = req.body;
   if (!company_name) return res.status(400).json({ error: 'company_name is required' });
   if (!relationship_id) return res.status(400).json({ error: 'relationship_id is required' });
   try {
     const { rows: rel } = await pool.query('SELECT id FROM relationships WHERE id = $1 AND firm_id = $2', [relationship_id, firmId]);
     if (!rel.length) return res.status(404).json({ error: 'Relationship not found' });
     const { rows } = await pool.query(
-      `INSERT INTO companies (firm_id, company_name, relationship_id, entity_type, realm_id, access_token, refresh_token, token_expires_at)
-       VALUES ($1, $2, $3, $4, '', '', '', 0) RETURNING id, company_name, entity_type, relationship_id, firm_id`,
-      [firmId, company_name, relationship_id, entity_type || 'other']
+      `INSERT INTO companies (firm_id, company_name, relationship_id, entity_type, realm_id, access_token, refresh_token, token_expires_at, address_line1, address_line2, city, state, zip)
+       VALUES ($1, $2, $3, $4, '', '', '', 0, $5, $6, $7, $8, $9) RETURNING id, company_name, entity_type, relationship_id, firm_id, address_line1, address_line2, city, state, zip`,
+      [firmId, company_name, relationship_id, entity_type || 'other', address_line1, address_line2, city, state, zip]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -185,6 +185,7 @@ router.get('/companies/:id([0-9]+)', async (req, res) => {
       `SELECT id, company_name, entity_type, ein_encrypted, tax_year_end, stanford_tax_url,
               status, relationship_id, realm_id, connected_at, last_sync_at, notes, firm_id,
               bookkeeper_id, bookkeeping_service, billing_method,
+              address_line1, address_line2, city, state, zip,
               (realm_id IS NOT NULL AND realm_id != '' AND access_token IS NOT NULL AND access_token != '') AS qbo_connected
        FROM companies
        WHERE id = $1 AND (firm_id = $2 OR firm_id IS NULL)`,
@@ -243,7 +244,7 @@ router.get('/companies/:id([0-9]+)', async (req, res) => {
 router.put('/companies/:id([0-9]+)', async (req, res) => {
   const firmId = req.firm?.id;
   const { id } = req.params;
-  const { company_name, entity_type, tax_year_end, stanford_tax_url, status, relationship_id, notes, bookkeeper_id, bookkeeping_service, billing_method } = req.body;
+  const { company_name, entity_type, tax_year_end, stanford_tax_url, status, relationship_id, notes, bookkeeper_id, bookkeeping_service, billing_method, address_line1, address_line2, city, state, zip } = req.body;
   try {
     const { rows: existing } = await pool.query(
       'SELECT id FROM companies WHERE id = $1 AND (firm_id = $2 OR firm_id IS NULL)',
@@ -262,9 +263,14 @@ router.put('/companies/:id([0-9]+)', async (req, res) => {
          notes = COALESCE($7, notes),
          bookkeeper_id = $10,
          bookkeeping_service = $11,
-         billing_method = COALESCE($12, billing_method)
+         billing_method = COALESCE($12, billing_method),
+         address_line1 = CASE WHEN $13::TEXT IS NOT NULL THEN $13 ELSE address_line1 END,
+         address_line2 = CASE WHEN $14::TEXT IS NOT NULL THEN $14 ELSE address_line2 END,
+         city = CASE WHEN $15::TEXT IS NOT NULL THEN $15 ELSE city END,
+         state = CASE WHEN $16::TEXT IS NOT NULL THEN $16 ELSE state END,
+         zip = CASE WHEN $17::TEXT IS NOT NULL THEN $17 ELSE zip END
        WHERE id = $8 AND (firm_id = $9 OR firm_id IS NULL)
-       RETURNING id, company_name, entity_type, tax_year_end, stanford_tax_url, status, relationship_id, realm_id, notes, bookkeeper_id, bookkeeping_service, billing_method`,
+       RETURNING id, company_name, entity_type, tax_year_end, stanford_tax_url, status, relationship_id, realm_id, notes, bookkeeper_id, bookkeeping_service, billing_method, address_line1, address_line2, city, state, zip`,
       [
         company_name || null,
         entity_type || null,
@@ -278,6 +284,11 @@ router.put('/companies/:id([0-9]+)', async (req, res) => {
         bookkeeper_id !== undefined ? (bookkeeper_id || null) : undefined,
         bookkeeping_service !== undefined ? (bookkeeping_service || null) : undefined,
         billing_method !== undefined ? (billing_method || null) : null,
+        address_line1 !== undefined ? (address_line1 || '') : null,
+        address_line2 !== undefined ? (address_line2 || '') : null,
+        city !== undefined ? (city || '') : null,
+        state !== undefined ? (state || '') : null,
+        zip !== undefined ? (zip || '') : null,
       ]
     );
     res.json(rows[0]);

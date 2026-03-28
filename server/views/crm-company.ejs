@@ -902,6 +902,16 @@
         </select>
       </div>
     </div>
+    <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:0.25rem;">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Address</div>
+      <div class="form-group"><label>Street Address</label><input type="text" class="form-control" id="ef-addr1" placeholder="123 Main St"></div>
+      <div class="form-group"><label>Line 2 <span style="color:var(--muted);font-weight:400;">(optional)</span></label><input type="text" class="form-control" id="ef-addr2" placeholder="Suite, Unit, etc."></div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:0 0.75rem;">
+        <div class="form-group"><label>City</label><input type="text" class="form-control" id="ef-city" placeholder="Naples"></div>
+        <div class="form-group"><label>State</label><input type="text" class="form-control" id="ef-state" placeholder="FL" maxlength="2"></div>
+        <div class="form-group"><label>ZIP</label><input type="text" class="form-control" id="ef-zip" placeholder="34108" maxlength="10"></div>
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
       <button class="btn btn-gold" id="ef-submit" onclick="submitEdit()">Save Changes</button>
@@ -1094,6 +1104,8 @@
     const meta = [];
     if (c.relationship) meta.push(`👥 <a href="/crm/relationship/${c.relationship.id}" style="color:var(--gold);text-decoration:none;">${esc(c.relationship.name)}</a>`);
     if (c.tax_year_end) meta.push(`Tax Year End: ${esc(c.tax_year_end)}`);
+    const cityState = [c.city, c.state].filter(x => x && x.trim()).map(esc).join(', ');
+    if (cityState) meta.push(`📍 ${cityState}`);
     document.getElementById('entity-meta').innerHTML = meta.join('  ·  ');
     // Track recent visit
     if (window.addRecentClient) window.addRecentClient({ _type:'company', id: c.id, _label: c.company_name || 'Unnamed', _sub: (c.relationship && c.relationship.name) || c.entity_type || 'Company' });
@@ -1114,8 +1126,16 @@
     const detailRowsHtml = detailRows.map(r =>
       `<div style="min-width:0;"><div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.18rem;">${r.label}</div><div style="font-size:0.84rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.val}</div></div>`
     ).join('');
+    const addrParts = [c.address_line1, c.address_line2].filter(x => x && x.trim()).map(esc).join('<br>');
+    const cityStateZip = [c.city, c.state, c.zip].filter(x => x && x.trim()).map(esc).join(', ');
+    const addrHtml = (addrParts || cityStateZip)
+      ? `<div style="margin-top:0.75rem;padding-top:0.65rem;border-top:1px solid rgba(255,255,255,0.05);">
+           <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.25rem;">Address</div>
+           <div style="font-size:0.84rem;font-weight:500;line-height:1.5;">${[addrParts, cityStateZip].filter(Boolean).join('<br>')}</div>
+         </div>`
+      : '';
     detailsEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Company Details</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem 1rem;">${detailRowsHtml}</div>`;
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem 1rem;">${detailRowsHtml}</div>${addrHtml}`;
 
     // ── TOP RIGHT: People panel ──
     const peopleEl = document.getElementById('overview-people-panel');
@@ -2071,6 +2091,11 @@
     document.getElementById('ef-status').value = companyData.status || 'active';
     document.getElementById('ef-billing-method').value = companyData.billing_method || '';
     document.getElementById('ef-bookkeeping-service').value = companyData.bookkeeping_service || 'none';
+    document.getElementById('ef-addr1').value = companyData.address_line1 || '';
+    document.getElementById('ef-addr2').value = companyData.address_line2 || '';
+    document.getElementById('ef-city').value = companyData.city || '';
+    document.getElementById('ef-state').value = companyData.state || '';
+    document.getElementById('ef-zip').value = companyData.zip || '';
     document.getElementById('edit-modal').classList.add('open');
     // Load bookkeeper options async after modal is visible
     const bkSel = document.getElementById('ef-bookkeeper');
@@ -2096,11 +2121,15 @@
       company_name: document.getElementById('ef-name').value.trim(),
       entity_type: document.getElementById('ef-entity-type').value,
       tax_year_end: document.getElementById('ef-tax-year-end').value.trim(),
-
       status: document.getElementById('ef-status').value,
       billing_method: document.getElementById('ef-billing-method').value || null,
       bookkeeper_id: document.getElementById('ef-bookkeeper').value || null,
       bookkeeping_service: document.getElementById('ef-bookkeeping-service').value || 'none',
+      address_line1: document.getElementById('ef-addr1').value.trim() || '',
+      address_line2: document.getElementById('ef-addr2').value.trim() || '',
+      city: document.getElementById('ef-city').value.trim() || '',
+      state: document.getElementById('ef-state').value.trim().toUpperCase() || '',
+      zip: document.getElementById('ef-zip').value.trim() || '',
     };
     try {
       const res = await apiFetch(`/api/companies/${companyId}`, { method: 'PUT', body: JSON.stringify(body) });

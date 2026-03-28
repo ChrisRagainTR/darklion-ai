@@ -429,6 +429,32 @@
           <input type="url" class="form-control" id="person-form-stanford" placeholder="https://…">
         </div>
       </div>
+      <!-- Address section -->
+      <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:0.25rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Address</div>
+        <div class="form-group">
+          <label class="form-label">Street Address</label>
+          <input type="text" class="form-control" id="person-form-addr1" placeholder="123 Main St">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Line 2 <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+          <input type="text" class="form-control" id="person-form-addr2" placeholder="Apt, Suite, etc.">
+        </div>
+        <div class="form-row" style="grid-template-columns:2fr 1fr 1fr;">
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input type="text" class="form-control" id="person-form-city" placeholder="Naples">
+          </div>
+          <div class="form-group">
+            <label class="form-label">State</label>
+            <input type="text" class="form-control" id="person-form-state" placeholder="FL" maxlength="2">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ZIP</label>
+            <input type="text" class="form-control" id="person-form-zip" placeholder="34108" maxlength="10">
+          </div>
+        </div>
+      </div>
       <!-- Spouse section — shown only when filing_status = MFJ -->
       <div id="person-form-spouse-section" style="display:none;border-top:1px solid var(--border);padding-top:1rem;margin-top:0.25rem;">
         <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Spouse</div>
@@ -817,7 +843,7 @@ function renderPeople(list) {
     </tr></thead>
     <tbody>${list.map(p => `
       <tr onclick="window.location.href='/crm/person/${p.id}'">
-        <td style="font-weight:600;">${esc(p.first_name)} ${esc(p.last_name)}${parseInt(p.unread_count||0)>0?` <span style="display:inline-flex;align-items:center;justify-content:center;background:#e74c3c;color:#fff;border-radius:999px;padding:0.1rem 0.45rem;font-size:0.65rem;font-weight:800;margin-left:0.35rem;">${p.unread_count}</span>`:''}</td>
+        <td style="font-weight:600;">${esc(p.first_name)} ${esc(p.last_name)}${parseInt(p.unread_count||0)>0?` <span style="display:inline-flex;align-items:center;justify-content:center;background:#e74c3c;color:#fff;border-radius:999px;padding:0.1rem 0.45rem;font-size:0.65rem;font-weight:800;margin-left:0.35rem;">${p.unread_count}</span>`:''}${(p.city||p.state)?`<div style="font-size:0.74rem;font-weight:400;color:var(--muted);margin-top:0.15rem;">${[p.city,p.state].filter(Boolean).map(esc).join(', ')}</div>`:''}</td>
         <td style="color:var(--muted);">${p.email ? esc(p.email) : '—'}</td>
         <td>${p.relationship_name ? `<span style="color:var(--gold);">${esc(p.relationship_name)}</span>` : '—'}</td>
         <td>${p.filing_status ? `<span class="badge badge-muted">${filingLabel(p.filing_status)}</span>` : '—'}</td>
@@ -859,6 +885,8 @@ function populatePersonPanelHeader(p) {
   let sub = '';
   if (p.email) sub += `📧 ${esc(p.email)}`;
   if (p.phone) sub += (sub ? '  ·  ' : '') + `📞 ${esc(p.phone)}`;
+  const cityState = [p.city, p.state].filter(Boolean).map(esc).join(', ');
+  if (cityState) sub += (sub ? '  ·  ' : '') + `📍 ${cityState}`;
   if (p.relationship_name) sub += (sub ? '<br>' : '') + `<a href="#" class="inline-edit-link" onclick="openRelByName('${esc(p.relationship_name)}');return false;">👥 ${esc(p.relationship_name)}</a>`;
   document.getElementById('person-panel-sub').innerHTML = sub;
 }
@@ -879,6 +907,7 @@ async function loadPersonOverview() {
         <div class="info-row"><span class="info-label">Phone</span><span class="info-val">${p.phone ? esc(p.phone) : '—'}</span></div>
         <div class="info-row"><span class="info-label">DOB</span><span class="info-val">${p.date_of_birth ? esc(p.date_of_birth) : '—'}</span></div>
         <div class="info-row"><span class="info-label">Spouse</span><span class="info-val">${spouseHtml}</span></div>
+        ${(p.address_line1||p.city||p.state||p.zip) ? `<div class="info-row"><span class="info-label">Address</span><span class="info-val">${[p.address_line1, p.address_line2].filter(x=>x&&x.trim()).map(esc).join('<br>')}${(p.address_line1||p.address_line2)&&(p.city||p.state||p.zip)?'<br>':''}${[p.city, p.state, p.zip].filter(x=>x&&x.trim()).map(esc).join(', ')}</span></div>` : `<div class="info-row"><span class="info-label">Address</span><span class="info-val" style="color:var(--muted);">—</span></div>`}
       </div>
       ${p.stanford_tax_url ? `
       <div class="info-card">
@@ -1029,6 +1058,11 @@ function openNewPerson(prefilledRelId = null, prefilledRelName = null) {
   document.getElementById('person-form-spouse-name').value = '';
   document.getElementById('person-form-spouse-email').value = '';
   // spouse_portal_enabled not set at creation — use Send Invite on the person CRM page
+  document.getElementById('person-form-addr1').value = '';
+  document.getElementById('person-form-addr2').value = '';
+  document.getElementById('person-form-city').value = '';
+  document.getElementById('person-form-state').value = '';
+  document.getElementById('person-form-zip').value = '';
   document.getElementById('person-form-error').style.display = 'none';
   openModal('person-modal');
   setTimeout(() => document.getElementById('person-form-fname').focus(), 100);
@@ -1063,6 +1097,11 @@ async function openEditPerson(id) {
   document.getElementById('person-form-spouse-name').value = p.spouse_name || '';
   document.getElementById('person-form-spouse-email').value = p.spouse_email || '';
   document.getElementById('person-form-spouse-portal').checked = !!p.spouse_portal_enabled;
+  document.getElementById('person-form-addr1').value = p.address_line1 || '';
+  document.getElementById('person-form-addr2').value = p.address_line2 || '';
+  document.getElementById('person-form-city').value = p.city || '';
+  document.getElementById('person-form-state').value = p.state || '';
+  document.getElementById('person-form-zip').value = p.zip || '';
   openModal('person-modal');
 }
 
@@ -1091,6 +1130,11 @@ async function submitPersonForm() {
     spouse_name: document.getElementById('person-form-spouse-name').value.trim() || null,
     spouse_email: document.getElementById('person-form-spouse-email').value.trim() || null,
     // spouse_portal_enabled only set via the portal invite flow, not creation form
+    address_line1: document.getElementById('person-form-addr1').value.trim() || '',
+    address_line2: document.getElementById('person-form-addr2').value.trim() || '',
+    city: document.getElementById('person-form-city').value.trim() || '',
+    state: document.getElementById('person-form-state').value.trim().toUpperCase() || '',
+    zip: document.getElementById('person-form-zip').value.trim() || '',
   };
   const btn = document.getElementById('person-form-submit');
   btn.disabled = true;
@@ -1157,7 +1201,7 @@ function renderCompanies(list) {
     <thead><tr><th>Company</th><th>Entity Type</th><th>Relationship</th><th>Status</th></tr></thead>
     <tbody>${list.map(co => `
       <tr onclick="window.location.href='/crm/company/${co.id||co.company_id||0}'" style="cursor:pointer;">
-        <td style="font-weight:600;">${esc(co.display_name||co.company_name||co.name||'Unknown')}</td>
+        <td style="font-weight:600;">${esc(co.display_name||co.company_name||co.name||'Unknown')}${(co.city||co.state)?`<div style="font-size:0.74rem;font-weight:400;color:var(--muted);margin-top:0.15rem;">${[co.city,co.state].filter(Boolean).map(esc).join(', ')}</div>`:''}</td>
         <td>${co.entity_type ? `<span class="badge badge-muted">${esc(co.entity_type)}</span>` : '—'}</td>
         <td>${co.relationship_name ? `<span style="color:var(--gold);">${esc(co.relationship_name)}</span>` : '—'}</td>
         <td>${co.status === 'inactive' ? '<span class="badge badge-muted">Inactive</span>' : '<span class="badge badge-green">Active</span>'}</td>

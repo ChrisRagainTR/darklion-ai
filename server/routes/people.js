@@ -70,6 +70,11 @@ router.post('/', async (req, res) => {
     spouse_name = '',
     spouse_email = '',
     spouse_portal_enabled = false,
+    address_line1 = '',
+    address_line2 = '',
+    city = '',
+    state = '',
+    zip = '',
   } = req.body;
 
   if (!relationship_id) return res.status(400).json({ error: 'relationship_id is required' });
@@ -115,15 +120,17 @@ router.post('/', async (req, res) => {
         date_of_birth_encrypted,
         filing_status, portal_enabled, stanford_tax_url, notes,
         spouse_name, spouse_email, spouse_portal_enabled,
+        address_line1, address_line2, city, state, zip,
         created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW())
       RETURNING *
     `, [
       firmId, relationship_id, first_name, last_name, email, phone,
       date_of_birth_encrypted,
       filing_status, portal_enabled, stanford_tax_url, notes,
       spouse_name, spouse_email, spouse_portal_enabled,
+      address_line1, address_line2, city, state, zip,
     ]);
 
     res.status(201).json(sanitizePerson(rows[0]));
@@ -192,6 +199,11 @@ router.put('/:id', async (req, res) => {
     spouse_name,
     spouse_email,
     spouse_portal_enabled,
+    address_line1,
+    address_line2,
+    city,
+    state,
+    zip,
   } = req.body;
 
   try {
@@ -253,6 +265,11 @@ router.put('/:id', async (req, res) => {
         spouse_name = CASE WHEN $14::BOOLEAN THEN $15 ELSE spouse_name END,
         spouse_email = CASE WHEN $16::BOOLEAN THEN $17 ELSE spouse_email END,
         spouse_portal_enabled = CASE WHEN $18::BOOLEAN THEN $19 ELSE spouse_portal_enabled END,
+        address_line1 = CASE WHEN $20::TEXT IS NOT NULL THEN $20 ELSE address_line1 END,
+        address_line2 = CASE WHEN $21::TEXT IS NOT NULL THEN $21 ELSE address_line2 END,
+        city = CASE WHEN $22::TEXT IS NOT NULL THEN $22 ELSE city END,
+        state = CASE WHEN $23::TEXT IS NOT NULL THEN $23 ELSE state END,
+        zip = CASE WHEN $24::TEXT IS NOT NULL THEN $24 ELSE zip END,
         updated_at = NOW()
       WHERE id = $11 AND firm_id = $12
       RETURNING *
@@ -276,6 +293,11 @@ router.put('/:id', async (req, res) => {
       spouse_email !== undefined ? (spouse_email || '') : '',      // $17
       spouse_portal_enabled !== undefined,                         // $18
       spouse_portal_enabled !== undefined ? !!spouse_portal_enabled : false, // $19
+      address_line1 !== undefined ? (address_line1 || '') : null, // $20
+      address_line2 !== undefined ? (address_line2 || '') : null, // $21
+      city !== undefined ? (city || '') : null,                   // $22
+      state !== undefined ? (state || '') : null,                 // $23
+      zip !== undefined ? (zip || '') : null,                     // $24
     ]);
 
     const updated = rows[0];
