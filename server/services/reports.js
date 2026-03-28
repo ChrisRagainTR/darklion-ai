@@ -23,12 +23,21 @@ async function generateClosePackage(realmId, period, customStart, customEnd) {
     monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
   }
 
-  // Fetch reports in parallel
-  const [pnlData, bsData, tbData] = await Promise.all([
-    qbFetch(realmId, `/reports/ProfitAndLoss?start_date=${startDate}&end_date=${endDate}&summarize_column_by=Month&minorversion=75`).catch(() => null),
-    qbFetch(realmId, `/reports/BalanceSheet?start_date=${monthStart}&end_date=${endDate}&minorversion=75`).catch(() => null),
-    qbFetch(realmId, `/reports/TrialBalance?start_date=${monthStart}&end_date=${endDate}&minorversion=75`).catch(() => null),
+  // Fetch reports in parallel — capture errors individually so we get real error messages
+  const [pnlResult, bsResult, tbResult] = await Promise.all([
+    qbFetch(realmId, `/reports/ProfitAndLoss?start_date=${startDate}&end_date=${endDate}&summarize_column_by=Month&minorversion=75`).then(d => ({ ok: true, data: d })).catch(e => ({ ok: false, error: e.message })),
+    qbFetch(realmId, `/reports/BalanceSheet?start_date=${monthStart}&end_date=${endDate}&minorversion=75`).then(d => ({ ok: true, data: d })).catch(e => ({ ok: false, error: e.message })),
+    qbFetch(realmId, `/reports/TrialBalance?start_date=${monthStart}&end_date=${endDate}&minorversion=75`).then(d => ({ ok: true, data: d })).catch(e => ({ ok: false, error: e.message })),
   ]);
+
+  // If all three failed, throw the first error so the caller knows what went wrong
+  if (!pnlResult.ok && !bsResult.ok && !tbResult.ok) {
+    throw new Error(`QBO reports failed: ${pnlResult.error}`);
+  }
+
+  const pnlData = pnlResult.ok ? pnlResult.data : null;
+  const bsData = bsResult.ok ? bsResult.data : null;
+  const tbData = tbResult.ok ? tbResult.data : null;
 
   // Get latest uncategorized scan
   const { rows: scans } = await pool.query(`

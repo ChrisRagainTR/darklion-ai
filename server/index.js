@@ -385,6 +385,15 @@ function startNightlyCron() {
 
   async function runNightlyScans() {
     console.log('Starting nightly scans...');
+    // ── Proactive QBO token refresh — keeps all connections alive (runs before scans) ──
+    try {
+      const { refreshAllTokens } = require('./routes/auth');
+      const result = await refreshAllTokens();
+      console.log(`[qbo-refresh] Done — refreshed: ${result.refreshed}, failed: ${result.failed}`);
+      if (result.errors.length) result.errors.forEach(e => console.error(`[qbo-refresh] ${e.company}: ${e.error}`));
+    } catch (e) {
+      console.error('[qbo-refresh] Fatal error:', e.message);
+    }
     try {
       const { rows: companies } = await pool.query('SELECT realm_id, company_name FROM companies');
       const now = new Date();

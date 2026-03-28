@@ -902,6 +902,16 @@
         </select>
       </div>
     </div>
+    <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:0.25rem;">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Address</div>
+      <div class="form-group"><label>Street Address</label><input type="text" class="form-control" id="ef-addr1" placeholder="123 Main St"></div>
+      <div class="form-group"><label>Line 2 <span style="color:var(--muted);font-weight:400;">(optional)</span></label><input type="text" class="form-control" id="ef-addr2" placeholder="Suite, Unit, etc."></div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:0 0.75rem;">
+        <div class="form-group"><label>City</label><input type="text" class="form-control" id="ef-city" placeholder="Naples"></div>
+        <div class="form-group"><label>State</label><input type="text" class="form-control" id="ef-state" placeholder="FL" maxlength="2"></div>
+        <div class="form-group"><label>ZIP</label><input type="text" class="form-control" id="ef-zip" placeholder="34108" maxlength="10"></div>
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
       <button class="btn btn-gold" id="ef-submit" onclick="submitEdit()">Save Changes</button>
@@ -952,7 +962,8 @@
       if (bookkeepingRealm) {
         bk_initBookkeeping();
       } else if (companyData) {
-        bk_showConnectCard();
+        // Had a realm_id before but tokens are gone = disconnected, needs reconnect
+        bk_showConnectCard(companyData.realm_id && companyData.realm_id !== '');
       } else {
         window._bkPendingInit = true;
       }
@@ -1061,7 +1072,7 @@
       // If bookkeeping tab was clicked before company loaded, init now
       if (window._bkPendingInit) {
         window._bkPendingInit = false;
-        if (bookkeepingRealm) bk_initBookkeeping(); else bk_showConnectCard();
+        if (bookkeepingRealm) bk_initBookkeeping(); else bk_showConnectCard(companyData.realm_id && companyData.realm_id !== '');
       }
     } catch(e) {
       console.error('loadCompany error:', e);
@@ -1086,6 +1097,7 @@
     if (c.status === 'inactive') html += ` <span class="badge badge-muted">Inactive</span>`;
     if (c.status === 'dissolved') html += ` <span class="badge badge-red">Dissolved</span>`;
     if (c.qbo_connected) html += ` <span class="badge badge-green">QBO Connected</span>`;
+    else if (c.realm_id && c.realm_id !== '') html += ` <span class="badge badge-red">QBO Disconnected</span>`;
     if (c.bookkeeping_service && c.bookkeeping_service !== 'none') {
       const bkLabel = { bank_feed: 'Bank Feed', accrual: 'Accrual', client_prepared: 'Client Prepared' }[c.bookkeeping_service] || c.bookkeeping_service;
       html += ` <span class="badge" style="background:rgba(74,144,217,0.15);color:#4a90d9;border:1px solid rgba(74,144,217,0.3);">📒 ${esc(bkLabel)}</span>`;
@@ -1094,6 +1106,8 @@
     const meta = [];
     if (c.relationship) meta.push(`👥 <a href="/crm/relationship/${c.relationship.id}" style="color:var(--gold);text-decoration:none;">${esc(c.relationship.name)}</a>`);
     if (c.tax_year_end) meta.push(`Tax Year End: ${esc(c.tax_year_end)}`);
+    const cityState = [c.city, c.state].filter(x => x && x.trim()).map(esc).join(', ');
+    if (cityState) meta.push(`📍 ${cityState}`);
     document.getElementById('entity-meta').innerHTML = meta.join('  ·  ');
     // Track recent visit
     if (window.addRecentClient) window.addRecentClient({ _type:'company', id: c.id, _label: c.company_name || 'Unnamed', _sub: (c.relationship && c.relationship.name) || c.entity_type || 'Company' });
@@ -1114,8 +1128,16 @@
     const detailRowsHtml = detailRows.map(r =>
       `<div style="min-width:0;"><div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.18rem;">${r.label}</div><div style="font-size:0.84rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.val}</div></div>`
     ).join('');
+    const addrParts = [c.address_line1, c.address_line2].filter(x => x && x.trim()).map(esc).join('<br>');
+    const cityStateZip = [c.city, c.state, c.zip].filter(x => x && x.trim()).map(esc).join(', ');
+    const addrHtml = (addrParts || cityStateZip)
+      ? `<div style="margin-top:0.75rem;padding-top:0.65rem;border-top:1px solid rgba(255,255,255,0.05);">
+           <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.25rem;">Address</div>
+           <div style="font-size:0.84rem;font-weight:500;line-height:1.5;">${[addrParts, cityStateZip].filter(Boolean).join('<br>')}</div>
+         </div>`
+      : '';
     detailsEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Company Details</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem 1rem;">${detailRowsHtml}</div>`;
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem 1rem;">${detailRowsHtml}</div>${addrHtml}`;
 
     // ── TOP RIGHT: People panel ──
     const peopleEl = document.getElementById('overview-people-panel');
@@ -1223,7 +1245,9 @@
         <div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:0.4rem;">QuickBooks Online</div>
         ${c.qbo_connected
           ? `<div style="display:flex;align-items:center;gap:0.5rem;"><span class="badge badge-green">Connected</span>${c.last_sync_at ? `<span style="font-size:0.75rem;color:var(--muted);">Last sync: ${new Date(c.last_sync_at).toLocaleDateString()}</span>` : ''}</div>`
-          : `<span style="font-size:0.82rem;color:var(--muted);">Not connected</span>`
+          : (c.realm_id && c.realm_id !== '')
+            ? `<div style="display:flex;align-items:center;gap:0.5rem;"><span class="badge badge-red">Disconnected</span><a href="/connect?company_id=${c.id}&firm_id=" onclick="this.href='/connect?company_id=${c.id}&firm_id='+((()=>{try{return JSON.parse(atob(localStorage.getItem('dl_token').split('.')[1])).firmId||'';}catch(e){return '';}})()); return true;" style="font-size:0.75rem;color:var(--gold);">Reconnect →</a></div>`
+            : `<span style="font-size:0.82rem;color:var(--muted);">Not connected</span>`
         }
       </div>`;
     // Populate bookkeeper select
@@ -2071,6 +2095,11 @@
     document.getElementById('ef-status').value = companyData.status || 'active';
     document.getElementById('ef-billing-method').value = companyData.billing_method || '';
     document.getElementById('ef-bookkeeping-service').value = companyData.bookkeeping_service || 'none';
+    document.getElementById('ef-addr1').value = companyData.address_line1 || '';
+    document.getElementById('ef-addr2').value = companyData.address_line2 || '';
+    document.getElementById('ef-city').value = companyData.city || '';
+    document.getElementById('ef-state').value = companyData.state || '';
+    document.getElementById('ef-zip').value = companyData.zip || '';
     document.getElementById('edit-modal').classList.add('open');
     // Load bookkeeper options async after modal is visible
     const bkSel = document.getElementById('ef-bookkeeper');
@@ -2096,11 +2125,15 @@
       company_name: document.getElementById('ef-name').value.trim(),
       entity_type: document.getElementById('ef-entity-type').value,
       tax_year_end: document.getElementById('ef-tax-year-end').value.trim(),
-
       status: document.getElementById('ef-status').value,
       billing_method: document.getElementById('ef-billing-method').value || null,
       bookkeeper_id: document.getElementById('ef-bookkeeper').value || null,
       bookkeeping_service: document.getElementById('ef-bookkeeping-service').value || 'none',
+      address_line1: document.getElementById('ef-addr1').value.trim() || '',
+      address_line2: document.getElementById('ef-addr2').value.trim() || '',
+      city: document.getElementById('ef-city').value.trim() || '',
+      state: document.getElementById('ef-state').value.trim().toUpperCase() || '',
+      zip: document.getElementById('ef-zip').value.trim() || '',
     };
     try {
       const res = await apiFetch(`/api/companies/${companyId}`, { method: 'PUT', body: JSON.stringify(body) });
@@ -2183,25 +2216,41 @@
     return true;
   }
 
-  function bk_showConnectCard() {
+  function bk_showConnectCard(isReconnect) {
     const tab = document.getElementById('tab-bookkeeping');
     if (!tab) return;
     let firmId = '';
     try { firmId = JSON.parse(atob(token.split('.')[1])).firmId || ''; } catch(e) {}
     const connectUrl = `/connect?company_id=${companyId}&firm_id=${firmId}`;
-    tab.innerHTML = `
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:340px;text-align:center;padding:3rem 2rem;">
-        <div style="font-size:3.5rem;margin-bottom:1rem;line-height:1;">📒</div>
-        <div style="font-size:1.15rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">Connect QuickBooks Online</div>
-        <div style="font-size:0.88rem;color:var(--muted);max-width:420px;line-height:1.6;margin-bottom:1.75rem;">
-          Link this company's QuickBooks Online account to see close packages, uncategorized transactions, variance reports, and more — all inside DarkLion.
+    if (isReconnect) {
+      tab.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:340px;text-align:center;padding:3rem 2rem;">
+          <div style="font-size:3.5rem;margin-bottom:1rem;line-height:1;">🔌</div>
+          <div style="font-size:1.15rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">QuickBooks Connection Lost</div>
+          <div style="font-size:0.88rem;color:var(--muted);max-width:420px;line-height:1.6;margin-bottom:1.75rem;">
+            The QuickBooks authorization for this company has expired or been revoked. Reconnect to restore access to bookkeeping, reports, and syncing.
+          </div>
+          <a href="${connectUrl}" class="btn btn-gold" style="font-size:0.95rem;padding:0.65rem 1.75rem;text-decoration:none;">
+            🔗 Reconnect to QuickBooks
+          </a>
+          <div style="font-size:0.75rem;color:rgba(143,163,184,0.5);margin-top:1rem;">You'll be redirected to Intuit to re-authorize access</div>
         </div>
-        <a href="${connectUrl}" class="btn btn-gold" style="font-size:0.95rem;padding:0.65rem 1.75rem;text-decoration:none;">
-          🔗 Connect to QuickBooks
-        </a>
-        <div style="font-size:0.75rem;color:rgba(143,163,184,0.5);margin-top:1rem;">You'll be redirected to Intuit to authorize access</div>
-      </div>
-    `;
+      `;
+    } else {
+      tab.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:340px;text-align:center;padding:3rem 2rem;">
+          <div style="font-size:3.5rem;margin-bottom:1rem;line-height:1;">📒</div>
+          <div style="font-size:1.15rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">Connect QuickBooks Online</div>
+          <div style="font-size:0.88rem;color:var(--muted);max-width:420px;line-height:1.6;margin-bottom:1.75rem;">
+            Link this company's QuickBooks Online account to see close packages, uncategorized transactions, variance reports, and more — all inside DarkLion.
+          </div>
+          <a href="${connectUrl}" class="btn btn-gold" style="font-size:0.95rem;padding:0.65rem 1.75rem;text-decoration:none;">
+            🔗 Connect to QuickBooks
+          </a>
+          <div style="font-size:0.75rem;color:rgba(143,163,184,0.5);margin-top:1rem;">You'll be redirected to Intuit to authorize access</div>
+        </div>
+      `;
+    }
   }
 
   function bk_initBookkeeping() {
