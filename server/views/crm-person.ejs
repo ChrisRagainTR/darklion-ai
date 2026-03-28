@@ -1084,19 +1084,17 @@
     const contactRowsHtml = contactRows.map(r =>
       `<div style="min-width:0;"><div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.18rem;">${r.label}</div><div style="font-size:0.84rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;">${r.val}</div></div>`
     ).join('');
-    const addrHtml = `<div style="margin-top:0.75rem;padding-top:0.65rem;border-top:1px solid rgba(255,255,255,0.05);">
-      <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.25rem;">Address</div>
-      <div style="font-size:0.84rem;font-weight:500;line-height:1.5;">${addrVal}</div>
-    </div>`;
+
     contactEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Contact Details</div>
       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.85rem;">
         <div style="width:48px;height:48px;border-radius:50%;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
         <div>
           <div style="font-weight:700;font-size:0.95rem;">${esc((p.first_name||'')+' '+(p.last_name||'')).trim() || 'Unnamed'}</div>
           ${p.filing_status ? `<span style="background:${fsBg};color:${fsTc};border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">${esc(fsLabel)}</span>` : ''}
+          ${(addrLine1||addrLine2) ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.25rem;line-height:1.4;">${[addrLine1,addrLine2].filter(Boolean).join('<br>')}</div>` : ''}
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem 1rem;">${contactRowsHtml}</div>${addrHtml}`;
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem 1rem;">${contactRowsHtml}</div>`;
 
     // ── LEFT COL: Client Portal ──
         // ── Portal Access Panel (taxpayer + spouse) ──
