@@ -2412,8 +2412,15 @@
       document.getElementById('bk-cp-results').innerHTML = '<h3 style="font-size:0.92rem;margin-bottom:1rem;">'+esc(bk_cpSelection.label)+'</h3>' + bk_renderClosePackageBody(rdObj, data);
       toast('Close package generated for '+bk_cpSelection.label);
     } catch(e) {
-      toast('Generation failed: '+e.message, 'error');
-      document.getElementById('bk-cp-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: '+esc(e.message)+'</div>';
+      // If QBO token is dead, show reconnect card instead of generic error
+      if (e.message && (e.message.includes('401') || e.message.includes('refresh') || e.message.includes('token'))) {
+        bk_showConnectCard(true);
+        // Reload company data so header badge updates too
+        loadCompany();
+      } else {
+        toast('Generation failed: '+e.message, 'error');
+        document.getElementById('bk-cp-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: '+esc(e.message)+'</div>';
+      }
     }
   }
 
@@ -2562,7 +2569,9 @@
       if (data.error) throw new Error(data.error);
       bk_renderUncatResults(data);
       toast('Scan complete: '+data.summary.flaggedCount+' flagged');
-    } catch(e) { toast('Scan failed: '+e.message, 'error'); }
+    } catch(e) {
+      if (e.message && (e.message.includes('401') || e.message.includes('refresh') || e.message.includes('token'))) { bk_showConnectCard(true); loadCompany(); } else toast('Scan failed: '+e.message, 'error');
+    }
     btn.disabled=false; btn.textContent='Run Scan';
   }
 
@@ -2662,8 +2671,7 @@
       bk_renderVarianceResults(data);
       toast('Variance analysis complete — '+data.summary.flaggedCount+' flagged');
     } catch(e) {
-      toast('Variance analysis failed: '+e.message, 'error');
-      document.getElementById('bk-var-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: '+esc(e.message)+'</div>';
+      if (e.message && (e.message.includes('401') || e.message.includes('refresh') || e.message.includes('token'))) { bk_showConnectCard(true); loadCompany(); } else { toast('Variance analysis failed: '+e.message, 'error'); document.getElementById('bk-var-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: '+esc(e.message)+'</div>'; }
     }
   }
 
@@ -2726,8 +2734,7 @@
       bk_renderLiabilityResults(data);
       toast('Liability check complete — '+data.summary.flaggedCount+' issues found');
     } catch(e) {
-      toast('Liability check failed: '+e.message, 'error');
-      document.getElementById('bk-liab-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: '+esc(e.message)+'</div>';
+      if (e.message && (e.message.includes('401') || e.message.includes('refresh') || e.message.includes('token'))) { bk_showConnectCard(true); loadCompany(); } else { toast('Liability check failed: '+e.message, 'error'); document.getElementById('bk-liab-results').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed: '+esc(e.message)+'</div>'; }
     }
   }
 
