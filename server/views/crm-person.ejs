@@ -594,6 +594,17 @@
         <option value="widow">Qualifying Widow(er)</option>
       </select>
     </div>
+    <!-- Address section -->
+    <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:0.25rem;">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Address</div>
+      <div class="form-group"><label>Street Address</label><input type="text" class="form-control" id="ef-addr1" placeholder="123 Main St"></div>
+      <div class="form-group"><label>Line 2 <span style="color:var(--muted);font-weight:400;">(optional)</span></label><input type="text" class="form-control" id="ef-addr2" placeholder="Apt, Suite, etc."></div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:0 0.75rem;">
+        <div class="form-group"><label>City</label><input type="text" class="form-control" id="ef-city" placeholder="Naples"></div>
+        <div class="form-group"><label>State</label><input type="text" class="form-control" id="ef-state" placeholder="FL" maxlength="2"></div>
+        <div class="form-group"><label>ZIP</label><input type="text" class="form-control" id="ef-zip" placeholder="34108" maxlength="10"></div>
+      </div>
+    </div>
     <!-- Spouse section - shown only when filing_status = mfj -->
     <div id="ef-spouse-section" style="display:none;">
       <div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin:1rem 0 0.5rem;text-transform:uppercase;letter-spacing:0.05em;">Spouse / MFJ</div>
@@ -1028,6 +1039,8 @@
     const meta = [];
     if (p.email) meta.push(esc(p.email));
     if (p.phone) meta.push(fmtPhone(p.phone));
+    const cityState = [p.city, p.state].filter(x => x && x.trim()).map(esc).join(', ');
+    if (cityState) meta.push(`📍 ${cityState}`);
     if (p.relationship_name) meta.push(`👥 <a href="#" style="color:var(--gold);text-decoration:none;">${esc(p.relationship_name)}</a>`);
     document.getElementById('entity-meta').innerHTML = meta.join('  ·  ');
     // Track recent visit
@@ -1050,6 +1063,9 @@
     const fsBg = fsColors[fsKey] || 'rgba(143,163,184,0.15)';
     const fsTc = fsTextColors[fsKey] || '#8fa3b8';
     const personBmLabel = p.billing_method === 'monthly_billing' ? 'Monthly Billing' : p.billing_method === 'client_invoice' ? 'Client Invoice' : (p.billing_method || '—');
+    const addrLine1 = [p.address_line1, p.address_line2].filter(x => x && x.trim()).map(esc).join(', ');
+    const addrLine2 = [p.city, p.state, p.zip].filter(x => x && x.trim()).map(esc).join(', ');
+    const addrVal = (addrLine1 || addrLine2) ? [addrLine1, addrLine2].filter(Boolean).join('<br>') : '—';
     const contactRows = [
       { label: 'Email',          val: p.email ? `<a href="mailto:${esc(p.email)}" style="color:var(--gold);">${esc(p.email)}</a>` : '—' },
       { label: 'Phone',          val: fmtPhone(p.phone) || '—' },
@@ -1061,6 +1077,10 @@
     const contactRowsHtml = contactRows.map(r =>
       `<div style="min-width:0;"><div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.18rem;">${r.label}</div><div style="font-size:0.84rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;">${r.val}</div></div>`
     ).join('');
+    const addrHtml = `<div style="margin-top:0.75rem;padding-top:0.65rem;border-top:1px solid rgba(255,255,255,0.05);">
+      <div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.25rem;">Address</div>
+      <div style="font-size:0.84rem;font-weight:500;line-height:1.5;">${addrVal}</div>
+    </div>`;
     contactEl.innerHTML = `<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Contact Details</div>
       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.85rem;">
         <div style="width:48px;height:48px;border-radius:50%;background:rgba(201,168,76,0.18);color:var(--gold);font-weight:700;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
@@ -1069,7 +1089,7 @@
           ${p.filing_status ? `<span style="background:${fsBg};color:${fsTc};border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">${esc(fsLabel)}</span>` : ''}
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem 1rem;">${contactRowsHtml}</div>`;
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem 1rem;">${contactRowsHtml}</div>${addrHtml}`;
 
     // ── LEFT COL: Client Portal ──
         // ── Portal Access Panel (taxpayer + spouse) ──
@@ -1976,6 +1996,11 @@
     document.getElementById('ef-spouse-portal-enabled').checked = !!personData.spouse_portal_enabled;
     // Show/hide spouse section based on filing status
     document.getElementById('ef-spouse-section').style.display = ['mfj','mfs'].includes(filingVal) ? '' : 'none';
+    document.getElementById('ef-addr1').value = personData.address_line1 || '';
+    document.getElementById('ef-addr2').value = personData.address_line2 || '';
+    document.getElementById('ef-city').value = personData.city || '';
+    document.getElementById('ef-state').value = personData.state || '';
+    document.getElementById('ef-zip').value = personData.zip || '';
     const m = document.getElementById('edit-modal');
     m.classList.remove('hidden');
     m.style.display = 'flex';
@@ -2006,6 +2031,11 @@
       spouse_name: document.getElementById('ef-spouse-name').value.trim(),
       spouse_email: document.getElementById('ef-spouse-email').value.trim(),
       spouse_portal_enabled: document.getElementById('ef-spouse-portal-enabled').checked,
+      address_line1: document.getElementById('ef-addr1').value.trim() || '',
+      address_line2: document.getElementById('ef-addr2').value.trim() || '',
+      city: document.getElementById('ef-city').value.trim() || '',
+      state: document.getElementById('ef-state').value.trim().toUpperCase() || '',
+      zip: document.getElementById('ef-zip').value.trim() || '',
     };
     try {
       const res = await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify(body) });
