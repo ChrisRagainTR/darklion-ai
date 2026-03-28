@@ -169,7 +169,15 @@ async function refreshTokens(realmId) {
     }),
   });
 
-  if (!tokenRes.ok) throw new Error('Token refresh failed');
+  if (!tokenRes.ok) {
+    const errBody = await tokenRes.text().catch(() => '');
+    // Clear tokens so the company shows as disconnected and prompts reconnect
+    await pool.query(
+      "UPDATE companies SET access_token = '', refresh_token = '', token_expires_at = 0 WHERE realm_id = $1",
+      [realmId]
+    );
+    throw new Error(`QBO token refresh failed (${tokenRes.status}): ${errBody}`);
+  }
 
   const tokens = await tokenRes.json();
   const expiresAt = Date.now() + tokens.expires_in * 1000;
@@ -180,6 +188,26 @@ async function refreshTokens(realmId) {
   );
 
   return tokens.access_token;
+}
+
+// Refresh all QBO tokens for all connected companies — call nightly to keep tokens alive
+async function refreshAllTokens() {
+  const { rows } = await pool.query(
+    "SELECT realm_id, company_name FROM companies WHERE refresh_token IS NOT NULL AND refresh_token != '' AND access_token != ''"
+  );
+  const results = { refreshed: 0, failed: 0, errors: [] };
+  for (const c of rows) {
+    try {
+      await refreshTokens(c.realm_id);
+      results.refreshed++;
+      console.log(`[qbo-refresh] Refreshed: ${c.company_name || c.realm_id}`);
+    } catch (e) {
+      results.failed++;
+      results.errors.push({ realm_id: c.realm_id, company: c.company_name, error: e.message });
+      console.error(`[qbo-refresh] Failed: ${c.company_name || c.realm_id} — ${e.message}`);
+    }
+  }
+  return results;
 }
 
 // Get a valid access token, refreshing if needed
@@ -367,5 +395,6 @@ router.refreshTokens = refreshTokens;
 router.getAccessToken = getAccessToken;
 router.refreshGustoTokens = refreshGustoTokens;
 router.getGustoAccessToken = getGustoAccessToken;
+router.refreshAllTokens = refreshAllTokens;
 
 module.exports = router;

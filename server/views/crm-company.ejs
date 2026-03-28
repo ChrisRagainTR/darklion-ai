@@ -962,7 +962,8 @@
       if (bookkeepingRealm) {
         bk_initBookkeeping();
       } else if (companyData) {
-        bk_showConnectCard();
+        // Had a realm_id before but tokens are gone = disconnected, needs reconnect
+        bk_showConnectCard(companyData.realm_id && companyData.realm_id !== '');
       } else {
         window._bkPendingInit = true;
       }
@@ -1071,7 +1072,7 @@
       // If bookkeeping tab was clicked before company loaded, init now
       if (window._bkPendingInit) {
         window._bkPendingInit = false;
-        if (bookkeepingRealm) bk_initBookkeeping(); else bk_showConnectCard();
+        if (bookkeepingRealm) bk_initBookkeeping(); else bk_showConnectCard(companyData.realm_id && companyData.realm_id !== '');
       }
     } catch(e) {
       console.error('loadCompany error:', e);
@@ -1096,6 +1097,7 @@
     if (c.status === 'inactive') html += ` <span class="badge badge-muted">Inactive</span>`;
     if (c.status === 'dissolved') html += ` <span class="badge badge-red">Dissolved</span>`;
     if (c.qbo_connected) html += ` <span class="badge badge-green">QBO Connected</span>`;
+    else if (c.realm_id && c.realm_id !== '') html += ` <span class="badge badge-red">QBO Disconnected</span>`;
     if (c.bookkeeping_service && c.bookkeeping_service !== 'none') {
       const bkLabel = { bank_feed: 'Bank Feed', accrual: 'Accrual', client_prepared: 'Client Prepared' }[c.bookkeeping_service] || c.bookkeeping_service;
       html += ` <span class="badge" style="background:rgba(74,144,217,0.15);color:#4a90d9;border:1px solid rgba(74,144,217,0.3);">📒 ${esc(bkLabel)}</span>`;
@@ -1243,7 +1245,9 @@
         <div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:0.4rem;">QuickBooks Online</div>
         ${c.qbo_connected
           ? `<div style="display:flex;align-items:center;gap:0.5rem;"><span class="badge badge-green">Connected</span>${c.last_sync_at ? `<span style="font-size:0.75rem;color:var(--muted);">Last sync: ${new Date(c.last_sync_at).toLocaleDateString()}</span>` : ''}</div>`
-          : `<span style="font-size:0.82rem;color:var(--muted);">Not connected</span>`
+          : (c.realm_id && c.realm_id !== '')
+            ? `<div style="display:flex;align-items:center;gap:0.5rem;"><span class="badge badge-red">Disconnected</span><a href="/connect?company_id=${c.id}&firm_id=" onclick="this.href='/connect?company_id=${c.id}&firm_id='+((()=>{try{return JSON.parse(atob(localStorage.getItem('dl_token').split('.')[1])).firmId||'';}catch(e){return '';}})()); return true;" style="font-size:0.75rem;color:var(--gold);">Reconnect →</a></div>`
+            : `<span style="font-size:0.82rem;color:var(--muted);">Not connected</span>`
         }
       </div>`;
     // Populate bookkeeper select
@@ -2212,25 +2216,41 @@
     return true;
   }
 
-  function bk_showConnectCard() {
+  function bk_showConnectCard(isReconnect) {
     const tab = document.getElementById('tab-bookkeeping');
     if (!tab) return;
     let firmId = '';
     try { firmId = JSON.parse(atob(token.split('.')[1])).firmId || ''; } catch(e) {}
     const connectUrl = `/connect?company_id=${companyId}&firm_id=${firmId}`;
-    tab.innerHTML = `
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:340px;text-align:center;padding:3rem 2rem;">
-        <div style="font-size:3.5rem;margin-bottom:1rem;line-height:1;">📒</div>
-        <div style="font-size:1.15rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">Connect QuickBooks Online</div>
-        <div style="font-size:0.88rem;color:var(--muted);max-width:420px;line-height:1.6;margin-bottom:1.75rem;">
-          Link this company's QuickBooks Online account to see close packages, uncategorized transactions, variance reports, and more — all inside DarkLion.
+    if (isReconnect) {
+      tab.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:340px;text-align:center;padding:3rem 2rem;">
+          <div style="font-size:3.5rem;margin-bottom:1rem;line-height:1;">🔌</div>
+          <div style="font-size:1.15rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">QuickBooks Connection Lost</div>
+          <div style="font-size:0.88rem;color:var(--muted);max-width:420px;line-height:1.6;margin-bottom:1.75rem;">
+            The QuickBooks authorization for this company has expired or been revoked. Reconnect to restore access to bookkeeping, reports, and syncing.
+          </div>
+          <a href="${connectUrl}" class="btn btn-gold" style="font-size:0.95rem;padding:0.65rem 1.75rem;text-decoration:none;">
+            🔗 Reconnect to QuickBooks
+          </a>
+          <div style="font-size:0.75rem;color:rgba(143,163,184,0.5);margin-top:1rem;">You'll be redirected to Intuit to re-authorize access</div>
         </div>
-        <a href="${connectUrl}" class="btn btn-gold" style="font-size:0.95rem;padding:0.65rem 1.75rem;text-decoration:none;">
-          🔗 Connect to QuickBooks
-        </a>
-        <div style="font-size:0.75rem;color:rgba(143,163,184,0.5);margin-top:1rem;">You'll be redirected to Intuit to authorize access</div>
-      </div>
-    `;
+      `;
+    } else {
+      tab.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:340px;text-align:center;padding:3rem 2rem;">
+          <div style="font-size:3.5rem;margin-bottom:1rem;line-height:1;">📒</div>
+          <div style="font-size:1.15rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">Connect QuickBooks Online</div>
+          <div style="font-size:0.88rem;color:var(--muted);max-width:420px;line-height:1.6;margin-bottom:1.75rem;">
+            Link this company's QuickBooks Online account to see close packages, uncategorized transactions, variance reports, and more — all inside DarkLion.
+          </div>
+          <a href="${connectUrl}" class="btn btn-gold" style="font-size:0.95rem;padding:0.65rem 1.75rem;text-decoration:none;">
+            🔗 Connect to QuickBooks
+          </a>
+          <div style="font-size:0.75rem;color:rgba(143,163,184,0.5);margin-top:1rem;">You'll be redirected to Intuit to authorize access</div>
+        </div>
+      `;
+    }
   }
 
   function bk_initBookkeeping() {
