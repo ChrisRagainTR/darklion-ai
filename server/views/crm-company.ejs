@@ -326,9 +326,35 @@
 </div>
 
 <div id="tab-docs" class="tab-content">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem 0;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem 0;gap:0.5rem;flex-wrap:wrap;">
     <span style="font-size:0.84rem;color:var(--muted);">Company documents</span>
-    <button class="btn btn-gold btn-sm" onclick="openUploadModal()">↑ Upload Document</button>
+    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+      <button class="btn btn-sm" id="tax-financials-btn" onclick="openTaxFinancialsModal()"
+        style="background:rgba(201,168,76,0.12);color:var(--gold);border:1px solid rgba(201,168,76,0.3);">
+        📊 Send to Tax Prep
+      </button>
+      <button class="btn btn-gold btn-sm" onclick="openUploadModal()">↑ Upload Document</button>
+    </div>
+  </div>
+
+  <!-- Tax Financials Modal -->
+  <div class="modal-overlay" id="tax-financials-modal" onclick="closeTaxFinancialsModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:420px;">
+      <h2>Send to Tax Prep</h2>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1.25rem;line-height:1.5;">
+        Pulls year-end financials from QuickBooks (cash basis) and saves a PDF to this company's tax folder — P&amp;L, Balance Sheet, and Trial Balance.
+      </p>
+      <div class="form-group">
+        <label>Tax Year</label>
+        <select class="form-control" id="tf-year"></select>
+      </div>
+      <div id="tf-error" style="display:none;color:#e74c3c;font-size:0.8rem;margin-top:0.5rem;"></div>
+      <div id="tf-success" style="display:none;color:#3ecf8e;font-size:0.8rem;margin-top:0.5rem;"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeTaxFinancialsModal()">Cancel</button>
+        <button class="btn btn-gold" id="tf-submit-btn" onclick="submitTaxFinancials()">Generate &amp; Save</button>
+      </div>
+    </div>
   </div>
   <div id="docs-content"><div class="loading-state"><div class="loading-spinner"></div><div>Loading…</div></div></div>
 
@@ -1507,6 +1533,58 @@
     });
   }
 
+
+  // ── Tax Financials (Send to Tax Prep) ──
+  (function() {
+    var tfModal = document.getElementById('tax-financials-modal');
+    var tfYear  = document.getElementById('tf-year');
+    var tfBtn   = document.getElementById('tf-submit-btn');
+    var tfErr   = document.getElementById('tf-error');
+    var tfOk    = document.getElementById('tf-success');
+    if (!tfModal || !tfYear) return;
+
+    // Populate year dropdown
+    var CY = new Date().getFullYear();
+    for (var y = CY - 1; y >= 2020; y--) {
+      var o = document.createElement('option');
+      o.value = String(y); o.textContent = String(y);
+      if (y === CY - 1) o.selected = true;
+      tfYear.appendChild(o);
+    }
+
+    window.openTaxFinancialsModal = function() {
+      tfErr.style.display = 'none'; tfOk.style.display = 'none';
+      tfBtn.disabled = false; tfBtn.textContent = 'Generate & Save';
+      tfModal.classList.add('open');
+    };
+    window.closeTaxFinancialsModal = function() { tfModal.classList.remove('open'); };
+
+    window.submitTaxFinancials = async function() {
+      tfErr.style.display = 'none'; tfOk.style.display = 'none';
+      tfBtn.disabled = true; tfBtn.textContent = 'Generating…';
+      try {
+        // Need realmId — get from bookkeepingRealm or company data
+        var realm = bookkeepingRealm || companyData.realm_id;
+        if (!realm) { tfErr.textContent = 'No QuickBooks connection found for this company.'; tfErr.style.display = ''; tfBtn.disabled = false; tfBtn.textContent = 'Generate & Save'; return; }
+        var res = await apiFetch('/api/companies/' + realm + '/tax-financials', {
+          method: 'POST',
+          body: JSON.stringify({ year: parseInt(tfYear.value) })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to generate');
+        tfOk.textContent = '✓ Saved to Docs → Tax: ' + data.document.display_name;
+        tfOk.style.display = '';
+        tfBtn.textContent = 'Done';
+        // Refresh docs list
+        loadDocs();
+        setTimeout(function() { closeTaxFinancialsModal(); }, 2500);
+      } catch(e) {
+        tfErr.textContent = e.message;
+        tfErr.style.display = '';
+        tfBtn.disabled = false; tfBtn.textContent = 'Generate & Save';
+      }
+    };
+  })();
 
   // ── Upload modal wiring (portal-matched) ──
   (function() {
