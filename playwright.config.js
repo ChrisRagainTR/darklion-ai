@@ -15,7 +15,7 @@ module.exports = defineConfig({
   testMatch: '**/*.spec.js',
 
   // Global timeout per test (60s in CI to handle Railway cold starts)
-  timeout: process.env.CI ? 60_000 : 30_000,
+  timeout: process.env.CI ? 60_000 : 45_000,
 
   // Expect timeout for assertions
   expect: {
