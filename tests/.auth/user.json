@@ -6,11 +6,11 @@
       "localStorage": [
         {
           "name": "dl_token",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmaXJtSWQiOjEsInVzZXJJZCI6MTQwMiwicm9sZSI6InN0YWZmIiwiZW1haWwiOiJ0ZXN0QGRhcmtsaW9uLmFpIiwibmFtZSI6IlRlc3QgVXNlciIsImZpcm1OYW1lIjoiU2VudGluZWwgV2VhbHRoICYgVGF4IiwiaWF0IjoxNzc0NTI2MTIzLCJleHAiOjE3NzQ2MTI1MjN9.w-sFdmeQJEkfh4szyLIc7GI-AcyKdi__YyP5BFP6UAU"
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmaXJtSWQiOjEsInVzZXJJZCI6MTQwMiwicm9sZSI6ImFkbWluIiwiZW1haWwiOiJ0ZXN0QGRhcmtsaW9uLmFpIiwibmFtZSI6IlRlc3QgVXNlciIsImZpcm1OYW1lIjoiU2VudGluZWwgV2VhbHRoICYgVGF4IiwiaWF0IjoxNzc0Nzk1NDM4LCJleHAiOjE3NzczODc0Mzh9.6kQWceqUDPaGSF-4Ff4mkTDn4I3hj9JKFXdHo8nF8ns"
         },
         {
           "name": "dl_firm",
-          "value": "{\"id\":1,\"name\":\"Sentinel Wealth & Tax\",\"email\":\"test@darklion.ai\",\"plan\":\"trial\"}"
+          "value": "{\"id\":1,\"name\":\"Sentinel Wealth & Tax\"}"
         }
       ]
     }
