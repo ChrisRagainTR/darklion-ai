@@ -172,7 +172,20 @@ router.post('/companies', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, '', '', '', 0, $8, $9, $10, $11, $12) RETURNING id, company_name, entity_type, bookkeeping_service, relationship_id, firm_id, address_line1, address_line2, city, state, zip`,
       [firmId, company_name, relationship_id, entity_type || 'other', bookkeeping_service || 'none', billing_method || null, tax_year_end || '12/31', address_line1, address_line2, city, state, zip]
     );
-    res.status(201).json(rows[0]);
+    const newCompany = rows[0];
+
+    // Auto-grant portal access to all people already in this relationship
+    await pool.query(`
+      INSERT INTO person_company_access (person_id, company_id, access_level)
+      SELECT p.id, $1, 'full'
+      FROM people p
+      WHERE p.relationship_id = $2 AND p.firm_id = $3
+      ON CONFLICT (person_id, company_id) DO NOTHING
+    `, [newCompany.id, relationship_id, firmId]).catch(e =>
+      console.warn('[companies] auto-grant access non-fatal:', e.message)
+    );
+
+    res.status(201).json(newCompany);
   } catch (err) {
     console.error('POST /companies error:', err);
     res.status(500).json({ error: 'Failed to create company' });

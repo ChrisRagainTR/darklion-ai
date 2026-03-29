@@ -133,7 +133,20 @@ router.post('/', async (req, res) => {
       address_line1, address_line2, city, state, zip,
     ]);
 
-    res.status(201).json(sanitizePerson(rows[0]));
+    const newPerson = rows[0];
+
+    // Auto-grant portal access to all companies already in this relationship
+    await pool.query(`
+      INSERT INTO person_company_access (person_id, company_id, access_level)
+      SELECT $1, c.id, 'full'
+      FROM companies c
+      WHERE c.relationship_id = $2 AND c.firm_id = $3
+      ON CONFLICT (person_id, company_id) DO NOTHING
+    `, [newPerson.id, relationship_id, firmId]).catch(e =>
+      console.warn('[people] auto-grant company access non-fatal:', e.message)
+    );
+
+    res.status(201).json(sanitizePerson(newPerson));
   } catch (err) {
     console.error('POST /people error:', err);
     res.status(500).json({ error: 'Failed to create person' });
