@@ -367,24 +367,16 @@
 
 <!-- ── Person Form Modal ── -->
 <div class="modal-overlay hidden" id="person-modal">
-  <div class="modal" style="max-width:560px;">
-    <div class="modal-header">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:720px;width:100%;display:flex;flex-direction:column;max-height:90vh;">
+    <div class="modal-header" style="flex-shrink:0;">
       <div class="modal-title" id="person-modal-title">New Person</div>
       <button class="modal-close" onclick="closeModal('person-modal')">✕</button>
     </div>
-    <div class="modal-body">
-      <div id="person-form-error" class="error-msg" style="display:none;"></div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">First Name <span class="req">*</span></label>
-          <input type="text" class="form-control" id="person-form-fname" placeholder="First">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Last Name <span class="req">*</span></label>
-          <input type="text" class="form-control" id="person-form-lname" placeholder="Last">
-        </div>
-      </div>
-      <div class="form-group">
+    <div class="modal-body" style="overflow-y:auto;flex:1;padding-right:0.25rem;">
+      <div id="person-form-error" class="error-msg" style="display:none;margin-bottom:0.75rem;"></div>
+
+      <!-- Relationship — full width (only shown for new person) -->
+      <div class="form-group" id="person-form-rel-wrap">
         <label class="form-label">Relationship <span class="req">*</span></label>
         <div class="searchable-select-wrap">
           <input type="text" class="form-control" id="person-form-rel-search" placeholder="Search relationship…" oninput="searchableSelectFilter('rel',this.value)" onfocus="openSearchableSelect('rel')" autocomplete="off">
@@ -392,91 +384,64 @@
           <div class="searchable-select-options" id="ss-rel-options"></div>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Email <span class="req">*</span></label>
-          <input type="email" class="form-control" id="person-form-email" placeholder="email@example.com">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Phone</label>
-          <input type="text" class="form-control" id="person-form-phone" placeholder="(555) 000-0000">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Filing Status</label>
-          <select class="form-control" id="person-form-filing">
-            <option value="">— Select —</option>
-            <option value="single">Single</option>
-            <option value="mfj">MFJ</option>
-            <option value="mfs">MFS</option>
-            <option value="hoh">HOH</option>
-            <option value="qw">QW</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Date of Birth</label>
-          <input type="date" class="form-control" id="person-form-dob">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label" style="color:var(--muted);">SSN</label>
-          <input type="text" class="form-control" id="person-form-ssn" placeholder="Stored in Drake / external system" disabled style="opacity:0.4;">
-          <div class="form-hint">SSN is managed in your tax software, not stored here</div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Stanford Tax URL</label>
-          <input type="url" class="form-control" id="person-form-stanford" placeholder="https://…">
-        </div>
-      </div>
-      <!-- Address section -->
-      <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:0.25rem;">
-        <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Address</div>
-        <div class="form-group">
-          <label class="form-label">Street Address</label>
-          <input type="text" class="form-control" id="person-form-addr1" placeholder="123 Main St">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Line 2 <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
-          <input type="text" class="form-control" id="person-form-addr2" placeholder="Apt, Suite, etc.">
-        </div>
-        <div class="form-row" style="grid-template-columns:2fr 1fr 1fr;">
-          <div class="form-group">
-            <label class="form-label">City</label>
-            <input type="text" class="form-control" id="person-form-city" placeholder="Naples">
+
+      <!-- Two-column: personal info left, address right -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1.5rem;align-items:start;">
+        <!-- LEFT -->
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Personal Info</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 0.75rem;">
+            <div class="form-group"><label class="form-label">First Name <span class="req">*</span></label><input type="text" class="form-control" id="person-form-fname" placeholder="First"></div>
+            <div class="form-group"><label class="form-label">Last Name <span class="req">*</span></label><input type="text" class="form-control" id="person-form-lname" placeholder="Last"></div>
           </div>
-          <div class="form-group">
-            <label class="form-label">State</label>
-            <input type="text" class="form-control" id="person-form-state" placeholder="FL" maxlength="2">
+          <div class="form-group"><label class="form-label">Email <span class="req">*</span></label><input type="email" class="form-control" id="person-form-email" placeholder="email@example.com"></div>
+          <div class="form-group"><label class="form-label">Phone</label><input type="text" class="form-control" id="person-form-phone" placeholder="(555) 000-0000"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 0.75rem;">
+            <div class="form-group"><label class="form-label">Date of Birth</label><input type="date" class="form-control" id="person-form-dob"></div>
+            <div class="form-group"><label class="form-label">Billing Method</label>
+              <select class="form-control" id="person-form-billing">
+                <option value="">— Select —</option>
+                <option value="monthly_billing">Monthly Billing</option>
+                <option value="client_invoice">Client Invoice</option>
+              </select>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">ZIP</label>
-            <input type="text" class="form-control" id="person-form-zip" placeholder="34108" maxlength="10">
+          <div class="form-group"><label class="form-label">Filing Status</label>
+            <select class="form-control" id="person-form-filing" onchange="personFormFilingChanged(this.value)">
+              <option value="">— Select —</option>
+              <option value="single">Single</option>
+              <option value="mfj">Married Filing Jointly</option>
+              <option value="mfs">Married Filing Separately</option>
+              <option value="hoh">Head of Household</option>
+              <option value="qw">Qualifying Widow(er)</option>
+            </select>
           </div>
+          <div class="form-group"><label class="form-label">Stanford Tax URL</label><input type="url" class="form-control" id="person-form-stanford" placeholder="https://…"></div>
+        </div>
+        <!-- RIGHT: address -->
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Address</div>
+          <div class="form-group"><label class="form-label">Street Address</label><input type="text" class="form-control" id="person-form-addr1" placeholder="123 Main St"></div>
+          <div class="form-group"><label class="form-label">Line 2 <span style="color:var(--muted);font-weight:400;">(optional)</span></label><input type="text" class="form-control" id="person-form-addr2" placeholder="Apt, Suite, etc."></div>
+          <div class="form-group"><label class="form-label">City</label><input type="text" class="form-control" id="person-form-city" placeholder="Naples"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 0.75rem;">
+            <div class="form-group"><label class="form-label">State</label><input type="text" class="form-control" id="person-form-state" placeholder="FL" maxlength="2"></div>
+            <div class="form-group"><label class="form-label">ZIP</label><input type="text" class="form-control" id="person-form-zip" placeholder="34108" maxlength="10"></div>
+          </div>
+          <div class="form-group" style="margin-top:0.5rem;"><label class="form-label">Notes</label><textarea class="form-control" id="person-form-notes" placeholder="Internal notes…" rows="3"></textarea></div>
         </div>
       </div>
-      <!-- Spouse section — shown only when filing_status = MFJ -->
+
+      <!-- Spouse section — full width, shown only when MFJ/MFS -->
       <div id="person-form-spouse-section" style="display:none;border-top:1px solid var(--border);padding-top:1rem;margin-top:0.25rem;">
         <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Spouse</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Spouse Name</label>
-            <input type="text" class="form-control" id="person-form-spouse-name" placeholder="Full name">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Spouse Email</label>
-            <input type="email" class="form-control" id="person-form-spouse-email" placeholder="spouse@email.com">
-          </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+          <div class="form-group"><label class="form-label">Spouse Name</label><input type="text" class="form-control" id="person-form-spouse-name" placeholder="Full name"></div>
+          <div class="form-group"><label class="form-label">Spouse Email</label><input type="email" class="form-control" id="person-form-spouse-email" placeholder="spouse@email.com"></div>
         </div>
-        <!-- Spouse portal access is enabled via Send Invite on the person CRM page -->
-      </div>
-      <div class="form-group">
-        <label class="form-label">Notes</label>
-        <textarea class="form-control" id="person-form-notes" placeholder="Internal notes…"></textarea>
       </div>
     </div>
-    <div class="modal-actions">
+    <div class="modal-actions" style="flex-shrink:0;margin-top:1rem;">
       <button class="btn btn-outline" onclick="closeModal('person-modal')">Cancel</button>
       <button class="btn btn-gold" id="person-form-submit" onclick="submitPersonForm()">Create Person</button>
     </div>
@@ -614,8 +579,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Show/hide spouse section when filing status changes
+  function personFormFilingChanged(val) {
+    document.getElementById('person-form-spouse-section').style.display = ['mfj','Married Filing Jointly','mfs','Married Filing Separately'].includes(val) ? '' : 'none';
+  }
   document.getElementById('person-form-filing').addEventListener('change', function() {
-    document.getElementById('person-form-spouse-section').style.display = ['mfj','mfs'].includes(this.value) ? '' : 'none';
+    personFormFilingChanged(this.value);
   });
 
   loadRelationships();
@@ -1112,6 +1080,7 @@ function openNewPerson(prefilledRelId = null, prefilledRelName = null) {
   document.getElementById('person-form-email').value = '';
   document.getElementById('person-form-phone').value = '';
   document.getElementById('person-form-filing').value = '';
+  document.getElementById('person-form-billing').value = '';
   document.getElementById('person-form-spouse-section').style.display = 'none';
   document.getElementById('person-form-dob').value = '';
   document.getElementById('person-form-stanford').value = '';
@@ -1120,13 +1089,15 @@ function openNewPerson(prefilledRelId = null, prefilledRelName = null) {
   document.getElementById('person-form-rel-search').value = prefilledRelName || '';
   document.getElementById('person-form-spouse-name').value = '';
   document.getElementById('person-form-spouse-email').value = '';
-  // spouse_portal_enabled not set at creation — use Send Invite on the person CRM page
   document.getElementById('person-form-addr1').value = '';
   document.getElementById('person-form-addr2').value = '';
   document.getElementById('person-form-city').value = '';
   document.getElementById('person-form-state').value = '';
   document.getElementById('person-form-zip').value = '';
   document.getElementById('person-form-error').style.display = 'none';
+  // Show relationship field for new person
+  const relWrap = document.getElementById('person-form-rel-wrap');
+  if (relWrap) relWrap.style.display = '';
   openModal('person-modal');
   setTimeout(() => document.getElementById('person-form-fname').focus(), 100);
 }
@@ -1149,6 +1120,7 @@ async function openEditPerson(id) {
   document.getElementById('person-form-email').value = p.email || '';
   document.getElementById('person-form-phone').value = p.phone || '';
   document.getElementById('person-form-filing').value = p.filing_status || '';
+  document.getElementById('person-form-billing').value = p.billing_method || '';
   document.getElementById('person-form-spouse-section').style.display = ['mfj','mfs'].includes(p.filing_status) ? '' : 'none';
   document.getElementById('person-form-dob').value = p.date_of_birth ? p.date_of_birth.slice(0,10) : '';
   document.getElementById('person-form-stanford').value = p.stanford_tax_url || '';
@@ -1159,12 +1131,17 @@ async function openEditPerson(id) {
   document.getElementById('person-form-error').style.display = 'none';
   document.getElementById('person-form-spouse-name').value = p.spouse_name || '';
   document.getElementById('person-form-spouse-email').value = p.spouse_email || '';
-  document.getElementById('person-form-spouse-portal').checked = !!p.spouse_portal_enabled;
+  // spouse_portal field may not exist in this modal (managed on person page)
+  const spousePortalEl = document.getElementById('person-form-spouse-portal');
+  if (spousePortalEl) spousePortalEl.checked = !!p.spouse_portal_enabled;
   document.getElementById('person-form-addr1').value = p.address_line1 || '';
   document.getElementById('person-form-addr2').value = p.address_line2 || '';
   document.getElementById('person-form-city').value = p.city || '';
   document.getElementById('person-form-state').value = p.state || '';
   document.getElementById('person-form-zip').value = p.zip || '';
+  // Hide relationship field when editing (can't change relationship from this modal)
+  const relWrap = document.getElementById('person-form-rel-wrap');
+  if (relWrap) relWrap.style.display = 'none';
   openModal('person-modal');
 }
 
@@ -1187,6 +1164,7 @@ async function submitPersonForm() {
     email: document.getElementById('person-form-email').value.trim() || null,
     phone: document.getElementById('person-form-phone').value.trim() || null,
     filing_status: document.getElementById('person-form-filing').value || null,
+    billing_method: document.getElementById('person-form-billing').value || null,
     date_of_birth: document.getElementById('person-form-dob').value || null,
     stanford_tax_url: document.getElementById('person-form-stanford').value.trim() || null,
     notes: document.getElementById('person-form-notes').value || null,
