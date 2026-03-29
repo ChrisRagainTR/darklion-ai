@@ -40,16 +40,21 @@ async function fireTrigger(firmId, triggerKey, entityId, context = {}, entityTyp
   const moved = [];
 
   // 1. Find all stage configs for this firm + trigger
+  //    Only match pipelines whose template entity_type matches the fired entityType
   const { rows: configs } = await pool.query(
     `SELECT pst.id, pst.pipeline_instance_id, pst.stage_id,
             pi.name AS pipeline_name,
             ps.name AS stage_name,
-            ps.is_terminal
+            ps.is_terminal,
+            pt.entity_type AS template_entity_type
      FROM pipeline_stage_triggers pst
      JOIN pipeline_instances pi ON pi.id = pst.pipeline_instance_id
+     JOIN pipeline_templates pt ON pt.id = pi.template_id
      JOIN pipeline_stages ps ON ps.id = pst.stage_id
-     WHERE pst.firm_id = $1 AND pst.trigger_key = $2`,
-    [firmId, triggerKey]
+     WHERE pst.firm_id = $1
+       AND pst.trigger_key = $2
+       AND pt.entity_type = $3`,
+    [firmId, triggerKey, entityType]
   );
 
   if (!configs.length) return moved;

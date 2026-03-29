@@ -559,21 +559,10 @@ router.post('/companies/:realmId/tax-financials', async (req, res) => {
       company_id: company.id,
     };
 
+    // Fire trigger against the company only — pipeline entity type filtering
+    // in fireTrigger ensures this only activates company-type pipelines
     fireTrigger(firmId, 'tax_financials_generated', company.id, triggerCtx, 'company')
-      .catch(e => console.error('[tax-financials] fireTrigger company non-fatal:', e));
-
-    if (company.relationship_id) {
-      // Fire against each person in the relationship
-      pool.query(
-        'SELECT id FROM people WHERE relationship_id = $1',
-        [company.relationship_id]
-      ).then(({ rows: people }) => {
-        people.forEach(p => {
-          fireTrigger(firmId, 'tax_financials_generated', p.id, triggerCtx, 'person')
-            .catch(e => console.error('[tax-financials] fireTrigger person non-fatal:', e));
-        });
-      }).catch(() => {});
-    }
+      .catch(e => console.error('[tax-financials] fireTrigger non-fatal:', e));
 
     res.json({ success: true, document: savedDoc, generatedAt });
   } catch (err) {
