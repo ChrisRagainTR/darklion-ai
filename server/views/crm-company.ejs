@@ -1572,12 +1572,17 @@
         });
         var data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to generate');
-        tfOk.textContent = '✓ Saved to Docs → Tax: ' + data.document.display_name;
+        tfOk.textContent = '✓ Saved to Docs → Tax folder';
         tfOk.style.display = '';
         tfBtn.textContent = 'Done';
-        // Refresh docs list
-        loadDocs();
-        setTimeout(function() { closeTaxFinancialsModal(); }, 2500);
+        // Close modal, switch to docs tab, refresh list
+        setTimeout(function() {
+          closeTaxFinancialsModal();
+          // Switch to docs tab so they see the new file
+          var docsTab = document.querySelector('.tab-item[onclick*="docs"]');
+          if (docsTab) docsTab.click();
+          loadDocs();
+        }, 1500);
       } catch(e) {
         tfErr.textContent = e.message;
         tfErr.style.display = '';

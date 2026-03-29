@@ -9,6 +9,7 @@ const { auditLog } = require('./firms');
 const { getChartOfAccounts, qbFetch, writeBackTransaction } = require('../services/quickbooks');
 const { generateTaxFinancialsPdf } = require('../services/taxFinancialsPdf');
 const { uploadFile, buildKey } = require('../services/s3');
+const { fireTrigger } = require('../services/pipelineTriggers');
 
 const router = Router();
 
@@ -546,7 +547,34 @@ router.post('/companies/:realmId/tax-financials', async (req, res) => {
       req.firm?.userId || null,
     ]);
 
-    res.json({ success: true, document: docs[0], generatedAt });
+    const savedDoc = docs[0];
+
+    // Fire pipeline trigger — against the company entity
+    // Also fire against each person in the relationship if available
+    const triggerCtx = {
+      document_id: savedDoc.id,
+      document_name: savedDoc.display_name,
+      tax_year: String(taxYear),
+      company_id: company.id,
+    };
+
+    fireTrigger(firmId, 'tax_financials_generated', company.id, triggerCtx, 'company')
+      .catch(e => console.error('[tax-financials] fireTrigger company non-fatal:', e));
+
+    if (company.relationship_id) {
+      // Fire against each person in the relationship
+      pool.query(
+        'SELECT id FROM people WHERE relationship_id = $1',
+        [company.relationship_id]
+      ).then(({ rows: people }) => {
+        people.forEach(p => {
+          fireTrigger(firmId, 'tax_financials_generated', p.id, triggerCtx, 'person')
+            .catch(e => console.error('[tax-financials] fireTrigger person non-fatal:', e));
+        });
+      }).catch(() => {});
+    }
+
+    res.json({ success: true, document: savedDoc, generatedAt });
   } catch (err) {
     console.error('[tax-financials] Error:', err);
     res.status(500).json({ error: err.message });
