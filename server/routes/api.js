@@ -161,16 +161,16 @@ router.get('/companies', async (req, res) => {
 // POST /api/companies — create a new company (firm-scoped)
 router.post('/companies', async (req, res) => {
   const firmId = req.firm?.id;
-  const { company_name, relationship_id, entity_type, address_line1 = '', address_line2 = '', city = '', state = '', zip = '' } = req.body;
+  const { company_name, relationship_id, entity_type, bookkeeping_service, address_line1 = '', address_line2 = '', city = '', state = '', zip = '' } = req.body;
   if (!company_name) return res.status(400).json({ error: 'company_name is required' });
   if (!relationship_id) return res.status(400).json({ error: 'relationship_id is required' });
   try {
     const { rows: rel } = await pool.query('SELECT id FROM relationships WHERE id = $1 AND firm_id = $2', [relationship_id, firmId]);
     if (!rel.length) return res.status(404).json({ error: 'Relationship not found' });
     const { rows } = await pool.query(
-      `INSERT INTO companies (firm_id, company_name, relationship_id, entity_type, realm_id, access_token, refresh_token, token_expires_at, address_line1, address_line2, city, state, zip)
-       VALUES ($1, $2, $3, $4, '', '', '', 0, $5, $6, $7, $8, $9) RETURNING id, company_name, entity_type, relationship_id, firm_id, address_line1, address_line2, city, state, zip`,
-      [firmId, company_name, relationship_id, entity_type || 'other', address_line1, address_line2, city, state, zip]
+      `INSERT INTO companies (firm_id, company_name, relationship_id, entity_type, bookkeeping_service, realm_id, access_token, refresh_token, token_expires_at, address_line1, address_line2, city, state, zip)
+       VALUES ($1, $2, $3, $4, $5, '', '', '', 0, $6, $7, $8, $9, $10) RETURNING id, company_name, entity_type, bookkeeping_service, relationship_id, firm_id, address_line1, address_line2, city, state, zip`,
+      [firmId, company_name, relationship_id, entity_type || 'other', bookkeeping_service || 'none', address_line1, address_line2, city, state, zip]
     );
     res.status(201).json(rows[0]);
   } catch (err) {

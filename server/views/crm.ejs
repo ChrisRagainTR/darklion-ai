@@ -151,6 +151,7 @@
       <div class="section-title">Companies</div>
       <div class="section-actions">
         <input type="text" class="inline-search" id="co-search" placeholder="Filter…" oninput="filterCompanies(this.value)">
+        <button class="btn btn-gold btn-sm" onclick="openNewCompanyModal()">+ New Company</button>
       </div>
     </div>
     <div id="companies-list-container">
@@ -515,6 +516,53 @@
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('grant-modal')">Cancel</button>
       <button class="btn btn-gold" onclick="submitGrantAccess()">Grant Access</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── New Company Modal ── -->
+<div class="modal-overlay hidden" id="new-company-modal" onclick="if(event.target===this)closeModal('new-company-modal')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title">New Company</div>
+      <button class="modal-close" onclick="closeModal('new-company-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="new-co-error" class="error-msg" style="display:none;"></div>
+      <div class="form-group">
+        <label class="form-label">Company Name *</label>
+        <input type="text" class="form-control" id="new-co-name" placeholder="e.g. Ragain LLC">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Relationship *</label>
+        <select class="form-control" id="new-co-rel"><option value="">Loading…</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Entity Type</label>
+        <select class="form-control" id="new-co-type">
+          <option value="other">Other</option>
+          <option value="1040">1040 (Individual)</option>
+          <option value="s_corp">S-Corp</option>
+          <option value="llc">LLC</option>
+          <option value="partnership">Partnership</option>
+          <option value="trust">Trust</option>
+          <option value="sole_prop">Sole Proprietorship</option>
+          <option value="c_corp">C-Corp</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bookkeeping Service</label>
+        <select class="form-control" id="new-co-bk">
+          <option value="none">None</option>
+          <option value="bank_feed">Bank Feed</option>
+          <option value="accrual">Accrual</option>
+          <option value="client_prepared">Client Prepared</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('new-company-modal')">Cancel</button>
+      <button class="btn btn-gold" id="new-co-submit" onclick="submitNewCompany()">Create Company</button>
     </div>
   </div>
 </div>
@@ -1216,6 +1264,51 @@ function filterCompanies(q) {
     (c.entity_type||'').toLowerCase().includes(f) ||
     (c.relationship_name||'').toLowerCase().includes(f)
   ));
+}
+
+async function openNewCompanyModal() {
+  const sel = document.getElementById('new-co-rel');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  document.getElementById('new-co-name').value = '';
+  document.getElementById('new-co-type').value = 'other';
+  document.getElementById('new-co-bk').value = 'none';
+  document.getElementById('new-co-error').style.display = 'none';
+  document.getElementById('new-co-submit').disabled = false;
+  document.getElementById('new-company-modal').classList.remove('hidden');
+  document.getElementById('new-company-modal').classList.add('open');
+  try {
+    const res = await apiFetch('/api/relationships');
+    const rels = await res.json();
+    sel.innerHTML = '<option value="">— Select relationship —</option>' +
+      rels.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  } catch(e) { sel.innerHTML = '<option value="">Failed to load</option>'; }
+}
+
+async function submitNewCompany() {
+  const name = document.getElementById('new-co-name').value.trim();
+  const rel = document.getElementById('new-co-rel').value;
+  const type = document.getElementById('new-co-type').value;
+  const bk = document.getElementById('new-co-bk').value;
+  const errEl = document.getElementById('new-co-error');
+  const btn = document.getElementById('new-co-submit');
+  errEl.style.display = 'none';
+  if (!name) { errEl.textContent = 'Company name is required.'; errEl.style.display = ''; return; }
+  if (!rel) { errEl.textContent = 'Please select a relationship.'; errEl.style.display = ''; return; }
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const res = await apiFetch('/api/companies', {
+      method: 'POST',
+      body: JSON.stringify({ company_name: name, relationship_id: parseInt(rel), entity_type: type, bookkeeping_service: bk }),
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to create company'); }
+    const co = await res.json();
+    closeModal('new-company-modal');
+    window.location.href = `/crm/company/${co.id}`;
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.style.display = '';
+    btn.disabled = false; btn.textContent = 'Create Company';
+  }
 }
 
 // =====================================================================
