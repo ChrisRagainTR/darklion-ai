@@ -1605,17 +1605,35 @@
       try {
         const data = await api(`/portal/companies/${coId}/close-packages`);
 
-        // No QBO connection — show connect prompt
+        // No QBO connection — show appropriate prompt based on bookkeeping_service
         if (!data.ytd && !data.prior && data.ytd !== undefined) {
-          container.innerHTML = `
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;text-align:center;padding:3rem 2rem;">
-              <div style="font-size:3rem;margin-bottom:1rem;line-height:1;">📒</div>
-              <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">QuickBooks Not Connected</div>
-              <div style="font-size:0.86rem;color:var(--muted);max-width:380px;line-height:1.6;margin-bottom:1.5rem;">
-                Your advisor hasn't connected QuickBooks Online for this company yet. Once connected, you'll see your financial summaries here.
-              </div>
-              <div style="font-size:0.78rem;color:rgba(143,163,184,0.5);">Contact your advisor to get set up.</div>
-            </div>`;
+          const co = _companies.find(c => (c.id || c.company_id) === coId);
+          const isClientPrepared = co && co.bookkeeping_service === 'client_prepared';
+          if (isClientPrepared) {
+            // Client manages their own books — show connect button
+            container.innerHTML = `
+              <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;text-align:center;padding:3rem 2rem;">
+                <div style="font-size:3rem;margin-bottom:1rem;line-height:1;">🔗</div>
+                <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">Connect Your QuickBooks</div>
+                <div style="font-size:0.86rem;color:var(--muted);max-width:380px;line-height:1.6;margin-bottom:1.5rem;">
+                  Connect your QuickBooks Online account so you can send your year-end financials to your advisor when you're ready.
+                </div>
+                <a href="/connect?company_id=${coId}&firm_id=${co.firm_id || ''}" target="_blank"
+                   style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;border:1px solid rgba(201,168,76,0.4);background:rgba(201,168,76,0.1);color:var(--gold,#c9a84c);font-weight:700;font-size:0.88rem;text-decoration:none;cursor:pointer;">
+                  Connect QuickBooks →
+                </a>
+              </div>`;
+          } else {
+            // Advisor manages books — advise them to contact advisor
+            container.innerHTML = `
+              <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;text-align:center;padding:3rem 2rem;">
+                <div style="font-size:3rem;margin-bottom:1rem;line-height:1;">📒</div>
+                <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">Bookkeeping Summary</div>
+                <div style="font-size:0.86rem;color:var(--muted);max-width:380px;line-height:1.6;">
+                  Your financial summaries will appear here once your advisor has prepared your close package.
+                </div>
+              </div>`;
+          }
           return;
         }
 
