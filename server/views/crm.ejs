@@ -522,42 +522,57 @@
 
 <!-- ── New Company Modal ── -->
 <div class="modal-overlay hidden" id="new-company-modal" onclick="if(event.target===this)closeModal('new-company-modal')">
-  <div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
     <div class="modal-header">
       <div class="modal-title">New Company</div>
       <button class="modal-close" onclick="closeModal('new-company-modal')">✕</button>
     </div>
     <div class="modal-body">
-      <div id="new-co-error" class="error-msg" style="display:none;"></div>
-      <div class="form-group">
-        <label class="form-label">Company Name *</label>
-        <input type="text" class="form-control" id="new-co-name" placeholder="e.g. Ragain LLC">
+      <div id="new-co-error" class="error-msg" style="display:none;margin-bottom:0.75rem;"></div>
+      <div class="form-group"><label class="form-label">Company Name *</label><input type="text" class="form-control" id="new-co-name" placeholder="e.g. Ragain Financial Inc"></div>
+      <div class="form-group"><label class="form-label">Relationship *</label><select class="form-control" id="new-co-rel"><option value="">Loading…</option></select></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+        <div class="form-group"><label class="form-label">Entity Type</label>
+          <select class="form-control" id="new-co-type">
+            <option value="other">Other</option>
+            <option value="llc">LLC</option>
+            <option value="s_corp">S-Corp</option>
+            <option value="c_corp">C-Corp</option>
+            <option value="partnership">Partnership</option>
+            <option value="sole_prop">Sole Prop</option>
+            <option value="trust">Trust</option>
+            <option value="nonprofit">Non-Profit</option>
+            <option value="1040">1040 (Individual)</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Tax Year End</label><input type="text" class="form-control" id="new-co-tax-year-end" placeholder="12/31"></div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Relationship *</label>
-        <select class="form-control" id="new-co-rel"><option value="">Loading…</option></select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+        <div class="form-group"><label class="form-label">Billing Method</label>
+          <select class="form-control" id="new-co-billing">
+            <option value="">— Select —</option>
+            <option value="monthly_billing">Monthly Billing</option>
+            <option value="client_invoice">Client Invoice</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Bookkeeping Service</label>
+          <select class="form-control" id="new-co-bk">
+            <option value="none">None</option>
+            <option value="bank_feed">Bank Feed</option>
+            <option value="accrual">Accrual</option>
+            <option value="client_prepared">Client Prepared</option>
+          </select>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Entity Type</label>
-        <select class="form-control" id="new-co-type">
-          <option value="other">Other</option>
-          <option value="1040">1040 (Individual)</option>
-          <option value="s_corp">S-Corp</option>
-          <option value="llc">LLC</option>
-          <option value="partnership">Partnership</option>
-          <option value="trust">Trust</option>
-          <option value="sole_prop">Sole Proprietorship</option>
-          <option value="c_corp">C-Corp</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Bookkeeping Service</label>
-        <select class="form-control" id="new-co-bk">
-          <option value="none">None</option>
-          <option value="bank_feed">Bank Feed</option>
-          <option value="accrual">Accrual</option>
-          <option value="client_prepared">Client Prepared</option>
-        </select>
+      <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:0.25rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;">Address</div>
+        <div class="form-group"><label class="form-label">Street Address</label><input type="text" class="form-control" id="new-co-addr1" placeholder="123 Main St"></div>
+        <div class="form-group"><label class="form-label">Line 2 <span style="color:var(--muted);font-weight:400;">(optional)</span></label><input type="text" class="form-control" id="new-co-addr2" placeholder="Suite, Unit, etc."></div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:0 0.75rem;">
+          <div class="form-group"><label class="form-label">City</label><input type="text" class="form-control" id="new-co-city" placeholder="Naples"></div>
+          <div class="form-group"><label class="form-label">State</label><input type="text" class="form-control" id="new-co-state" placeholder="FL" maxlength="2"></div>
+          <div class="form-group"><label class="form-label">ZIP</label><input type="text" class="form-control" id="new-co-zip" placeholder="34108" maxlength="10"></div>
+        </div>
       </div>
     </div>
     <div class="modal-actions">
@@ -1269,11 +1284,15 @@ function filterCompanies(q) {
 async function openNewCompanyModal() {
   const sel = document.getElementById('new-co-rel');
   sel.innerHTML = '<option value="">Loading…</option>';
-  document.getElementById('new-co-name').value = '';
+  ['new-co-name','new-co-tax-year-end','new-co-addr1','new-co-addr2','new-co-city','new-co-state','new-co-zip'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
   document.getElementById('new-co-type').value = 'other';
   document.getElementById('new-co-bk').value = 'none';
+  document.getElementById('new-co-billing').value = '';
   document.getElementById('new-co-error').style.display = 'none';
   document.getElementById('new-co-submit').disabled = false;
+  document.getElementById('new-co-submit').textContent = 'Create Company';
   document.getElementById('new-company-modal').classList.remove('hidden');
   document.getElementById('new-company-modal').classList.add('open');
   try {
@@ -1287,8 +1306,6 @@ async function openNewCompanyModal() {
 async function submitNewCompany() {
   const name = document.getElementById('new-co-name').value.trim();
   const rel = document.getElementById('new-co-rel').value;
-  const type = document.getElementById('new-co-type').value;
-  const bk = document.getElementById('new-co-bk').value;
   const errEl = document.getElementById('new-co-error');
   const btn = document.getElementById('new-co-submit');
   errEl.style.display = 'none';
@@ -1298,7 +1315,19 @@ async function submitNewCompany() {
   try {
     const res = await apiFetch('/api/companies', {
       method: 'POST',
-      body: JSON.stringify({ company_name: name, relationship_id: parseInt(rel), entity_type: type, bookkeeping_service: bk }),
+      body: JSON.stringify({
+        company_name: name,
+        relationship_id: parseInt(rel),
+        entity_type: document.getElementById('new-co-type').value,
+        bookkeeping_service: document.getElementById('new-co-bk').value,
+        billing_method: document.getElementById('new-co-billing').value || null,
+        tax_year_end: document.getElementById('new-co-tax-year-end').value.trim() || null,
+        address_line1: document.getElementById('new-co-addr1').value.trim(),
+        address_line2: document.getElementById('new-co-addr2').value.trim(),
+        city: document.getElementById('new-co-city').value.trim(),
+        state: document.getElementById('new-co-state').value.trim().toUpperCase(),
+        zip: document.getElementById('new-co-zip').value.trim(),
+      }),
     });
     if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to create company'); }
     const co = await res.json();
