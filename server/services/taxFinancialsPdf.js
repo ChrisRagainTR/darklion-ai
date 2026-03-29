@@ -10,6 +10,8 @@
 
 const { qbFetch } = require('./quickbooks');
 const { generatePDF } = require('./pdf');
+const { downloadFile } = require('./s3');
+const { pool } = require('../db');
 
 function fmt(val) {
   const n = parseFloat(val);
@@ -65,9 +67,11 @@ function renderQBTable(reportData, title) {
     </table>`;
 }
 
-function buildHtml({ companyName, taxYear, entityType, generatedAt, pnl, bs, tb }) {
+function buildHtml({ companyName, taxYear, entityType, generatedAt, pnl, bs, tb, logoDataUrl, firmDisplayName, primaryColor }) {
   const dateStr = new Date(generatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = new Date(generatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const brandColor = primaryColor || '#c9a84c';
+  const firmName = firmDisplayName || 'Sentinel Wealth &amp; Tax';
 
   return `<!DOCTYPE html>
 <html>
@@ -84,16 +88,18 @@ function buildHtml({ companyName, taxYear, entityType, generatedAt, pnl, bs, tb 
     min-height: 100vh; text-align: center; padding: 60px 40px;
     background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
     color: #fff;
+    color: #fff;
   }
   .title-logo {
     font-size: 11pt; font-weight: 700; letter-spacing: 0.15em;
-    text-transform: uppercase; color: #c9a84c; margin-bottom: 60px;
+    text-transform: uppercase; color: ${brandColor}; margin-bottom: 60px;
   }
   .title-logo span { color: rgba(255,255,255,0.5); }
+  .title-logo img { max-height: 64px; max-width: 240px; object-fit: contain; }
   .title-company { font-size: 28pt; font-weight: 700; margin-bottom: 12px; line-height: 1.2; }
-  .title-year { font-size: 18pt; color: #c9a84c; font-weight: 600; margin-bottom: 8px; }
+  .title-year { font-size: 18pt; color: ${brandColor}; font-weight: 600; margin-bottom: 8px; }
   .title-subtitle { font-size: 11pt; color: rgba(255,255,255,0.6); margin-bottom: 60px; }
-  .title-divider { width: 60px; height: 2px; background: #c9a84c; margin: 0 auto 60px; }
+  .title-divider { width: 60px; height: 2px; background: ${brandColor}; margin: 0 auto 60px; }
   .title-meta { font-size: 9pt; color: rgba(255,255,255,0.4); line-height: 1.8; }
   .title-meta strong { color: rgba(255,255,255,0.7); }
 
@@ -107,7 +113,7 @@ function buildHtml({ companyName, taxYear, entityType, generatedAt, pnl, bs, tb 
   }
   .report-title {
     font-size: 14pt; font-weight: 700; color: #1a1a3e;
-    border-bottom: 2px solid #c9a84c;
+    border-bottom: 2px solid ${brandColor};
     padding-bottom: 8px; margin-bottom: 6px;
   }
   .report-subtitle {
@@ -135,7 +141,12 @@ function buildHtml({ companyName, taxYear, entityType, generatedAt, pnl, bs, tb 
 
 <!-- TITLE PAGE -->
 <div class="title-page">
-  <div class="title-logo">Sentinel <span>Wealth &amp; Tax</span></div>
+  <div class="title-logo">
+    ${logoDataUrl
+      ? `<img src="${logoDataUrl}" alt="${firmName}">`
+      : `<span style="color:${brandColor};font-size:11pt;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;">${firmName}</span>`
+    }
+  </div>
   <div class="title-company">${companyName}</div>
   <div class="title-year">${taxYear} Tax Year</div>
   <div class="title-subtitle">Year-End Financial Statements &mdash; Cash Basis</div>
@@ -151,6 +162,7 @@ function buildHtml({ companyName, taxYear, entityType, generatedAt, pnl, bs, tb 
 
 <!-- P&L -->
 <div class="report-section">
+  ${logoDataUrl ? `<div style="text-align:right;margin-bottom:12px;"><img src="${logoDataUrl}" style="max-height:32px;max-width:140px;object-fit:contain;opacity:0.85;"></div>` : ''}
   <div class="report-title">Profit &amp; Loss</div>
   <div class="report-subtitle">For the year ended December 31, ${taxYear} &mdash; Cash Basis</div>
   ${renderQBTable(pnl, 'Account')}
@@ -158,6 +170,7 @@ function buildHtml({ companyName, taxYear, entityType, generatedAt, pnl, bs, tb 
 
 <!-- BALANCE SHEET -->
 <div class="report-section">
+  ${logoDataUrl ? `<div style="text-align:right;margin-bottom:12px;"><img src="${logoDataUrl}" style="max-height:32px;max-width:140px;object-fit:contain;opacity:0.85;"></div>` : ''}
   <div class="report-title">Balance Sheet</div>
   <div class="report-subtitle">As of December 31, ${taxYear} &mdash; Cash Basis</div>
   ${renderQBTable(bs, 'Account')}
@@ -165,6 +178,7 @@ function buildHtml({ companyName, taxYear, entityType, generatedAt, pnl, bs, tb 
 
 <!-- TRIAL BALANCE -->
 <div class="report-section">
+  ${logoDataUrl ? `<div style="text-align:right;margin-bottom:12px;"><img src="${logoDataUrl}" style="max-height:32px;max-width:140px;object-fit:contain;opacity:0.85;"></div>` : ''}
   <div class="report-title">Trial Balance</div>
   <div class="report-subtitle">As of December 31, ${taxYear} &mdash; Cash Basis</div>
   ${renderQBTable(tb, 'Account')}
@@ -174,24 +188,58 @@ function buildHtml({ companyName, taxYear, entityType, generatedAt, pnl, bs, tb 
 </html>`;
 }
 
-async function generateTaxFinancialsPdf({ realmId, companyName, entityType, taxYear }) {
+async function generateTaxFinancialsPdf({ realmId, companyName, entityType, taxYear, firmId }) {
   const year = parseInt(taxYear) || new Date().getFullYear() - 1;
   const startDate = `${year}-01-01`;
   const endDate = `${year}-12-31`;
   const generatedAt = new Date().toISOString();
 
-  // Fetch all three reports in parallel, cash basis
-  const [pnlRes, bsRes, tbRes] = await Promise.allSettled([
+  // Fetch QBO reports + firm branding in parallel
+  const [pnlRes, bsRes, tbRes, firmRes] = await Promise.allSettled([
     qbFetch(realmId, `/reports/ProfitAndLoss?start_date=${startDate}&end_date=${endDate}&accounting_method=Cash&summarize_column_by=Total&minorversion=75`),
     qbFetch(realmId, `/reports/BalanceSheet?start_date=${endDate}&end_date=${endDate}&accounting_method=Cash&minorversion=75`),
     qbFetch(realmId, `/reports/TrialBalance?start_date=${endDate}&end_date=${endDate}&accounting_method=Cash&minorversion=75`),
+    firmId ? pool.query('SELECT display_name, logo_url, primary_color FROM firms WHERE id = $1', [firmId]) : Promise.resolve(null),
   ]);
 
   const pnl = pnlRes.status === 'fulfilled' ? pnlRes.value : null;
   const bs  = bsRes.status  === 'fulfilled' ? bsRes.value  : null;
   const tb  = tbRes.status  === 'fulfilled' ? tbRes.value  : null;
 
-  const html = buildHtml({ companyName, taxYear: year, entityType, generatedAt, pnl, bs, tb });
+  // Firm branding
+  let logoDataUrl = null;
+  let firmDisplayName = null;
+  let primaryColor = null;
+
+  if (firmRes.status === 'fulfilled' && firmRes.value?.rows?.[0]) {
+    const firm = firmRes.value.rows[0];
+    firmDisplayName = firm.display_name;
+    primaryColor = firm.primary_color;
+
+    if (firm.logo_url && !firm.logo_url.startsWith('http')) {
+      // It's an S3 key — download and convert to base64 data URL
+      try {
+        const logoBuffer = await downloadFile({ key: firm.logo_url, bucket: process.env.AWS_S3_BUCKET });
+        const ext = firm.logo_url.split('.').pop().toLowerCase();
+        const mime = ext === 'png' ? 'image/png' : ext === 'svg' ? 'image/svg+xml' : 'image/jpeg';
+        logoDataUrl = `data:${mime};base64,${logoBuffer.toString('base64')}`;
+      } catch (e) {
+        console.warn('[taxFinancialsPdf] Could not load firm logo:', e.message);
+      }
+    } else if (firm.logo_url?.startsWith('http')) {
+      // Already a URL — fetch it
+      try {
+        const resp = await fetch(firm.logo_url);
+        const buf = Buffer.from(await resp.arrayBuffer());
+        const ct = resp.headers.get('content-type') || 'image/png';
+        logoDataUrl = `data:${ct};base64,${buf.toString('base64')}`;
+      } catch (e) {
+        console.warn('[taxFinancialsPdf] Could not fetch firm logo URL:', e.message);
+      }
+    }
+  }
+
+  const html = buildHtml({ companyName, taxYear: year, entityType, generatedAt, pnl, bs, tb, logoDataUrl, firmDisplayName, primaryColor });
   const pdfBuffer = await generatePDF(html);
 
   return { pdfBuffer, generatedAt, year };

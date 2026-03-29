@@ -512,6 +512,7 @@ router.post('/companies/:realmId/tax-financials', async (req, res) => {
       companyName: company.company_name || 'Company',
       entityType: company.entity_type,
       taxYear,
+      firmId,
     });
 
     // Upload to S3
