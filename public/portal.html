@@ -1213,10 +1213,12 @@
 
     // ── Auth fetch ────────────────────────────────────────
     async function api(path, opts = {}) {
+      const hasBody = opts.body && typeof opts.body === 'string';
       const res = await fetch(path, {
         ...opts,
         headers: {
           'Authorization': `Bearer ${token}`,
+          ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
           ...(opts.headers || {}),
         },
       });
@@ -1392,20 +1394,36 @@
         panel.className = 'tab-panel';
         panel.id = `tab-${tabKey}`;
         panel.innerHTML = `
-          <div class="co-subtab-bar" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.25rem;">
-            <button class="co-subtab-btn active" data-co="${coId}" data-subtab="docs"
-              style="padding:0.5rem 1.1rem;font-size:0.82rem;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--gold,#c9a84c);border-bottom:2px solid var(--gold,#c9a84c);margin-bottom:-2px;transition:color 0.15s;">
-              📁 Documents
-            </button>
-            <button class="co-subtab-btn" data-co="${coId}" data-subtab="bookkeeping"
-              style="padding:0.5rem 1.1rem;font-size:0.82rem;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color 0.15s;">
-              📒 Bookkeeping
-            </button>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0;flex-wrap:wrap;gap:0.5rem;">
+            <div class="co-subtab-bar" style="display:flex;gap:0;border-bottom:2px solid var(--border);">
+              <button class="co-subtab-btn active" data-co="${coId}" data-subtab="docs"
+                style="padding:0.5rem 1.1rem;font-size:0.82rem;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--gold,#c9a84c);border-bottom:2px solid var(--gold,#c9a84c);margin-bottom:-2px;transition:color 0.15s;">
+                📁 Documents
+              </button>
+              <button class="co-subtab-btn" data-co="${coId}" data-subtab="bookkeeping"
+                style="padding:0.5rem 1.1rem;font-size:0.82rem;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color 0.15s;">
+                📒 Bookkeeping
+              </button>
+            </div>
+            ${co.bookkeeping_service === 'client_prepared' ? `
+              <div id="co-qbo-actions-${coId}" style="display:flex;gap:0.5rem;align-items:center;padding-bottom:4px;">
+                ${!co.qbo_connected
+                  ? `<a href="/connect?company_id=${coId}&firm_id=${co.firm_id || ''}" target="_blank"
+                       style="font-size:0.78rem;padding:0.3rem 0.85rem;border-radius:6px;border:1px solid rgba(201,168,76,0.4);background:rgba(201,168,76,0.08);color:var(--gold,#c9a84c);text-decoration:none;font-weight:600;cursor:pointer;">
+                       🔗 Connect QuickBooks
+                     </a>`
+                  : `<button onclick="submitClientFinancials(${coId})" id="co-send-btn-${coId}"
+                       style="font-size:0.78rem;padding:0.3rem 0.85rem;border-radius:6px;border:1px solid rgba(62,207,142,0.4);background:rgba(62,207,142,0.08);color:#3ecf8e;font-weight:600;cursor:pointer;">
+                       📊 Send Financials to Advisor
+                     </button>`
+                }
+                <div id="co-send-msg-${coId}" style="font-size:0.75rem;color:#3ecf8e;display:none;"></div>
+              </div>` : ''}
           </div>
-          <div id="co-subtab-docs-${coId}" class="co-subtab-panel">
+          <div id="co-subtab-docs-${coId}" class="co-subtab-panel" style="margin-top:1.25rem;">
             <div id="co-docs-${coId}"><div class="loading-state"><div class="loading-spinner"></div><div>Loading documents…</div></div></div>
           </div>
-          <div id="co-subtab-bookkeeping-${coId}" class="co-subtab-panel" style="display:none;">
+          <div id="co-subtab-bookkeeping-${coId}" class="co-subtab-panel" style="display:none;margin-top:1.25rem;">
             <div id="co-bk-${coId}">
               <div class="loading-state"><div class="loading-spinner"></div><div>Loading close package…</div></div>
             </div>
@@ -1547,6 +1565,37 @@
       }
     }
 
+    // ── CLIENT FINANCIALS SUBMISSION ─────────────────────
+    window.submitClientFinancials = async function submitClientFinancials(coId) {
+      const btn = document.getElementById(`co-send-btn-${coId}`);
+      const msgEl = document.getElementById(`co-send-msg-${coId}`);
+      if (!btn) return;
+      const year = new Date().getFullYear() - 1; // default to prior year — could add a picker later
+      btn.disabled = true;
+      btn.textContent = '⏳ Generating…';
+      msgEl.style.display = 'none';
+      try {
+        const data = await api(`/portal/companies/${coId}/tax-financials`, {
+          method: 'POST',
+          body: JSON.stringify({ year }),
+        });
+        if (data.error) throw new Error(data.error);
+        btn.textContent = '✓ Sent';
+        btn.style.color = '#3ecf8e';
+        msgEl.textContent = `${year} financials sent to your advisor and saved to your documents.`;
+        msgEl.style.display = '';
+        // Refresh docs tab
+        const docsEl = document.getElementById(`co-docs-${coId}`);
+        if (docsEl) { delete docsEl.dataset.loaded; loadCompanyDocs(coId); }
+      } catch(e) {
+        btn.disabled = false;
+        btn.textContent = '📊 Send Financials to Advisor';
+        msgEl.textContent = 'Error: ' + e.message;
+        msgEl.style.color = '#e74c3c';
+        msgEl.style.display = '';
+      }
+    }
+
     // ── BOOKKEEPING / CLOSE PACKAGE ──────────────────────
     async function loadCompanyBookkeeping(coId) {
       const container = document.getElementById(`co-bk-${coId}`);
@@ -1556,17 +1605,35 @@
       try {
         const data = await api(`/portal/companies/${coId}/close-packages`);
 
-        // No QBO connection — show connect prompt
+        // No QBO connection — show appropriate prompt based on bookkeeping_service
         if (!data.ytd && !data.prior && data.ytd !== undefined) {
-          container.innerHTML = `
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;text-align:center;padding:3rem 2rem;">
-              <div style="font-size:3rem;margin-bottom:1rem;line-height:1;">📒</div>
-              <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">QuickBooks Not Connected</div>
-              <div style="font-size:0.86rem;color:var(--muted);max-width:380px;line-height:1.6;margin-bottom:1.5rem;">
-                Your advisor hasn't connected QuickBooks Online for this company yet. Once connected, you'll see your financial summaries here.
-              </div>
-              <div style="font-size:0.78rem;color:rgba(143,163,184,0.5);">Contact your advisor to get set up.</div>
-            </div>`;
+          const co = _companies.find(c => (c.id || c.company_id) === coId);
+          const isClientPrepared = co && co.bookkeeping_service === 'client_prepared';
+          if (isClientPrepared) {
+            // Client manages their own books — show connect button
+            container.innerHTML = `
+              <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;text-align:center;padding:3rem 2rem;">
+                <div style="font-size:3rem;margin-bottom:1rem;line-height:1;">🔗</div>
+                <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">Connect Your QuickBooks</div>
+                <div style="font-size:0.86rem;color:var(--muted);max-width:380px;line-height:1.6;margin-bottom:1.5rem;">
+                  Connect your QuickBooks Online account so you can send your year-end financials to your advisor when you're ready.
+                </div>
+                <a href="/connect?company_id=${coId}&firm_id=${co.firm_id || ''}" target="_blank"
+                   style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;border:1px solid rgba(201,168,76,0.4);background:rgba(201,168,76,0.1);color:var(--gold,#c9a84c);font-weight:700;font-size:0.88rem;text-decoration:none;cursor:pointer;">
+                  Connect QuickBooks →
+                </a>
+              </div>`;
+          } else {
+            // Advisor manages books — advise them to contact advisor
+            container.innerHTML = `
+              <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;text-align:center;padding:3rem 2rem;">
+                <div style="font-size:3rem;margin-bottom:1rem;line-height:1;">📒</div>
+                <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">Bookkeeping Summary</div>
+                <div style="font-size:0.86rem;color:var(--muted);max-width:380px;line-height:1.6;">
+                  Your financial summaries will appear here once your advisor has prepared your close package.
+                </div>
+              </div>`;
+          }
           return;
         }
 

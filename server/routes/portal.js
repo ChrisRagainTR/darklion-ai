@@ -99,6 +99,9 @@ router.get('/companies', async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT c.id, c.company_name, c.entity_type,
+              c.bookkeeping_service,
+              (c.realm_id IS NOT NULL AND c.realm_id <> '') AS qbo_connected,
+              c.firm_id,
               pca.access_level, pca.ownership_pct
        FROM person_company_access pca
        JOIN companies c ON c.id = pca.company_id
@@ -111,6 +114,98 @@ router.get('/companies', async (req, res) => {
   } catch (err) {
     console.error('Portal /companies error:', err);
     res.status(500).json({ error: 'Failed to fetch companies' });
+  }
+});
+
+// --- POST /portal/companies/:id/tax-financials ---
+// Client-initiated: pull year-end financials from QBO and save to tax folder
+// Only allowed when bookkeeping_service = 'client_prepared' and QBO is connected
+router.post('/companies/:id/tax-financials', async (req, res) => {
+  try {
+    const personId = req.portal.personId;
+    const companyId = parseInt(req.params.id);
+    const { year } = req.body;
+
+    // Verify this person has access to this company
+    const { rows: access } = await pool.query(
+      'SELECT 1 FROM person_company_access WHERE person_id = $1 AND company_id = $2',
+      [personId, companyId]
+    );
+    if (!access.length) return res.status(403).json({ error: 'No access to this company' });
+
+    // Fetch company details
+    const { rows: cos } = await pool.query(
+      'SELECT id, company_name, entity_type, bookkeeping_service, realm_id, firm_id, relationship_id FROM companies WHERE id = $1',
+      [companyId]
+    );
+    if (!cos.length) return res.status(404).json({ error: 'Company not found' });
+    const company = cos[0];
+
+    // Enforce: only client_prepared companies
+    if (company.bookkeeping_service !== 'client_prepared') {
+      return res.status(403).json({ error: 'This feature is only available for client-prepared books' });
+    }
+    if (!company.realm_id) {
+      return res.status(400).json({ error: 'QuickBooks not connected for this company' });
+    }
+
+    const { generateTaxFinancialsPdf } = require('../services/taxFinancialsPdf');
+    const { uploadFile, buildKey } = require('../services/s3');
+    const { fireTrigger } = require('../services/pipelineTriggers');
+
+    const firmId = company.firm_id;
+    const taxYear = parseInt(year) || new Date().getFullYear() - 1;
+
+    const { pdfBuffer, generatedAt } = await generateTaxFinancialsPdf({
+      realmId: company.realm_id,
+      companyName: company.company_name || 'Company',
+      entityType: company.entity_type,
+      taxYear,
+      firmId,
+    });
+
+    // Upload to S3
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const safeName = (company.company_name || 'company').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const s3Key = buildKey({
+      firmId,
+      ownerType: 'company',
+      ownerId: company.id,
+      filename: `${safeName}-${taxYear}-financials-client-${timestamp}.pdf`,
+    });
+    const bucket = process.env.AWS_S3_BUCKET;
+    await uploadFile({ buffer: pdfBuffer, key: s3Key, mimeType: 'application/pdf', bucket });
+
+    // Save to documents table
+    const displayName = `${company.company_name || 'Company'} — ${taxYear} Year-End Financials (Client Submitted)`;
+    const { rows: docs } = await pool.query(`
+      INSERT INTO documents
+        (firm_id, owner_type, owner_id, year, doc_type, display_name,
+         s3_key, s3_bucket, mime_type, size_bytes,
+         uploaded_by_type, uploaded_by_id,
+         folder_section, folder_category, created_at)
+      VALUES ($1, 'company', $2, $3, 'financial_statements', $4, $5, $6, 'application/pdf', $7,
+              'client', $8, 'client_uploaded', 'tax', NOW())
+      RETURNING id, display_name, created_at
+    `, [firmId, company.id, String(taxYear), displayName, s3Key, bucket, pdfBuffer.length, personId]);
+
+    const savedDoc = docs[0];
+
+    // Fire the client-specific trigger (different from advisor-initiated)
+    const triggerCtx = {
+      document_id: savedDoc.id,
+      document_name: savedDoc.display_name,
+      tax_year: String(taxYear),
+      company_id: company.id,
+      submitted_by_person_id: personId,
+    };
+    fireTrigger(firmId, 'client_financials_submitted', company.id, triggerCtx, 'company')
+      .catch(e => console.error('[portal/tax-financials] fireTrigger non-fatal:', e));
+
+    res.json({ success: true, document: savedDoc, generatedAt });
+  } catch (err) {
+    console.error('[portal/tax-financials] Error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 

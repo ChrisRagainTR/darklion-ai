@@ -7,6 +7,9 @@ const { scanLiabilities } = require('../services/liability');
 const { verifyPayroll } = require('../services/payroll');
 const { auditLog } = require('./firms');
 const { getChartOfAccounts, qbFetch, writeBackTransaction } = require('../services/quickbooks');
+const { generateTaxFinancialsPdf } = require('../services/taxFinancialsPdf');
+const { uploadFile, buildKey } = require('../services/s3');
+const { fireTrigger } = require('../services/pipelineTriggers');
 
 const router = Router();
 
@@ -158,18 +161,31 @@ router.get('/companies', async (req, res) => {
 // POST /api/companies — create a new company (firm-scoped)
 router.post('/companies', async (req, res) => {
   const firmId = req.firm?.id;
-  const { company_name, relationship_id, entity_type, address_line1 = '', address_line2 = '', city = '', state = '', zip = '' } = req.body;
+  const { company_name, relationship_id, entity_type, bookkeeping_service, billing_method, tax_year_end, address_line1 = '', address_line2 = '', city = '', state = '', zip = '' } = req.body;
   if (!company_name) return res.status(400).json({ error: 'company_name is required' });
   if (!relationship_id) return res.status(400).json({ error: 'relationship_id is required' });
   try {
     const { rows: rel } = await pool.query('SELECT id FROM relationships WHERE id = $1 AND firm_id = $2', [relationship_id, firmId]);
     if (!rel.length) return res.status(404).json({ error: 'Relationship not found' });
     const { rows } = await pool.query(
-      `INSERT INTO companies (firm_id, company_name, relationship_id, entity_type, realm_id, access_token, refresh_token, token_expires_at, address_line1, address_line2, city, state, zip)
-       VALUES ($1, $2, $3, $4, '', '', '', 0, $5, $6, $7, $8, $9) RETURNING id, company_name, entity_type, relationship_id, firm_id, address_line1, address_line2, city, state, zip`,
-      [firmId, company_name, relationship_id, entity_type || 'other', address_line1, address_line2, city, state, zip]
+      `INSERT INTO companies (firm_id, company_name, relationship_id, entity_type, bookkeeping_service, billing_method, tax_year_end, realm_id, access_token, refresh_token, token_expires_at, address_line1, address_line2, city, state, zip)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, '', '', '', 0, $8, $9, $10, $11, $12) RETURNING id, company_name, entity_type, bookkeeping_service, relationship_id, firm_id, address_line1, address_line2, city, state, zip`,
+      [firmId, company_name, relationship_id, entity_type || 'other', bookkeeping_service || 'none', billing_method || null, tax_year_end || '12/31', address_line1, address_line2, city, state, zip]
     );
-    res.status(201).json(rows[0]);
+    const newCompany = rows[0];
+
+    // Auto-grant portal access to all people already in this relationship
+    await pool.query(`
+      INSERT INTO person_company_access (person_id, company_id, access_level)
+      SELECT p.id, $1, 'full'
+      FROM people p
+      WHERE p.relationship_id = $2 AND p.firm_id = $3
+      ON CONFLICT (person_id, company_id) DO NOTHING
+    `, [newCompany.id, relationship_id, firmId]).catch(e =>
+      console.warn('[companies] auto-grant access non-fatal:', e.message)
+    );
+
+    res.status(201).json(newCompany);
   } catch (err) {
     console.error('POST /companies error:', err);
     res.status(500).json({ error: 'Failed to create company' });
@@ -480,6 +496,90 @@ router.post('/companies/:realmId/close-package', async (req, res) => {
     const pkg = await generateClosePackage(realmId, p);
     res.json(pkg);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /companies/:realmId/tax-financials ─────────────────────────────────
+// Generate year-end financial statements PDF (P&L, BS, TB) and save to docs tab
+router.post('/companies/:realmId/tax-financials', async (req, res) => {
+  try {
+    const firmId = req.firm?.id;
+    const realmId = req.params.realmId;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
+
+    const { year } = req.body;
+    const taxYear = parseInt(year) || new Date().getFullYear() - 1;
+
+    // Look up company info
+    const { rows: companies } = await pool.query(
+      'SELECT id, company_name, entity_type, relationship_id FROM companies WHERE realm_id = $1 AND firm_id = $2',
+      [realmId, firmId]
+    );
+    if (!companies.length) return res.status(404).json({ error: 'Company not found' });
+    const company = companies[0];
+
+    // Generate PDF
+    const { pdfBuffer, generatedAt } = await generateTaxFinancialsPdf({
+      realmId,
+      companyName: company.company_name || 'Company',
+      entityType: company.entity_type,
+      taxYear,
+      firmId,
+    });
+
+    // Upload to S3
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const safeName = (company.company_name || 'company').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const s3Key = buildKey({
+      firmId,
+      ownerType: 'company',
+      ownerId: company.id,
+      filename: `${safeName}-${taxYear}-financials-${timestamp}.pdf`,
+    });
+    const bucket = process.env.AWS_S3_BUCKET;
+    await uploadFile({ buffer: pdfBuffer, key: s3Key, mimeType: 'application/pdf', bucket });
+
+    // Save to documents table
+    const displayName = `${company.company_name || 'Company'} — ${taxYear} Year-End Financials`;
+    const { rows: docs } = await pool.query(`
+      INSERT INTO documents
+        (firm_id, owner_type, owner_id, year, doc_type, display_name,
+         s3_key, s3_bucket, mime_type, size_bytes,
+         uploaded_by_type, uploaded_by_id,
+         folder_section, folder_category, created_at)
+      VALUES ($1, 'company', $2, $3, 'financial_statements', $4, $5, $6, 'application/pdf', $7, 'staff', $8, 'firm_uploaded', 'tax', NOW())
+      RETURNING id, display_name, created_at
+    `, [
+      firmId,
+      company.id,
+      String(taxYear),
+      displayName,
+      s3Key,
+      bucket,
+      pdfBuffer.length,
+      req.firm?.userId || null,
+    ]);
+
+    const savedDoc = docs[0];
+
+    // Fire pipeline trigger — against the company entity
+    // Also fire against each person in the relationship if available
+    const triggerCtx = {
+      document_id: savedDoc.id,
+      document_name: savedDoc.display_name,
+      tax_year: String(taxYear),
+      company_id: company.id,
+    };
+
+    // Fire trigger against the company only — pipeline entity type filtering
+    // in fireTrigger ensures this only activates company-type pipelines
+    fireTrigger(firmId, 'tax_financials_generated', company.id, triggerCtx, 'company')
+      .catch(e => console.error('[tax-financials] fireTrigger non-fatal:', e));
+
+    res.json({ success: true, document: savedDoc, generatedAt });
+  } catch (err) {
+    console.error('[tax-financials] Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
