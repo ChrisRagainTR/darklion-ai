@@ -30,6 +30,28 @@ export default async function globalSetup() {
     return;
   }
 
+  // Skip login if a valid (non-expired) token already exists in the auth state file.
+  // This avoids hammering the rate-limited login endpoint on every test run.
+  const authStatePath = path.resolve(AUTH_STATE_PATH);
+  if (fs.existsSync(authStatePath)) {
+    try {
+      const saved = JSON.parse(fs.readFileSync(authStatePath, 'utf8'));
+      const origin = saved.origins?.find(o => o.origin?.includes('railway.app') || o.origin?.includes('darklion'));
+      const tokenEntry = origin?.localStorage?.find(e => e.name === 'dl_token');
+      if (tokenEntry?.value) {
+        const payload = JSON.parse(Buffer.from(tokenEntry.value.split('.')[1], 'base64').toString());
+        const expiresIn = payload.exp - Math.floor(Date.now() / 1000);
+        if (expiresIn > 300) { // more than 5 minutes remaining
+          console.log(`\n✅ [global-setup] Valid token found (expires in ${Math.round(expiresIn / 3600)}h) — skipping login\n`);
+          return;
+        }
+        console.log(`\n⚠️  [global-setup] Token expired or expiring soon — re-logging in\n`);
+      }
+    } catch {
+      // Malformed auth file — fall through to fresh login
+    }
+  }
+
   console.log(`\n🔐 [global-setup] Logging in as ${TEST_EMAIL} …`);
 
   const browser = await chromium.launch();
