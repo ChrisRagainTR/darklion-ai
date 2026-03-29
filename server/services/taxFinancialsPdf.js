@@ -67,10 +67,36 @@ function renderQBTable(reportData, title) {
     </table>`;
 }
 
+// Lighten a hex color by mixing with white — used for dark backgrounds
+function lightenColor(hex, amount = 0.45) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  const lr = Math.round(r + (255 - r) * amount);
+  const lg = Math.round(g + (255 - g) * amount);
+  const lb = Math.round(b + (255 - b) * amount);
+  return `#${lr.toString(16).padStart(2,'0')}${lg.toString(16).padStart(2,'0')}${lb.toString(16).padStart(2,'0')}`;
+}
+
+// Determine if a hex color is "dark" (luminance < 0.35)
+function isDark(hex) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0, 2), 16) / 255;
+  const g = parseInt(c.substring(2, 4), 16) / 255;
+  const b = parseInt(c.substring(4, 6), 16) / 255;
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  return lum < 0.35;
+}
+
 function buildHtml({ companyName, taxYear, entityType, generatedAt, pnl, bs, tb, logoDataUrl, firmDisplayName, primaryColor }) {
   const dateStr = new Date(generatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = new Date(generatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  const brandColor = primaryColor || '#c9a84c';
+  const rawColor = (primaryColor || '#c9a84c').trim();
+  // On the dark title page background, if the brand color is too dark, lighten it significantly
+  const titleAccentColor = isDark(rawColor) ? lightenColor(rawColor, 0.55) : rawColor;
+  // On white report pages, use the raw color (or slightly darkened if too light)
+  const brandColor = rawColor;
   const firmName = firmDisplayName || 'Sentinel Wealth &amp; Tax';
 
   return `<!DOCTYPE html>
@@ -92,16 +118,16 @@ function buildHtml({ companyName, taxYear, entityType, generatedAt, pnl, bs, tb,
   }
   .title-logo {
     font-size: 11pt; font-weight: 700; letter-spacing: 0.15em;
-    text-transform: uppercase; color: ${brandColor}; margin-bottom: 60px;
+    text-transform: uppercase; color: ${titleAccentColor}; margin-bottom: 60px;
   }
   .title-logo span { color: rgba(255,255,255,0.5); }
   .title-logo img { max-height: 64px; max-width: 240px; object-fit: contain; }
   .title-company { font-size: 28pt; font-weight: 700; margin-bottom: 12px; line-height: 1.2; }
-  .title-year { font-size: 18pt; color: ${brandColor}; font-weight: 600; margin-bottom: 8px; }
+  .title-year { font-size: 18pt; color: ${titleAccentColor}; font-weight: 600; margin-bottom: 8px; }
   .title-subtitle { font-size: 11pt; color: rgba(255,255,255,0.6); margin-bottom: 60px; }
-  .title-divider { width: 60px; height: 2px; background: ${brandColor}; margin: 0 auto 60px; }
-  .title-meta { font-size: 9pt; color: rgba(255,255,255,0.4); line-height: 1.8; }
-  .title-meta strong { color: rgba(255,255,255,0.7); }
+  .title-divider { width: 60px; height: 2px; background: ${titleAccentColor}; margin: 0 auto 60px; }
+  .title-meta { font-size: 9pt; color: rgba(255,255,255,0.65); line-height: 1.8; }
+  .title-meta strong { color: #ffffff; }
 
   /* Report sections */
   .report-section {
@@ -144,7 +170,7 @@ function buildHtml({ companyName, taxYear, entityType, generatedAt, pnl, bs, tb,
   <div class="title-logo">
     ${logoDataUrl
       ? `<img src="${logoDataUrl}" alt="${firmName}">`
-      : `<span style="color:${brandColor};font-size:11pt;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;">${firmName}</span>`
+      : `<span style="color:${titleAccentColor};font-size:11pt;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;">${firmName}</span>`
     }
   </div>
   <div class="title-company">${companyName}</div>

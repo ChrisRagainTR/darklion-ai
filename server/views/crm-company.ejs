@@ -1578,13 +1578,16 @@
         tfOk.textContent = '✓ Saved to Docs → Tax folder';
         tfOk.style.display = '';
         tfBtn.textContent = 'Done';
-        // Close modal, switch to docs tab, refresh list
+        // Close modal, switch to docs tab, force-refresh list
         setTimeout(function() {
           closeTaxFinancialsModal();
-          // Switch to docs tab so they see the new file
+          // Clear the loaded cache so loadDocs re-fetches
+          var docsEl = document.getElementById('docs-content');
+          if (docsEl) delete docsEl.dataset.loaded;
+          // Switch to docs tab
           var docsTab = document.querySelector('.tab-item[onclick*="docs"]');
           if (docsTab) docsTab.click();
-          loadDocs();
+          else loadDocs();
         }, 1500);
       } catch(e) {
         tfErr.textContent = e.message;
