@@ -1566,7 +1566,7 @@
     }
 
     // ── CLIENT FINANCIALS SUBMISSION ─────────────────────
-    async function submitClientFinancials(coId) {
+    window.submitClientFinancials = async function submitClientFinancials(coId) {
       const btn = document.getElementById(`co-send-btn-${coId}`);
       const msgEl = document.getElementById(`co-send-msg-${coId}`);
       if (!btn) return;
