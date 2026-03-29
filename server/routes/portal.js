@@ -118,13 +118,22 @@ router.get('/companies', async (req, res) => {
 });
 
 // --- POST /portal/companies/:id/tax-financials ---
-// Client-initiated: pull year-end financials from QBO and save to tax folder
-// Only allowed when bookkeeping_service = 'client_prepared' and QBO is connected
-router.post('/companies/:id/tax-financials', async (req, res) => {
+// Client-initiated: pull year-end financials from QBO OR upload P&L + BS PDFs manually.
+// Only allowed when bookkeeping_service = 'client_prepared'.
+// Two modes:
+//   1. QBO mode (multipart with no files, or JSON): requires realm_id on company
+//   2. Upload mode (multipart with pl_file + bs_file): saves both PDFs directly
+router.post('/companies/:id/tax-financials', (req, res, next) => {
+  // Accept optional file uploads (pl_file and bs_file)
+  upload.fields([{ name: 'pl_file', maxCount: 1 }, { name: 'bs_file', maxCount: 1 }])(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    next();
+  });
+}, async (req, res) => {
   try {
     const personId = req.portal.personId;
     const companyId = parseInt(req.params.id);
-    const { year } = req.body;
+    const year = req.body && req.body.year;
 
     // Verify this person has access to this company
     const { rows: access } = await pool.query(
@@ -145,64 +154,115 @@ router.post('/companies/:id/tax-financials', async (req, res) => {
     if (company.bookkeeping_service !== 'client_prepared') {
       return res.status(403).json({ error: 'This feature is only available for client-prepared books' });
     }
-    if (!company.realm_id) {
-      return res.status(400).json({ error: 'QuickBooks not connected for this company' });
-    }
 
-    const { generateTaxFinancialsPdf } = require('../services/taxFinancialsPdf');
     const { uploadFile, buildKey } = require('../services/s3');
     const { fireTrigger } = require('../services/pipelineTriggers');
 
     const firmId = company.firm_id;
     const taxYear = parseInt(year) || new Date().getFullYear() - 1;
-
-    const { pdfBuffer, generatedAt } = await generateTaxFinancialsPdf({
-      realmId: company.realm_id,
-      companyName: company.company_name || 'Company',
-      entityType: company.entity_type,
-      taxYear,
-      firmId,
-    });
-
-    // Upload to S3
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const safeName = (company.company_name || 'company').replace(/[^a-z0-9]/gi, '-').toLowerCase();
-    const s3Key = buildKey({
-      firmId,
-      ownerType: 'company',
-      ownerId: company.id,
-      filename: `${safeName}-${taxYear}-financials-client-${timestamp}.pdf`,
-    });
     const bucket = process.env.AWS_S3_BUCKET;
-    await uploadFile({ buffer: pdfBuffer, key: s3Key, mimeType: 'application/pdf', bucket });
+    const safeName = (company.company_name || 'company').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
-    // Save to documents table
-    const displayName = `${company.company_name || 'Company'} — ${taxYear} Year-End Financials (Client Submitted)`;
-    const { rows: docs } = await pool.query(`
-      INSERT INTO documents
-        (firm_id, owner_type, owner_id, year, doc_type, display_name,
-         s3_key, s3_bucket, mime_type, size_bytes,
-         uploaded_by_type, uploaded_by_id,
-         folder_section, folder_category, created_at)
-      VALUES ($1, 'company', $2, $3, 'financial_statements', $4, $5, $6, 'application/pdf', $7,
-              'client', $8, 'client_uploaded', 'tax', NOW())
-      RETURNING id, display_name, created_at
-    `, [firmId, company.id, String(taxYear), displayName, s3Key, bucket, pdfBuffer.length, personId]);
+    const plFile = req.files && req.files['pl_file'] && req.files['pl_file'][0];
+    const bsFile = req.files && req.files['bs_file'] && req.files['bs_file'][0];
+    const isUploadMode = !!(plFile || bsFile);
 
-    const savedDoc = docs[0];
+    let savedDocs = [];
 
-    // Fire the client-specific trigger (different from advisor-initiated)
-    const triggerCtx = {
-      document_id: savedDoc.id,
-      document_name: savedDoc.display_name,
-      tax_year: String(taxYear),
-      company_id: company.id,
-      submitted_by_person_id: personId,
-    };
-    fireTrigger(firmId, 'client_financials_submitted', company.id, triggerCtx, 'company')
-      .catch(e => console.error('[portal/tax-financials] fireTrigger non-fatal:', e));
+    if (isUploadMode) {
+      // ── Upload mode: save P&L and/or BS PDFs directly ──────────────────────
+      const filesToSave = [];
+      if (plFile) filesToSave.push({ file: plFile, label: 'Profit & Loss', suffix: 'pl' });
+      if (bsFile) filesToSave.push({ file: bsFile, label: 'Balance Sheet', suffix: 'bs' });
 
-    res.json({ success: true, document: savedDoc, generatedAt });
+      for (const { file, label, suffix } of filesToSave) {
+        const ext = (file.originalname || 'upload').split('.').pop().toLowerCase() || 'pdf';
+        const s3Key = buildKey({
+          firmId,
+          ownerType: 'company',
+          ownerId: company.id,
+          filename: `${safeName}-${taxYear}-${suffix}-client-${timestamp}.${ext}`,
+        });
+        await uploadFile({ buffer: file.buffer, key: s3Key, mimeType: file.mimetype || 'application/pdf', bucket });
+
+        const displayName = `${company.company_name || 'Company'} — ${taxYear} ${label} (Client Uploaded)`;
+        const { rows: docs } = await pool.query(`
+          INSERT INTO documents
+            (firm_id, owner_type, owner_id, year, doc_type, display_name,
+             s3_key, s3_bucket, mime_type, size_bytes,
+             uploaded_by_type, uploaded_by_id,
+             folder_section, folder_category, created_at)
+          VALUES ($1, 'company', $2, $3, 'financial_statements', $4, $5, $6, $7, $8,
+                  'client', $9, 'client_uploaded', 'tax', NOW())
+          RETURNING id, display_name, created_at
+        `, [firmId, company.id, String(taxYear), displayName, s3Key, bucket, file.mimetype || 'application/pdf', file.size || file.buffer.length, personId]);
+        savedDocs.push(docs[0]);
+      }
+
+      // Fire trigger once for the batch
+      const triggerCtx = {
+        document_ids: savedDocs.map(d => d.id),
+        tax_year: String(taxYear),
+        company_id: company.id,
+        submitted_by_person_id: personId,
+        upload_mode: true,
+      };
+      fireTrigger(firmId, 'client_financials_submitted', company.id, triggerCtx, 'company')
+        .catch(e => console.error('[portal/tax-financials] fireTrigger non-fatal:', e));
+
+      return res.json({ success: true, documents: savedDocs, uploadMode: true });
+
+    } else {
+      // ── QBO mode: pull from QuickBooks and generate PDF ─────────────────────
+      if (!company.realm_id) {
+        return res.status(400).json({ error: 'QuickBooks not connected for this company' });
+      }
+
+      const { generateTaxFinancialsPdf } = require('../services/taxFinancialsPdf');
+
+      const { pdfBuffer, generatedAt } = await generateTaxFinancialsPdf({
+        realmId: company.realm_id,
+        companyName: company.company_name || 'Company',
+        entityType: company.entity_type,
+        taxYear,
+        firmId,
+      });
+
+      const s3Key = buildKey({
+        firmId,
+        ownerType: 'company',
+        ownerId: company.id,
+        filename: `${safeName}-${taxYear}-financials-client-${timestamp}.pdf`,
+      });
+      await uploadFile({ buffer: pdfBuffer, key: s3Key, mimeType: 'application/pdf', bucket });
+
+      const displayName = `${company.company_name || 'Company'} — ${taxYear} Year-End Financials (Client Submitted)`;
+      const { rows: docs } = await pool.query(`
+        INSERT INTO documents
+          (firm_id, owner_type, owner_id, year, doc_type, display_name,
+           s3_key, s3_bucket, mime_type, size_bytes,
+           uploaded_by_type, uploaded_by_id,
+           folder_section, folder_category, created_at)
+        VALUES ($1, 'company', $2, $3, 'financial_statements', $4, $5, $6, 'application/pdf', $7,
+                'client', $8, 'client_uploaded', 'tax', NOW())
+        RETURNING id, display_name, created_at
+      `, [firmId, company.id, String(taxYear), displayName, s3Key, bucket, pdfBuffer.length, personId]);
+
+      const savedDoc = docs[0];
+
+      const triggerCtx = {
+        document_id: savedDoc.id,
+        document_name: savedDoc.display_name,
+        tax_year: String(taxYear),
+        company_id: company.id,
+        submitted_by_person_id: personId,
+      };
+      fireTrigger(firmId, 'client_financials_submitted', company.id, triggerCtx, 'company')
+        .catch(e => console.error('[portal/tax-financials] fireTrigger non-fatal:', e));
+
+      return res.json({ success: true, document: savedDoc, generatedAt });
+    }
   } catch (err) {
     console.error('[portal/tax-financials] Error:', err);
     res.status(500).json({ error: err.message });

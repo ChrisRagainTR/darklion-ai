@@ -1151,6 +1151,65 @@
     </div>
   </div>
 
+  <!-- FINANCIALS SUBMISSION MODAL -->
+  <div class="modal-overlay hidden" id="financialsModal">
+    <div class="modal" style="max-width:500px;">
+      <h2>📊 Send Financials to Advisor</h2>
+      <div id="fin-company-label" style="font-size:0.82rem;color:var(--gold,#c9a84c);margin-bottom:1rem;font-weight:600;"></div>
+
+      <!-- QBO path (shown when connected) -->
+      <div id="fin-qbo-section" style="display:none;margin-bottom:1.25rem;">
+        <div style="background:rgba(62,207,142,0.08);border:1px solid rgba(62,207,142,0.25);border-radius:8px;padding:0.75rem 1rem;display:flex;align-items:center;gap:0.6rem;">
+          <span style="color:#3ecf8e;font-size:1rem;">✓</span>
+          <span style="font-size:0.86rem;color:var(--text);">QuickBooks connected — we'll pull your year-end financials automatically.</span>
+        </div>
+      </div>
+
+      <!-- PDF upload path (two dropzones) -->
+      <div id="fin-upload-section">
+        <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;">Upload your year-end financial statements as PDF files:</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+          <!-- P&L dropzone -->
+          <div>
+            <div style="font-size:0.75rem;font-weight:700;color:var(--muted);margin-bottom:0.35rem;text-transform:uppercase;letter-spacing:0.05em;">Profit & Loss</div>
+            <div class="file-drop" id="fin-pl-drop" onclick="document.getElementById('fin-pl-input').click()" style="padding:1rem;min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.3rem;">
+              <input type="file" id="fin-pl-input" accept=".pdf,.xlsx,.xls,.csv" style="position:absolute;width:1px;height:1px;opacity:0;">
+              <span style="font-size:1.2rem;">📄</span>
+              <span style="font-size:0.76rem;text-align:center;">Drop PDF or click</span>
+              <div id="fin-pl-name" style="font-size:0.72rem;color:var(--gold);display:none;word-break:break-all;text-align:center;"></div>
+            </div>
+          </div>
+          <!-- Balance Sheet dropzone -->
+          <div>
+            <div style="font-size:0.75rem;font-weight:700;color:var(--muted);margin-bottom:0.35rem;text-transform:uppercase;letter-spacing:0.05em;">Balance Sheet</div>
+            <div class="file-drop" id="fin-bs-drop" onclick="document.getElementById('fin-bs-input').click()" style="padding:1rem;min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.3rem;">
+              <input type="file" id="fin-bs-input" accept=".pdf,.xlsx,.xls,.csv" style="position:absolute;width:1px;height:1px;opacity:0;">
+              <span style="font-size:1.2rem;">📊</span>
+              <span style="font-size:0.76rem;text-align:center;">Drop PDF or click</span>
+              <div id="fin-bs-name" style="font-size:0.72rem;color:var(--gold);display:none;word-break:break-all;text-align:center;"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Always-visible QBO connect link -->
+        <div id="fin-connect-link" style="font-size:0.78rem;color:var(--muted);text-align:center;padding:0.4rem 0;"></div>
+      </div>
+
+      <!-- Tax year picker -->
+      <div class="form-group" style="margin-top:0.5rem;">
+        <label>Tax Year</label>
+        <select id="fin-year"></select>
+      </div>
+
+      <div id="fin-err" style="font-size:0.8rem;color:var(--red,#e05555);margin-top:0.5rem;display:none;"></div>
+      <div id="fin-msg" style="font-size:0.8rem;color:var(--green,#3ecf8e);margin-top:0.5rem;display:none;"></div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeFinancialsModal()">Cancel</button>
+        <button class="btn-submit" id="fin-submit-btn" disabled onclick="submitFinancials()">Send to Advisor</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
   <script>
   (function () {
@@ -1407,16 +1466,10 @@
             </div>
             ${co.bookkeeping_service === 'client_prepared' ? `
               <div id="co-qbo-actions-${coId}" style="display:flex;gap:0.5rem;align-items:center;padding-bottom:4px;">
-                ${!co.qbo_connected
-                  ? `<a href="/connect?company_id=${coId}&firm_id=${co.firm_id || ''}" target="_blank"
-                       style="font-size:0.78rem;padding:0.3rem 0.85rem;border-radius:6px;border:1px solid rgba(201,168,76,0.4);background:rgba(201,168,76,0.08);color:var(--gold,#c9a84c);text-decoration:none;font-weight:600;cursor:pointer;">
-                       🔗 Connect QuickBooks
-                     </a>`
-                  : `<button onclick="submitClientFinancials(${coId})" id="co-send-btn-${coId}"
-                       style="font-size:0.78rem;padding:0.3rem 0.85rem;border-radius:6px;border:1px solid rgba(62,207,142,0.4);background:rgba(62,207,142,0.08);color:#3ecf8e;font-weight:600;cursor:pointer;">
-                       📊 Send Financials to Advisor
-                     </button>`
-                }
+                <button onclick="openFinancialsModal(${coId}, ${co.qbo_connected ? 'true' : 'false'}, ${JSON.stringify(co.firm_id || '')})"
+                  style="font-size:0.78rem;padding:0.3rem 0.85rem;border-radius:6px;border:1px solid rgba(201,168,76,0.4);background:rgba(201,168,76,0.08);color:var(--gold,#c9a84c);font-weight:600;cursor:pointer;">
+                  📊 Send Financials to Advisor
+                </button>
                 <div id="co-send-msg-${coId}" style="font-size:0.75rem;color:#3ecf8e;display:none;"></div>
               </div>` : ''}
           </div>
@@ -1565,36 +1618,7 @@
       }
     }
 
-    // ── CLIENT FINANCIALS SUBMISSION ─────────────────────
-    window.submitClientFinancials = async function submitClientFinancials(coId) {
-      const btn = document.getElementById(`co-send-btn-${coId}`);
-      const msgEl = document.getElementById(`co-send-msg-${coId}`);
-      if (!btn) return;
-      const year = new Date().getFullYear() - 1; // default to prior year — could add a picker later
-      btn.disabled = true;
-      btn.textContent = '⏳ Generating…';
-      msgEl.style.display = 'none';
-      try {
-        const data = await api(`/portal/companies/${coId}/tax-financials`, {
-          method: 'POST',
-          body: JSON.stringify({ year }),
-        });
-        if (data.error) throw new Error(data.error);
-        btn.textContent = '✓ Sent';
-        btn.style.color = '#3ecf8e';
-        msgEl.textContent = `${year} financials sent to your advisor and saved to your documents.`;
-        msgEl.style.display = '';
-        // Refresh docs tab
-        const docsEl = document.getElementById(`co-docs-${coId}`);
-        if (docsEl) { delete docsEl.dataset.loaded; loadCompanyDocs(coId); }
-      } catch(e) {
-        btn.disabled = false;
-        btn.textContent = '📊 Send Financials to Advisor';
-        msgEl.textContent = 'Error: ' + e.message;
-        msgEl.style.color = '#e74c3c';
-        msgEl.style.display = '';
-      }
-    }
+    // submitClientFinancials replaced by openFinancialsModal / submitFinancials below
 
     // ── BOOKKEEPING / CLOSE PACKAGE ──────────────────────
     async function loadCompanyBookkeeping(coId) {
@@ -2966,6 +2990,185 @@
         });
       }
     })();
+
+    // ── FINANCIALS MODAL ─────────────────────────────────
+    let _finCoId = null;
+    let _finQboConnected = false;
+    let _finFirmId = null;
+    let _finPlFile = null;
+    let _finBsFile = null;
+
+    // Populate year select
+    (function() {
+      const sel = document.getElementById('fin-year');
+      const cur = new Date().getFullYear();
+      for (let y = cur - 1; y >= 2018; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        sel.appendChild(opt);
+      }
+    })();
+
+    window.openFinancialsModal = function(coId, qboConnected, firmId) {
+      _finCoId = coId;
+      _finQboConnected = !!qboConnected;
+      _finFirmId = firmId;
+      _finPlFile = null;
+      _finBsFile = null;
+
+      const co = (_companies || []).find(c => (c.id || c.company_id) === coId);
+      const coName = co ? (co.company_name || co.name) : `Company #${coId}`;
+      document.getElementById('fin-company-label').textContent = coName;
+
+      // Show/hide QBO section
+      document.getElementById('fin-qbo-section').style.display = _finQboConnected ? '' : 'none';
+
+      // Reset upload dropzones
+      document.getElementById('fin-pl-name').textContent = '';
+      document.getElementById('fin-pl-name').style.display = 'none';
+      document.getElementById('fin-bs-name').textContent = '';
+      document.getElementById('fin-bs-name').style.display = 'none';
+      document.getElementById('fin-pl-input').value = '';
+      document.getElementById('fin-bs-input').value = '';
+      document.getElementById('fin-pl-drop').classList.remove('drag-over');
+      document.getElementById('fin-bs-drop').classList.remove('drag-over');
+
+      // QBO connect link (always shown in upload section)
+      const linkEl = document.getElementById('fin-connect-link');
+      if (_finQboConnected) {
+        linkEl.innerHTML = `<span style="color:#3ecf8e;">✓ QuickBooks connected</span> — or upload PDFs above to override`;
+      } else {
+        linkEl.innerHTML = `Have QuickBooks? <a href="/connect?company_id=${coId}&firm_id=${firmId || ''}" target="_blank" style="color:var(--gold,#c9a84c);text-decoration:underline;font-weight:600;">Connect it for one-click submission →</a>`;
+      }
+
+      document.getElementById('fin-err').style.display = 'none';
+      document.getElementById('fin-msg').style.display = 'none';
+      _updateFinSubmitBtn();
+
+      document.getElementById('financialsModal').classList.remove('hidden');
+    };
+
+    window.closeFinancialsModal = function() {
+      document.getElementById('financialsModal').classList.add('hidden');
+    };
+    document.getElementById('financialsModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('financialsModal')) closeFinancialsModal();
+    });
+
+    function _updateFinSubmitBtn() {
+      const btn = document.getElementById('fin-submit-btn');
+      // Enable if: QBO connected OR both P&L and BS files staged
+      const canSubmit = _finQboConnected || (_finPlFile && _finBsFile);
+      btn.disabled = !canSubmit;
+    }
+
+    function _setFinFile(which, file) {
+      if (which === 'pl') {
+        _finPlFile = file;
+        const nameEl = document.getElementById('fin-pl-name');
+        nameEl.textContent = '✓ ' + file.name;
+        nameEl.style.display = '';
+        document.getElementById('fin-pl-drop').classList.add('drag-over');
+      } else {
+        _finBsFile = file;
+        const nameEl = document.getElementById('fin-bs-name');
+        nameEl.textContent = '✓ ' + file.name;
+        nameEl.style.display = '';
+        document.getElementById('fin-bs-drop').classList.add('drag-over');
+      }
+      _updateFinSubmitBtn();
+    }
+
+    // Wire P&L input
+    document.getElementById('fin-pl-input').addEventListener('change', function() {
+      if (this.files[0]) _setFinFile('pl', this.files[0]);
+    });
+    // Wire BS input
+    document.getElementById('fin-bs-input').addEventListener('change', function() {
+      if (this.files[0]) _setFinFile('bs', this.files[0]);
+    });
+
+    // Drag-and-drop for P&L
+    (function wireDrop(dropEl, which) {
+      dropEl.addEventListener('dragover', e => { e.preventDefault(); dropEl.style.borderColor = 'var(--gold)'; });
+      dropEl.addEventListener('dragleave', () => { if (!((which === 'pl' ? _finPlFile : _finBsFile))) dropEl.style.borderColor = ''; });
+      dropEl.addEventListener('drop', e => {
+        e.preventDefault();
+        dropEl.style.borderColor = '';
+        const f = e.dataTransfer.files[0];
+        if (f) _setFinFile(which, f);
+      });
+    })(document.getElementById('fin-pl-drop'), 'pl');
+    (function wireDrop(dropEl, which) {
+      dropEl.addEventListener('dragover', e => { e.preventDefault(); dropEl.style.borderColor = 'var(--gold)'; });
+      dropEl.addEventListener('dragleave', () => { if (!((which === 'pl' ? _finPlFile : _finBsFile))) dropEl.style.borderColor = ''; });
+      dropEl.addEventListener('drop', e => {
+        e.preventDefault();
+        dropEl.style.borderColor = '';
+        const f = e.dataTransfer.files[0];
+        if (f) _setFinFile(which, f);
+      });
+    })(document.getElementById('fin-bs-drop'), 'bs');
+
+    window.submitFinancials = async function() {
+      const btn = document.getElementById('fin-submit-btn');
+      const errEl = document.getElementById('fin-err');
+      const msgEl = document.getElementById('fin-msg');
+      const year = document.getElementById('fin-year').value;
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Sending…';
+      errEl.style.display = 'none';
+      msgEl.style.display = 'none';
+
+      try {
+        let response;
+        const hasUploads = _finPlFile || _finBsFile;
+
+        if (hasUploads) {
+          // Upload mode — send as multipart
+          const fd = new FormData();
+          fd.append('year', year);
+          if (_finPlFile) fd.append('pl_file', _finPlFile);
+          if (_finBsFile) fd.append('bs_file', _finBsFile);
+          const res = await fetch(`/portal/companies/${_finCoId}/tax-financials`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('portalToken')}` },
+            body: fd,
+          });
+          response = await res.json();
+          if (!res.ok) throw new Error(response.error || `Server error ${res.status}`);
+        } else {
+          // QBO mode — JSON
+          response = await api(`/portal/companies/${_finCoId}/tax-financials`, {
+            method: 'POST',
+            body: JSON.stringify({ year }),
+          });
+        }
+
+        // Success
+        closeFinancialsModal();
+
+        // Update send message on the tab
+        const msgDiv = document.getElementById(`co-send-msg-${_finCoId}`);
+        if (msgDiv) {
+          msgDiv.textContent = `✓ ${year} financials sent to your advisor.`;
+          msgDiv.style.color = '#3ecf8e';
+          msgDiv.style.display = '';
+        }
+
+        // Refresh docs tab for this company
+        const docsEl = document.getElementById(`co-docs-${_finCoId}`);
+        if (docsEl) { delete docsEl.dataset.loaded; loadCompanyDocs(_finCoId); }
+
+      } catch(e) {
+        errEl.textContent = 'Error: ' + e.message;
+        errEl.style.display = '';
+        btn.disabled = false;
+        btn.textContent = 'Send to Advisor';
+      }
+    };
 
     // ── KICK OFF ─────────────────────────────────────────
     init().catch(function(e) {
