@@ -834,15 +834,61 @@
 
 <div id="tab-workflow" class="tab-content">
   <div style="max-width:860px;padding:1.5rem 2rem;">
-    <div style="font-size:1.05rem;font-weight:700;margin-bottom:1.25rem;">Active Pipelines</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div style="font-size:1.05rem;font-weight:700;">Active Pipelines</div>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn btn-sm" onclick="openFireTriggerModal()" style="background:rgba(201,168,76,0.1);color:var(--gold);border:1px solid rgba(201,168,76,0.25);font-size:0.78rem;">⚡ Fire Trigger</button>
+        <button class="btn btn-gold btn-sm" onclick="openCreateCardModal()" style="font-size:0.78rem;">+ Create Card</button>
+      </div>
+    </div>
     <div id="workflow-loading" style="color:var(--muted);padding:2rem 0;">Loading…</div>
     <div id="workflow-list" style="display:none;"></div>
 
     <!-- Pipeline History -->
     <div style="margin-top:2rem;">
       <div style="font-size:1.05rem;font-weight:700;margin-bottom:1rem;">📋 Pipeline History</div>
-      <div id="pipeline-history-loading" style="color:var(--muted);font-size:0.85rem;">Loading…</div>
+      <div id="pipeline-history-loading" style="color:var(--muted);font-size:0.85rem;"></div>
       <div id="pipeline-history-list" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ➕ Create Card Modal (company) -->
+<div class="modal-overlay hidden" id="create-card-modal" onclick="this.classList.add('hidden')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:420px;">
+    <h2 style="margin-bottom:0.25rem;">➕ Create Pipeline Card</h2>
+    <p style="font-size:0.83rem;color:var(--muted);margin-bottom:1.25rem;">Add this company to any pipeline at any stage.</p>
+    <div style="margin-bottom:0.85rem;">
+      <label class="form-label" style="font-size:0.78rem;margin-bottom:0.35rem;display:block;">Pipeline</label>
+      <select id="cc-pipeline-sel" class="form-control" style="font-size:0.85rem;width:100%;"></select>
+    </div>
+    <div style="margin-bottom:1rem;">
+      <label class="form-label" style="font-size:0.78rem;margin-bottom:0.35rem;display:block;">Starting Stage</label>
+      <select id="cc-stage-sel" class="form-control" style="font-size:0.85rem;width:100%;"></select>
+    </div>
+    <div id="cc-error" style="display:none;font-size:0.8rem;color:var(--red);margin-bottom:0.75rem;"></div>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="document.getElementById('create-card-modal').classList.add('hidden')">Cancel</button>
+      <button class="btn btn-gold" onclick="submitCreateCard()">Create Card</button>
+    </div>
+  </div>
+</div>
+
+<!-- ⚡ Fire Trigger Modal (company) -->
+<div class="modal-overlay hidden" id="fire-trigger-modal">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:440px;">
+    <h2 style="margin-bottom:0.25rem;">⚡ Fire Trigger</h2>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1.25rem;">Manually fire a trigger to move this company's pipeline card(s) to the configured stage.</p>
+    <div class="form-group">
+      <label>Trigger</label>
+      <select class="form-control" id="ft-trigger-select">
+        <option value="">— Loading triggers… —</option>
+      </select>
+    </div>
+    <div id="ft-result" style="display:none;margin:0.75rem 0;padding:0.75rem 1rem;border-radius:8px;font-size:0.85rem;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeFireTriggerModal()">Cancel</button>
+      <button class="btn btn-gold" id="ft-submit" onclick="submitFireTrigger()">Fire ⚡</button>
     </div>
   </div>
 </div>
@@ -1016,27 +1062,80 @@
       const res = await apiFetch(`/api/pipelines/entity-jobs?entity_type=company&entity_id=${companyId}`);
       const jobs = await res.json();
       loading.style.display = 'none'; list.style.display = '';
-      if (!jobs.length) { list.innerHTML = '<div style="color:var(--muted);">This company is not in any pipelines yet.</div>'; return; }
-      list.innerHTML = jobs.map(j => {
-        const stageColor = j.stage_color || 'var(--gold)';
-        const yearBadge = j.tax_year ? `<span style="font-size:0.72rem;background:rgba(255,255,255,0.06);border-radius:4px;padding:0.1rem 0.45rem;margin-left:0.5rem;color:var(--muted);">${j.tax_year}</span>` : '';
-        const statusColor = j.job_status === 'blocked' ? 'var(--red)' : (j.job_status === 'waiting_client' || j.job_status === 'missing_info') ? 'var(--orange)' : 'var(--green)';
-        const statusLabel = {active:'Active',waiting_client:'Waiting on Client',missing_info:'Missing Info',blocked:'Blocked',under_extension:'Under Extension',on_hold:'On Hold'}[j.job_status] || 'Active';
-        const updateText = j.last_update ? (j.last_update.length > 80 ? j.last_update.substring(0,80)+'…' : j.last_update) : null;
-        const updateDate = j.last_update_at ? new Date(j.last_update_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
-        const updateAuthor = j.last_update_author || '';
-        const lastUpdate = updateText ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">${esc(updateText)}<span style="font-size:0.72rem;color:rgba(143,163,184,0.6);margin-left:0.4rem;">— ${esc(updateAuthor)}${updateDate ? ', '+updateDate : ''}</span></div>` : '';
-        return `<div class="workflow-job-card" onclick="window.location.href='/pipelines?job=${j.id}'">
-          <div style="flex:1;min-width:180px;"><div style="font-weight:700;font-size:0.95rem;">${esc(j.pipeline_name)}${yearBadge}</div>${lastUpdate}</div>
-          <div style="text-align:center;min-width:140px;"><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Current Stage</div><div style="font-weight:700;color:${stageColor};font-size:0.9rem;">${esc(j.stage_name)}</div></div>
-          <div style="text-align:center;min-width:100px;"><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Status</div><div style="font-weight:600;font-size:0.82rem;color:${statusColor};">${statusLabel}</div></div>
-          ${j.assigned_name ? `<div style="text-align:center;min-width:80px;"><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Assigned</div><div style="font-size:0.82rem;">${esc(j.assigned_name)}</div></div>` : ''}
+      if (!jobs.length) {
+        list.innerHTML = `<div style="text-align:center;padding:2.5rem 1rem;color:var(--muted);">
+          <div style="font-size:2rem;margin-bottom:0.75rem;">📋</div>
+          <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.4rem;color:var(--text);">No active pipelines</div>
+          <div style="font-size:0.84rem;">Workflows will appear here once this company is added to a pipeline.</div>
         </div>`;
-      }).join('');
+        loadPipelineHistory(); return;
+      }
+      list.innerHTML = jobs.map(j => renderJobCard(j)).join('');
     } catch(e) { loading.textContent = 'Failed to load pipelines: ' + e.message; }
-
-    // Load pipeline history
     loadPipelineHistory();
+  }
+
+  function renderJobCard(j) {
+    const stageColor = j.stage_color || 'var(--gold)';
+    const yearBadge = j.tax_year ? `<span style="font-size:0.72rem;background:rgba(255,255,255,0.06);border-radius:4px;padding:0.1rem 0.45rem;margin-left:0.5rem;color:var(--muted);">${j.tax_year}</span>` : '';
+    const statusColor = j.job_status === 'blocked' ? 'var(--red)' : (j.job_status === 'waiting_client' || j.job_status === 'missing_info') ? 'var(--orange)' : 'var(--green)';
+    const statusLabel = {active:'Active',waiting_client:'Waiting on Client',missing_info:'Missing Info',blocked:'Blocked',under_extension:'Under Extension',on_hold:'On Hold'}[j.job_status] || 'Active';
+    const updateText = j.last_update ? (j.last_update.length > 80 ? j.last_update.substring(0,80)+'…' : j.last_update) : null;
+    const updateDate = j.last_update_at ? new Date(j.last_update_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+    const lastUpdate = updateText ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.25rem;">${esc(updateText)}<span style="font-size:0.72rem;color:rgba(143,163,184,0.5);margin-left:0.4rem;">${esc(j.last_update_author||'')}${updateDate ? ' · '+updateDate : ''}</span></div>` : '';
+
+    const stages = j.stages || [];
+    const curIdx = stages.findIndex(s => s.id === j.current_stage_id);
+    const prevStage = curIdx > 0 ? stages[curIdx - 1] : null;
+    const nextStage = curIdx < stages.length - 1 ? stages[curIdx + 1] : null;
+
+    const prevBtn = prevStage
+      ? `<button onclick="event.stopPropagation();moveJobStage(${j.id},'${esc(j.pipeline_name)}${j.tax_year?' '+j.tax_year:''}',${prevStage.id},'${esc(prevStage.name)}')" title="Move back to: ${esc(prevStage.name)}" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:0.3rem 0.6rem;cursor:pointer;color:var(--muted);font-size:0.75rem;display:flex;align-items:center;gap:0.3rem;white-space:nowrap;">← ${esc(prevStage.name)}</button>`
+      : `<span style="width:0"></span>`;
+    const nextBtn = nextStage
+      ? `<button onclick="event.stopPropagation();moveJobStage(${j.id},'${esc(j.pipeline_name)}${j.tax_year?' '+j.tax_year:''}',${nextStage.id},'${esc(nextStage.name)}')" title="Move forward to: ${esc(nextStage.name)}" style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.25);border-radius:6px;padding:0.3rem 0.6rem;cursor:pointer;color:var(--gold);font-size:0.75rem;display:flex;align-items:center;gap:0.3rem;white-space:nowrap;">${esc(nextStage.name)} →</button>`
+      : `<span style="font-size:0.72rem;color:rgba(255,255,255,0.2);">Final stage</span>`;
+
+    return `<div class="workflow-job-card" style="flex-direction:column;align-items:stretch;gap:0.75rem;padding:1rem 1.25rem;cursor:default;" onclick="">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div style="flex:1;min-width:180px;">
+          <div style="font-weight:700;font-size:0.95rem;">${esc(j.pipeline_name)}${yearBadge}</div>
+          ${lastUpdate}
+        </div>
+        <div style="text-align:center;min-width:130px;">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Current Stage</div>
+          <div style="font-weight:700;color:${stageColor};font-size:0.88rem;">${esc(j.stage_name)}</div>
+        </div>
+        <div style="text-align:center;min-width:90px;">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Status</div>
+          <div style="font-weight:600;font-size:0.8rem;color:${statusColor};">${statusLabel}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(255,255,255,0.05);">
+        <div>${prevBtn}</div>
+        <div style="font-size:0.72rem;color:rgba(255,255,255,0.2);">${curIdx + 1} / ${stages.length}</div>
+        <div>${nextBtn}</div>
+      </div>
+    </div>`;
+  }
+
+  async function moveJobStage(jobId, pipelineName, stageId, stageName) {
+    try {
+      const res = await apiFetch(`/api/pipelines/jobs/${jobId}/move`, {
+        method: 'POST',
+        body: JSON.stringify({ stage_id: stageId, note: `Moved to "${stageName}" from company workflow tab` }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Move failed'); }
+      if (typeof window.toast === 'function') window.toast(`Moved to "${stageName}"`);
+      const wList = document.getElementById('workflow-list');
+      const wLoad = document.getElementById('workflow-loading');
+      if (wList) { wList.innerHTML = ''; wList.style.display = 'none'; }
+      if (wLoad) wLoad.style.display = '';
+      await loadWorkflow();
+    } catch(e) {
+      if (typeof window.toast === 'function') window.toast('Error: ' + e.message, 'error');
+      else alert('Error: ' + e.message);
+    }
   }
 
   async function loadPipelineHistory() {
@@ -1078,6 +1177,122 @@
       loading.style.display = 'none'; list.style.display = '';
       list.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">No pipeline history yet.</div>';
     }
+  }
+
+  // ── Create Card Modal ──────────────────────────────────
+  let _allInstances = [];
+
+  async function openCreateCardModal() {
+    const modal = document.getElementById('create-card-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    const pipelineSel = document.getElementById('cc-pipeline-sel');
+    const stageSel = document.getElementById('cc-stage-sel');
+    pipelineSel.innerHTML = '<option value="">Loading pipelines…</option>';
+    stageSel.innerHTML = '<option value="">Select pipeline first</option>';
+    try {
+      const res = await apiFetch('/api/pipelines/instances');
+      _allInstances = await res.json();
+      const companyInstances = _allInstances.filter(i => i.entity_type === 'company');
+      if (!companyInstances.length) { pipelineSel.innerHTML = '<option value="">No company pipelines found</option>'; return; }
+      pipelineSel.innerHTML = '<option value="">— Select pipeline —</option>' +
+        companyInstances.map(i => `<option value="${i.id}">${esc(i.template_name)}${i.tax_year ? ' '+i.tax_year : ''}</option>`).join('');
+      pipelineSel.onchange = async () => {
+        const instId = pipelineSel.value;
+        stageSel.innerHTML = '<option value="">Loading stages…</option>';
+        if (!instId) { stageSel.innerHTML = '<option value="">Select pipeline first</option>'; return; }
+        const r = await apiFetch(`/api/pipelines/instances/${instId}`);
+        const data = await r.json();
+        stageSel.innerHTML = '<option value="">— Select starting stage —</option>' +
+          (data.stages || []).map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+      };
+    } catch(e) { pipelineSel.innerHTML = `<option value="">Error: ${esc(e.message)}</option>`; }
+  }
+
+  async function submitCreateCard() {
+    const instId = document.getElementById('cc-pipeline-sel').value;
+    const stageId = document.getElementById('cc-stage-sel').value;
+    const errEl = document.getElementById('cc-error');
+    if (!instId || !stageId) { errEl.textContent = 'Select a pipeline and stage.'; errEl.style.display = 'block'; return; }
+    errEl.style.display = 'none';
+    try {
+      const res = await apiFetch(`/api/pipelines/instances/${instId}/jobs`, {
+        method: 'POST',
+        body: JSON.stringify({ entity_type: 'company', entity_id: companyId }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      const newJob = await res.json();
+      if (newJob.current_stage_id !== parseInt(stageId)) {
+        await apiFetch(`/api/pipelines/jobs/${newJob.id}/move`, {
+          method: 'POST',
+          body: JSON.stringify({ stage_id: parseInt(stageId), note: 'Placed at stage on card creation' }),
+        });
+      }
+      document.getElementById('create-card-modal').classList.add('hidden');
+      if (typeof window.toast === 'function') window.toast('Pipeline card created');
+      const wList = document.getElementById('workflow-list');
+      const wLoad = document.getElementById('workflow-loading');
+      if (wList) { wList.innerHTML = ''; wList.style.display = 'none'; }
+      if (wLoad) wLoad.style.display = '';
+      loadWorkflow();
+    } catch(e) { errEl.textContent = 'Error: ' + e.message; errEl.style.display = 'block'; }
+  }
+
+  // ── Fire Trigger Modal ─────────────────────────────────
+  let availableTriggers = [];
+
+  async function openFireTriggerModal() {
+    const modal = document.getElementById('fire-trigger-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    document.getElementById('ft-result').style.display = 'none';
+    const sel = document.getElementById('ft-trigger-select');
+    sel.innerHTML = '<option value="">Loading…</option>';
+    try {
+      const res = await apiFetch('/api/pipeline-triggers');
+      availableTriggers = await res.json();
+      // Only show triggers relevant to companies (filter out portal/organizer triggers)
+      const companyTriggers = availableTriggers.filter(t =>
+        !['portal_first_login','portal_message_received','document_uploaded_by_client','organizer_submitted'].includes(t.key)
+      );
+      sel.innerHTML = '<option value="">— Select a trigger —</option>' +
+        companyTriggers.map(t => `<option value="${t.key}">${esc(t.label)}</option>`).join('');
+    } catch(e) { sel.innerHTML = `<option value="">Error: ${esc(e.message)}</option>`; }
+  }
+
+  function closeFireTriggerModal() {
+    const modal = document.getElementById('fire-trigger-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async function submitFireTrigger() {
+    const triggerKey = document.getElementById('ft-trigger-select').value;
+    const resultEl = document.getElementById('ft-result');
+    if (!triggerKey) { resultEl.style.cssText = 'display:block;background:rgba(231,76,60,0.1);color:#e74c3c;'; resultEl.textContent = 'Select a trigger first.'; return; }
+    document.getElementById('ft-submit').disabled = true;
+    resultEl.style.display = 'none';
+    try {
+      const res = await apiFetch(`/api/pipeline-triggers/fire`, {
+        method: 'POST',
+        body: JSON.stringify({ trigger_key: triggerKey, entity_type: 'company', entity_id: companyId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      const moved = data.moved || [];
+      resultEl.style.cssText = 'display:block;background:rgba(62,207,142,0.1);color:#3ecf8e;';
+      resultEl.textContent = moved.length
+        ? `✓ Moved ${moved.length} card(s): ${moved.map(m => `"${m.pipeline_name}" → ${m.to_stage}`).join(', ')}`
+        : 'ℹ️ No cards moved — no pipeline stages are configured for this trigger on this company.';
+      const wList = document.getElementById('workflow-list');
+      const wLoad = document.getElementById('workflow-loading');
+      if (wList) { wList.innerHTML = ''; wList.style.display = 'none'; }
+      if (wLoad) wLoad.style.display = '';
+      loadWorkflow();
+    } catch(e) {
+      resultEl.style.cssText = 'display:block;background:rgba(231,76,60,0.1);color:#e74c3c;';
+      resultEl.textContent = 'Error: ' + e.message;
+    }
+    document.getElementById('ft-submit').disabled = false;
   }
 
   function switchSubtab(name, el) {
