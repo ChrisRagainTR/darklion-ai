@@ -1634,18 +1634,24 @@
           const co = _companies.find(c => (c.id || c.company_id) === coId);
           const isClientPrepared = co && co.bookkeeping_service === 'client_prepared';
           if (isClientPrepared) {
-            // Client manages their own books — show connect button
+            // Client manages their own books — show both upload and connect options
             container.innerHTML = `
               <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;text-align:center;padding:3rem 2rem;">
-                <div style="font-size:3rem;margin-bottom:1rem;line-height:1;">🔗</div>
-                <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">Connect Your QuickBooks</div>
-                <div style="font-size:0.86rem;color:var(--muted);max-width:380px;line-height:1.6;margin-bottom:1.5rem;">
-                  Connect your QuickBooks Online account so you can send your year-end financials to your advisor when you're ready.
+                <div style="font-size:3rem;margin-bottom:1rem;line-height:1;">📊</div>
+                <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">Submit Your Year-End Financials</div>
+                <div style="font-size:0.86rem;color:var(--muted);max-width:420px;line-height:1.6;margin-bottom:1.75rem;">
+                  Send your year-end P&amp;L and Balance Sheet to your advisor. You can upload PDFs directly, or connect QuickBooks for one-click submission.
                 </div>
-                <a href="/connect?company_id=${coId}&firm_id=${co.firm_id || ''}" target="_blank"
-                   style="display:inline-block;padding:0.6rem 1.5rem;border-radius:8px;border:1px solid rgba(201,168,76,0.4);background:rgba(201,168,76,0.1);color:var(--gold,#c9a84c);font-weight:700;font-size:0.88rem;text-decoration:none;cursor:pointer;">
-                  Connect QuickBooks →
-                </a>
+                <div style="display:flex;flex-direction:column;gap:0.75rem;align-items:center;">
+                  <button onclick="openFinancialsModal(${coId}, false, ${JSON.stringify(co.firm_id || '')})"
+                     style="display:inline-block;padding:0.65rem 1.75rem;border-radius:8px;border:1px solid rgba(201,168,76,0.4);background:rgba(201,168,76,0.1);color:var(--gold,#c9a84c);font-weight:700;font-size:0.88rem;cursor:pointer;">
+                    📄 Upload Tax Documents →
+                  </button>
+                  <a href="/connect?company_id=${coId}&firm_id=${co.firm_id || ''}" target="_blank"
+                     style="font-size:0.82rem;color:var(--muted);text-decoration:underline;">
+                    Or connect QuickBooks for one-click submission
+                  </a>
+                </div>
               </div>`;
           } else {
             // Advisor manages books — advise them to contact advisor
