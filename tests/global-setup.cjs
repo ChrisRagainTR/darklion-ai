@@ -30,6 +30,16 @@ module.exports = async function globalSetup() {
     return;
   }
 
+  // If existing auth state has a token, reuse it (avoid hammering login endpoint)
+  const existingState = fs.existsSync(path.resolve(AUTH_STATE_PATH))
+    ? JSON.parse(fs.readFileSync(path.resolve(AUTH_STATE_PATH), 'utf8'))
+    : null;
+  const existingToken = existingState?.origins?.[0]?.localStorage?.find(e => e.name === 'dl_token')?.value;
+  if (existingToken) {
+    console.log('✅ [global-setup] Reusing existing auth token');
+    return;
+  }
+
   console.log(`\n🔐 [global-setup] Logging in as ${TEST_EMAIL} …`);
 
   // Use the API directly — avoids browser rate-limit issues and is faster
@@ -44,7 +54,10 @@ module.exports = async function globalSetup() {
 
     if (!res.ok || !data.token) {
       console.error('[global-setup] API login failed:', data.error || JSON.stringify(data));
-      fs.writeFileSync(path.resolve(AUTH_STATE_PATH), JSON.stringify({ cookies: [], origins: [] }));
+      // Don't overwrite existing state if login fails
+      if (!fs.existsSync(path.resolve(AUTH_STATE_PATH))) {
+        fs.writeFileSync(path.resolve(AUTH_STATE_PATH), JSON.stringify({ cookies: [], origins: [] }));
+      }
       return;
     }
 
