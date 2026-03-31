@@ -621,7 +621,7 @@ const articles = [
   <li>All downloads are logged in the audit trail</li>
 </ul>
 
-<div class="callout tip"><span class="callout-icon">💡</span><div>There is also a firm-level <strong>Documents</strong> page (in the sidebar) that shows all documents across all clients in one view — useful for bulk management or finding something quickly.</div></div>
+<div class="callout tip"><span class="callout-icon">💡</span><div>Documents are managed from within individual client records. Open a Person or Company in the CRM and go to their <strong>Docs</strong> tab to upload, deliver, or manage their files.</div></div>
 
 </div>
     `
@@ -685,8 +685,7 @@ const articles = [
 </ol>
 <div class="callout warning"><span class="callout-icon">⚠️</span><div>Document deletion is <strong>permanent</strong> and cannot be undone. Make sure you have the correct file before confirming.</div></div>
 
-<h2>Firm-Level Document Library</h2>
-<p>The <strong>Documents</strong> link in the left sidebar opens the firm-level document library — a view of all documents across all clients. You can search, filter, and manage documents from here without navigating to individual client records. This is especially useful for bulk delivery or firm-wide audits.</p>
+
 
 </div>
     `
@@ -743,8 +742,8 @@ const articles = [
   <li><strong>View timestamp</strong> — Recorded when the client first opens or downloads the file. This is how you know a client has actually seen their return.</li>
 </ul>
 
-<h2>Bulk Delivery</h2>
-<p>To deliver multiple documents at once, use the firm-level <strong>Documents</strong> page (sidebar → Documents). You can filter by client or date, select multiple documents, and deliver them all in one action — rather than going to each client record individually.</p>
+<h2>Delivering Documents</h2>
+<p>To deliver a document, open the client's record in the CRM (Person or Company), go to their <strong>Docs</strong> tab, find the file, and use the <strong>Deliver</strong> action. Delivered documents immediately appear in the client's portal with a "New" badge.</p>
 
 <div class="callout tip"><span class="callout-icon">💡</span><div>A common workflow: upload the signed return PDF to the client's Docs tab → keep it private → review it → when you're ready to tell the client their return is done, deliver the document AND send them a portal message. Both arrive at the same time.</div></div>
 
@@ -1069,7 +1068,7 @@ const articles = [
 </ul>
 
 <h2>What You See in the CRM</h2>
-<p>On the Company's Docs tab in the CRM, the submitted files appear under <strong>"Uploaded by Client"</strong> section. You'll also see the files in the firm-level Documents page.</p>
+<p>On the Company's Docs tab in the CRM, the submitted files appear under <strong>"Uploaded by Client"</strong> section.</p>
 
 <p>The submission fires the <code>client_financials_submitted</code> pipeline trigger — if you have a pipeline configured with that trigger, the client's card will automatically move to the target stage.</p>
 
