@@ -2082,10 +2082,10 @@ const articles = [
     slug: 'settings',
     title: 'Settings & Branding',
     section: 'Other',
-    keywords: ['settings', 'branding', 'logo', 'custom domain', 'API keys', 'brand color', 'tax year', 'firm name'],
+    keywords: ['settings', 'branding', 'logo', 'custom domain', 'brand color', 'tax year', 'firm name'],
     prev: { slug: 'bulk-send', title: 'Bulk Send' },
     next: null,
-    body: 'Configure your firm branding (logo, colors, name), set up a custom domain for the client portal, and manage API keys for integrations.',
+    body: 'Configure your firm branding (logo, colors, name) and set up a custom domain for the client portal.',
     html: `
 <div class="article-breadcrumb">
   <a href="/help">Help</a><span class="sep">›</span>
@@ -2095,13 +2095,13 @@ const articles = [
 <h1 class="article-title">Settings & Branding</h1>
 <figure class="help-screenshot">
   <img src="/images/help/settings.png" alt="Settings page with firm branding and configuration" loading="lazy" />
-  <figcaption>Settings: customize your firm's logo, colors, domain, and API keys.</figcaption>
+  <figcaption>Settings: customize your firm's logo, colors, and domain.</figcaption>
 </figure>
 
 <div class="article-meta">Section: Other</div>
 <div class="article-body">
 
-<p>Go to <strong>Settings (⚙️)</strong> in the left sidebar to manage your firm's branding, custom domain, and API access. Settings has three tabs.</p>
+<p>Go to <strong>Settings (⚙️)</strong> in the left sidebar to manage your firm's branding and custom domain. Settings has two tabs.</p>
 
 <h2>Firm Branding Tab</h2>
 <p>Everything here controls how your firm appears to clients in the portal, in emails, and on PDF reports.</p>
