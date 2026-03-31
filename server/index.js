@@ -192,6 +192,50 @@ app.get('/invite/:token', (req, res) => res.sendFile(path.join(publicDir, 'invit
 // --- Staff pages (EJS templates with unified layout) ---
 // Note: auth is handled client-side (JWT in localStorage); server just serves the pages
 app.get('/dashboard', (req, res) => res.render('dashboard', { title: 'Dashboard', activeNav: '' }));
+
+// ─── HELP CENTER (public, no auth required) ───────────────────────────────
+const { articles: helpArticles, searchIndex: helpSearchIndex, homeModules: helpHomeModules } = require('./help-articles');
+
+function renderHelp(res, body, title, currentSlug) {
+  res.render('help-layout', { body, title, currentSlug, searchIndex: helpSearchIndex });
+}
+
+app.get('/help', (req, res) => {
+  const homeHtml = `
+    <div class="help-home-hero">
+      <h1>DarkLion Help Center</h1>
+      <p>Everything you need to get the most out of DarkLion — for staff, accountants, and bookkeepers.</p>
+    </div>
+    <div class="help-module-grid">
+      ${helpHomeModules.map(m => `
+        <a href="${m.href}" class="help-module-card">
+          <div class="card-icon">${m.icon}</div>
+          <div class="card-title">${m.title}</div>
+          <div class="card-desc">${m.desc}</div>
+        </a>
+      `).join('')}
+    </div>
+  `;
+  renderHelp(res, homeHtml, 'Help Center', 'home');
+});
+
+app.get('/help/article/:slug', (req, res) => {
+  const article = helpArticles.find(a => a.slug === req.params.slug);
+  if (!article) return res.status(404).render('help-layout', {
+    body: `<h1 class="article-title">Article Not Found</h1><p style="color:var(--muted)">That article doesn't exist. <a href="/help">Return to Help Center →</a></p>`,
+    title: 'Not Found',
+    currentSlug: '',
+    searchIndex: helpSearchIndex,
+  });
+
+  const nav = `<div class="article-nav">
+    ${article.prev ? `<a href="/help/article/${article.prev.slug}"><span class="nav-label">← Previous</span><span class="nav-title">${article.prev.title}</span></a>` : '<span></span>'}
+    ${article.next ? `<a href="/help/article/${article.next.slug}" class="next"><span class="nav-label">Next →</span><span class="nav-title">${article.next.title}</span></a>` : ''}
+  </div>`;
+
+  renderHelp(res, article.html + nav, article.title, article.slug);
+});
+// ─────────────────────────────────────────────────────────────────────────────
 app.get('/statements-calendar', (req, res) => res.render('statements-calendar', { title: 'Statement Calendar', activeNav: 'statements-calendar' }));
 app.get('/documents', (req, res) => res.render('documents', { title: 'Documents', activeNav: 'documents' }));
 app.get('/dashboard.html', (req, res) => res.redirect('/dashboard'));
