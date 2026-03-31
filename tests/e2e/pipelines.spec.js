@@ -28,7 +28,14 @@ async function openFirstBoard(page) {
   if (await pipeLink.count() === 0) return false;
 
   await pipeLink.click();
-  await page.waitForSelector('#view-board', { timeout: TIMEOUTS.api });
+  // Wait for board to become visible (showBoard() sets display:flex)
+  await page.waitForFunction(
+    () => {
+      const board = document.getElementById('view-board');
+      return board && board.style.display === 'flex';
+    },
+    { timeout: TIMEOUTS.api }
+  ).catch(() => null);
   return true;
 }
 

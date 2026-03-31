@@ -151,15 +151,19 @@ test.describe('Messages — Inbox', () => {
 
   test('Send button (.btn-gold in .reply-box-actions) is visible and enabled', async ({ page }) => {
     await page.waitForSelector('.thread-card', { timeout: TIMEOUTS.api }).catch(() => null);
-    if (await page.locator('.thread-card').count() === 0) return test.skip(true, 'No threads');
-    await page.locator('.thread-card').first().click();
-    // Wait for thread content to load (async API call after click)
-    await page.waitForSelector('#thread-messages', { timeout: TIMEOUTS.api }).catch(() => null);
-    await page.waitForTimeout(500);
-    // Reply box may be hidden for task threads — soft pass if not shown
-    const replyBox = page.locator('#replyBox');
-    const isVisible = await replyBox.isVisible().catch(() => false);
-    if (!isVisible) return test.skip(true, 'Reply box not visible for this thread type');
+    const threadCards = page.locator('.thread-card');
+    if (await threadCards.count() === 0) return test.skip(true, 'No threads');
+    // Try each thread until we find one with a visible reply box (skip task threads)
+    const count = await threadCards.count();
+    let replyBoxVisible = false;
+    for (let i = 0; i < Math.min(count, 5); i++) {
+      await threadCards.nth(i).click();
+      await page.waitForFunction(() => { const dm = document.getElementById("detailMessages"); return dm && dm.children.length > 0 && !dm.querySelector(".spinner"); }, { timeout: TIMEOUTS.api }).catch(() => null);
+      await page.waitForTimeout(300);
+      replyBoxVisible = await page.locator('#replyBox').isVisible().catch(() => false);
+      if (replyBoxVisible) break;
+    }
+    if (!replyBoxVisible) return test.skip(true, 'No non-task thread found with visible reply box');
     const sendBtn = page.locator('.reply-box-actions .btn-gold, .reply-box button:has-text("Send")');
     await expect(sendBtn).toBeVisible({ timeout: TIMEOUTS.element });
     await expect(sendBtn).toBeEnabled();
@@ -169,15 +173,19 @@ test.describe('Messages — Inbox', () => {
 
   test('internal note toggle checkbox is present in .reply-box-controls', async ({ page }) => {
     await page.waitForSelector('.thread-card', { timeout: TIMEOUTS.api }).catch(() => null);
-    if (await page.locator('.thread-card').count() === 0) return test.skip(true, 'No threads');
-    await page.locator('.thread-card').first().click();
-    // Wait for thread content to load (async API call after click)
-    await page.waitForSelector('#thread-messages', { timeout: TIMEOUTS.api }).catch(() => null);
-    await page.waitForTimeout(500);
-    // Reply box may be hidden for task threads
-    const replyBox = page.locator('#replyBox');
-    const isVisible = await replyBox.isVisible().catch(() => false);
-    if (!isVisible) return test.skip(true, 'Reply box not visible for this thread type');
+    const threadCards = page.locator('.thread-card');
+    if (await threadCards.count() === 0) return test.skip(true, 'No threads');
+    // Try each thread until we find one with a visible reply box (skip task threads)
+    const count = await threadCards.count();
+    let replyBoxVisible = false;
+    for (let i = 0; i < Math.min(count, 5); i++) {
+      await threadCards.nth(i).click();
+      await page.waitForFunction(() => { const dm = document.getElementById("detailMessages"); return dm && dm.children.length > 0 && !dm.querySelector(".spinner"); }, { timeout: TIMEOUTS.api }).catch(() => null);
+      await page.waitForTimeout(300);
+      replyBoxVisible = await page.locator('#replyBox').isVisible().catch(() => false);
+      if (replyBoxVisible) break;
+    }
+    if (!replyBoxVisible) return test.skip(true, 'No non-task thread found with visible reply box');
 
     // The .reply-box-controls area should contain a checkbox for internal notes
     const controls = page.locator('.reply-box-controls');
