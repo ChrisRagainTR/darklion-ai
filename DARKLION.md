@@ -360,7 +360,9 @@ PUSHER_APP_ID, PUSHER_KEY, PUSHER_SECRET, PUSHER_CLUSTER
 | Person modal 2-column layout | `crm-person.ejs` |
 | Company workflow tab (full parity) | `crm-company.ejs` |
 | Auto-grant portal access on relationship add | `server/routes/api.js` |
-| E2E test suite (173 tests) | `tests/e2e/`, `tests/global-setup.cjs` |
+| Help Center (`/help`) — public, no auth, 32 articles | `server/help-articles.js`, `server/views/help-layout.ejs`, `server/index.js` |
+| Advisor Portal Ghost Preview ("View Portal as Client") | `server/routes/people.js` POST `/:id/portal-preview`, `public/portal.html` ghost banner |
+| E2E test suite (237 tests — 7 spec files added) | `tests/e2e/`, `tests/global-setup.cjs` |
 | DarkLion Drive (Windows desktop app) | `darklion-drive/` — Electron + rclone + WinFsp |
 | DarkLion Print Agent (Windows desktop app) | `darklion-print-agent/` — Electron + Ghostscript |
 
@@ -399,9 +401,11 @@ Password: DarkLion2026!
 JWT_SECRET (dev): k9Xm2vQpL7nR4wYtBsEuJcFhGdAzN8oWiKqT3eMjP6yDlCbOxVHrUfSgZ5I1Ma
 ```
 
-- 173 passing / 0 failing (stable baseline)
-- 29 skipped (data-dependent — pipelines/messages need real records)
+- 237 tests across 14 spec files
+- 0 failing (stable baseline)
 - Global setup generates JWT directly to avoid rate limits
+- messages.spec.js: `beforeAll` seeds a test thread if inbox is empty so data-dependent tests run
+- pipelines.spec.js: `waitForFunction` on `.pipe-link` to handle async tbody population
 
 ---
 
@@ -438,14 +442,52 @@ JWT_SECRET (dev): k9Xm2vQpL7nR4wYtBsEuJcFhGdAzN8oWiKqT3eMjP6yDlCbOxVHrUfSgZ5I1Ma
 - **Portal bookkeeping empty state:** Shows upload option alongside QB connect
 - **Test suite hardening:** JWT bypass in global-setup.cjs, skip login if valid token exists
 
-### 2026-03-31 — Refactor + Doc Count Fix + Financials UX
+### 2026-03-31 — Help Center + Portal Ghost Preview + Test Coverage + Refactor
 
-- **Portal doc count mismatch (fixed):** `portal.html` and `crm-person.ejs` — docs with categories not in the valid cat list were counted but not rendered. Fixed by normalizing unknown categories to 'other' before filtering.
+#### Fixes
+- **Portal doc count mismatch:** `portal.html` and `crm-person.ejs` — docs with unrecognized categories were counted but not rendered. Fixed by normalizing unknown categories to `'other'` before filtering.
 - **Financials upload UX:** After upload success, portal auto-switches to Docs subtab and shows green success banner (auto-dismisses after 8s).
-- **Modal button state bug (fixed):** Financials modal submit button stuck on "⏳ Sending…" after prior upload. Fixed by resetting button text/state on modal open.
-- **Refactor:** Deleted stale public HTML files (8 files shadowing EJS routes), dead `coa-monitor.js` service, Fly.io deployment workflow.
-- **Branch cleanup:** Deleted all stale `claude/` branches from GitHub.
-- **Prod push:** All above merged to main and deployed.
+- **Modal button state bug:** Financials modal submit button stuck on "⏳ Sending…" after prior upload. Fixed by resetting button text/state on modal open.
+- **viewPortalAsClient scope bug:** inline `onclick` couldn't find the function because it was defined inside a JS closure. Fixed by assigning to `window.viewPortalAsClient`. Also fixed to `await res.json()` before reading the URL.
+
+#### New Feature: Help Center (`/help`)
+- Public route, no login required — accessible by staff, clients, and external users
+- **Route:** `GET /help` (home), `GET /help/article/:slug`
+- **32 articles** across 8 modules: Getting Started, CRM, Documents, Client Portal, Pipelines, Messaging, Tax Organizer, Other (Proposals, Bulk Send, Settings, Viktor AI)
+- Left sidebar with full navigation, search bar (real-time across all article content), "← Back to DarkLion" header link
+- 👓 Help Center link added to staff sidebar (opens in new tab)
+- **Files:** `server/help-articles.js` (article registry + search index), `server/views/help-layout.ejs` (dedicated layout, not EJS shell)
+- Article 404 → renders "Article Not Found" with redirect link (not a server error)
+
+#### New Feature: Advisor Portal Ghost Preview
+- Staff can view the client portal exactly as a specific client sees it
+- **Button:** Person detail → Overview tab → Portal Access section → `👁️ View Portal` (only shown when portal is fully active)
+- **API:** `POST /api/people/:id/portal-preview` → returns `{ url }` with short-lived token
+- **Token:** JWT with `ghostedBy: staffUserId` claim, expires in **1 hour** (vs. 7 days for real clients)
+- **Portal behavior:** `?preview_token=` in URL → token stored in localStorage → purple ghost banner shown: *"Advisor Preview — viewing portal as [Client Name]"* + "← Back to DarkLion" link
+- **URL cleanup:** `window.history.replaceState` removes token from address bar after pickup
+- **Audit log:** Every preview logged to `audit_log` with actor, client, timestamp
+- **File:** `server/routes/people.js` (new endpoint at bottom), `public/portal.html` (token pickup + banner)
+
+#### Test Suite Expansion
+Added 5 new spec files + fixed 2 existing:
+- `tests/e2e/help.spec.js` — 10 tests: public routes, article pages, sidebar, search
+- `tests/e2e/bulk-send.spec.js` — 6 tests: page structure, audience builder, compose
+- `tests/e2e/forecast.spec.js` — 6 tests: page load, table/cards rendering
+- `tests/e2e/tax-organizer.spec.js` — 3 tests: API endpoints, Organizers tab navigation
+- `tests/e2e/portal-ghost.spec.js` — 5 tests: API auth, URL validation, CRM button presence
+- `tests/e2e/pipelines.spec.js` — Fixed: `waitForFunction` to detect `.pipe-link` after async load
+- `tests/e2e/messages.spec.js` — Fixed: `beforeAll` seeds test thread if inbox is empty
+
+#### Refactor + Cleanup
+- Deleted stale public HTML files (8 files shadowing EJS routes)
+- Deleted dead `server/services/coa-monitor.js` (0 references)
+- Deleted `.github/workflows/deploy-fly.yml` (Fly.io unused, Railway is active)
+- Deleted 5 stale `claude/` branches from GitHub
+
+#### Production deploys
+- `e20b698` — portal UX fixes + refactor
+- `f2c1a6e` — help center + portal ghost preview + tests
 
 ---
 

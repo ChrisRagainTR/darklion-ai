@@ -64,13 +64,13 @@ test.describe('Tax Organizer', () => {
     const found = await goToFirstPerson(page);
     if (!found) return test.skip(true, 'No people in test account');
 
-    // Click Organizers tab
-    const orgTab = page.locator('.tab-btn:has-text("Organizers"), button:has-text("Organizers"), [data-tab="organizers"]');
+    // Click Organizers tab — uses .tab-item with onclick="switchTab('organizers', this)"
+    const orgTab = page.locator('.tab-item:has-text("Organizers"), .tab-btn:has-text("Organizers"), button:has-text("Organizers")');
     await expect(orgTab).toBeVisible({ timeout: TIMEOUTS.element });
     await orgTab.click();
 
     // Organizer content area should render
-    const content = page.locator('#tab-organizers, [id="tab-organizers"]');
+    const content = page.locator('#tab-organizers');
     await expect(content).toBeVisible({ timeout: TIMEOUTS.element });
     const bodyText = await content.textContent();
     expect(bodyText.trim().length).toBeGreaterThan(0);
@@ -80,12 +80,15 @@ test.describe('Tax Organizer', () => {
     const found = await goToFirstPerson(page);
     if (!found) return test.skip(true, 'No people in test account');
 
-    const orgTab = page.locator('.tab-btn:has-text("Organizers"), button:has-text("Organizers"), [data-tab="organizers"]');
+    const orgTab = page.locator('.tab-item:has-text("Organizers"), .tab-btn:has-text("Organizers"), button:has-text("Organizers")');
     await orgTab.click();
     await page.waitForTimeout(1500);
 
-    const sendBtn = page.locator('button:has-text("Send Organizer"), button:has-text("New Organizer"), .btn:has-text("Organizer")');
-    const orgCard = page.locator('.organizer-card, .organizer-row, .organizer-item, .organizer-year');
+    // "Upload Drake Organizer" is a <label><span class="btn btn-gold"> — not a <button>
+    const sendBtn = page.locator(
+      'button:has-text("Organizer"), .btn:has-text("Organizer"), label:has-text("Organizer"), span.btn:has-text("Organizer")'
+    );
+    const orgCard = page.locator('.organizer-card, .organizer-row, .organizer-item, #adv-organizer-wrap .card, #adv-organizer-wrap [style*="border-radius"]');
     const hasSendBtn = await sendBtn.count() > 0;
     const hasOrgCard = await orgCard.count() > 0;
     expect(hasSendBtn || hasOrgCard).toBeTruthy();
