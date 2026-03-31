@@ -1318,6 +1318,13 @@
     // Build left and right column sections
     const leftSections = ['w2','1099-r','1099-div','1099-int','1099-nec','1099-misc','1099-g'];
     const rightSections = ['k1','schedule-c','1098','childcare','other'];
+    // Add any unknown sections to rightSections so no items are dropped
+    Object.keys(groups).forEach(key => {
+      if (!leftSections.includes(key) && !rightSections.includes(key)) {
+        rightSections.push(key);
+        if (!SECTION_LABELS[key]) SECTION_LABELS[key] = key.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+      }
+    });
 
     function renderSection(sectionKey) {
       const sectionItems = groups[sectionKey];
