@@ -210,7 +210,7 @@
       font-size: 0.7rem; color: transparent;
     }
     .ci-check.uploaded { background: var(--green); border-color: var(--green); color: white; }
-    .ci-check.na { background: var(--muted); border-color: var(--muted); color: white; }
+    .ci-check.na { background: rgba(245,101,101,0.2); border-color: rgba(245,101,101,0.5); color: var(--red); }
     .ci-info { flex: 1; min-width: 0; overflow: hidden; }
     .ci-payer {
       font-size: 0.88rem; font-weight: 500; color: var(--text);
@@ -223,7 +223,9 @@
     .ci-status { font-size: 0.73rem; white-space: nowrap; flex-shrink: 0; }
     .ci-status.uploaded { color: var(--green); }
     .ci-status.pending { color: var(--muted); }
-    .ci-status.na { color: var(--muted); }
+    .ci-status.na { color: var(--red); text-decoration: line-through; opacity: 0.75; }
+    .checklist-item.na { opacity: 0.7; }
+    .ci-info.na { text-decoration: line-through; opacity: 0.7; }
     .ci-actions { display: flex; gap: 0.35rem; align-items: center; flex-shrink: 0; }
     .ci-btn {
       font-size: 0.75rem; padding: 0.28rem 0.7rem;
@@ -234,14 +236,15 @@
     }
     .ci-btn.upload { border-color: rgba(201,168,76,0.4); color: var(--gold); }
     .ci-btn.upload:hover { background: rgba(201,168,76,0.12); }
-    .ci-btn.nty-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .ci-btn.nty-btn { border-color: rgba(245,101,101,0.5); color: var(--red); }
+    .ci-btn.nty-btn:hover { background: rgba(245,101,101,0.1); }
     .ci-btn.na-btn { border-color: rgba(201,168,76,0.35); color: var(--gold); display: none; }
     .ci-btn.na-btn:hover { background: rgba(201,168,76,0.09); }
     body.bulk-ready .ci-btn.na-btn { display: inline-flex; }
     .ci-btn.undo { color: var(--muted); }
-    .ci-status.na-item { color: #f56565; text-decoration: line-through; opacity: 0.75; }
-    .checklist-item.na-item { opacity: 0.7; }
-    .ci-check.na-item { background: rgba(245,101,101,0.25); border-color: rgba(245,101,101,0.5); color: #f56565; }
+    .ci-status.na-item { color: var(--green); }
+    .checklist-item.na-item { opacity: 0.9; }
+    .ci-check.na-item { background: var(--green); border-color: var(--green); color: white; }
 
     /* === SENTINEL PROVIDES === */
     .checklist-item.sentinel-provides { opacity: 0.75; }
@@ -814,7 +817,7 @@
       </div>
       <div class="checklist-item na" id="ci-int-3">
         <div class="ci-check na" onclick="cycleItem('ci-int-3')">–</div>
-        <div class="ci-info">
+        <div class="ci-info na">
           <div class="ci-payer">Northwestern Mutual Life Insurance</div>
           <div class="ci-type">Form 1099-INT · Jacob</div>
         </div>
@@ -1113,6 +1116,8 @@
     const check = item.querySelector('.ci-check');
     check.className = 'ci-check na';
     check.textContent = '–';
+    const info = item.querySelector('.ci-info');
+    if (info) info.className = 'ci-info na';
     const status = document.getElementById(id + '-status');
     status.className = 'ci-status na';
     status.textContent = 'Not This Year';
@@ -1127,10 +1132,12 @@
     item.className = 'checklist-item na-item';
     const check = item.querySelector('.ci-check');
     check.className = 'ci-check na-item';
-    check.textContent = '✗';
+    check.textContent = '✓';
+    const info = item.querySelector('.ci-info');
+    if (info) info.className = 'ci-info';
     const status = document.getElementById(id + '-status');
     status.className = 'ci-status na-item';
-    status.textContent = '📦 In Bulk Upload';
+    status.textContent = '✓ In Bulk Upload';
     const actions = item.querySelector('.ci-actions');
     actions.innerHTML = `<button class="ci-btn undo" onclick="undoItem('${id}')">Undo</button>`;
     itemStates[id] = 'na';
@@ -1143,6 +1150,8 @@
     const check = item.querySelector('.ci-check');
     check.className = 'ci-check';
     check.textContent = '';
+    const info = item.querySelector('.ci-info');
+    if (info) info.className = 'ci-info';
     const status = document.getElementById(id + '-status');
     status.className = 'ci-status pending';
     status.textContent = 'Pending';
@@ -1338,9 +1347,9 @@
         const isNA = item.status === 'not_applicable';
         const itemClass = isUploaded ? 'checklist-item uploaded' : isNTY ? 'checklist-item na' : isNA ? 'checklist-item na-item' : 'checklist-item';
         const checkClass = isUploaded ? 'ci-check uploaded' : isNTY ? 'ci-check na' : isNA ? 'ci-check na-item' : 'ci-check';
-        const checkText = isUploaded ? '✓' : isNTY ? '–' : isNA ? '✗' : '';
+        const checkText = isUploaded ? '✓' : isNTY ? '–' : isNA ? '✓' : '';
         const statusClass = isUploaded ? 'ci-status uploaded' : isNTY ? 'ci-status na' : isNA ? 'ci-status na-item' : 'ci-status pending';
-        const statusText = isUploaded ? '✓ Uploaded' : isNTY ? 'Not This Year' : isNA ? '📦 In Bulk Upload' : 'Pending';
+        const statusText = isUploaded ? '✓ Uploaded' : isNTY ? 'Not This Year' : isNA ? '✓ In Bulk Upload' : 'Pending';
         const actions = (isUploaded || isNTY || isNA)
           ? `<button class="ci-btn undo" onclick="undoItemById(${item.id},'${id}')">Undo</button>`
           : `<button class="ci-btn upload" onclick="fakeUploadById(${item.id},'${id}')">⬆ Upload</button>
@@ -1351,9 +1360,9 @@
         if (isNTY) itemStates[id] = 'nty';
         if (isNA) itemStates[id] = 'na';
 
-        return `<div class="checklist-item ${isUploaded?'uploaded':isNTY?'na':''}" id="${id}">
+        return `<div class="checklist-item ${isUploaded?'uploaded':isNTY?'na':isNA?'na-item':''}" id="${id}">
           <div class="${checkClass}" onclick="cycleItemById(${item.id},'${id}')">${checkText}</div>
-          <div class="ci-info">
+          <div class="ci-info${isNTY?' na':''}">
             <div class="ci-payer">${escH(item.payer_name)}${acct}</div>
             <div class="ci-type">${typeLabel}</div>
           </div>
@@ -1449,6 +1458,8 @@
     item.className = 'checklist-item na';
     item.querySelector('.ci-check').className = 'ci-check na';
     item.querySelector('.ci-check').textContent = '–';
+    const info = item.querySelector('.ci-info');
+    if (info) info.className = 'ci-info na';
     document.getElementById(domId+'-status').className = 'ci-status na';
     document.getElementById(domId+'-status').textContent = 'Not This Year';
     item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn undo" onclick="undoItemById(${itemId},'${domId}')">Undo</button>`;
@@ -1462,9 +1473,11 @@
     if (!item) return;
     item.className = 'checklist-item na-item';
     item.querySelector('.ci-check').className = 'ci-check na-item';
-    item.querySelector('.ci-check').textContent = '✗';
+    item.querySelector('.ci-check').textContent = '✓';
+    const info = item.querySelector('.ci-info');
+    if (info) info.className = 'ci-info';
     document.getElementById(domId+'-status').className = 'ci-status na-item';
-    document.getElementById(domId+'-status').textContent = '📦 In Bulk Upload';
+    document.getElementById(domId+'-status').textContent = '✓ In Bulk Upload';
     item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn undo" onclick="undoItemById(${itemId},'${domId}')">Undo</button>`;
     itemStates[domId] = 'na';
     apiUpdateItem(itemId, 'not_applicable');
@@ -1477,6 +1490,8 @@
     item.className = 'checklist-item';
     item.querySelector('.ci-check').className = 'ci-check';
     item.querySelector('.ci-check').textContent = '';
+    const info = item.querySelector('.ci-info');
+    if (info) info.className = 'ci-info';
     document.getElementById(domId+'-status').className = 'ci-status pending';
     document.getElementById(domId+'-status').textContent = 'Pending';
     item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn upload" onclick="fakeUploadById(${itemId},'${domId}')">⬆ Upload</button><button class="ci-btn nty-btn" onclick="markNTYById(${itemId},'${domId}')">Not This Year</button><button class="ci-btn na-btn" onclick="markNAById(${itemId},'${domId}')">In Bulk Upload</button>`;
