@@ -309,6 +309,15 @@ JWT_SECRET, ENCRYPTION_KEY, DATABASE_URL
 QB_CLIENT_ID, QB_CLIENT_SECRET, QB_REDIRECT_URI
 GUSTO_CLIENT_ID, GUSTO_CLIENT_SECRET, GUSTO_REDIRECT_URI
 AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_S3_BUCKET
+```
+
+### AWS S3 Notes
+- **Always use `AWS_S3_BUCKET`** — never `S3_BUCKET` (wrong name, will fall through to a non-existent default)
+- Dev bucket: `darklion-documents` (same bucket for both dev and prod currently)
+- All document code must use: `process.env.AWS_S3_BUCKET || process.env.S3_BUCKET || 'darklion-docs'`
+- Files are never served directly — always use signed URLs via `server/services/s3.js`
+
+```
 RESEND_API_KEY, RESEND_FROM
 STRIPE_KEY_SENTINEL_PCS, STRIPE_KEY_SENTINEL_TAX
 TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
