@@ -1080,7 +1080,7 @@
   }
 
   // === CHECKLIST ITEMS ===
-  const TOTAL_ITEMS = 17;
+  let TOTAL_ITEMS = 17;
   let itemStates = {};
 
   function fakeUpload(id) {
@@ -1515,7 +1515,9 @@
 
   function updateProgressLive() {
     // Override TOTAL_ITEMS with live count if available
-    if (window.TOTAL_ITEMS_LIVE) window.TOTAL_ITEMS = window.TOTAL_ITEMS_LIVE;
+    if (window.TOTAL_ITEMS_LIVE !== undefined && window.TOTAL_ITEMS_LIVE !== null) {
+      TOTAL_ITEMS = window.TOTAL_ITEMS_LIVE;
+    }
     updateProgress();
   }
 
