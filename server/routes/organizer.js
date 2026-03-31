@@ -748,7 +748,7 @@ router.post('/client/:year/submit', requirePortal, async (req, res) => {
 
     // Upload to S3
     const s3Key = `firms/${organizer.firm_id}/people/${personId}/organizer/${year}/workpaper.pdf`;
-    const bucket = process.env.S3_BUCKET || 'darklion-docs';
+    const bucket = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET || 'darklion-docs';
     await uploadFile({ buffer: workpaperBuffer, key: s3Key, bucket, mimeType: 'application/pdf' });
 
     // Save document record
