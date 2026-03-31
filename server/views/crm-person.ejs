@@ -1113,9 +1113,27 @@
       const inviteLabel = token ? 'Resend Invite' : 'Send Invite';
       if (fullyActive) {
         return `<button class="btn btn-outline btn-xs" onclick="${resetFn}">Reset Password</button>
+                <button class="btn btn-xs" style="border:1px solid rgba(201,168,76,0.4);color:var(--gold);background:transparent;" onclick="viewPortalAsClient(this)" title="Open portal as this client (advisor preview)">👁️ View Portal</button>
                 <button class="btn btn-xs" style="border:1px solid rgba(229,62,62,0.4);color:var(--red);background:transparent;" onclick="${disableFn}">Disable</button>`;
       }
       return `<button class="btn btn-gold btn-sm" onclick="${inviteFn.replace(')', 'this)')}" style="white-space:nowrap;">${inviteLabel}</button>`;
+    }
+
+    async function viewPortalAsClient(btn) {
+      const orig = btn.textContent;
+      btn.textContent = '…'; btn.disabled = true;
+      try {
+        const res = await apiFetch(`/api/people/${personId}/portal-preview`, { method: 'POST' });
+        if (res.url) {
+          window.open(res.url, '_blank');
+        } else {
+          window._shellToast(res.error || 'Could not generate preview link', 'error');
+        }
+      } catch(e) {
+        window._shellToast('Failed to open portal preview', 'error');
+      } finally {
+        btn.textContent = orig; btn.disabled = false;
+      }
     }
 
     function portalPersonRow(initials, avatarBg, avatarColor, name, role, email, enabled, hasPassword, token, hasEmail, isSpouse, borderBottom) {

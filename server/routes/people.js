@@ -490,4 +490,61 @@ router.post('/:id/portal-disable', async (req, res) => {
   }
 });
 
+// --- POST /api/people/:id/portal-preview ---
+// Generates a short-lived ghost portal token so a staff member can view the portal as a client.
+// Token expires in 1 hour. Audit-logged. Requires portal to be enabled for the person.
+router.post('/:id/portal-preview', async (req, res) => {
+  const firmId = req.firm.id;
+  const staffUserId = req.firm.userId;
+  const id = parseInt(req.params.id);
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT p.id, p.first_name, p.last_name, p.email, p.relationship_id, p.portal_enabled,
+              f.name AS firm_name
+       FROM people p JOIN firms f ON f.id = p.firm_id
+       WHERE p.id = $1 AND p.firm_id = $2`,
+      [id, firmId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Person not found' });
+    const person = rows[0];
+
+    if (!person.portal_enabled) {
+      return res.status(400).json({ error: 'Portal is not enabled for this person. Invite them first.' });
+    }
+
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      {
+        personId: person.id,
+        firmId,
+        relationshipId: person.relationship_id || null,
+        email: person.email,
+        name: `${person.first_name} ${person.last_name}`.trim(),
+        type: 'portal',
+        signerRole: 'taxpayer',
+        ghostedBy: staffUserId,       // marks this as a ghost session
+        ghostedByName: req.firm.name || 'Staff',
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }             // short-lived — ghost sessions expire in 1 hour
+    );
+
+    // Audit log
+    await pool.query(
+      `INSERT INTO audit_log (firm_id, actor_type, actor_id, action, entity_type, entity_id, meta)
+       VALUES ($1, 'staff', $2, 'portal_ghost_view', 'person', $3, $4)`,
+      [firmId, staffUserId, id, JSON.stringify({ client: person.first_name + ' ' + person.last_name })]
+    ).catch(() => {}); // non-fatal
+
+    const PORTAL_URL = (process.env.PORTAL_URL || process.env.APP_URL || 'https://darklion.ai').replace(/\/+$/, '');
+    const url = `${PORTAL_URL}/portal?preview_token=${token}`;
+
+    res.json({ url });
+  } catch (err) {
+    console.error('POST /people/:id/portal-preview error:', err);
+    res.status(500).json({ error: 'Failed to generate preview token' });
+  }
+});
+
 module.exports = router;
