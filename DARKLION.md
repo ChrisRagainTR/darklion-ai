@@ -571,6 +571,7 @@ server/views/partials/shell-close.ejs — closes the page: </body>, </html>, glo
 | — | Send to Tax Prep: QBO → branded PDF | 2026-03-29 |
 | — | Client portal: connect QBO + upload P&L/BS PDFs | 2026-03-29 |
 | — | Refactor: remove stale HTML, dead services, Fly.io CI | 2026-03-31 |
+| — | Remove 2nd-gen placeholder screenshots from help center (21 images + figure blocks) | 2026-03-31 |
 
 ---
 
