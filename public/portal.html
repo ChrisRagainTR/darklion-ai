@@ -3158,17 +3158,25 @@
         // Success
         closeFinancialsModal();
 
-        // Update send message on the tab
-        const msgDiv = document.getElementById(`co-send-msg-${_finCoId}`);
-        if (msgDiv) {
-          msgDiv.textContent = `✓ ${year} financials sent to your advisor.`;
-          msgDiv.style.color = '#3ecf8e';
-          msgDiv.style.display = '';
-        }
-
         // Refresh docs tab for this company
         const docsEl = document.getElementById(`co-docs-${_finCoId}`);
         if (docsEl) { delete docsEl.dataset.loaded; loadCompanyDocs(_finCoId); }
+
+        // Switch to the Docs subtab so they can see the uploaded files
+        const docsSubtabBtn = document.querySelector(`.co-subtab-btn[data-co="${_finCoId}"][data-subtab="docs"]`);
+        if (docsSubtabBtn) {
+          docsSubtabBtn.click();
+        }
+
+        // Show success banner on the docs panel
+        const docsPanelEl = document.getElementById(`co-subtab-docs-${_finCoId}`);
+        if (docsPanelEl) {
+          const banner = document.createElement('div');
+          banner.style.cssText = 'background:rgba(62,207,142,0.12);border:1px solid rgba(62,207,142,0.35);color:#3ecf8e;border-radius:6px;padding:0.6rem 1rem;margin-bottom:1rem;font-size:0.85rem;font-weight:600;';
+          banner.textContent = `✓ Your ${year} financials were sent to your advisor successfully.`;
+          docsPanelEl.prepend(banner);
+          setTimeout(() => banner.remove(), 8000);
+        }
 
       } catch(e) {
         errEl.textContent = 'Error: ' + e.message;
