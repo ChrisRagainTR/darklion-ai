@@ -775,7 +775,7 @@ router.post('/client/:year/submit', requirePortal, async (req, res) => {
     // normally in the Docs tab after submit. Workpaper stays firm_uploaded/tax.
     await pool.query(`
       UPDATE documents
-      SET folder_category = 'tax', folder_section = 'client_uploaded', updated_at = NOW()
+      SET folder_category = 'tax', folder_section = 'client_uploaded'
       WHERE owner_type = 'person' AND owner_id = $1
         AND folder_category = 'organizer'
         AND doc_type = 'organizer_item'
