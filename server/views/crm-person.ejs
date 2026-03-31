@@ -1119,22 +1119,23 @@
       return `<button class="btn btn-gold btn-sm" onclick="${inviteFn.replace(')', 'this)')}" style="white-space:nowrap;">${inviteLabel}</button>`;
     }
 
-    async function viewPortalAsClient(btn) {
+    window.viewPortalAsClient = async function(btn) {
       const orig = btn.textContent;
       btn.textContent = '…'; btn.disabled = true;
       try {
         const res = await apiFetch(`/api/people/${personId}/portal-preview`, { method: 'POST' });
-        if (res.url) {
-          window.open(res.url, '_blank');
+        const data = await res.json();
+        if (data.url) {
+          window.open(data.url, '_blank');
         } else {
-          window._shellToast(res.error || 'Could not generate preview link', 'error');
+          window._shellToast(data.error || 'Could not generate preview link', 'error');
         }
       } catch(e) {
         window._shellToast('Failed to open portal preview', 'error');
       } finally {
         btn.textContent = orig; btn.disabled = false;
       }
-    }
+    };
 
     function portalPersonRow(initials, avatarBg, avatarColor, name, role, email, enabled, hasPassword, token, hasEmail, isSpouse, borderBottom) {
       return `
