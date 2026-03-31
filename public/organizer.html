@@ -1167,6 +1167,7 @@
   }
 
   function updateProgress() {
+    if (window.TOTAL_ITEMS_LIVE != null) TOTAL_ITEMS = window.TOTAL_ITEMS_LIVE;
     const resolved = Object.keys(itemStates).length;
     const remaining = TOTAL_ITEMS - resolved;
     const pct = Math.round((resolved / TOTAL_ITEMS) * 100);
@@ -1511,6 +1512,21 @@
   function cycleItemById(itemId, domId) {
     if (itemStates[domId]) undoItemById(itemId, domId);
     else fakeUploadById(itemId, domId);
+  }
+
+  function updateSummary() {
+    let uploaded = 0, nty = 0;
+    for (const state of Object.values(itemStates)) {
+      if (state === 'uploaded' || state === 'na') uploaded++;
+      else if (state === 'nty') nty++;
+    }
+    const sentinel = document.querySelectorAll('.ci-sentinel-badge').length;
+    const elUploaded = document.getElementById('summary-uploaded');
+    const elNty = document.getElementById('summary-nty');
+    const elSentinel = document.getElementById('summary-sentinel');
+    if (elUploaded) elUploaded.textContent = uploaded;
+    if (elNty) elNty.textContent = nty;
+    if (elSentinel) elSentinel.textContent = sentinel;
   }
 
   function updateProgressLive() {
