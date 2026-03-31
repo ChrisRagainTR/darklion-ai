@@ -1,4 +1,8 @@
 # DarkLion AI - Project Context
+> ⚠️ **Read `DARKLION.md` first** — it's the master context document for this project.
+> This file has basic setup info but DARKLION.md has everything: architecture, rules, history, shell template rules, known bugs, and session history.
+
+
 
 ## Deployment
 - **Platform**: Railway (auto-deploys from GitHub `main` branch)
