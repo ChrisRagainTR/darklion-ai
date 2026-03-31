@@ -210,7 +210,7 @@
       font-size: 0.7rem; color: transparent;
     }
     .ci-check.uploaded { background: var(--green); border-color: var(--green); color: white; }
-    .ci-check.na { background: var(--muted); border-color: var(--muted); color: white; }
+    .ci-check.na { background: rgba(245,101,101,0.2); border-color: rgba(245,101,101,0.5); color: var(--red); }
     .ci-info { flex: 1; min-width: 0; overflow: hidden; }
     .ci-payer {
       font-size: 0.88rem; font-weight: 500; color: var(--text);
@@ -223,7 +223,9 @@
     .ci-status { font-size: 0.73rem; white-space: nowrap; flex-shrink: 0; }
     .ci-status.uploaded { color: var(--green); }
     .ci-status.pending { color: var(--muted); }
-    .ci-status.na { color: var(--muted); }
+    .ci-status.na { color: var(--red); text-decoration: line-through; opacity: 0.75; }
+    .checklist-item.na { opacity: 0.7; }
+    .ci-info.na { text-decoration: line-through; opacity: 0.7; }
     .ci-actions { display: flex; gap: 0.35rem; align-items: center; flex-shrink: 0; }
     .ci-btn {
       font-size: 0.75rem; padding: 0.28rem 0.7rem;
@@ -234,8 +236,15 @@
     }
     .ci-btn.upload { border-color: rgba(201,168,76,0.4); color: var(--gold); }
     .ci-btn.upload:hover { background: rgba(201,168,76,0.12); }
-    .ci-btn.nty-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .ci-btn.nty-btn { border-color: #f56565; color: white; background: #f56565; }
+    .ci-btn.nty-btn:hover { background: #e74c3c; border-color: #e74c3c; }
+    .ci-btn.na-btn { border-color: rgba(201,168,76,0.35); color: var(--gold); display: none; }
+    .ci-btn.na-btn:hover { background: rgba(201,168,76,0.09); }
+    body.bulk-ready .ci-btn.na-btn { display: inline-flex; }
     .ci-btn.undo { color: var(--muted); }
+    .ci-status.na-item { color: var(--green); }
+    .checklist-item.na-item { opacity: 0.9; }
+    .ci-check.na-item { background: var(--green); border-color: var(--green); color: white; }
 
     /* === SENTINEL PROVIDES === */
     .checklist-item.sentinel-provides { opacity: 0.75; }
@@ -269,11 +278,26 @@
       border-radius: 12px; padding: 1.25rem 1.5rem;
       text-align: center; margin-bottom: 1.5rem;
       cursor: pointer; transition: all 0.2s;
+      position: relative;
     }
-    .bulk-upload-card:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
+    .bulk-upload-card:hover:not(.bulk-done):not(.bulk-uploading) { background: rgba(201,168,76,0.1); border-color: var(--gold); }
+    .bulk-upload-card.drag-over { background: rgba(201,168,76,0.14); border-color: var(--gold); border-style: solid; }
+    .bulk-upload-card.bulk-uploading { cursor: default; opacity: 0.9; }
+    .bulk-upload-card.bulk-done { background: rgba(62,207,142,0.07); border-color: rgba(62,207,142,0.5); border-style: solid; cursor: default; }
+    .bulk-upload-card.bulk-error { background: rgba(245,101,101,0.07); border-color: rgba(245,101,101,0.4); border-style: solid; cursor: pointer; }
     .bulk-upload-card .bu-icon { font-size: 1.6rem; margin-bottom: 0.4rem; }
     .bulk-upload-card .bu-title { font-size: 0.95rem; font-weight: 600; color: var(--gold); }
+    .bulk-upload-card .bu-title.done { color: var(--green); }
+    .bulk-upload-card .bu-title.error { color: var(--red); }
     .bulk-upload-card .bu-sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
+    .bulk-progress {
+      height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px;
+      margin-top: 0.75rem; overflow: hidden;
+    }
+    .bulk-progress-fill {
+      height: 100%; background: var(--gold); border-radius: 2px;
+      width: 0%; transition: width 0.4s ease;
+    }
 
     /* === NAV BUTTONS === */
     .org-nav {
@@ -634,12 +658,12 @@
   <!-- ═══════════════════════════════════════════════ -->
   <div class="step-panel" id="step-3">
     <div class="section-title">Your 2025 Documents</div>
-    <div class="section-sub">Based on your 2024 return, here's what we're expecting. Upload each item or mark it "Not This Year" if it no longer applies. Every item must be resolved before you can submit.</div>
+    <div class="section-sub">Based on your 2024 return, here's what we're expecting. Upload each document individually, or mark it "Not This Year" if it no longer applies. If you uploaded a bulk PDF above, click "In Bulk Upload" on each item it covers. Every item must be resolved before you can submit.</div>
 
     <!-- Combined status bar -->
     <div class="progress-summary" id="progress-summary-card" style="align-items:center; gap:1.5rem; flex-wrap:wrap;">
       <div id="checklist-banner" style="display:flex; align-items:center; gap:0.5rem; font-size:0.83rem; color:var(--muted); flex-shrink:0; max-width:420px;">
-        ℹ️ <span>Every item must be <strong>uploaded</strong> or marked <strong>Not This Year</strong> before you can submit. <strong id="remaining-count">13 remaining.</strong></span>
+        ℹ️ <span>Every item must be <strong>uploaded</strong>, marked <strong>Not This Year</strong>, or marked <strong>Not applicable</strong> before you can submit. <strong id="remaining-count">13 remaining.</strong></span>
       </div>
       <div class="ps-bar-wrap" style="min-width:160px;">
         <div class="ps-label" id="progress-label" style="font-size:0.73rem; color:var(--muted); margin-bottom:0.3rem;">Items resolved</div>
@@ -649,10 +673,14 @@
     </div>
 
     <!-- Bulk Upload Option -->
-    <div class="bulk-upload-card" onclick="alert('Upload UI coming — drag your files here or click to browse')">
-      <div class="bu-icon">📦</div>
-      <div class="bu-title">Have everything in one PDF?</div>
-      <div class="bu-sub">Upload one file and check off what's inside — no need to separate each document.</div>
+    <div class="bulk-upload-card" id="bulk-upload-card" onclick="bulkCardClick(event)">
+      <input type="file" id="bulk-file-input" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="bulkFileSelected(this.files[0])">
+      <div class="bu-icon" id="bulk-icon">📦</div>
+      <div class="bu-title" id="bulk-title">Have everything in one PDF?</div>
+      <div class="bu-sub" id="bulk-sub">Click to browse or drag &amp; drop — upload one file containing all your documents.</div>
+      <div class="bulk-progress" id="bulk-progress" style="display:none">
+        <div class="bulk-progress-fill" id="bulk-progress-fill"></div>
+      </div>
     </div>
 
     <div class="checklist-grid">
@@ -672,6 +700,7 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-w2-1')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-w2-1')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-w2-1')">In Bulk Upload</button>
         </div>
       </div>
       <div class="checklist-item uploaded" id="ci-w2-2">
@@ -711,6 +740,7 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-misc-1')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-misc-1')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-misc-1')">In Bulk Upload</button>
         </div>
       </div>
     </div>
@@ -738,6 +768,7 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-div-1')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-div-1')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-div-1')">In Bulk Upload</button>
         </div>
       </div>
       <div class="checklist-item" id="ci-div-2">
@@ -750,6 +781,7 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-div-2')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-div-2')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-div-2')">In Bulk Upload</button>
         </div>
       </div>
     </div>
@@ -767,6 +799,7 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-int-1')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-int-1')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-int-1')">In Bulk Upload</button>
         </div>
       </div>
       <div class="checklist-item" id="ci-int-2">
@@ -779,11 +812,12 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-int-2')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-int-2')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-int-2')">In Bulk Upload</button>
         </div>
       </div>
       <div class="checklist-item na" id="ci-int-3">
         <div class="ci-check na" onclick="cycleItem('ci-int-3')">–</div>
-        <div class="ci-info">
+        <div class="ci-info na">
           <div class="ci-payer">Northwestern Mutual Life Insurance</div>
           <div class="ci-type">Form 1099-INT · Jacob</div>
         </div>
@@ -802,6 +836,7 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-int-4')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-int-4')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-int-4')">In Bulk Upload</button>
         </div>
       </div>
     </div>
@@ -823,6 +858,7 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-k1-1')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-k1-1')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-k1-1')">In Bulk Upload</button>
         </div>
       </div>
       <div class="checklist-item" id="ci-k1-2">
@@ -835,6 +871,7 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-k1-2')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-k1-2')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-k1-2')">In Bulk Upload</button>
         </div>
       </div>
       <div class="checklist-item" id="ci-k1-3">
@@ -847,6 +884,7 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-k1-3')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-k1-3')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-k1-3')">In Bulk Upload</button>
         </div>
       </div>
       <div class="checklist-item sentinel-provides" id="ci-k1-4">
@@ -869,6 +907,7 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-k1-5')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-k1-5')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-k1-5')">In Bulk Upload</button>
         </div>
       </div>
     </div>
@@ -886,6 +925,7 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-c-1')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-c-1')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-c-1')">In Bulk Upload</button>
         </div>
       </div>
     </div>
@@ -903,6 +943,7 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-1098-1')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-1098-1')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-1098-1')">In Bulk Upload</button>
         </div>
       </div>
     </div>
@@ -920,6 +961,7 @@
         <div class="ci-actions">
           <button class="ci-btn upload" onclick="fakeUpload('ci-care-1')">⬆ Upload</button>
           <button class="ci-btn nty-btn" onclick="markNTY('ci-care-1')">Not This Year</button>
+          <button class="ci-btn na-btn" onclick="markNA('ci-care-1')">In Bulk Upload</button>
         </div>
       </div>
     </div>
@@ -1038,7 +1080,7 @@
   }
 
   // === CHECKLIST ITEMS ===
-  const TOTAL_ITEMS = 13;
+  const TOTAL_ITEMS = 17;
   let itemStates = {};
 
   function fakeUpload(id) {
@@ -1074,6 +1116,8 @@
     const check = item.querySelector('.ci-check');
     check.className = 'ci-check na';
     check.textContent = '–';
+    const info = item.querySelector('.ci-info');
+    if (info) info.className = 'ci-info na';
     const status = document.getElementById(id + '-status');
     status.className = 'ci-status na';
     status.textContent = 'Not This Year';
@@ -1083,17 +1127,36 @@
     updateProgress();
   }
 
+  function markNA(id) {
+    const item = document.getElementById(id);
+    item.className = 'checklist-item na-item';
+    const check = item.querySelector('.ci-check');
+    check.className = 'ci-check na-item';
+    check.textContent = '✓';
+    const info = item.querySelector('.ci-info');
+    if (info) info.className = 'ci-info';
+    const status = document.getElementById(id + '-status');
+    status.className = 'ci-status na-item';
+    status.textContent = '✓ In Bulk Upload';
+    const actions = item.querySelector('.ci-actions');
+    actions.innerHTML = `<button class="ci-btn undo" onclick="undoItem('${id}')">Undo</button>`;
+    itemStates[id] = 'na';
+    updateProgress();
+  }
+
   function undoItem(id) {
     const item = document.getElementById(id);
     item.className = 'checklist-item';
     const check = item.querySelector('.ci-check');
     check.className = 'ci-check';
     check.textContent = '';
+    const info = item.querySelector('.ci-info');
+    if (info) info.className = 'ci-info';
     const status = document.getElementById(id + '-status');
     status.className = 'ci-status pending';
     status.textContent = 'Pending';
     const actions = item.querySelector('.ci-actions');
-    actions.innerHTML = `<button class="ci-btn upload" onclick="fakeUpload(\'${id}\')">⬆ Upload</button><button class="ci-btn nty-btn" onclick="markNTY(\'${id}\')">Not This Year</button>`;
+    actions.innerHTML = `<button class="ci-btn upload" onclick="fakeUpload('${id}')">⬆ Upload</button><button class="ci-btn nty-btn" onclick="markNTY('${id}')">Not This Year</button><button class="ci-btn na-btn" onclick="markNA('${id}')">In Bulk Upload</button>`;
     delete itemStates[id];
     updateProgress();
   }
@@ -1255,6 +1318,13 @@
     // Build left and right column sections
     const leftSections = ['w2','1099-r','1099-div','1099-int','1099-nec','1099-misc','1099-g'];
     const rightSections = ['k1','schedule-c','1098','childcare','other'];
+    // Add any unknown sections to rightSections so no items are dropped
+    Object.keys(groups).forEach(key => {
+      if (!leftSections.includes(key) && !rightSections.includes(key)) {
+        rightSections.push(key);
+        if (!SECTION_LABELS[key]) SECTION_LABELS[key] = key.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+      }
+    });
 
     function renderSection(sectionKey) {
       const sectionItems = groups[sectionKey];
@@ -1281,22 +1351,25 @@
 
         const isUploaded = item.status === 'uploaded';
         const isNTY = item.status === 'not_this_year';
-        const itemClass = isUploaded ? 'checklist-item uploaded' : isNTY ? 'checklist-item na' : 'checklist-item';
-        const checkClass = isUploaded ? 'ci-check uploaded' : isNTY ? 'ci-check na' : 'ci-check';
-        const checkText = isUploaded ? '✓' : isNTY ? '–' : '';
-        const statusClass = isUploaded ? 'ci-status uploaded' : isNTY ? 'ci-status na' : 'ci-status pending';
-        const statusText = isUploaded ? '✓ Uploaded' : isNTY ? 'Not This Year' : 'Pending';
-        const actions = isUploaded || isNTY
+        const isNA = item.status === 'not_applicable';
+        const itemClass = isUploaded ? 'checklist-item uploaded' : isNTY ? 'checklist-item na' : isNA ? 'checklist-item na-item' : 'checklist-item';
+        const checkClass = isUploaded ? 'ci-check uploaded' : isNTY ? 'ci-check na' : isNA ? 'ci-check na-item' : 'ci-check';
+        const checkText = isUploaded ? '✓' : isNTY ? '–' : isNA ? '✓' : '';
+        const statusClass = isUploaded ? 'ci-status uploaded' : isNTY ? 'ci-status na' : isNA ? 'ci-status na-item' : 'ci-status pending';
+        const statusText = isUploaded ? '✓ Uploaded' : isNTY ? 'Not This Year' : isNA ? '✓ In Bulk Upload' : 'Pending';
+        const actions = (isUploaded || isNTY || isNA)
           ? `<button class="ci-btn undo" onclick="undoItemById(${item.id},'${id}')">Undo</button>`
           : `<button class="ci-btn upload" onclick="fakeUploadById(${item.id},'${id}')">⬆ Upload</button>
-             <button class="ci-btn nty-btn" onclick="markNTYById(${item.id},'${id}')">Not This Year</button>`;
+             <button class="ci-btn nty-btn" onclick="markNTYById(${item.id},'${id}')">Not This Year</button>
+             <button class="ci-btn na-btn" onclick="markNAById(${item.id},'${id}')">In Bulk Upload</button>`;
 
         if (isUploaded) itemStates[id] = 'uploaded';
         if (isNTY) itemStates[id] = 'nty';
+        if (isNA) itemStates[id] = 'na';
 
-        return `<div class="checklist-item ${isUploaded?'uploaded':isNTY?'na':''}" id="${id}">
+        return `<div class="checklist-item ${isUploaded?'uploaded':isNTY?'na':isNA?'na-item':''}" id="${id}">
           <div class="${checkClass}" onclick="cycleItemById(${item.id},'${id}')">${checkText}</div>
-          <div class="ci-info">
+          <div class="ci-info${isNTY?' na':''}">
             <div class="ci-payer">${escH(item.payer_name)}${acct}</div>
             <div class="ci-type">${typeLabel}</div>
           </div>
@@ -1366,7 +1439,7 @@
         } catch(e) {
           document.getElementById(domId+'-status').className = 'ci-status pending';
           document.getElementById(domId+'-status').textContent = '❌ ' + e.message;
-          item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn upload" onclick="fakeUploadById(${itemId},'${domId}')">⬆ Try Again</button><button class="ci-btn nty-btn" onclick="markNTYById(${itemId},'${domId}')">Not This Year</button>`;
+          item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn upload" onclick="fakeUploadById(${itemId},'${domId}')">⬆ Try Again</button><button class="ci-btn nty-btn" onclick="markNTYById(${itemId},'${domId}')">Not This Year</button><button class="ci-btn na-btn" onclick="markNAById(${itemId},'${domId}')">In Bulk Upload</button>`;
           return;
         }
       } else {
@@ -1392,11 +1465,29 @@
     item.className = 'checklist-item na';
     item.querySelector('.ci-check').className = 'ci-check na';
     item.querySelector('.ci-check').textContent = '–';
+    const info = item.querySelector('.ci-info');
+    if (info) info.className = 'ci-info na';
     document.getElementById(domId+'-status').className = 'ci-status na';
     document.getElementById(domId+'-status').textContent = 'Not This Year';
     item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn undo" onclick="undoItemById(${itemId},'${domId}')">Undo</button>`;
     itemStates[domId] = 'nty';
     apiUpdateItem(itemId, 'not_this_year');
+    updateProgressLive();
+  }
+
+  function markNAById(itemId, domId) {
+    const item = document.getElementById(domId);
+    if (!item) return;
+    item.className = 'checklist-item na-item';
+    item.querySelector('.ci-check').className = 'ci-check na-item';
+    item.querySelector('.ci-check').textContent = '✓';
+    const info = item.querySelector('.ci-info');
+    if (info) info.className = 'ci-info';
+    document.getElementById(domId+'-status').className = 'ci-status na-item';
+    document.getElementById(domId+'-status').textContent = '✓ In Bulk Upload';
+    item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn undo" onclick="undoItemById(${itemId},'${domId}')">Undo</button>`;
+    itemStates[domId] = 'na';
+    apiUpdateItem(itemId, 'not_applicable');
     updateProgressLive();
   }
 
@@ -1406,9 +1497,11 @@
     item.className = 'checklist-item';
     item.querySelector('.ci-check').className = 'ci-check';
     item.querySelector('.ci-check').textContent = '';
+    const info = item.querySelector('.ci-info');
+    if (info) info.className = 'ci-info';
     document.getElementById(domId+'-status').className = 'ci-status pending';
     document.getElementById(domId+'-status').textContent = 'Pending';
-    item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn upload" onclick="fakeUploadById(${itemId},'${domId}')">⬆ Upload</button><button class="ci-btn nty-btn" onclick="markNTYById(${itemId},'${domId}')">Not This Year</button>`;
+    item.querySelector('.ci-actions').innerHTML = `<button class="ci-btn upload" onclick="fakeUploadById(${itemId},'${domId}')">⬆ Upload</button><button class="ci-btn nty-btn" onclick="markNTYById(${itemId},'${domId}')">Not This Year</button><button class="ci-btn na-btn" onclick="markNAById(${itemId},'${domId}')">In Bulk Upload</button>`;
     delete itemStates[domId];
     apiUpdateItem(itemId, 'pending');
     updateProgressLive();
@@ -1425,6 +1518,113 @@
     updateProgress();
   }
 
+  // ── BULK PDF UPLOADER ────────────────────────────────────
+  (function() {
+    const card = document.getElementById('bulk-upload-card');
+    if (!card) return;
+
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (!card.classList.contains('bulk-done') && !card.classList.contains('bulk-uploading')) {
+        card.classList.add('drag-over');
+      }
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      const file = e.dataTransfer?.files?.[0];
+      if (file) bulkFileSelected(file);
+    });
+  })();
+
+  function bulkCardClick(e) {
+    const card = document.getElementById('bulk-upload-card');
+    if (card.classList.contains('bulk-done') || card.classList.contains('bulk-uploading')) return;
+    document.getElementById('bulk-file-input').click();
+  }
+
+  async function bulkFileSelected(file) {
+    if (!file) return;
+
+    const allowed = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!allowed.includes(file.type)) {
+      setBulkState('error', '❌ Please upload a PDF or image file', `Received: ${file.name}`);
+      return;
+    }
+
+    setBulkState('uploading', '⏳ Uploading…', file.name);
+    animateBulkProgress();
+
+    if (!token) {
+      // Demo mode — simulate success
+      await new Promise(r => setTimeout(r, 1400));
+      setBulkState('done', '✅ PDF uploaded — we\'ll sort it out from here', file.name);
+      return;
+    }
+
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch(`/portal/organizer/client/${YEAR}/bulk-upload`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: fd,
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Upload failed');
+      setBulkState('done', '✅ PDF uploaded — we\'ll sort it out from here', file.name);
+    } catch(e) {
+      setBulkState('error', '❌ ' + e.message, 'Click to try again');
+    }
+  }
+
+  function setBulkState(state, title, sub) {
+    const card = document.getElementById('bulk-upload-card');
+    const icon = document.getElementById('bulk-icon');
+    const titleEl = document.getElementById('bulk-title');
+    const subEl = document.getElementById('bulk-sub');
+    const progress = document.getElementById('bulk-progress');
+    const progressFill = document.getElementById('bulk-progress-fill');
+
+    card.classList.remove('bulk-uploading', 'bulk-done', 'bulk-error');
+    titleEl.classList.remove('done', 'error');
+
+    if (state === 'uploading') {
+      card.classList.add('bulk-uploading');
+      icon.textContent = '📤';
+      progress.style.display = '';
+      document.body.classList.remove('bulk-ready');
+    } else if (state === 'done') {
+      card.classList.add('bulk-done');
+      icon.textContent = '✅';
+      titleEl.classList.add('done');
+      progress.style.display = 'none';
+      progressFill.style.width = '100%';
+      document.body.classList.add('bulk-ready');
+    } else if (state === 'error') {
+      card.classList.add('bulk-error');
+      icon.textContent = '❌';
+      titleEl.classList.add('error');
+      progress.style.display = 'none';
+      document.body.classList.remove('bulk-ready');
+    }
+    titleEl.textContent = title;
+    subEl.textContent = sub || '';
+  }
+
+  function animateBulkProgress() {
+    const fill = document.getElementById('bulk-progress-fill');
+    if (!fill) return;
+    fill.style.width = '0%';
+    let pct = 0;
+    const iv = setInterval(() => {
+      pct = Math.min(pct + (Math.random() * 12 + 4), 88);
+      fill.style.width = pct + '%';
+      if (pct >= 88) clearInterval(iv);
+    }, 200);
+  }
+
   // ── BOOT ──────────────────────────────────────────────────
   async function bootOrganizer() {
     if (!token) { updateProgress(); return; } // demo mode
@@ -1436,6 +1636,12 @@
 
       // Load organizer items for Step 3
       const orgData = await portalApi(`/portal/organizer/client/${YEAR}`);
+
+      // Restore bulk-done state if a bulk PDF was previously uploaded
+      if (orgData.organizer?.bulk_document_id) {
+        setBulkState('done', '✅ PDF uploaded — we\'ll sort it out from here', '');
+      }
+
       if (orgData.items && orgData.items.length) {
         // Clear existing hardcoded itemStates
         Object.keys(itemStates).forEach(k => delete itemStates[k]);
@@ -1487,7 +1693,7 @@
       // Fall back to hardcoded demo data — updateProgress already called below
     }
 
-    updateProgress();
+    updateProgressLive();
   }
 
   bootOrganizer();

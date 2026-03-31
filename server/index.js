@@ -148,9 +148,17 @@ app.get('/health', (req, res) => {
 // --- Static files ---
 const publicDir = path.join(__dirname, '..', 'public');
 
+// HTML files: no-cache (always fetch fresh from server)
+// Other static assets (images, fonts, etc.): cache 1 day in prod
 app.use(express.static(publicDir, {
   index: false,
-  maxAge: IS_PROD ? '1d' : 0,
+  setHeaders(res, filePath) {
+    if (IS_PROD && !filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
 }));
 
 // --- Public page routes ---

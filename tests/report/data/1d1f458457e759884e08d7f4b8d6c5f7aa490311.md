@@ -1,0 +1,225 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - link "DL DarkLion" [ref=e3] [cursor=pointer]:
+      - /url: /dashboard
+      - img "DL" [ref=e4]
+      - generic [ref=e5]: DarkLion
+    - generic [ref=e7]:
+      - generic: 🔍
+      - textbox "Search relationships, companies, people…" [ref=e8]
+    - generic [ref=e9] [cursor=pointer]:
+      - img [ref=e11]
+      - generic [ref=e12]:
+        - generic [ref=e13]: Test User ▼
+        - generic [ref=e14]: Sentinel Wealth & Tax
+  - complementary [ref=e15]:
+    - generic [ref=e16]: Clients
+    - link "🗂️ CRM" [ref=e17] [cursor=pointer]:
+      - /url: /crm
+      - text: 🗂️
+      - generic [ref=e18]: CRM
+    - generic [ref=e19]: Messages
+    - link "💬 My Inbox" [ref=e20] [cursor=pointer]:
+      - /url: /messages
+      - text: 💬
+      - generic [ref=e21]: My Inbox
+    - link "🗒️ Summaries" [ref=e22] [cursor=pointer]:
+      - /url: /conversation-summaries
+      - text: 🗒️
+      - generic [ref=e23]: Summaries
+    - link "📝 Templates" [ref=e24] [cursor=pointer]:
+      - /url: /templates
+      - text: 📝
+      - generic [ref=e25]: Templates
+    - link "📢 Bulk Send" [ref=e26] [cursor=pointer]:
+      - /url: /bulk-send
+      - text: 📢
+      - generic [ref=e27]: Bulk Send
+    - generic [ref=e28]: Work
+    - link "📋 Pipelines" [ref=e29] [cursor=pointer]:
+      - /url: /pipelines
+      - text: 📋
+      - generic [ref=e30]: Pipelines
+    - link "📅 Statement Calendar" [ref=e31] [cursor=pointer]:
+      - /url: /statements-calendar
+      - text: 📅
+      - generic [ref=e32]: Statement Calendar
+    - generic [ref=e33]: Engagements
+    - link "📄 Proposals" [ref=e34] [cursor=pointer]:
+      - /url: /proposals
+      - text: 📄
+      - generic [ref=e35]: Proposals
+    - generic [ref=e36]: Forecast
+    - link "📈 Revenue Forecast" [ref=e37] [cursor=pointer]:
+      - /url: /forecast
+      - text: 📈
+      - generic [ref=e38]: Revenue Forecast
+    - generic [ref=e39]: Account
+    - link "⚙️ Settings" [ref=e40] [cursor=pointer]:
+      - /url: /settings
+      - text: ⚙️
+      - generic [ref=e41]: Settings
+    - link "❓ Help Center" [ref=e42] [cursor=pointer]:
+      - /url: /help
+      - text: ❓
+      - generic [ref=e43]: Help Center
+  - main [ref=e44]:
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - generic [ref=e47]:
+          - button "← Pipelines" [ref=e48] [cursor=pointer]
+          - generic [ref=e49]: "|"
+          - generic [ref=e50]: Business Tax Return Workflow
+        - generic [ref=e51]:
+          - generic [ref=e52]: "Year:"
+          - combobox [ref=e53] [cursor=pointer]:
+            - option "2027"
+            - option "2026"
+            - option "2025" [selected]
+            - option "2024"
+            - option "2023"
+          - button "+ Add Job" [ref=e54] [cursor=pointer]
+          - link "⚙️ Settings" [ref=e55] [cursor=pointer]:
+            - /url: /pipelines/2/settings
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - generic [ref=e58]:
+            - generic [ref=e59]: Under Extension
+            - generic [ref=e60]: "0"
+          - generic [ref=e61]:
+            - generic: Drop here
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - generic [ref=e64]: Request Financials | Drop Financials
+            - generic [ref=e65]: "0"
+          - generic [ref=e66]:
+            - generic: Drop here
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - generic [ref=e69]: Financial Review⚡
+            - generic [ref=e70]: "1"
+          - generic [ref=e73] [cursor=pointer]:
+            - generic [ref=e74]: S-Corp
+            - text: Test Company
+        - generic [ref=e75]:
+          - generic [ref=e76]:
+            - generic [ref=e77]: Check for Invoice Paid
+            - generic [ref=e78]: "1"
+          - generic [ref=e81] [cursor=pointer]:
+            - generic [ref=e82]: S-Corp
+            - text: Tax Planner Pro
+        - generic [ref=e83]:
+          - generic [ref=e84]:
+            - generic [ref=e85]: Special Situation | Missing Info
+            - generic [ref=e86]: "0"
+          - generic [ref=e87]:
+            - generic: Drop here
+        - generic [ref=e88]:
+          - generic [ref=e89]:
+            - generic [ref=e90]: Prepare Return
+            - generic [ref=e91]: "1"
+          - generic [ref=e94] [cursor=pointer]:
+            - generic [ref=e95]: S-Corp
+            - text: Del Toro Counseling Services PLLC
+        - generic [ref=e96]:
+          - generic [ref=e97]:
+            - generic [ref=e98]: CPA Return Review
+            - generic [ref=e99]: "0"
+          - generic [ref=e100]:
+            - generic: Drop here
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e103]: Client Approval⚡
+            - generic [ref=e104]: "0"
+          - generic [ref=e105]:
+            - generic: Drop here
+        - generic [ref=e106]:
+          - generic [ref=e107]:
+            - generic [ref=e108]: Ready for E-file⚡
+            - generic [ref=e109]: "1"
+          - generic [ref=e112] [cursor=pointer]:
+            - generic [ref=e113]: Individual
+            - text: Chris Ragain
+            - generic [ref=e114]: INVOICE
+        - generic [ref=e115]:
+          - generic [ref=e116]:
+            - generic [ref=e117]: Ready for Archive🏁
+            - generic [ref=e118]: "1"
+          - generic [ref=e120] [cursor=pointer]:
+            - generic [ref=e121]:
+              - generic [ref=e122]: S-Corp
+              - text: TeeRival
+              - generic [ref=e123]: INVOICE
+            - generic [ref=e124]: 🏁 Archiving tonight at 10 PM
+    - generic [ref=e126]:
+      - generic [ref=e127]:
+        - generic [ref=e128]: Test Company
+        - button "✕" [ref=e129] [cursor=pointer]
+      - generic [ref=e130]:
+        - generic [ref=e131]:
+          - generic [ref=e132]: Client
+          - link "Test Company" [ref=e133] [cursor=pointer]:
+            - /url: /crm/company/26
+        - generic [ref=e134]:
+          - generic [ref=e135]: Stage
+          - combobox [ref=e136]:
+            - option "Under Extension"
+            - option "Request Financials | Drop Financials"
+            - option "Financial Review" [selected]
+            - option "Check for Invoice Paid"
+            - option "Special Situation | Missing Info"
+            - option "Prepare Return"
+            - option "CPA Return Review"
+            - option "Client Approval"
+            - option "Ready for E-file"
+            - option "Ready for Archive"
+        - generic [ref=e137]:
+          - generic [ref=e138]: Status
+          - combobox [ref=e139]:
+            - option "Active" [selected]
+            - option "🟡 Waiting on Client"
+            - option "🟠 Missing Info"
+            - option "🔴 Blocked"
+            - option "🔵 Under Extension"
+            - option "⚫ On Hold"
+        - generic [ref=e140]:
+          - generic [ref=e141]: Assigned To
+          - combobox [ref=e142]:
+            - option "— Unassigned —" [selected]
+            - option "Christopher"
+            - option "Sara"
+            - option "Nick"
+            - option "Adam"
+            - option "Test Staff Member"
+        - generic [ref=e143]:
+          - generic [ref=e144]: Notes
+          - textbox [ref=e145]
+        - generic [ref=e146]: Updates
+        - generic [ref=e147]:
+          - textbox "Add an update…" [ref=e148]
+          - button "Post" [ref=e149] [cursor=pointer]
+        - paragraph [ref=e151]: No updates yet.
+        - generic [ref=e152]: Movement History
+        - generic [ref=e156]:
+          - strong [ref=e157]: Start
+          - text: →
+          - strong [ref=e158]: Financial Review
+          - text: System · 3/31/2026, 6:16:07 AM
+          - emphasis [ref=e159]: "Auto-created + placed: trigger \"client_financials_submitted\""
+        - button "Delete Job" [ref=e161] [cursor=pointer]
+    - button "Agent AI" [ref=e162] [cursor=pointer]:
+      - img "Agent AI" [ref=e163]
+    - generic:
+      - generic:
+        - generic: Agent AI
+        - generic: Connecting…
+        - button "✕"
+      - generic:
+        - generic: Loading…
+      - generic:
+        - textbox "Ask anything…" [disabled]
+        - button "↑" [disabled]
+```

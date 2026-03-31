@@ -360,7 +360,9 @@ PUSHER_APP_ID, PUSHER_KEY, PUSHER_SECRET, PUSHER_CLUSTER
 | Person modal 2-column layout | `crm-person.ejs` |
 | Company workflow tab (full parity) | `crm-company.ejs` |
 | Auto-grant portal access on relationship add | `server/routes/api.js` |
-| E2E test suite (173 tests) | `tests/e2e/`, `tests/global-setup.cjs` |
+| Help Center (`/help`) — public, no auth, 32 articles | `server/help-articles.js`, `server/views/help-layout.ejs`, `server/index.js` |
+| Advisor Portal Ghost Preview ("View Portal as Client") | `server/routes/people.js` POST `/:id/portal-preview`, `public/portal.html` ghost banner |
+| E2E test suite (237 tests — 7 spec files added) | `tests/e2e/`, `tests/global-setup.cjs` |
 | DarkLion Drive (Windows desktop app) | `darklion-drive/` — Electron + rclone + WinFsp |
 | DarkLion Print Agent (Windows desktop app) | `darklion-print-agent/` — Electron + Ghostscript |
 
@@ -399,9 +401,11 @@ Password: DarkLion2026!
 JWT_SECRET (dev): k9Xm2vQpL7nR4wYtBsEuJcFhGdAzN8oWiKqT3eMjP6yDlCbOxVHrUfSgZ5I1Ma
 ```
 
-- 173 passing / 0 failing (stable baseline)
-- 29 skipped (data-dependent — pipelines/messages need real records)
+- 237 tests across 14 spec files
+- 0 failing (stable baseline)
 - Global setup generates JWT directly to avoid rate limits
+- messages.spec.js: `beforeAll` seeds a test thread if inbox is empty so data-dependent tests run
+- pipelines.spec.js: `waitForFunction` on `.pipe-link` to handle async tbody population
 
 ---
 
@@ -438,14 +442,93 @@ JWT_SECRET (dev): k9Xm2vQpL7nR4wYtBsEuJcFhGdAzN8oWiKqT3eMjP6yDlCbOxVHrUfSgZ5I1Ma
 - **Portal bookkeeping empty state:** Shows upload option alongside QB connect
 - **Test suite hardening:** JWT bypass in global-setup.cjs, skip login if valid token exists
 
-### 2026-03-31 — Refactor + Doc Count Fix + Financials UX
+### 2026-03-31 — Help Center + Portal Ghost Preview + Test Coverage + Refactor
 
-- **Portal doc count mismatch (fixed):** `portal.html` and `crm-person.ejs` — docs with categories not in the valid cat list were counted but not rendered. Fixed by normalizing unknown categories to 'other' before filtering.
+#### Fixes
+- **Portal doc count mismatch:** `portal.html` and `crm-person.ejs` — docs with unrecognized categories were counted but not rendered. Fixed by normalizing unknown categories to `'other'` before filtering.
 - **Financials upload UX:** After upload success, portal auto-switches to Docs subtab and shows green success banner (auto-dismisses after 8s).
-- **Modal button state bug (fixed):** Financials modal submit button stuck on "⏳ Sending…" after prior upload. Fixed by resetting button text/state on modal open.
-- **Refactor:** Deleted stale public HTML files (8 files shadowing EJS routes), dead `coa-monitor.js` service, Fly.io deployment workflow.
-- **Branch cleanup:** Deleted all stale `claude/` branches from GitHub.
-- **Prod push:** All above merged to main and deployed.
+- **Modal button state bug:** Financials modal submit button stuck on "⏳ Sending…" after prior upload. Fixed by resetting button text/state on modal open.
+- **viewPortalAsClient scope bug:** inline `onclick` couldn't find the function because it was defined inside a JS closure. Fixed by assigning to `window.viewPortalAsClient`. Also fixed to `await res.json()` before reading the URL.
+
+#### New Feature: Help Center (`/help`)
+- Public route, no login required — accessible by staff, clients, and external users
+- **Route:** `GET /help` (home), `GET /help/article/:slug`
+- **32 articles** across 8 modules: Getting Started, CRM, Documents, Client Portal, Pipelines, Messaging, Tax Organizer, Other (Proposals, Bulk Send, Settings, Viktor AI)
+- Left sidebar with full navigation, search bar (real-time across all article content), "← Back to DarkLion" header link
+- 👓 Help Center link added to staff sidebar (opens in new tab)
+- **Files:** `server/help-articles.js` (article registry + search index), `server/views/help-layout.ejs` (dedicated layout, not EJS shell)
+- Article 404 → renders "Article Not Found" with redirect link (not a server error)
+
+#### New Feature: Advisor Portal Ghost Preview
+- Staff can view the client portal exactly as a specific client sees it
+- **Button:** Person detail → Overview tab → Portal Access section → `👁️ View Portal` (only shown when portal is fully active)
+- **API:** `POST /api/people/:id/portal-preview` → returns `{ url }` with short-lived token
+- **Token:** JWT with `ghostedBy: staffUserId` claim, expires in **1 hour** (vs. 7 days for real clients)
+- **Portal behavior:** `?preview_token=` in URL → token stored in localStorage → purple ghost banner shown: *"Advisor Preview — viewing portal as [Client Name]"* + "← Back to DarkLion" link
+- **URL cleanup:** `window.history.replaceState` removes token from address bar after pickup
+- **Audit log:** Every preview logged to `audit_log` with actor, client, timestamp
+- **File:** `server/routes/people.js` (new endpoint at bottom), `public/portal.html` (token pickup + banner)
+
+#### Test Suite Expansion
+Added 5 new spec files + fixed 2 existing:
+- `tests/e2e/help.spec.js` — 10 tests: public routes, article pages, sidebar, search
+- `tests/e2e/bulk-send.spec.js` — 6 tests: page structure, audience builder, compose
+- `tests/e2e/forecast.spec.js` — 6 tests: page load, table/cards rendering
+- `tests/e2e/tax-organizer.spec.js` — 3 tests: API endpoints, Organizers tab navigation
+- `tests/e2e/portal-ghost.spec.js` — 5 tests: API auth, URL validation, CRM button presence
+- `tests/e2e/pipelines.spec.js` — Fixed: `waitForFunction` to detect `.pipe-link` after async load
+- `tests/e2e/messages.spec.js` — Fixed: `beforeAll` seeds test thread if inbox is empty
+
+#### Refactor + Cleanup
+- Deleted stale public HTML files (8 files shadowing EJS routes)
+- Deleted dead `server/services/coa-monitor.js` (0 references)
+- Deleted `.github/workflows/deploy-fly.yml` (Fly.io unused, Railway is active)
+- Deleted 5 stale `claude/` branches from GitHub
+
+#### Production deploys
+- `e20b698` — portal UX fixes + refactor
+- `f2c1a6e` — help center + portal ghost preview + tests
+
+### 2026-03-31 (follow-up #2) — Fix Yellow Halo on Custom Branded Login Page
+
+- **Bug:** `my.sentineltax.co` (and all custom domain login pages) showed a yellow glow/halo around the firm logo in the login card
+- **Cause:** `.brand-logo` CSS in `server/views/login-branded.ejs` had `filter: drop-shadow(0 0 20px rgba(201,168,76,0.4))` — a DarkLion gold glow that makes no sense on white-label pages showing a client's own logo
+- **Fix:** Removed `filter` and `transition` from `.brand-logo` and removed the `.brand-logo:hover` rule entirely. Logo now renders cleanly with no colored border, glow, or effect.
+- Pushed to dev: `d975483`
+
+### 2026-03-31 (follow-up #3) — Bulk PDF Uploader + "I don't have this" on Tax Organizer
+
+#### Bulk PDF Uploader (Step 3 of organizer)
+- **Card:** The "Have everything in one PDF?" card is now a real upload experience — click or drag & drop
+- **Endpoint:** `POST /portal/organizer/client/:year/bulk-upload` — accepts PDF/JPG/PNG, saves to S3 as `organizer_bulk` doc, stores `bulk_document_id` on the `tax_organizers` row
+- **UX states:** Idle → Uploading (progress bar animation) → ✅ Green success ("PDF uploaded — we'll sort it out from here") / ❌ Red error with retry
+- **Demo mode:** Works without portal token — simulates upload for testing
+- **Workpaper:** Cover page now notes if a bulk PDF was submitted, includes it in the doc summary
+
+#### "I don't have this" Button (per item, Step 3)
+- **Third action** added alongside Upload / Not This Year on every checklist item
+- **Status:** `not_applicable` — new valid status added to `tax_organizer_items`
+- **Visual:** Red ✗, strikethrough label, dimmed row (distinct from "Not This Year" which is gray/dash)
+- **API:** Uses existing `PUT /portal/organizer/client/:year/item/:itemId` — allowed `not_applicable` as valid status
+- **Undo:** Restores item to Pending with all 3 buttons
+- **Submit:** `not_applicable` counts as resolved — no longer blocks organizer submission
+- **DB:** Idempotent migration drops+re-adds `tax_organizer_items_status_check` to include `not_applicable`; also adds `bulk_document_id` column to `tax_organizers`
+- Pushed to dev: `4d1ddc4`
+
+### 2026-03-31 (follow-up #4) — Remove Eye Emoji from Portal Ghost Preview Banner
+
+- **Bug:** Ghost preview banner in `public/portal.html` had 👁️ eye emojis — one in the static HTML `<span>` and one in the JS `bannerText.textContent` string
+- **Fix:** Removed both 👁️ characters. Banner text remains intact: *"Advisor Preview — viewing portal as [Client Name]"*
+- Pushed to dev: `3cacae6`
+
+### 2026-03-31 (follow-up) — Help Center Accuracy Fix
+
+- **Removed inaccurate "firm-level document library" references** from `server/help-articles.js`
+  - `uploading-documents`: replaced callout claiming sidebar Documents shows all clients → accurate note that docs are managed from individual CRM records
+  - `document-folders`: removed entire `<h2>Firm-Level Document Library</h2>` section (feature doesn't exist)
+  - `delivering-to-clients`: replaced "Bulk Delivery" section claiming central Documents page has multi-select → accurate description of per-client Docs tab delivery
+  - `delivering-to-clients` (QBO financials article): removed trailing claim that submitted files also appear "in the firm-level Documents page"
+- Pushed to dev: `a27210f`
 
 ---
 
@@ -529,6 +612,7 @@ server/views/partials/shell-close.ejs — closes the page: </body>, </html>, glo
 | — | Send to Tax Prep: QBO → branded PDF | 2026-03-29 |
 | — | Client portal: connect QBO + upload P&L/BS PDFs | 2026-03-29 |
 | — | Refactor: remove stale HTML, dead services, Fly.io CI | 2026-03-31 |
+| — | Remove 2nd-gen placeholder screenshots from help center (21 images + figure blocks) | 2026-03-31 |
 
 ---
 

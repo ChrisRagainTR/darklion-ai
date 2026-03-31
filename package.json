@@ -41,6 +41,7 @@
     "webdav-server": "^2.6.2"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2"
+    "@playwright/test": "^1.58.2",
+    "sharp": "^0.34.5"
   }
 }

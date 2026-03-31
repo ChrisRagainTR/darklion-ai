@@ -69,6 +69,7 @@ const articles = [
   <span>Key Concepts</span>
 </div>
 <h1 class="article-title">Key Concepts</h1>
+
 <div class="article-meta">Section: Getting Started</div>
 <div class="article-body">
 
@@ -132,6 +133,7 @@ const articles = [
   <span>Your First Client</span>
 </div>
 <h1 class="article-title">Your First Client</h1>
+
 <div class="article-meta">Section: Getting Started</div>
 <div class="article-body">
 
@@ -203,6 +205,11 @@ const articles = [
   <span>CRM Overview</span>
 </div>
 <h1 class="article-title">CRM Overview</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/crm-overview.png" alt="CRM showing Relationships, People, Companies with search and filter" loading="lazy" />
+  <figcaption>The CRM dashboard: manage all your client relationships, people, and companies in one place.</figcaption>
+</figure>
+
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
 
@@ -254,6 +261,11 @@ const articles = [
   <span>Managing Relationships</span>
 </div>
 <h1 class="article-title">Managing Relationships</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/crm-relationships.png" alt="Relationships list showing households" loading="lazy" />
+  <figcaption>Relationships list — each row is a household or group billing unit.</figcaption>
+</figure>
+
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
 
@@ -332,6 +344,11 @@ const articles = [
   <span>Managing People</span>
 </div>
 <h1 class="article-title">Managing People</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/crm-people.png" alt="People list showing individual users" loading="lazy" />
+  <figcaption>People list — each person can have their own portal login.</figcaption>
+</figure>
+
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
 
@@ -416,6 +433,11 @@ const articles = [
   <span>Managing Companies</span>
 </div>
 <h1 class="article-title">Managing Companies</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/crm-companies.png" alt="Companies list showing business entities" loading="lazy" />
+  <figcaption>Companies list — S-Corps, LLCs, Trusts, and other legal entities.</figcaption>
+</figure>
+
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
 
@@ -508,6 +530,7 @@ const articles = [
   <span>Search</span>
 </div>
 <h1 class="article-title">Search</h1>
+
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
 
@@ -565,6 +588,11 @@ const articles = [
   <span>Documents Overview</span>
 </div>
 <h1 class="article-title">Documents Overview</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/documents.png" alt="Documents page showing organized file list" loading="lazy" />
+  <figcaption>Documents page — upload, organize, and deliver files to clients.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Documents</div>
 <div class="article-body">
 
@@ -593,7 +621,7 @@ const articles = [
   <li>All downloads are logged in the audit trail</li>
 </ul>
 
-<div class="callout tip"><span class="callout-icon">💡</span><div>There is also a firm-level <strong>Documents</strong> page (in the sidebar) that shows all documents across all clients in one view — useful for bulk management or finding something quickly.</div></div>
+<div class="callout tip"><span class="callout-icon">💡</span><div>Documents are managed from within individual client records. Open a Person or Company in the CRM and go to their <strong>Docs</strong> tab to upload, deliver, or manage their files.</div></div>
 
 </div>
     `
@@ -614,6 +642,7 @@ const articles = [
   <span>Uploading Documents</span>
 </div>
 <h1 class="article-title">Uploading Documents</h1>
+
 <div class="article-meta">Section: Documents</div>
 <div class="article-body">
 
@@ -656,8 +685,7 @@ const articles = [
 </ol>
 <div class="callout warning"><span class="callout-icon">⚠️</span><div>Document deletion is <strong>permanent</strong> and cannot be undone. Make sure you have the correct file before confirming.</div></div>
 
-<h2>Firm-Level Document Library</h2>
-<p>The <strong>Documents</strong> link in the left sidebar opens the firm-level document library — a view of all documents across all clients. You can search, filter, and manage documents from here without navigating to individual client records. This is especially useful for bulk delivery or firm-wide audits.</p>
+
 
 </div>
     `
@@ -678,6 +706,7 @@ const articles = [
   <span>Delivering to Clients</span>
 </div>
 <h1 class="article-title">Delivering to Clients</h1>
+
 <div class="article-meta">Section: Documents</div>
 <div class="article-body">
 
@@ -713,8 +742,8 @@ const articles = [
   <li><strong>View timestamp</strong> — Recorded when the client first opens or downloads the file. This is how you know a client has actually seen their return.</li>
 </ul>
 
-<h2>Bulk Delivery</h2>
-<p>To deliver multiple documents at once, use the firm-level <strong>Documents</strong> page (sidebar → Documents). You can filter by client or date, select multiple documents, and deliver them all in one action — rather than going to each client record individually.</p>
+<h2>Delivering Documents</h2>
+<p>To deliver a document, open the client's record in the CRM (Person or Company), go to their <strong>Docs</strong> tab, find the file, and use the <strong>Deliver</strong> action. Delivered documents immediately appear in the client's portal with a "New" badge.</p>
 
 <div class="callout tip"><span class="callout-icon">💡</span><div>A common workflow: upload the signed return PDF to the client's Docs tab → keep it private → review it → when you're ready to tell the client their return is done, deliver the document AND send them a portal message. Both arrive at the same time.</div></div>
 
@@ -737,6 +766,7 @@ const articles = [
   <span>Folder Structure</span>
 </div>
 <h1 class="article-title">Folder Structure</h1>
+
 <div class="article-meta">Section: Documents</div>
 <div class="article-body">
 
@@ -812,6 +842,7 @@ const articles = [
   <span>Portal Overview</span>
 </div>
 <h1 class="article-title">Client Portal Overview</h1>
+
 <div class="article-meta">Section: Client Portal</div>
 <div class="article-body">
 
@@ -861,6 +892,7 @@ const articles = [
   <span>Inviting Clients</span>
 </div>
 <h1 class="article-title">Inviting Clients to the Portal</h1>
+
 <div class="article-meta">Section: Client Portal</div>
 <div class="article-body">
 
@@ -912,6 +944,7 @@ const articles = [
   <span>What Clients See</span>
 </div>
 <h1 class="article-title">What Clients See</h1>
+
 <div class="article-meta">Section: Client Portal</div>
 <div class="article-body">
 
@@ -994,6 +1027,7 @@ const articles = [
   <span>Client Financials Upload</span>
 </div>
 <h1 class="article-title">Client Financials Upload</h1>
+
 <div class="article-meta">Section: Client Portal</div>
 <div class="article-body">
 
@@ -1034,7 +1068,7 @@ const articles = [
 </ul>
 
 <h2>What You See in the CRM</h2>
-<p>On the Company's Docs tab in the CRM, the submitted files appear under <strong>"Uploaded by Client"</strong> section. You'll also see the files in the firm-level Documents page.</p>
+<p>On the Company's Docs tab in the CRM, the submitted files appear under <strong>"Uploaded by Client"</strong> section.</p>
 
 <p>The submission fires the <code>client_financials_submitted</code> pipeline trigger — if you have a pipeline configured with that trigger, the client's card will automatically move to the target stage.</p>
 
@@ -1061,6 +1095,11 @@ const articles = [
   <span>Pipelines Overview</span>
 </div>
 <h1 class="article-title">Pipelines Overview</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/pipelines.png" alt="Pipelines dashboard with list of workflows" loading="lazy" />
+  <figcaption>Pipelines are workflows you create to track client progress — tax returns, engagements, follow-ups, etc.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Pipelines</div>
 <div class="article-body">
 
@@ -1117,6 +1156,7 @@ const articles = [
   <span>Creating a Pipeline</span>
 </div>
 <h1 class="article-title">Creating a Pipeline</h1>
+
 <div class="article-meta">Section: Pipelines</div>
 <div class="article-body">
 
@@ -1196,6 +1236,7 @@ const articles = [
   <span>Stages & Cards</span>
 </div>
 <h1 class="article-title">Stages & Cards</h1>
+
 <div class="article-meta">Section: Pipelines</div>
 <div class="article-body">
 
@@ -1280,6 +1321,7 @@ const articles = [
   <span>Smart Triggers</span>
 </div>
 <h1 class="article-title">Smart Triggers</h1>
+
 <div class="article-meta">Section: Pipelines</div>
 <div class="article-body">
 
@@ -1350,6 +1392,7 @@ const articles = [
   <span>Stage Actions</span>
 </div>
 <h1 class="article-title">Stage Actions</h1>
+
 <div class="article-meta">Section: Pipelines</div>
 <div class="article-body">
 
@@ -1428,6 +1471,11 @@ const articles = [
   <span>Messaging Overview</span>
 </div>
 <h1 class="article-title">Messaging Overview</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/messages.png" alt="Messaging inbox page" loading="lazy" />
+  <figcaption>Secure messaging — send and receive messages directly inside DarkLion instead of email.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Messaging</div>
 <div class="article-body">
 
@@ -1476,6 +1524,7 @@ const articles = [
   <span>Staff Inbox</span>
 </div>
 <h1 class="article-title">Staff Inbox</h1>
+
 <div class="article-meta">Section: Messaging</div>
 <div class="article-body">
 
@@ -1538,6 +1587,7 @@ const articles = [
   <span>Sending Messages</span>
 </div>
 <h1 class="article-title">Sending Messages</h1>
+
 <div class="article-meta">Section: Messaging</div>
 <div class="article-body">
 
@@ -1613,6 +1663,7 @@ const articles = [
   <span>Internal Notes</span>
 </div>
 <h1 class="article-title">Internal Notes</h1>
+
 <div class="article-meta">Section: Messaging</div>
 <div class="article-body">
 
@@ -1668,6 +1719,7 @@ const articles = [
   <span>Tax Organizer Overview</span>
 </div>
 <h1 class="article-title">Tax Organizer Overview</h1>
+
 <div class="article-meta">Section: Tax Organizer</div>
 <div class="article-body">
 
@@ -1739,6 +1791,7 @@ const articles = [
   <span>Sending an Organizer</span>
 </div>
 <h1 class="article-title">Sending an Organizer</h1>
+
 <div class="article-meta">Section: Tax Organizer</div>
 <div class="article-body">
 
@@ -1806,6 +1859,7 @@ const articles = [
   <span>Reviewing Submissions</span>
 </div>
 <h1 class="article-title">Reviewing Submissions</h1>
+
 <div class="article-meta">Section: Tax Organizer</div>
 <div class="article-body">
 
@@ -1876,6 +1930,11 @@ const articles = [
   <span>Proposals</span>
 </div>
 <h1 class="article-title">Proposals</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/proposals.png" alt="Proposals list showing engagement letters" loading="lazy" />
+  <figcaption>Proposals are engagement letters your clients sign electronically.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Other</div>
 <div class="article-body">
 
@@ -1949,6 +2008,11 @@ const articles = [
   <span>Bulk Send</span>
 </div>
 <h1 class="article-title">Bulk Send</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/bulk-send.png" alt="Bulk send audience builder and compose form" loading="lazy" />
+  <figcaption>Send a message to multiple clients at once with audience filters.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Other</div>
 <div class="article-body">
 
@@ -2018,10 +2082,10 @@ const articles = [
     slug: 'settings',
     title: 'Settings & Branding',
     section: 'Other',
-    keywords: ['settings', 'branding', 'logo', 'custom domain', 'API keys', 'brand color', 'tax year', 'firm name'],
+    keywords: ['settings', 'branding', 'logo', 'custom domain', 'brand color', 'tax year', 'firm name'],
     prev: { slug: 'bulk-send', title: 'Bulk Send' },
     next: null,
-    body: 'Configure your firm branding (logo, colors, name), set up a custom domain for the client portal, and manage API keys for integrations.',
+    body: 'Configure your firm branding (logo, colors, name) and set up a custom domain for the client portal.',
     html: `
 <div class="article-breadcrumb">
   <a href="/help">Help</a><span class="sep">›</span>
@@ -2029,10 +2093,15 @@ const articles = [
   <span>Settings & Branding</span>
 </div>
 <h1 class="article-title">Settings & Branding</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/settings.png" alt="Settings page with firm branding and configuration" loading="lazy" />
+  <figcaption>Settings: customize your firm's logo, colors, and domain.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Other</div>
 <div class="article-body">
 
-<p>Go to <strong>Settings (⚙️)</strong> in the left sidebar to manage your firm's branding, custom domain, and API access. Settings has three tabs.</p>
+<p>Go to <strong>Settings (⚙️)</strong> in the left sidebar to manage your firm's branding and custom domain. Settings has two tabs.</p>
 
 <h2>Firm Branding Tab</h2>
 <p>Everything here controls how your firm appears to clients in the portal, in emails, and on PDF reports.</p>
@@ -2089,17 +2158,6 @@ const articles = [
 
 <div class="callout info"><span class="callout-icon">ℹ️</span><div>The darklion.ai/client-login URL continues to work even after you set up a custom domain — existing client bookmarks won't break.</div></div>
 
-<h2>API Keys Tab</h2>
-<p>API Keys let external systems authenticate with DarkLion's API — useful for custom integrations, automation scripts, or tools you build yourself.</p>
-
-<ul>
-  <li><strong>Generate a key:</strong> Click <strong>+ New API Key</strong> → give it a descriptive name (e.g., "Zapier Integration", "Custom Reporting Script") → the key is generated and shown once. Copy it immediately — it won't be shown again.</li>
-  <li><strong>Key details:</strong> Each key shows its name, creation date, and last used date.</li>
-  <li><strong>Access level:</strong> API keys give full API access — they can read and write everything a staff member can. Treat them like passwords.</li>
-  <li><strong>Delete keys:</strong> When you no longer need a key (e.g., an integration was discontinued), delete it. This immediately revokes access.</li>
-</ul>
-
-<div class="callout warning"><span class="callout-icon">⚠️</span><div>Never share API keys in public places (GitHub repos, Slack, email). If a key is accidentally exposed, delete it immediately and generate a new one.</div></div>
 
 </div>
     `
@@ -2121,6 +2179,7 @@ const articles = [
   <span>Viktor AI</span>
 </div>
 <h1 class="article-title">Viktor AI</h1>
+
 <div class="article-meta">Section: Viktor AI</div>
 <div class="article-body">
 
