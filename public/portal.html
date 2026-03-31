@@ -2028,7 +2028,9 @@
       // uploadContext: null = personal, number = company_id
       function renderSectionWithCats(sectionKey, sectionLabel, sectionIcon, sourceDocs, cats, uploadContext) {
         const isClientSection = sectionKey === 'client_uploaded';
-        const sectionDocs = (sourceDocs || []).filter(d => (d.folder_section || '') === sectionKey);
+        const validCatKeys = new Set(cats.map(c => c.key));
+        const sectionDocs = (sourceDocs || []).filter(d => (d.folder_section || '') === sectionKey)
+          .map(d => ({ ...d, folder_category: validCatKeys.has(d.folder_category) ? d.folder_category : 'other' }));
 
         // Upload button in section header (client_uploaded only)
         const uploadBtn = isClientSection
