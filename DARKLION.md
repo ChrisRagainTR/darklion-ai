@@ -489,6 +489,15 @@ Added 5 new spec files + fixed 2 existing:
 - `e20b698` — portal UX fixes + refactor
 - `f2c1a6e` — help center + portal ghost preview + tests
 
+### 2026-03-31 (follow-up) — Help Center Accuracy Fix
+
+- **Removed inaccurate "firm-level document library" references** from `server/help-articles.js`
+  - `uploading-documents`: replaced callout claiming sidebar Documents shows all clients → accurate note that docs are managed from individual CRM records
+  - `document-folders`: removed entire `<h2>Firm-Level Document Library</h2>` section (feature doesn't exist)
+  - `delivering-to-clients`: replaced "Bulk Delivery" section claiming central Documents page has multi-select → accurate description of per-client Docs tab delivery
+  - `delivering-to-clients` (QBO financials article): removed trailing claim that submitted files also appear "in the firm-level Documents page"
+- Pushed to dev: `a27210f`
+
 ---
 
 ## EJS Shell — The Template That Must Not Break
