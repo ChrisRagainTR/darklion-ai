@@ -2158,17 +2158,6 @@ const articles = [
 
 <div class="callout info"><span class="callout-icon">ℹ️</span><div>The darklion.ai/client-login URL continues to work even after you set up a custom domain — existing client bookmarks won't break.</div></div>
 
-<h2>API Keys Tab</h2>
-<p>API Keys let external systems authenticate with DarkLion's API — useful for custom integrations, automation scripts, or tools you build yourself.</p>
-
-<ul>
-  <li><strong>Generate a key:</strong> Click <strong>+ New API Key</strong> → give it a descriptive name (e.g., "Zapier Integration", "Custom Reporting Script") → the key is generated and shown once. Copy it immediately — it won't be shown again.</li>
-  <li><strong>Key details:</strong> Each key shows its name, creation date, and last used date.</li>
-  <li><strong>Access level:</strong> API keys give full API access — they can read and write everything a staff member can. Treat them like passwords.</li>
-  <li><strong>Delete keys:</strong> When you no longer need a key (e.g., an integration was discontinued), delete it. This immediately revokes access.</li>
-</ul>
-
-<div class="callout warning"><span class="callout-icon">⚠️</span><div>Never share API keys in public places (GitHub repos, Slack, email). If a key is accidentally exposed, delete it immediately and generate a new one.</div></div>
 
 </div>
     `
