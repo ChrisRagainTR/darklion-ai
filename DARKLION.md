@@ -515,6 +515,12 @@ Added 5 new spec files + fixed 2 existing:
 - **DB:** Idempotent migration drops+re-adds `tax_organizer_items_status_check` to include `not_applicable`; also adds `bulk_document_id` column to `tax_organizers`
 - Pushed to dev: `4d1ddc4`
 
+### 2026-03-31 (follow-up #4) — Remove Eye Emoji from Portal Ghost Preview Banner
+
+- **Bug:** Ghost preview banner in `public/portal.html` had 👁️ eye emojis — one in the static HTML `<span>` and one in the JS `bannerText.textContent` string
+- **Fix:** Removed both 👁️ characters. Banner text remains intact: *"Advisor Preview — viewing portal as [Client Name]"*
+- Pushed to dev: `3cacae6`
+
 ### 2026-03-31 (follow-up) — Help Center Accuracy Fix
 
 - **Removed inaccurate "firm-level document library" references** from `server/help-articles.js`
