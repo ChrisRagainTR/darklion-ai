@@ -1393,9 +1393,10 @@
     if (leftCol) leftCol.innerHTML = leftHtml;
     if (rightCol) rightCol.innerHTML = rightHtml;
 
-    // Update total item count
+    // Update total item count and refresh progress counter
     const actionable = items.filter(i => !i.sentinel_provides);
     window.TOTAL_ITEMS_LIVE = actionable.length;
+    updateProgressLive();
   }
 
   // API-backed item actions
