@@ -666,13 +666,13 @@ router.post('/client/:year/submit', requirePortal, async (req, res) => {
     const bulkDocId = organizer.bulk_document_id;
 
     coverPage.drawText('DOCUMENT SUMMARY', { x: 40, y: height - 195, size: 10, font: boldFont, color: rgb(0.4, 0.4, 0.4) });
-    coverPage.drawText(`✓ ${uploaded.length} documents uploaded`, { x: 40, y: height - 215, size: 11, font, color: rgb(0.18, 0.7, 0.45) });
+    coverPage.drawText(`v ${uploaded.length} documents uploaded`, { x: 40, y: height - 215, size: 11, font, color: rgb(0.18, 0.7, 0.45) });
     if (bulkDocId) {
-      coverPage.drawText(`📦 Bulk PDF uploaded (client provided combined file)`, { x: 40, y: height - 233, size: 10, font, color: rgb(0.4, 0.6, 0.9) });
+      coverPage.drawText(`Bulk PDF uploaded (client provided combined file)`, { x: 40, y: height - 233, size: 10, font, color: rgb(0.4, 0.6, 0.9) });
     }
-    coverPage.drawText(`– ${notThisYear.length} marked Not This Year`, { x: 40, y: bulkDocId ? height - 251 : height - 233, size: 11, font, color: rgb(0.4, 0.4, 0.4) });
-    coverPage.drawText(`✗ ${notApplicable.length} marked Not Applicable`, { x: 40, y: bulkDocId ? height - 269 : height - 251, size: 11, font, color: rgb(0.5, 0.4, 0.4) });
-    coverPage.drawText(`🏢 ${sentinelItems.length} provided by Sentinel`, { x: 40, y: bulkDocId ? height - 287 : height - 269, size: 11, font, color: rgb(0.788, 0.659, 0.298) });
+    coverPage.drawText(`- ${notThisYear.length} marked Not This Year`, { x: 40, y: bulkDocId ? height - 251 : height - 233, size: 11, font, color: rgb(0.4, 0.4, 0.4) });
+    coverPage.drawText(`x ${notApplicable.length} marked Not Applicable`, { x: 40, y: bulkDocId ? height - 269 : height - 251, size: 11, font, color: rgb(0.5, 0.4, 0.4) });
+    coverPage.drawText(`${sentinelItems.length} provided by Sentinel`, { x: 40, y: bulkDocId ? height - 287 : height - 269, size: 11, font, color: rgb(0.788, 0.659, 0.298) });
 
     const summaryEndY = bulkDocId ? height - 300 : height - 282;
 
@@ -682,7 +682,7 @@ router.post('/client/:year/submit', requirePortal, async (req, res) => {
       coverPage.drawLine({ start: { x: 40, y: summaryEndY - 10 }, end: { x: width - 40, y: summaryEndY - 10 }, thickness: 0.5, color: rgb(0.85, 0.85, 0.85) });
       coverPage.drawText('CLIENT DECLARED N/A:', { x: 40, y: summaryEndY - 30, size: 9, font: boldFont, color: rgb(0.5, 0.5, 0.5) });
       declaredNA.forEach((item, i) => {
-        const label = item.status === 'not_applicable' ? '✗' : '–';
+        const label = item.status === 'not_applicable' ? 'x' : '-';
         coverPage.drawText(`  ${label} ${item.payer_name}`, { x: 40, y: summaryEndY - 48 - (i * 15), size: 9, font, color: rgb(0.5, 0.5, 0.5) });
       });
     }
@@ -709,7 +709,7 @@ router.post('/client/:year/submit', requirePortal, async (req, res) => {
       let qRow = 0;
       for (const [key, val] of Object.entries(answers)) {
         const label = qLabels[key] || key;
-        const display = val === true ? '✓ YES' : val === false ? '– No' : String(val);
+        const display = val === true ? 'v YES' : val === false ? '- No' : String(val);
         const color = val === true ? rgb(0.18, 0.7, 0.45) : rgb(0.4, 0.4, 0.4);
         coverPage.drawText(`  ${label}: ${display}`, { x: 40, y: answerY - 38 - (qRow * 13), size: 9, font, color });
         qRow++;
