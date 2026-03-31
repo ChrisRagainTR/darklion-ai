@@ -3052,6 +3052,11 @@
 
       document.getElementById('fin-err').style.display = 'none';
       document.getElementById('fin-msg').style.display = 'none';
+
+      // Always reset button text/state on open
+      const submitBtn = document.getElementById('fin-submit-btn');
+      submitBtn.textContent = 'Send to Advisor';
+      submitBtn.disabled = true;
       _updateFinSubmitBtn();
 
       document.getElementById('financialsModal').classList.remove('hidden');
