@@ -1,6 +1,7 @@
 # DarkLion — Build Log & Roadmap
 > Last updated: 2026-03-28
-> Context document — if session resets, read this + SCHEMA_PLAN.md to get back up to speed.
+> ⚠️ **New sessions: read `DARKLION.md` first** — it's the master context doc.
+> This file has the full phase-by-phase history and is a good supplement, but DARKLION.md is the primary source.
 
 ---
 

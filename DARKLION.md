@@ -1,6 +1,7 @@
 # DARKLION.md — Master Context Document
 > Read this at the start of every session before touching any code.
 > Last updated: 2026-03-31
+> This is the single source of context for new sessions. BUILD_LOG.md and SCHEMA_PLAN.md have more detail but this doc covers everything you need to work safely.
 
 ---
 
@@ -445,3 +446,155 @@ JWT_SECRET (dev): k9Xm2vQpL7nR4wYtBsEuJcFhGdAzN8oWiKqT3eMjP6yDlCbOxVHrUfSgZ5I1Ma
 - **Refactor:** Deleted stale public HTML files (8 files shadowing EJS routes), dead `coa-monitor.js` service, Fly.io deployment workflow.
 - **Branch cleanup:** Deleted all stale `claude/` branches from GitHub.
 - **Prod push:** All above merged to main and deployed.
+
+---
+
+## EJS Shell — The Template That Must Not Break
+
+Every staff page in DarkLion uses the EJS shell. **This is sacred. Do not change it without understanding the full impact.**
+
+### Shell Partials
+```
+server/views/partials/shell-top.ejs   — opens the page: <html>, <head>, CSS vars, sidebar nav, top header
+server/views/partials/shell-close.ejs — closes the page: </body>, </html>, global JS
+```
+
+### How Every Page Works
+```ejs
+<%- include('partials/shell-top', { title: 'Page Title', activeNav: 'navkey' }) %>
+<style>/* page-specific styles */</style>
+<main class="main">
+  <!-- all page content here -->
+</main>
+<script>/* page-specific JS */</script>
+<%- include('partials/shell-close') %>
+```
+
+### Rules for the Shell
+1. **The left nav and top header are defined in `shell-top.ejs` — they NEVER change per page.** Only the `<main>` content changes.
+2. **Never add page-specific nav items to the shell.** All nav links are global.
+3. **activeNav** controls which sidebar item is highlighted — must match a nav key defined in shell-top.
+4. **CSS variables** are defined in shell-top (--gold, --navy, --charcoal, --border, --text, --muted, --card, --bg). Use them. Never hardcode colors.
+5. **`window._shellToast(message, type)`** is the toast notification function available on all EJS pages. Type: 'success', 'error', 'info'. Do NOT call `toast()` — it doesn't exist on detail pages.
+6. **Never build a new staff page as a static `public/*.html`** — it won't have the shell, won't have auth, and will get stale. Always use EJS.
+7. **When building a new page:** start with a blank placeholder inside the shell, confirm it renders, then add content incrementally.
+
+### Nav Keys (activeNav values)
+```
+''                  — dashboard (no highlight)
+'relationships'     — CRM
+'people'            — CRM
+'companies'         — CRM
+'messages'          — Messages
+'pipelines'         — Pipelines
+'documents'         — Documents
+'bulk-send'         — Bulk Send
+'templates'         — Templates
+'settings'          — Settings
+'statements-calendar' — Statement Calendar
+```
+
+---
+
+## Build History — Phase Timeline
+
+| Phase | What | Completed |
+|---|---|---|
+| 1 | Foundation: schema, Relationships/Companies/People tables, encryption, CRUD APIs | 2026-03-20 |
+| 2 | Auth + portal logins: JWT, portal-auth routes, invite/reset flow | 2026-03-20 |
+| 3 | Internal CRM UI: crm.ejs + full-page detail views (person, company, relationship) | 2026-03-20 |
+| 4 | Document management: S3 upload/download, signed URLs, folder structure | 2026-03-20 |
+| 5 | Client portal: full SPA, invite emails (Resend), doc view, upload | 2026-03-20 |
+| 6 | Pipelines: kanban, drag-drop, instances, stage editor, job detail | 2026-03-21 |
+| 7 | Tax return delivery + e-signatures | 2026-03-21 (built, needs refinement) |
+| 8 | Secure messaging: staff inbox, portal chat, thread sharing, AI classification | 2026-03-20 |
+| 9 | Proposals + engagement letters | SKIPPED — not building |
+| 10 | Billing (Stripe) | SKIPPED — not building |
+| 11 | Viktor full integration: agent role, all endpoints, audit log | 2026-03-23 |
+| 12 | Gmail connector (design complete, not yet implemented) | 2026-03-23 |
+| 13 | Native AI layer: alert engine, smart triage, client brief generator, workflow automation | 2026-03-23 |
+| 14 | Engagement tab: upload/view letters, AI extraction of key terms | 2026-03-23 |
+| 6b | Pipeline bulk add (backlog — needs more CRM data first) | Not started |
+| — | EJS shell migration: all CRM pages converted from static HTML to EJS | 2026-03-24 |
+| — | Print Agent (Windows Electron app, confirmed working) | 2026-03-24 |
+| — | Firm branding settings | 2026-03-24 |
+| — | Dev/prod Railway environments + Playwright test suite (173 tests) | 2026-03-24 |
+| — | DarkLion Drive (Windows Electron + rclone, confirmed working) | 2026-03-25 |
+| — | Bulk send with audience builder | 2026-03-25 |
+| — | Pipeline smart triggers (12 types) + stage actions | 2026-03-25 |
+| — | Pipeline settings page | 2026-03-25 |
+| — | Pipeline completion history + nightly archive | 2026-03-25 |
+| — | Tax organizer (4-step portal flow, Drake PDF parser) | 2026-03-26 |
+| — | QBO connect flow fixed + deployed to prod | 2026-03-27 |
+| — | Send to Tax Prep: QBO → branded PDF | 2026-03-29 |
+| — | Client portal: connect QBO + upload P&L/BS PDFs | 2026-03-29 |
+| — | Refactor: remove stale HTML, dead services, Fly.io CI | 2026-03-31 |
+
+---
+
+## Problems We've Hit — Don't Repeat These
+
+### 1. Subagent EJS Wipeout (2026-03-24) ⚠️ MOST DANGEROUS
+**What happened:** Used a subagent to refactor EJS pages. Subagent didn't know which files were stale `public/*.html` vs. live `server/views/*.ejs` with months of work. It used the wrong files as source, stripping content from the real EJS files.
+**Recovery:** `git show <hash>:server/views/<file>.ejs` to retrieve from git history.
+**Rule:** **Never use subagents for EJS page edits.** Do them directly. The context to know what's "stale public HTML" vs "live EJS with real work in it" doesn't survive being passed to a subagent.
+**Rule:** Create a git tag before any multi-file refactor: `git tag backup/pre-<description>-$(date +%Y%m%d)`
+**Rule:** After any refactor, check `wc -l` — a 1300-line EJS file should not become 400 lines.
+
+### 2. Static HTML Shadowing EJS Routes (found 2026-03-31)
+**What happened:** `express.static` is registered at line 151 in `server/index.js`, BEFORE named routes at line 194+. So `/crm.html` served the stale `public/crm.html` directly, bypassing the EJS route — even though an explicit redirect existed.
+**Fix:** Deleted all stale `public/*.html` files that had EJS equivalents.
+**Rule:** If you're adding a new EJS page, make sure there's no `public/<name>.html` file with the same base name.
+
+### 3. DB Migration Missing From db.js (2026-03-28)
+**What happened:** Added columns to API code (`address_line1`, etc.) and tested locally, but forgot to add the `ALTER TABLE` migration to `server/db.js`. Prod didn't have the columns, causing 500 errors on the company page.
+**Rule:** Every schema change goes in `server/db.js` as an idempotent `ALTER TABLE IF NOT EXISTS` or `ADD COLUMN IF NOT EXISTS`. Never expect columns to exist without a migration.
+
+### 4. Pipeline Status Typo (2026-03-27)
+**What happened:** `fireTrigger` was checking for `job_status = 'complete'` but the DB stores `'completed'`. Trigger never fired, duplicate jobs were created.
+**Rule:** Pipeline job_status values are exactly: `'active'`, `'completed'`, `'archived'`. Not 'complete', not 'done'.
+
+### 5. QBO Realm ID Null Check (2026-03-27)
+**What happened:** `companies.realm_id` defaults to `''` (empty string), not NULL. Code checking `if (company.realm_id)` evaluates to true for empty string in some contexts. Caused false "connected" states.
+**Rule:** Always check `realm_id && realm_id.trim()` — not just `realm_id`.
+
+### 6. QBO Liability Balances Are Negative (2026-03-27)
+**What happened:** QBO returns liability balances as negative numbers (credit-normal accounting). Code was flagging normal credit balances as problems because it compared raw values directly.
+**Fix:** Flip sign for display: `displayBalance = -rawBalance`. Only flag when `displayBalance < 0`.
+
+### 7. Toast Function Not Available on Detail Pages (2026-03-25)
+**What happened:** Calling `toast()` from crm-person.ejs / crm-company.ejs context threw "toast is not defined".
+**Rule:** On EJS detail pages, use `window._shellToast(message, type)`. The `toast()` function only exists in the shell's global scope under a different name.
+
+### 8. Express Route Ordering (recurring)
+**Rule:** Always register specific routes before wildcard `/:id` routes. Express matches in order — if `/:id` is first, it swallows everything including `/all`, `/settings`, `/search`.
+**Example:** `GET /api/organizers/:personId/all` must come before `GET /api/organizers/:personId/:year`.
+
+### 9. Tab/Display:none Race Condition (2026-03-25)
+**What happened:** `#tab-communication` div was never closed in the HTML, so the organizers/workflow/notes tabs were nested inside the communication tab. They appeared to work (display:none kept them hidden) but their JS initialized inside the wrong container.
+**Rule:** Always validate HTML structure when adding new tabs. Each tab panel must be a proper sibling, not nested.
+
+### 10. Inline Style Not Cleared on Tab Switch (2026-03-25)
+**What happened:** Some tab panels had `style="display:none"` set inline. Tab switching code toggled a class, but the inline style took priority over class-based styles — panels stayed hidden even when "active".
+**Rule:** When hiding/showing elements programmatically, be consistent. Either use only classes OR only inline styles — don't mix. Or explicitly clear inline style: `el.style.display = ''`.
+
+### 11. Subagent Variable Shadowing (2026-03-25)
+**What happened:** `const el = document.getElementById(...)` inside a loop — the variable name `el` was reused in an inner scope, shadowing the outer variable and causing tab switch failures.
+**Rule:** Use descriptive variable names in JS. Don't reuse `el`, `btn`, `res` as generic names inside closures or nested functions.
+
+### 12. Organizer Step 2 Answers Lost (2026-03-27)
+**What happened:** Step 2 yes/no answers were being read from DOM input selectors at submit time. The selectors were slightly wrong, so answers were silently lost — organizer submitted with empty answers.
+**Fix:** Store answers in a JS object (`_answers{}`) keyed by question ID as the user clicks, not at submit time.
+**Rule:** For multi-step forms, write state to JS objects as the user interacts. Don't rely on reading DOM values at the end — selectors can be wrong silently.
+
+---
+
+## What's Next / Backlog
+
+| Item | Notes |
+|---|---|
+| Phase 6b — Pipeline Bulk Add | "📥 Bulk Add" button on board header. Needs more CRM data for meaningful filtering first. |
+| Gmail connector | Design complete in BUILD_LOG.md. Uses Google Workspace service account + domain-wide delegation. |
+| Phase 7 refinement | Tax return delivery e-signatures need testing and polish |
+| Security checklist | See BUILD_LOG.md — several items flagged before real client data |
+| SOC 2 audit | Design is ready; formal engagement when client volume warrants |
