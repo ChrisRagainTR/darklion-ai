@@ -153,6 +153,9 @@ test.describe('Messages — Inbox', () => {
     await page.waitForSelector('.thread-card', { timeout: TIMEOUTS.api }).catch(() => null);
     if (await page.locator('.thread-card').count() === 0) return test.skip(true, 'No threads');
     await page.locator('.thread-card').first().click();
+    // Wait for thread content to load (async API call after click)
+    await page.waitForSelector('#thread-messages', { timeout: TIMEOUTS.api }).catch(() => null);
+    await page.waitForTimeout(500);
     // Reply box may be hidden for task threads — soft pass if not shown
     const replyBox = page.locator('#replyBox');
     const isVisible = await replyBox.isVisible().catch(() => false);
@@ -168,6 +171,9 @@ test.describe('Messages — Inbox', () => {
     await page.waitForSelector('.thread-card', { timeout: TIMEOUTS.api }).catch(() => null);
     if (await page.locator('.thread-card').count() === 0) return test.skip(true, 'No threads');
     await page.locator('.thread-card').first().click();
+    // Wait for thread content to load (async API call after click)
+    await page.waitForSelector('#thread-messages', { timeout: TIMEOUTS.api }).catch(() => null);
+    await page.waitForTimeout(500);
     // Reply box may be hidden for task threads
     const replyBox = page.locator('#replyBox');
     const isVisible = await replyBox.isVisible().catch(() => false);
