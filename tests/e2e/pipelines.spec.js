@@ -12,7 +12,17 @@ test.use({ storageState: 'tests/.auth/user.json' });
 /** Opens the first available pipeline board. Returns false if no pipelines exist. */
 async function openFirstBoard(page) {
   await page.goto(`${BASE_URL}/pipelines`, { waitUntil: 'domcontentloaded', timeout: TIMEOUTS.navigation });
-  await page.waitForSelector('#pipe-tbody tr', { timeout: TIMEOUTS.api }).catch(() => null);
+  // Wait for the async loadList() call to populate the tbody
+  await page.waitForFunction(
+    () => {
+      const tbody = document.getElementById('pipe-tbody');
+      if (!tbody) return false;
+      // Has real rows (not the spinner/empty row)
+      return tbody.querySelectorAll('tr').length > 0 &&
+             tbody.querySelector('.pipe-link') !== null;
+    },
+    { timeout: TIMEOUTS.api }
+  ).catch(() => null);
 
   const pipeLink = page.locator('.pipe-link').first();
   if (await pipeLink.count() === 0) return false;

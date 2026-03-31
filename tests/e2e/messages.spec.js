@@ -10,6 +10,43 @@ const { BASE_URL, TIMEOUTS } = require('./helpers/config');
 test.use({ storageState: 'tests/.auth/user.json' });
 
 test.describe('Messages — Inbox', () => {
+  // Seed a test thread if the inbox is empty so data-dependent tests can run.
+  test.beforeAll(async ({ browser }) => {
+    const context = await browser.newContext({ storageState: 'tests/.auth/user.json' });
+    const page = await context.newPage();
+    await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    const token = await page.evaluate(() => localStorage.getItem('dl_token'));
+    if (!token) { await context.close(); return; }
+
+    // Check if inbox already has threads
+    const check = await page.request.get(`${BASE_URL}/api/messages`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const threads = check.ok() ? await check.json() : [];
+    if (Array.isArray(threads) && threads.length > 0) { await context.close(); return; }
+
+    // Get a person to message
+    const peopleRes = await page.request.get(`${BASE_URL}/api/people`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!peopleRes.ok()) { await context.close(); return; }
+    const people = await peopleRes.json();
+    const arr = Array.isArray(people) ? people : (people.people || []);
+    if (!arr.length) { await context.close(); return; }
+
+    // Seed one test thread
+    await page.request.post(`${BASE_URL}/api/messages`, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      data: JSON.stringify({
+        person_id: arr[0].id,
+        subject: '[Test] Automated test thread',
+        body: 'This is a test message created by the Playwright test suite. Safe to ignore.',
+        is_internal: false,
+      }),
+    });
+    await context.close();
+  });
+
   test.beforeEach(async ({ page }) => {
     await page.goto(`${BASE_URL}/messages`, { waitUntil: 'domcontentloaded', timeout: TIMEOUTS.navigation });
   });
