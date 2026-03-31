@@ -938,7 +938,6 @@
 
   <!-- GHOST PREVIEW BANNER (shown only when advisor is ghosting as client) -->
   <div id="ghost-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#7c3aed;color:#fff;font-size:0.82rem;font-weight:600;padding:0.5rem 1.25rem;display:none;align-items:center;gap:0.75rem;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
-    <span>👁️</span>
     <span id="ghost-banner-text">Advisor Preview — you are viewing this portal as the client</span>
     <span style="margin-left:auto;opacity:0.8;font-weight:400;font-size:0.75rem;">This session expires in 1 hour · Clients cannot see this banner</span>
     <a href="/dashboard" style="color:#fff;text-decoration:underline;font-size:0.78rem;white-space:nowrap;">← Back to DarkLion</a>
@@ -1242,7 +1241,7 @@
             const banner = document.getElementById('ghost-banner');
             const bannerText = document.getElementById('ghost-banner-text');
             if (banner) {
-              bannerText.textContent = `👁️ Advisor Preview — viewing portal as ${payload.name || 'client'}`;
+              bannerText.textContent = `Advisor Preview — viewing portal as ${payload.name || 'client'}`;
               banner.style.display = 'flex';
               // Push topnav down to make room for banner
               const nav = document.getElementById('portal-topnav');
