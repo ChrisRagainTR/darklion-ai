@@ -1,0 +1,137 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - link "DL DarkLion" [ref=e3] [cursor=pointer]:
+      - /url: /dashboard
+      - img "DL" [ref=e4]
+      - generic [ref=e5]: DarkLion
+    - generic [ref=e7]:
+      - generic: 🔍
+      - textbox "Search relationships, companies, people…" [ref=e8]
+    - generic [ref=e9] [cursor=pointer]:
+      - img [ref=e11]
+      - generic [ref=e12]:
+        - generic [ref=e13]: Test User ▼
+        - generic [ref=e14]: Sentinel Wealth & Tax
+  - complementary [ref=e15]:
+    - generic [ref=e16]: Clients
+    - link "🗂️ CRM" [ref=e17] [cursor=pointer]:
+      - /url: /crm
+      - text: 🗂️
+      - generic [ref=e18]: CRM
+    - generic [ref=e19]: Messages
+    - link "💬 My Inbox" [ref=e20] [cursor=pointer]:
+      - /url: /messages
+      - text: 💬
+      - generic [ref=e21]: My Inbox
+    - link "🗒️ Summaries" [ref=e22] [cursor=pointer]:
+      - /url: /conversation-summaries
+      - text: 🗒️
+      - generic [ref=e23]: Summaries
+    - link "📝 Templates" [ref=e24] [cursor=pointer]:
+      - /url: /templates
+      - text: 📝
+      - generic [ref=e25]: Templates
+    - link "📢 Bulk Send" [ref=e26] [cursor=pointer]:
+      - /url: /bulk-send
+      - text: 📢
+      - generic [ref=e27]: Bulk Send
+    - generic [ref=e28]: Work
+    - link "📋 Pipelines" [ref=e29] [cursor=pointer]:
+      - /url: /pipelines
+      - text: 📋
+      - generic [ref=e30]: Pipelines
+    - link "📅 Statement Calendar" [ref=e31] [cursor=pointer]:
+      - /url: /statements-calendar
+      - text: 📅
+      - generic [ref=e32]: Statement Calendar
+    - generic [ref=e33]: Engagements
+    - link "📄 Proposals" [ref=e34] [cursor=pointer]:
+      - /url: /proposals
+      - text: 📄
+      - generic [ref=e35]: Proposals
+    - generic [ref=e36]: Forecast
+    - link "📈 Revenue Forecast" [ref=e37] [cursor=pointer]:
+      - /url: /forecast
+      - text: 📈
+      - generic [ref=e38]: Revenue Forecast
+    - generic [ref=e39]: Account
+    - link "⚙️ Settings" [ref=e40] [cursor=pointer]:
+      - /url: /settings
+      - text: ⚙️
+      - generic [ref=e41]: Settings
+    - link "❓ Help Center" [ref=e42] [cursor=pointer]:
+      - /url: /help
+      - text: ❓
+      - generic [ref=e43]: Help Center
+  - main [ref=e44]:
+    - main [ref=e45]:
+      - generic [ref=e46]:
+        - generic [ref=e47]:
+          - heading "💬 My Inbox" [level=2] [ref=e49]
+          - textbox "Search by name…" [ref=e50]
+        - generic [ref=e51]:
+          - button "💬 Messages 1" [ref=e52] [cursor=pointer]:
+            - text: 💬 Messages
+            - generic [ref=e53]: "1"
+          - button "📋 Tasks 0" [ref=e54] [cursor=pointer]:
+            - text: 📋 Tasks
+            - generic [ref=e55]: "0"
+        - generic [ref=e57] [cursor=pointer]:
+          - generic [ref=e58]:
+            - generic [ref=e59]: Chris Ragain
+            - generic [ref=e60]: 11m ago
+          - generic [ref=e61]: "[Test] Automated test thread"
+          - generic [ref=e62]: This is a test message created by the Playwright test suite. Safe to ignore.
+          - button "Archive" [ref=e64]
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - link "Chris Ragain" [ref=e70] [cursor=pointer]:
+              - /url: /crm/person/25
+            - generic [ref=e71]:
+              - generic [ref=e72]: chris.ragain@teerival.com
+              - generic [ref=e73]: 239.297.2988
+              - generic [ref=e74]: · Ragain Family
+          - button "Archive" [ref=e76] [cursor=pointer]
+        - generic [ref=e78]:
+          - generic [ref=e80]: This is a test message created by the Playwright test suite. Safe to ignore.
+          - generic [ref=e81]: Test Staff Member · 11m ago
+        - generic [ref=e82]:
+          - textbox "Write a reply… (use @Name to loop in a colleague)" [ref=e83]
+          - generic [ref=e84]:
+            - button "Send Reply" [ref=e85] [cursor=pointer]
+            - button "📱 Send as Text" [ref=e86] [cursor=pointer]
+            - button "📎 Attach" [ref=e87] [cursor=pointer]
+            - button "Archive" [ref=e88] [cursor=pointer]
+      - generic [ref=e89]:
+        - generic [ref=e90]:
+          - heading "🤖 30-Day Summary" [level=3] [ref=e91]
+          - button "↺ Refresh" [ref=e92] [cursor=pointer]
+        - generic [ref=e93]:
+          - generic [ref=e94]:
+            - strong [ref=e95]: Recent Topics
+            - text: "- 2025 tax return preparation and review"
+            - strong [ref=e96]: Action Items
+            - text: "- Client needs to review 2025 tax return for accuracy"
+            - text: "- Client must approve and electronically sign the return, or request changes if corrections are needed"
+            - strong [ref=e97]: Documents
+            - text: "- 2025 tax return (prepared and awaiting client review)"
+            - strong [ref=e98]: Client Mood/Concerns
+            - text: "- No concerns or questions indicated in recent communications"
+          - generic [ref=e99]: Based on 9 messages · 10:00 AM
+    - button "Agent AI" [ref=e100] [cursor=pointer]:
+      - img "Agent AI" [ref=e101]
+    - generic:
+      - generic:
+        - generic: Agent AI
+        - generic: Connecting…
+        - button "✕"
+      - generic:
+        - generic: Loading…
+      - generic:
+        - textbox "Ask anything…" [disabled]
+        - button "↑" [disabled]
+```

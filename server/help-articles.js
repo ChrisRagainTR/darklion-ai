@@ -74,6 +74,11 @@ const articles = [
   <span>Key Concepts</span>
 </div>
 <h1 class="article-title">Key Concepts</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/key-concepts.png" alt="CRM overview showing Relationships, People, and Companies tabs" loading="lazy" />
+  <figcaption>The three-level hierarchy: Relationships (households), People (individuals), and Companies (business entities).</figcaption>
+</figure>
+
 <div class="article-meta">Section: Getting Started</div>
 <div class="article-body">
 
@@ -137,6 +142,11 @@ const articles = [
   <span>Your First Client</span>
 </div>
 <h1 class="article-title">Your First Client</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/first-client.png" alt="CRM Relationships tab with New Relationship button" loading="lazy" />
+  <figcaption>Start here: Create your first Relationship in the CRM.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Getting Started</div>
 <div class="article-body">
 
@@ -208,6 +218,11 @@ const articles = [
   <span>CRM Overview</span>
 </div>
 <h1 class="article-title">CRM Overview</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/crm-overview.png" alt="CRM showing Relationships, People, Companies with search and filter" loading="lazy" />
+  <figcaption>The CRM dashboard: manage all your client relationships, people, and companies in one place.</figcaption>
+</figure>
+
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
 
@@ -264,6 +279,11 @@ const articles = [
   <span>Managing Relationships</span>
 </div>
 <h1 class="article-title">Managing Relationships</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/crm-relationships.png" alt="Relationships list showing households" loading="lazy" />
+  <figcaption>Relationships list — each row is a household or group billing unit.</figcaption>
+</figure>
+
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
 
@@ -347,6 +367,11 @@ const articles = [
   <span>Managing People</span>
 </div>
 <h1 class="article-title">Managing People</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/crm-people.png" alt="People list showing individual users" loading="lazy" />
+  <figcaption>People list — each person can have their own portal login.</figcaption>
+</figure>
+
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
 
@@ -436,6 +461,11 @@ const articles = [
   <span>Managing Companies</span>
 </div>
 <h1 class="article-title">Managing Companies</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/crm-companies.png" alt="Companies list showing business entities" loading="lazy" />
+  <figcaption>Companies list — S-Corps, LLCs, Trusts, and other legal entities.</figcaption>
+</figure>
+
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
 
@@ -533,6 +563,11 @@ const articles = [
   <span>Search</span>
 </div>
 <h1 class="article-title">Search</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/search.png" alt="Top header with search bar" loading="lazy" />
+  <figcaption>Search bar in the top header — find any client, person, or company instantly.</figcaption>
+</figure>
+
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
 
@@ -590,6 +625,11 @@ const articles = [
   <span>Documents Overview</span>
 </div>
 <h1 class="article-title">Documents Overview</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/documents.png" alt="Documents page showing organized file list" loading="lazy" />
+  <figcaption>Documents page — upload, organize, and deliver files to clients.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Documents</div>
 <div class="article-body">
 
@@ -644,6 +684,11 @@ const articles = [
   <span>Uploading Documents</span>
 </div>
 <h1 class="article-title">Uploading Documents</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/uploading-documents.png" alt="Upload button and file management controls" loading="lazy" />
+  <figcaption>Click the Upload button to add new documents to your clients' folders.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Documents</div>
 <div class="article-body">
 
@@ -708,6 +753,11 @@ const articles = [
   <span>Delivering to Clients</span>
 </div>
 <h1 class="article-title">Delivering to Clients</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/delivering-to-clients.png" alt="Deliver controls on documents page" loading="lazy" />
+  <figcaption>Use the deliver dropdown to send documents to a specific client portal.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Documents</div>
 <div class="article-body">
 
@@ -767,6 +817,11 @@ const articles = [
   <span>Folder Structure</span>
 </div>
 <h1 class="article-title">Folder Structure</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/document-folders.png" alt="Document folder and category organization" loading="lazy" />
+  <figcaption>Documents are organized by folder section (firm or client uploaded) and category (tax, bookkeeping, other).</figcaption>
+</figure>
+
 <div class="article-meta">Section: Documents</div>
 <div class="article-body">
 
@@ -842,6 +897,11 @@ const articles = [
   <span>Portal Overview</span>
 </div>
 <h1 class="article-title">Client Portal Overview</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/portal-overview.png" alt="Client portal showing documents and messages" loading="lazy" />
+  <figcaption>The client portal: where your clients upload documents, send messages, and view deliverables.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Client Portal</div>
 <div class="article-body">
 
@@ -891,6 +951,11 @@ const articles = [
   <span>Inviting Clients</span>
 </div>
 <h1 class="article-title">Inviting Clients to the Portal</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/inviting-clients.png" alt="Invite to Portal button in Person detail view" loading="lazy" />
+  <figcaption>Click the "Invite to Portal" button on any person's detail page to send them a login link.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Client Portal</div>
 <div class="article-body">
 
@@ -942,6 +1007,11 @@ const articles = [
   <span>What Clients See</span>
 </div>
 <h1 class="article-title">What Clients See</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/what-clients-see.png" alt="Client portal preview from admin view" loading="lazy" />
+  <figcaption>Use "View Portal" to preview exactly what your client sees when they log in.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Client Portal</div>
 <div class="article-body">
 
@@ -1024,6 +1094,11 @@ const articles = [
   <span>Client Financials Upload</span>
 </div>
 <h1 class="article-title">Client Financials Upload</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/client-financials.png" alt="Financials upload and QuickBooks connection controls" loading="lazy" />
+  <figcaption>On the Company details page, clients can connect QuickBooks or upload P&L and Balance Sheet files.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Client Portal</div>
 <div class="article-body">
 
@@ -1091,6 +1166,11 @@ const articles = [
   <span>Pipelines Overview</span>
 </div>
 <h1 class="article-title">Pipelines Overview</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/pipelines.png" alt="Pipelines dashboard with list of workflows" loading="lazy" />
+  <figcaption>Pipelines are workflows you create to track client progress — tax returns, engagements, follow-ups, etc.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Pipelines</div>
 <div class="article-body">
 
@@ -1152,6 +1232,11 @@ const articles = [
   <span>Creating a Pipeline</span>
 </div>
 <h1 class="article-title">Creating a Pipeline</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/creating-pipelines.png" alt="New Pipeline button on pipelines dashboard" loading="lazy" />
+  <figcaption>Click "+ New Pipeline" to create a workflow for tracking your clients.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Pipelines</div>
 <div class="article-body">
 
@@ -1231,6 +1316,11 @@ const articles = [
   <span>Stages & Cards</span>
 </div>
 <h1 class="article-title">Stages & Cards</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/pipeline-cards.png" alt="Kanban board showing cards across pipeline stages" loading="lazy" />
+  <figcaption>The kanban board — drag cards between stages to move clients through your workflow.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Pipelines</div>
 <div class="article-body">
 
@@ -1315,6 +1405,11 @@ const articles = [
   <span>Smart Triggers</span>
 </div>
 <h1 class="article-title">Smart Triggers</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/smart-triggers.png" alt="Trigger configuration in pipeline settings" loading="lazy" />
+  <figcaption>Triggers automatically fire actions (like sending messages) when specific things happen — e.g. when a card is created or completed.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Pipelines</div>
 <div class="article-body">
 
@@ -1385,6 +1480,11 @@ const articles = [
   <span>Stage Actions</span>
 </div>
 <h1 class="article-title">Stage Actions</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/stage-actions.png" alt="Stage action configuration in pipeline settings" loading="lazy" />
+  <figcaption>Stage actions run automatically when a card enters a specific stage — send messages, create tasks, etc.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Pipelines</div>
 <div class="article-body">
 
@@ -1463,6 +1563,11 @@ const articles = [
   <span>Messaging Overview</span>
 </div>
 <h1 class="article-title">Messaging Overview</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/messages.png" alt="Messaging inbox page" loading="lazy" />
+  <figcaption>Secure messaging — send and receive messages directly inside DarkLion instead of email.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Messaging</div>
 <div class="article-body">
 
@@ -1516,6 +1621,11 @@ const articles = [
   <span>Staff Inbox</span>
 </div>
 <h1 class="article-title">Staff Inbox</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/staff-inbox.png" alt="Staff messaging inbox with thread list" loading="lazy" />
+  <figcaption>Your inbox shows all message threads with clients, sorted by activity.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Messaging</div>
 <div class="article-body">
 
@@ -1578,6 +1688,11 @@ const articles = [
   <span>Sending Messages</span>
 </div>
 <h1 class="article-title">Sending Messages</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/sending-messages.png" alt="Compose button for new message" loading="lazy" />
+  <figcaption>Click "Compose" to start a new message thread with a client.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Messaging</div>
 <div class="article-body">
 
@@ -1653,6 +1768,11 @@ const articles = [
   <span>Internal Notes</span>
 </div>
 <h1 class="article-title">Internal Notes</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/internal-notes.png" alt="Internal note toggle in message thread" loading="lazy" />
+  <figcaption>Toggle "Internal" before sending to hide your note from the client — staff only.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Messaging</div>
 <div class="article-body">
 
@@ -1708,6 +1828,11 @@ const articles = [
   <span>Tax Organizer Overview</span>
 </div>
 <h1 class="article-title">Tax Organizer Overview</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/organizer-overview.png" alt="Tax organizer management in person detail view" loading="lazy" />
+  <figcaption>Tax organizers are personalized checklists your clients fill out and return with documents.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Tax Organizer</div>
 <div class="article-body">
 
@@ -1779,6 +1904,11 @@ const articles = [
   <span>Sending an Organizer</span>
 </div>
 <h1 class="article-title">Sending an Organizer</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/sending-organizer.png" alt="Send Organizer button in person workflow tab" loading="lazy" />
+  <figcaption>Click "Send Organizer" to start a new tax document checklist for your client.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Tax Organizer</div>
 <div class="article-body">
 
@@ -1846,6 +1976,11 @@ const articles = [
   <span>Reviewing Submissions</span>
 </div>
 <h1 class="article-title">Reviewing Submissions</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/reviewing-submissions.png" alt="Organizer submissions review interface" loading="lazy" />
+  <figcaption>Review your client's responses and download the compiled workpaper PDF.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Tax Organizer</div>
 <div class="article-body">
 
@@ -1916,6 +2051,11 @@ const articles = [
   <span>Proposals</span>
 </div>
 <h1 class="article-title">Proposals</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/proposals.png" alt="Proposals list showing engagement letters" loading="lazy" />
+  <figcaption>Proposals are engagement letters your clients sign electronically.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Other</div>
 <div class="article-body">
 
@@ -1994,6 +2134,11 @@ const articles = [
   <span>Bulk Send</span>
 </div>
 <h1 class="article-title">Bulk Send</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/bulk-send.png" alt="Bulk send audience builder and compose form" loading="lazy" />
+  <figcaption>Send a message to multiple clients at once with audience filters.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Other</div>
 <div class="article-body">
 
@@ -2074,6 +2219,11 @@ const articles = [
   <span>Settings & Branding</span>
 </div>
 <h1 class="article-title">Settings & Branding</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/settings.png" alt="Settings page with firm branding and configuration" loading="lazy" />
+  <figcaption>Settings: customize your firm's logo, colors, domain, and API keys.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Other</div>
 <div class="article-body">
 
@@ -2171,6 +2321,11 @@ const articles = [
   <span>Viktor AI</span>
 </div>
 <h1 class="article-title">Viktor AI</h1>
+<figure class="help-screenshot">
+  <img src="/images/help/viktor-ai.png" alt="Viktor AI panel on dashboard" loading="lazy" />
+  <figcaption>Viktor is your AI co-worker — ask about clients, pipelines, workload, tax strategies, anything. He has full access to firm data.</figcaption>
+</figure>
+
 <div class="article-meta">Section: Viktor AI</div>
 <div class="article-body">
 

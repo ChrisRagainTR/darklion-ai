@@ -1,0 +1,105 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - link "DL DarkLion" [ref=e3] [cursor=pointer]:
+      - /url: /dashboard
+      - img "DL" [ref=e4]
+      - generic [ref=e5]: DarkLion
+    - generic [ref=e7]:
+      - generic: 🔍
+      - textbox "Search relationships, companies, people…" [ref=e8]
+    - generic [ref=e9] [cursor=pointer]:
+      - img [ref=e11]
+      - generic [ref=e12]:
+        - generic [ref=e13]: Test User ▼
+        - generic [ref=e14]: Sentinel Wealth & Tax
+  - complementary [ref=e15]:
+    - generic [ref=e16]: Clients
+    - link "🗂️ CRM" [ref=e17] [cursor=pointer]:
+      - /url: /crm
+      - text: 🗂️
+      - generic [ref=e18]: CRM
+    - generic [ref=e19]: Messages
+    - link "💬 My Inbox" [ref=e20] [cursor=pointer]:
+      - /url: /messages
+      - text: 💬
+      - generic [ref=e21]: My Inbox
+    - link "🗒️ Summaries" [ref=e22] [cursor=pointer]:
+      - /url: /conversation-summaries
+      - text: 🗒️
+      - generic [ref=e23]: Summaries
+    - link "📝 Templates" [ref=e24] [cursor=pointer]:
+      - /url: /templates
+      - text: 📝
+      - generic [ref=e25]: Templates
+    - link "📢 Bulk Send" [ref=e26] [cursor=pointer]:
+      - /url: /bulk-send
+      - text: 📢
+      - generic [ref=e27]: Bulk Send
+    - generic [ref=e28]: Work
+    - link "📋 Pipelines" [ref=e29] [cursor=pointer]:
+      - /url: /pipelines
+      - text: 📋
+      - generic [ref=e30]: Pipelines
+    - link "📅 Statement Calendar" [ref=e31] [cursor=pointer]:
+      - /url: /statements-calendar
+      - text: 📅
+      - generic [ref=e32]: Statement Calendar
+    - generic [ref=e33]: Engagements
+    - link "📄 Proposals" [ref=e34] [cursor=pointer]:
+      - /url: /proposals
+      - text: 📄
+      - generic [ref=e35]: Proposals
+    - generic [ref=e36]: Forecast
+    - link "📈 Revenue Forecast" [ref=e37] [cursor=pointer]:
+      - /url: /forecast
+      - text: 📈
+      - generic [ref=e38]: Revenue Forecast
+    - generic [ref=e39]: Account
+    - link "⚙️ Settings" [ref=e40] [cursor=pointer]:
+      - /url: /settings
+      - text: ⚙️
+      - generic [ref=e41]: Settings
+    - link "❓ Help Center" [ref=e42] [cursor=pointer]:
+      - /url: /help
+      - text: ❓
+      - generic [ref=e43]: Help Center
+  - main [ref=e44]:
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - generic [ref=e47]:
+          - button "← Pipelines" [ref=e48] [cursor=pointer]
+          - generic [ref=e49]: "|"
+          - generic [ref=e50]: —
+        - generic [ref=e51]:
+          - generic [ref=e52]: "Year:"
+          - combobox [ref=e53] [cursor=pointer]:
+            - option "2027"
+            - option "2026" [selected]
+            - option "2025"
+            - option "2024"
+            - option "2023"
+          - button "+ Add Job" [ref=e54] [cursor=pointer]
+          - link "⚙️ Settings" [ref=e55] [cursor=pointer]:
+            - /url: /pipelines
+      - paragraph [ref=e58]: Loading…
+    - generic [ref=e59]:
+      - generic [ref=e60]:
+        - generic [ref=e61]: Job Details
+        - button "✕" [ref=e62] [cursor=pointer]
+      - paragraph [ref=e64]: Loading…
+    - button "Agent AI" [ref=e65] [cursor=pointer]:
+      - img "Agent AI" [ref=e66]
+    - generic:
+      - generic:
+        - generic: Agent AI
+        - generic: Connecting…
+        - button "✕"
+      - generic:
+        - generic: Loading…
+      - generic:
+        - textbox "Ask anything…" [disabled]
+        - button "↑" [disabled]
+```
