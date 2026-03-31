@@ -1327,10 +1327,12 @@
 
   let docsData = [];
   const PERSON_CATS = [{ key: 'tax', label: 'Tax', icon: '🧾' }, { key: 'other', label: 'Other', icon: '📎' }];
+  const _personCatKeys = new Set(PERSON_CATS.map(c => c.key));
   const DOCS_YEARS = (() => { const a = []; for (let y = new Date().getFullYear(); y >= 2018; y--) a.push(String(y)); return a; })();
 
   function buildDocsSection(docs, sectionKey, sectionTitle, sectionIcon) {
-    const sectionDocs = docs.filter(d => (d.folder_section || 'firm_uploaded') === sectionKey);
+    const sectionDocs = docs.filter(d => (d.folder_section || 'firm_uploaded') === sectionKey)
+      .map(d => ({ ...d, folder_category: _personCatKeys.has(d.folder_category) ? d.folder_category : 'other' }));
     let s = `<div class="docs-col-title">${sectionIcon} ${sectionTitle} <span style="font-size:0.75rem;font-weight:400;color:var(--muted);">(${sectionDocs.length})</span></div>`;
     const recentYears = DOCS_YEARS.slice(0, 2);
     const prevYears = DOCS_YEARS.slice(2);
