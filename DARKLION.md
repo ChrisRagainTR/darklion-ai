@@ -489,6 +489,13 @@ Added 5 new spec files + fixed 2 existing:
 - `e20b698` — portal UX fixes + refactor
 - `f2c1a6e` — help center + portal ghost preview + tests
 
+### 2026-03-31 (follow-up #2) — Fix Yellow Halo on Custom Branded Login Page
+
+- **Bug:** `my.sentineltax.co` (and all custom domain login pages) showed a yellow glow/halo around the firm logo in the login card
+- **Cause:** `.brand-logo` CSS in `server/views/login-branded.ejs` had `filter: drop-shadow(0 0 20px rgba(201,168,76,0.4))` — a DarkLion gold glow that makes no sense on white-label pages showing a client's own logo
+- **Fix:** Removed `filter` and `transition` from `.brand-logo` and removed the `.brand-logo:hover` rule entirely. Logo now renders cleanly with no colored border, glow, or effect.
+- Pushed to dev: `d975483`
+
 ### 2026-03-31 (follow-up) — Help Center Accuracy Fix
 
 - **Removed inaccurate "firm-level document library" references** from `server/help-articles.js`
