@@ -787,35 +787,7 @@ router.post('/client/:year/submit', requirePortal, async (req, res) => {
       .catch(e => console.error('[organizer] fireTrigger organizer_submitted non-fatal:', e));
 
     // ── Email notification to firm (non-fatal) ─────────────
-    try {
-      const firmRes = await pool.query('SELECT name, contact_email FROM firms WHERE id = $1', [organizer.firm_id]);
-      const firm = firmRes.rows[0];
-      const notifyEmail = firm?.contact_email || process.env.RESEND_NOTIFY_EMAIL;
-      if (notifyEmail && process.env.RESEND_API_KEY) {
-        const uploadedCount = items.filter(i => i.status === 'uploaded').length;
-        const ntyCount = items.filter(i => i.status === 'not_this_year').length;
-        const sentinelCount = items.filter(i => i.sentinel_provides).length;
-        await resend.emails.send({
-          from: process.env.RESEND_FROM || `${firm?.name || 'DarkLion'} <messages@sentineltax.co>`,
-          to: notifyEmail,
-          subject: `[Organizer Submitted] ${clientName} — ${year}`,
-          html: `
-            <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-              <h2 style="color:#0f1926;">Tax Organizer Submitted</h2>
-              <p><strong>${clientName}</strong> has submitted their ${year} tax organizer.</p>
-              <table style="border-collapse:collapse;width:100%;margin:1rem 0;">
-                <tr><td style="padding:0.4rem 0.75rem;border:1px solid #ddd;">Documents uploaded</td><td style="padding:0.4rem 0.75rem;border:1px solid #ddd;font-weight:700;">${uploadedCount}</td></tr>
-                <tr><td style="padding:0.4rem 0.75rem;border:1px solid #ddd;">Marked Not This Year</td><td style="padding:0.4rem 0.75rem;border:1px solid #ddd;">${ntyCount}</td></tr>
-                <tr><td style="padding:0.4rem 0.75rem;border:1px solid #ddd;">Provided by Sentinel</td><td style="padding:0.4rem 0.75rem;border:1px solid #ddd;">${sentinelCount}</td></tr>
-              </table>
-              <p><a href="https://darklion.ai/crm/person/${personId}" style="background:#c9a84c;color:#fff;padding:0.5rem 1rem;border-radius:6px;text-decoration:none;">View in DarkLion →</a></p>
-            </div>
-          `,
-        });
-      }
-    } catch (emailErr) {
-      console.error('[organizer] submit email non-fatal:', emailErr.message);
-    }
+    // Staff email notification removed — staff use pipeline tasks instead
 
     res.json({ success: true, workpaper_document_id: wpDocRes.rows[0].id });
 
