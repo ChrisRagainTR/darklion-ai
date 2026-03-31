@@ -1021,12 +1021,29 @@ async function initDB() {
       ein TEXT DEFAULT '',
       sentinel_provides BOOLEAN DEFAULT FALSE,  -- Altruist or firm-prepared entity
       status TEXT NOT NULL DEFAULT 'pending'
-        CHECK(status IN ('pending','uploaded','not_this_year')),
+        CHECK(status IN ('pending','uploaded','not_this_year','not_applicable')),
       document_id INTEGER REFERENCES documents(id),  -- the uploaded file
       display_order INTEGER DEFAULT 0,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    -- Expand CHECK constraint to include 'not_applicable'
+    DO $$ BEGIN
+      ALTER TABLE tax_organizer_items DROP CONSTRAINT IF EXISTS tax_organizer_items_status_check;
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END $$;
+    DO $$ BEGIN
+      ALTER TABLE tax_organizer_items ADD CONSTRAINT tax_organizer_items_status_check
+        CHECK(status IN ('pending','uploaded','not_this_year','not_applicable'));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+
+    -- Add bulk_document_id to tax_organizers (the "dump everything in one PDF" upload)
+    DO $$ BEGIN
+      ALTER TABLE tax_organizers ADD COLUMN IF NOT EXISTS bulk_document_id INTEGER REFERENCES documents(id);
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
   `);
 }
 

@@ -412,7 +412,7 @@ router.put('/client/:year/item/:itemId', requirePortal, async (req, res) => {
   const { status, document_id } = req.body;
   const personId = req.portal.personId;
 
-  if (!['pending', 'uploaded', 'not_this_year'].includes(status)) {
+  if (!['pending', 'uploaded', 'not_this_year', 'not_applicable'].includes(status)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
 
@@ -543,6 +543,65 @@ router.post('/client/:year/upload-item/:itemId', requirePortal, upload.single('f
 });
 
 // ─────────────────────────────────────────────────────────────
+// PORTAL: Bulk PDF upload — one file covering all documents
+// POST /portal/organizer/client/:year/bulk-upload
+// ─────────────────────────────────────────────────────────────
+router.post('/client/:year/bulk-upload', requirePortal, upload.single('file'), async (req, res) => {
+  const { year } = req.params;
+  const personId = req.portal.personId;
+
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png'];
+  if (!allowedMimes.includes(req.file.mimetype)) {
+    return res.status(400).json({ error: 'Please upload a PDF or image file.' });
+  }
+
+  try {
+    // Verify organizer exists for this client
+    const orgRes = await pool.query(
+      'SELECT * FROM tax_organizers WHERE person_id = $1 AND tax_year = $2',
+      [personId, year]
+    );
+    if (!orgRes.rows.length) return res.status(404).json({ error: 'No organizer found' });
+    const organizer = orgRes.rows[0];
+    const firmId = organizer.firm_id;
+
+    // Upload bulk PDF to S3
+    const bucket = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET || 'darklion-docs';
+    const ext = req.file.originalname.split('.').pop().toLowerCase();
+    const safeFilename = sanitizeFilename ? sanitizeFilename(req.file.originalname) : req.file.originalname;
+    const key = `firms/${firmId}/people/${personId}/organizer/${year}/bulk-${Date.now()}.${ext}`;
+    await uploadFile({ buffer: req.file.buffer, key, bucket, mimeType: req.file.mimetype });
+
+    // Get person name for display_name
+    const personRes = await pool.query('SELECT first_name, last_name FROM people WHERE id = $1', [personId]);
+    const person = personRes.rows[0];
+    const clientName = person ? `${person.first_name} ${person.last_name}` : 'Client';
+    const displayName = `${year} Bulk Tax Documents — ${clientName}.${ext}`;
+
+    // Save document record
+    const docRes = await pool.query(`
+      INSERT INTO documents (firm_id, owner_type, owner_id, year, doc_type, display_name,
+        s3_bucket, s3_key, mime_type, size_bytes, uploaded_by_type, folder_section, folder_category)
+      VALUES ($1, 'person', $2, $3, 'organizer_bulk', $4, $5, $6, $7, $8, 'client', 'client_uploaded', 'organizer')
+      RETURNING id
+    `, [firmId, personId, year, displayName, bucket, key, req.file.mimetype, req.file.size]);
+    const documentId = docRes.rows[0].id;
+
+    // Store bulk_document_id on the organizer and bump to in_progress
+    await pool.query(`
+      UPDATE tax_organizers SET bulk_document_id = $1, status = CASE WHEN status = 'pending' THEN 'in_progress' ELSE status END, updated_at = NOW()
+      WHERE id = $2
+    `, [documentId, organizer.id]);
+
+    res.json({ success: true, document_id: documentId, filename: safeFilename });
+  } catch (err) {
+    console.error('Portal bulk upload error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
 // PORTAL: Submit organizer — build workpaper PDF
 // ─────────────────────────────────────────────────────────────
 router.post('/client/:year/submit', requirePortal, async (req, res) => {
@@ -563,7 +622,7 @@ router.post('/client/:year/submit', requirePortal, async (req, res) => {
     );
     const items = itemsRes.rows;
 
-    // Check all actionable items are resolved
+    // Check all actionable items are resolved (uploaded, not_this_year, or not_applicable)
     const pending = items.filter(i => !i.sentinel_provides && i.status === 'pending');
     if (pending.length > 0) {
       return res.status(400).json({ error: `${pending.length} items still pending`, pending: pending.map(i => i.payer_name) });
@@ -599,19 +658,32 @@ router.post('/client/:year/submit', requirePortal, async (req, res) => {
     // Document summary
     const uploaded = items.filter(i => i.status === 'uploaded');
     const notThisYear = items.filter(i => i.status === 'not_this_year');
+    const notApplicable = items.filter(i => i.status === 'not_applicable');
+    const resolvedByBulk = items.filter(i => i.status === 'not_this_year' || i.status === 'not_applicable');
     const sentinelItems = items.filter(i => i.sentinel_provides);
+
+    // Check for a bulk upload note on this organizer
+    const bulkDocId = organizer.bulk_document_id;
 
     coverPage.drawText('DOCUMENT SUMMARY', { x: 40, y: height - 195, size: 10, font: boldFont, color: rgb(0.4, 0.4, 0.4) });
     coverPage.drawText(`✓ ${uploaded.length} documents uploaded`, { x: 40, y: height - 215, size: 11, font, color: rgb(0.18, 0.7, 0.45) });
-    coverPage.drawText(`– ${notThisYear.length} marked Not This Year`, { x: 40, y: height - 233, size: 11, font, color: rgb(0.4, 0.4, 0.4) });
-    coverPage.drawText(`🏢 ${sentinelItems.length} provided by Sentinel`, { x: 40, y: height - 251, size: 11, font, color: rgb(0.788, 0.659, 0.298) });
+    if (bulkDocId) {
+      coverPage.drawText(`📦 Bulk PDF uploaded (client provided combined file)`, { x: 40, y: height - 233, size: 10, font, color: rgb(0.4, 0.6, 0.9) });
+    }
+    coverPage.drawText(`– ${notThisYear.length} marked Not This Year`, { x: 40, y: bulkDocId ? height - 251 : height - 233, size: 11, font, color: rgb(0.4, 0.4, 0.4) });
+    coverPage.drawText(`✗ ${notApplicable.length} marked Not Applicable`, { x: 40, y: bulkDocId ? height - 269 : height - 251, size: 11, font, color: rgb(0.5, 0.4, 0.4) });
+    coverPage.drawText(`🏢 ${sentinelItems.length} provided by Sentinel`, { x: 40, y: bulkDocId ? height - 287 : height - 269, size: 11, font, color: rgb(0.788, 0.659, 0.298) });
+
+    const summaryEndY = bulkDocId ? height - 300 : height - 282;
 
     // Not This Year list
-    if (notThisYear.length > 0) {
-      coverPage.drawLine({ start: { x: 40, y: height - 270 }, end: { x: width - 40, y: height - 270 }, thickness: 0.5, color: rgb(0.85, 0.85, 0.85) });
-      coverPage.drawText('NOT THIS YEAR — CLIENT CONFIRMED N/A:', { x: 40, y: height - 290, size: 9, font: boldFont, color: rgb(0.5, 0.5, 0.5) });
-      notThisYear.forEach((item, i) => {
-        coverPage.drawText(`  – ${item.payer_name}`, { x: 40, y: height - 308 - (i * 15), size: 9, font, color: rgb(0.5, 0.5, 0.5) });
+    const declaredNA = [...notThisYear, ...notApplicable];
+    if (declaredNA.length > 0) {
+      coverPage.drawLine({ start: { x: 40, y: summaryEndY - 10 }, end: { x: width - 40, y: summaryEndY - 10 }, thickness: 0.5, color: rgb(0.85, 0.85, 0.85) });
+      coverPage.drawText('CLIENT DECLARED N/A:', { x: 40, y: summaryEndY - 30, size: 9, font: boldFont, color: rgb(0.5, 0.5, 0.5) });
+      declaredNA.forEach((item, i) => {
+        const label = item.status === 'not_applicable' ? '✗' : '–';
+        coverPage.drawText(`  ${label} ${item.payer_name}`, { x: 40, y: summaryEndY - 48 - (i * 15), size: 9, font, color: rgb(0.5, 0.5, 0.5) });
       });
     }
 
