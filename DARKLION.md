@@ -496,6 +496,25 @@ Added 5 new spec files + fixed 2 existing:
 - **Fix:** Removed `filter` and `transition` from `.brand-logo` and removed the `.brand-logo:hover` rule entirely. Logo now renders cleanly with no colored border, glow, or effect.
 - Pushed to dev: `d975483`
 
+### 2026-03-31 (follow-up #3) — Bulk PDF Uploader + "I don't have this" on Tax Organizer
+
+#### Bulk PDF Uploader (Step 3 of organizer)
+- **Card:** The "Have everything in one PDF?" card is now a real upload experience — click or drag & drop
+- **Endpoint:** `POST /portal/organizer/client/:year/bulk-upload` — accepts PDF/JPG/PNG, saves to S3 as `organizer_bulk` doc, stores `bulk_document_id` on the `tax_organizers` row
+- **UX states:** Idle → Uploading (progress bar animation) → ✅ Green success ("PDF uploaded — we'll sort it out from here") / ❌ Red error with retry
+- **Demo mode:** Works without portal token — simulates upload for testing
+- **Workpaper:** Cover page now notes if a bulk PDF was submitted, includes it in the doc summary
+
+#### "I don't have this" Button (per item, Step 3)
+- **Third action** added alongside Upload / Not This Year on every checklist item
+- **Status:** `not_applicable` — new valid status added to `tax_organizer_items`
+- **Visual:** Red ✗, strikethrough label, dimmed row (distinct from "Not This Year" which is gray/dash)
+- **API:** Uses existing `PUT /portal/organizer/client/:year/item/:itemId` — allowed `not_applicable` as valid status
+- **Undo:** Restores item to Pending with all 3 buttons
+- **Submit:** `not_applicable` counts as resolved — no longer blocks organizer submission
+- **DB:** Idempotent migration drops+re-adds `tax_organizer_items_status_check` to include `not_applicable`; also adds `bulk_document_id` column to `tax_organizers`
+- Pushed to dev: `4d1ddc4`
+
 ### 2026-03-31 (follow-up) — Help Center Accuracy Fix
 
 - **Removed inaccurate "firm-level document library" references** from `server/help-articles.js`
