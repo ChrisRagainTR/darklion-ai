@@ -27,6 +27,11 @@ const articles = [
 <div class="article-meta">Section: Getting Started</div>
 <div class="article-body">
 
+<figure class="help-screenshot">
+  <img src="/images/help/dashboard.png" alt="DarkLion dashboard — firm overview with client metrics, pipeline summary, and Viktor AI panel" loading="lazy" />
+  <figcaption>The DarkLion dashboard: client metrics, pipeline activity, revenue summary, and Viktor AI — all in one view.</figcaption>
+</figure>
+
 <p>DarkLion is a full practice management platform built for Sentinel Wealth & Tax. It's designed to replace TaxDome as the central hub for managing clients, documents, workflows, messaging, and tax preparation — with AI built in from the ground up rather than bolted on top.</p>
 
 <h2>What You Can Do in DarkLion</h2>
@@ -206,6 +211,11 @@ const articles = [
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
 
+<figure class="help-screenshot">
+  <img src="/images/help/crm-overview.png" alt="CRM overview — list of client relationships with search and filter" loading="lazy" />
+  <figcaption>The CRM: all client relationships, people, and companies in one searchable list.</figcaption>
+</figure>
+
 <p>The CRM (Client Relationship Manager) is the central hub for all client data in DarkLion. Navigate to it using the <strong>🗂️ CRM</strong> link in the left sidebar.</p>
 
 <h2>The Three Tabs</h2>
@@ -256,6 +266,11 @@ const articles = [
 <h1 class="article-title">Managing Relationships</h1>
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
+
+<figure class="help-screenshot">
+  <img src="/images/help/crm-relationships.png" alt="Relationships list in the CRM" loading="lazy" />
+  <figcaption>The Relationships tab: every client household with service tier and billing status at a glance.</figcaption>
+</figure>
 
 <p>A <strong>Relationship</strong> is the top-level container for a client household or group — for example, "The Smith Family." Everything in DarkLion ultimately ties back to a Relationship: the People who can log into the portal, the Companies they own, the billing subscription, and the pipeline history for the whole household.</p>
 
@@ -334,6 +349,11 @@ const articles = [
 <h1 class="article-title">Managing People</h1>
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
+
+<figure class="help-screenshot">
+  <img src="/images/help/crm-people.png" alt="People list in the CRM" loading="lazy" />
+  <figcaption>The People tab: all individual clients across every household, searchable by name or email.</figcaption>
+</figure>
 
 <p><strong>People</strong> are the individual clients in DarkLion — the taxpayer, their spouse, adult children, or any person who has their own portal login and tax records. Each Person belongs to one Relationship (household) but can have access to multiple Companies.</p>
 
@@ -418,6 +438,11 @@ const articles = [
 <h1 class="article-title">Managing Companies</h1>
 <div class="article-meta">Section: CRM</div>
 <div class="article-body">
+
+<figure class="help-screenshot">
+  <img src="/images/help/crm-companies.png" alt="Companies list in the CRM" loading="lazy" />
+  <figcaption>The Companies tab: all business entities with entity type, bookkeeping service, and linked relationship.</figcaption>
+</figure>
 
 <p><strong>Companies</strong> in DarkLion represent legal business entities — an S-Corp, LLC, Partnership, Trust, or even a joint 1040 being tracked as a discrete entity. Each Company belongs to one Relationship and has its own documents, pipeline cards, bookkeeping connection, and portal presence.</p>
 
@@ -567,6 +592,11 @@ const articles = [
 <h1 class="article-title">Documents Overview</h1>
 <div class="article-meta">Section: Documents</div>
 <div class="article-body">
+
+<figure class="help-screenshot">
+  <img src="/images/help/documents.png" alt="Documents page — organized file list with upload and deliver controls" loading="lazy" />
+  <figcaption>The Documents page: all client files organized by entity, year, and category.</figcaption>
+</figure>
 
 <p>DarkLion stores all client documents securely in AWS S3. Every document is organized by who owns it, what year it belongs to, and what category it falls under. Clients only see documents that have been delivered to them — everything else is private to your firm.</p>
 
@@ -1064,6 +1094,11 @@ const articles = [
 <div class="article-meta">Section: Pipelines</div>
 <div class="article-body">
 
+<figure class="help-screenshot">
+  <img src="/images/help/pipelines.png" alt="Pipeline kanban board showing client cards across workflow stages" loading="lazy" />
+  <figcaption>The Pipelines board: every client's return tracked visually through each stage of your workflow.</figcaption>
+</figure>
+
 <p>Pipelines are the workflow engine of DarkLion. They let you track every client through a repeatable process — like a tax return preparation workflow — using a visual kanban board.</p>
 
 <h2>Core Concepts</h2>
@@ -1430,6 +1465,11 @@ const articles = [
 <h1 class="article-title">Messaging Overview</h1>
 <div class="article-meta">Section: Messaging</div>
 <div class="article-body">
+
+<figure class="help-screenshot">
+  <img src="/images/help/messages.png" alt="Staff messaging inbox with client conversation threads" loading="lazy" />
+  <figcaption>The Messaging inbox: all client conversations in one place, with full thread history and internal notes.</figcaption>
+</figure>
 
 <p>DarkLion has a built-in secure messaging system that replaces email for day-to-day client communication. Messages are sent and received inside the platform — nothing sensitive touches an external inbox.</p>
 
@@ -1879,6 +1919,11 @@ const articles = [
 <div class="article-meta">Section: Other</div>
 <div class="article-body">
 
+<figure class="help-screenshot">
+  <img src="/images/help/proposals.png" alt="Proposals list with status, client name, and signature tracking" loading="lazy" />
+  <figcaption>The Proposals page: track every engagement proposal from draft through signed.</figcaption>
+</figure>
+
 <p>DarkLion's Proposals feature lets you create professional engagement proposals, send them to clients for review, and collect electronic signatures — without leaving the platform.</p>
 
 <h2>The Proposals Dashboard</h2>
@@ -2031,6 +2076,11 @@ const articles = [
 <h1 class="article-title">Settings & Branding</h1>
 <div class="article-meta">Section: Other</div>
 <div class="article-body">
+
+<figure class="help-screenshot">
+  <img src="/images/help/settings.png" alt="Settings page with firm branding, domain, and API key configuration" loading="lazy" />
+  <figcaption>Settings: manage your firm name, logo, portal domain, and API access in one place.</figcaption>
+</figure>
 
 <p>Go to <strong>Settings (⚙️)</strong> in the left sidebar to manage your firm's branding, custom domain, and API access. Settings has three tabs.</p>
 
