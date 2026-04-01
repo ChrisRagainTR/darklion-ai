@@ -3350,8 +3350,18 @@
 
   function renderInvestmentsData(wrap, snapshot) {
     const perf = snapshot.performance || {};
-    const accounts = snapshot.accounts || [];
+    // Sort accounts largest to smallest by value
+    const accounts = (snapshot.accounts || []).slice().sort((a, b) => {
+      const va = a.balance || a.currentNetValue || 0;
+      const vb = b.balance || b.currentNetValue || 0;
+      return vb - va;
+    });
     const syncedAt = snapshot.synced_at ? new Date(snapshot.synced_at).toLocaleString() : '';
+    // Hidden accounts stored in localStorage per person
+    const hiddenKey = 'inv_hidden_' + personId;
+    let hiddenAccounts = JSON.parse(localStorage.getItem(hiddenKey) || '[]');
+
+    function saveHidden() { localStorage.setItem(hiddenKey, JSON.stringify(hiddenAccounts)); }
 
     const perfCards = [
       { label: 'Month to Date', key: 'mtd' },
@@ -3367,7 +3377,11 @@
       `;
     }).join('');
 
+    // Count hidden accounts
+    const hiddenCount = accounts.filter(a => hiddenAccounts.includes(a.id)).length;
+
     const accountsHtml = accounts.map((acct, i) => {
+      const hidden = hiddenAccounts.includes(acct.id);
       const holdings = (acct.holdings || []);
       const holdingsHtml = holdings.length ? `
         <table style="width:100%;border-collapse:collapse;font-size:0.82rem;margin-top:0.5rem;">
@@ -3394,21 +3408,27 @@
         </table>
       ` : '<div style="padding:0.5rem 0;color:var(--muted);font-size:0.82rem;">No holdings data</div>';
 
-      const acctValue = acct.balance || acct.currentNetValue;
-      const acctType = acct.accountType ? `<span style="background:rgba(201,168,76,0.12);color:var(--gold);border:1px solid rgba(201,168,76,0.25);border-radius:20px;padding:0.1rem 0.5rem;font-size:0.7rem;font-weight:600;margin-left:0.5rem;">${esc(acct.accountType)}</span>` : '';
+      const acctValue = acct.balance || acct.currentNetValue || 0;
+      const acctTypeLabel = acct.accountType || '';
+      const acctType = acctTypeLabel ? `<span style="background:rgba(201,168,76,0.12);color:var(--gold);border:1px solid rgba(201,168,76,0.25);border-radius:20px;padding:0.1rem 0.5rem;font-size:0.7rem;font-weight:600;margin-left:0.5rem;">${esc(acctTypeLabel)}</span>` : '';
 
       return `
-        <div class="inv-account-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:0.75rem;overflow:hidden;">
-          <div onclick="invToggleAccount(${i})" style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.1rem;cursor:pointer;user-select:none;" id="inv-acct-hdr-${i}">
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:0.88rem;font-weight:700;color:var(--text);">${esc(acct.institutionName || 'Unknown Institution')}${acctType}</div>
-              <div style="font-size:0.8rem;color:var(--muted);margin-top:0.1rem;">${esc(acct.name || '')}${acct.accountNumber ? ' ···' + acct.accountNumber.slice(-4) : ''}</div>
+        <div class="inv-account-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:0.75rem;overflow:hidden;${hidden ? 'opacity:0.45;' : ''}" id="inv-panel-${i}">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.1rem;" id="inv-acct-hdr-${i}">
+            <div onclick="invToggleAccount(${i})" style="flex:1;min-width:0;cursor:pointer;user-select:none;display:flex;align-items:center;gap:0.75rem;">
+              <div>
+                <div style="font-size:0.88rem;color:var(--text);">
+                  <span style="font-weight:700;">${esc(acct.name || acct.institutionName || 'Account')}</span>${acctType}
+                </div>
+                <div style="font-size:0.8rem;color:var(--muted);margin-top:0.1rem;">${esc(acct.institutionName || '')}${acct.accountNumber ? ' ···' + acct.accountNumber.slice(-4) : ''}</div>
+              </div>
             </div>
             <div style="text-align:right;flex-shrink:0;margin-left:1rem;">
               <div style="font-size:1rem;font-weight:700;color:var(--text);">${fmtMoney(acctValue)}</div>
               <div style="font-size:0.72rem;color:var(--muted);">${holdings.length} holding${holdings.length !== 1 ? 's' : ''}</div>
             </div>
-            <div style="margin-left:0.75rem;color:var(--muted);font-size:0.8rem;" id="inv-acct-chevron-${i}">▼</div>
+            <div onclick="invToggleAccount(${i})" style="margin-left:0.75rem;color:var(--muted);font-size:0.8rem;cursor:pointer;" id="inv-acct-chevron-${i}">▼</div>
+            <button onclick="invToggleHide('${esc(acct.id)}', ${i})" title="${hidden ? 'Show' : 'Hide'} this account" style="margin-left:0.5rem;background:none;border:none;cursor:pointer;color:var(--muted);font-size:0.78rem;padding:0.2rem 0.4rem;border-radius:4px;" id="inv-hide-btn-${i}">${hidden ? '👁 Show' : '✕ Hide'}</button>
           </div>
           <div id="inv-acct-body-${i}" style="display:none;border-top:1px solid var(--border);padding:0.75rem 1.1rem;">
             ${holdingsHtml}
@@ -3421,7 +3441,7 @@
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.5rem;">
         <div>
           <div style="font-size:1rem;font-weight:700;color:var(--text);">Investment Portfolio</div>
-          <div style="font-size:0.78rem;color:var(--muted);margin-top:0.1rem;">Total: ${fmtMoney(snapshot.raw_balance)} · Synced ${syncedAt}</div>
+          <div style="font-size:0.78rem;color:var(--muted);margin-top:0.1rem;">Total: ${fmtMoney(snapshot.raw_balance)} · Synced ${syncedAt}${hiddenCount ? ' · <span style="color:var(--muted);">' + hiddenCount + ' account' + (hiddenCount > 1 ? 's' : '') + ' hidden</span>' : ''}</div>
         </div>
         <div style="display:flex;gap:0.5rem;">
           <button class="btn btn-outline btn-sm" onclick="invManualSync()">🔄 Sync Now</button>
@@ -3434,6 +3454,25 @@
       <div style="font-size:0.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.75rem;">Accounts</div>
       ${accounts.length ? accountsHtml : '<div style="color:var(--muted);font-size:0.88rem;">No accounts found</div>'}
     `;
+
+    // Attach hide toggle handler
+    window._invHiddenKey = hiddenKey;
+    window._invHiddenAccounts = hiddenAccounts;
+    window._invSaveHidden = saveHidden;
+  }
+
+  function invToggleHide(acctId, i) {
+    const hidden = window._invHiddenAccounts || [];
+    const idx = hidden.indexOf(acctId);
+    if (idx === -1) hidden.push(acctId); else hidden.splice(idx, 1);
+    window._invHiddenAccounts = hidden;
+    if (window._invSaveHidden) window._invSaveHidden();
+    // Update panel opacity + button label without full re-render
+    const panel = document.getElementById('inv-panel-' + i);
+    const btn = document.getElementById('inv-hide-btn-' + i);
+    const isNowHidden = hidden.indexOf(acctId) !== -1;
+    if (panel) panel.style.opacity = isNowHidden ? '0.45' : '1';
+    if (btn) btn.textContent = isNowHidden ? '👁 Show' : '✕ Hide';
   }
 
   function invToggleAccount(i) {

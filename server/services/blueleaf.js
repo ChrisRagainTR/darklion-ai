@@ -60,18 +60,24 @@ async function fetchHouseholdDetail(token, householdId) {
   const accountBlocks = extractAllTags(householdBlock, 'account');
   const accounts = accountBlocks.map(ab => {
     const holdingBlocks = extractAllTags(ab, 'holding');
+    // account-type is a nested block: <account-type><name>ira</name><display-name>IRA</display-name></account-type>
+    const accountTypeBlock = extractTag(ab, 'account-type');
+    const accountTypeDisplay = extractTag(accountTypeBlock, 'display-name') || extractTag(accountTypeBlock, 'name') || '';
+    // balance is a nested block: <balance><value>123.00</value><period>2025-01-01</period></balance>
+    const balanceBlock = extractTag(ab, 'balance');
+    const balanceValue = parseNumber(extractTag(balanceBlock, 'value')) || parseNumber(extractTag(ab, 'current-net-value'));
     return {
       id: extractTag(ab, 'id'),
       name: extractTag(ab, 'name'),
       institutionName: extractTag(ab, 'institution-name'),
       accountNumber: extractTag(ab, 'account-number'),
-      accountType: extractTag(ab, 'account-type'),
+      accountType: accountTypeDisplay,
       currentNetValue: parseNumber(extractTag(ab, 'current-net-value')),
-      balance: parseNumber(extractTag(ab, 'balance')),
+      balance: balanceValue,
       holdings: holdingBlocks.map(hb => ({
-        id: extractTag(hb, 'id'),
+        id: extractTag(hb, 'id') || extractTag(hb, 'holding-id'),
         description: extractTag(hb, 'description'),
-        ticker: extractTag(hb, 'ticker'),
+        ticker: extractTag(hb, 'ticker-name') || extractTag(hb, 'ticker'),
         companyName: extractTag(hb, 'company-name'),
         price: parseNumber(extractTag(hb, 'price')),
         value: parseNumber(extractTag(hb, 'value')),
@@ -96,7 +102,10 @@ async function fetchHouseholdBalance(token, householdId, date) {
   const accountBlocks = extractAllTags(householdBlock, 'account');
   let total = 0;
   for (const ab of accountBlocks) {
-    total += parseNumber(extractTag(ab, 'balance')) || parseNumber(extractTag(ab, 'current-net-value'));
+    // balance is nested: <balance><value>...</value></balance>
+    const balanceBlock = extractTag(ab, 'balance');
+    const val = parseNumber(extractTag(balanceBlock, 'value')) || parseNumber(extractTag(ab, 'current-net-value'));
+    total += val;
   }
   return total;
 }
