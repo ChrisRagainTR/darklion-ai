@@ -640,7 +640,7 @@ async function saveTaxYear() {
 
 // ==================== INTEGRATIONS ====================
 async function loadIntegrations() {
-  const res = await apiFetch('/integrations');
+  const res = await apiFetch('/firms/integrations');
   if (!res || !res.ok) return;
   const data = await res.json();
   const current = document.getElementById('blueleaf-token-current');
@@ -658,7 +658,7 @@ async function saveBlueleafToken() {
   saveMsg.style.display = 'none';
   errMsg.style.display = 'none';
 
-  const res = await apiFetch('/integrations', {
+  const res = await apiFetch('/firms/integrations', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ blueleaf_api_token: input.value.trim() }),
@@ -666,13 +666,11 @@ async function saveBlueleafToken() {
   if (!res) return;
   if (res.ok) {
     input.value = '';
-    saveMsg.style.display = '';
-    setTimeout(() => saveMsg.style.display = 'none', 3000);
+    window._shellToast('Blueleaf token saved ✓', 'success');
     loadIntegrations();
   } else {
-    const d = await res.json();
-    errMsg.textContent = d.error || 'Failed to save';
-    errMsg.style.display = '';
+    const d = await res.json().catch(() => ({}));
+    window._shellToast(d.error || 'Failed to save token', 'error');
   }
 }
 
@@ -683,20 +681,18 @@ async function clearBlueleafToken() {
   saveMsg.style.display = 'none';
   errMsg.style.display = 'none';
 
-  const res = await apiFetch('/integrations', {
+  const res = await apiFetch('/firms/integrations', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ blueleaf_api_token: '' }),
   });
   if (!res) return;
   if (res.ok) {
-    saveMsg.style.display = '';
-    setTimeout(() => saveMsg.style.display = 'none', 3000);
+    window._shellToast('Blueleaf token removed', 'success');
     loadIntegrations();
   } else {
-    const d = await res.json();
-    errMsg.textContent = d.error || 'Failed to clear';
-    errMsg.style.display = '';
+    const d = await res.json().catch(() => ({}));
+    window._shellToast(d.error || 'Failed to clear token', 'error');
   }
 }
 
