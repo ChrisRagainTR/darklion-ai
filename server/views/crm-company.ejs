@@ -1777,9 +1777,13 @@
       <div>${buildDocsColumn(firmDocs, 'Delivered by Advisor', '📁', DOC_CATS_FIRM)}</div>
       <div>${buildDocsColumn(clientDocs, 'Uploaded by Client', '📤', DOC_CATS_CLIENT)}</div>
     </div>`;
-    // Wire year folder toggles
-    el.querySelectorAll('.year-header').forEach(h => {
-      h.addEventListener('click', () => h.closest('.year-folder').classList.toggle('open'));
+    // Wire year folder toggles — event delegation so BK account sub-folders work
+    el.addEventListener('click', e => {
+      const hdr = e.target.closest('.year-header');
+      if (hdr && el.contains(hdr)) {
+        e.stopPropagation();
+        hdr.closest('.year-folder').classList.toggle('open');
+      }
     });
     // Wire doc name click to open
     el.querySelectorAll('.doc-name-link').forEach(nameEl => {
