@@ -60,9 +60,13 @@ async function fetchHouseholdDetail(token, householdId) {
   const accountBlocks = extractAllTags(householdBlock, 'account');
   const accounts = accountBlocks.map(ab => {
     const holdingBlocks = extractAllTags(ab, 'holding');
-    // account-type is a nested block: <account-type><name>ira</name><display-name>IRA</display-name></account-type>
+    // account-type is a nested block — display-name may be self-closing (<display-name nil="true"/>)
     const accountTypeBlock = extractTag(ab, 'account-type');
-    const accountTypeDisplay = extractTag(accountTypeBlock, 'display-name') || extractTag(accountTypeBlock, 'name') || '';
+    // Try display-name first (non-self-closing), fall back to name
+    const rawDisplayName = extractTag(accountTypeBlock, 'display-name');
+    const rawName = extractTag(accountTypeBlock, 'name');
+    // Self-closing tags return empty string from extractTag — use name as fallback
+    const accountTypeDisplay = (rawDisplayName && !rawDisplayName.includes('<') ? rawDisplayName : rawName) || '';
     // balance is a nested block: <balance><value>123.00</value><period>2025-01-01</period></balance>
     const balanceBlock = extractTag(ab, 'balance');
     const balanceValue = parseNumber(extractTag(balanceBlock, 'value')) || parseNumber(extractTag(ab, 'current-net-value'));
