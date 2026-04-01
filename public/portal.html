@@ -965,7 +965,7 @@
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="overview">📋 Overview</button>
     <button class="tab-btn" data-tab="documents">📁 Personal Documents</button>
-    <button class="tab-btn" data-tab="organizers">🔗 Organizers</button>
+    <button class="tab-btn" data-tab="organizers" id="organizers-tab" style="display:none;">🔗 Organizers</button>
     <button class="tab-btn" data-tab="messages">💬 Messages</button>
     <button class="tab-btn review-sign-attention" data-tab="review-sign" id="review-sign-tab" style="display:none;">
       ✍️ Review &amp; Sign
@@ -1455,6 +1455,12 @@
             console.warn('[portal] tax-deliveries status:', tdRes.status);
           }
         } catch(e) { console.error('[portal] tax delivery init error:', e); }
+
+        // Show Organizers tab only if organizer_visible is true for this person
+        if (_me.organizerVisible) {
+          const orgTab = document.getElementById('organizers-tab');
+          if (orgTab) orgTab.style.display = '';
+        }
 
         document.getElementById('overview-loading').style.display = 'none';
         document.getElementById('overview-content').style.display = 'block';

@@ -1,0 +1,177 @@
+<%- include('partials/shell-top', { title: title, activeNav: activeNav }) %>
+
+<style>
+  .ts-wrap { padding: 1.5rem 2rem; max-width: 900px; }
+  .ts-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 1rem; }
+  .ts-top h1 { font-size: 1.25rem; font-weight: 800; }
+  .ts-bulk-btns { display: flex; gap: 0.5rem; flex-shrink: 0; }
+  .ts-subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+  .ts-table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .ts-table th { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 0.65rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+  .ts-table td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.88rem; vertical-align: middle; }
+  .ts-table tbody tr:last-child td { border-bottom: none; }
+  .ts-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+  .ts-name-link { color: var(--gold); font-weight: 600; text-decoration: none; }
+  .ts-name-link:hover { color: var(--gold-light); text-decoration: underline; }
+  .ts-empty { text-align: center; padding: 3rem; color: var(--muted); }
+  .status-badge { display: inline-flex; align-items: center; padding: 0.18rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+  .status-not-sent  { background: rgba(143,163,184,0.12); color: var(--muted); }
+  .status-pending   { background: rgba(237,137,54,0.12); color: var(--orange); }
+  .status-in_progress { background: rgba(201,168,76,0.14); color: var(--gold); }
+  .status-submitted { background: rgba(62,207,142,0.12); color: var(--green); }
+  .status-closed    { background: rgba(143,163,184,0.12); color: var(--muted); }
+  .status-reviewed  { background: rgba(62,207,142,0.12); color: var(--green); }
+  .status-reopened  { background: rgba(237,137,54,0.12); color: var(--orange); }
+</style>
+
+<div class="ts-wrap">
+  <div class="ts-top">
+    <h1>🗓️ Tax Season</h1>
+    <div class="ts-bulk-btns">
+      <button class="btn btn-gold btn-sm" id="show-all-btn">Show All</button>
+      <button class="btn btn-outline btn-sm" id="hide-all-btn">Hide All</button>
+    </div>
+  </div>
+  <p class="ts-subtitle">Control which clients can see their organizer in the portal.</p>
+
+  <div id="ts-loading" class="loading-state">
+    <div class="loading-spinner"></div>
+    <span>Loading clients…</span>
+  </div>
+
+  <table class="ts-table" id="ts-table" style="display:none;">
+    <thead>
+      <tr>
+        <th>Client</th>
+        <th>Organizer Status</th>
+        <th>Portal Visibility</th>
+      </tr>
+    </thead>
+    <tbody id="ts-tbody"></tbody>
+  </table>
+
+  <div id="ts-empty" class="ts-empty" style="display:none;">No clients found.</div>
+</div>
+
+<div class="toast" id="ts-toast"></div>
+
+<script>
+const TOKEN = localStorage.getItem('dl_token');
+if (!TOKEN) { window.location.href = '/login'; }
+
+function toast(msg, isError) {
+  const el = document.getElementById('ts-toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => { el.className = 'toast'; }, 3000);
+}
+
+function statusLabel(status) {
+  if (!status) return '<span class="status-badge status-not-sent">Not Sent</span>';
+  const map = {
+    pending:     '<span class="status-badge status-pending">Pending</span>',
+    in_progress: '<span class="status-badge status-in_progress">In Progress</span>',
+    submitted:   '<span class="status-badge status-submitted">Submitted</span>',
+    reviewed:    '<span class="status-badge status-reviewed">Reviewed</span>',
+    closed:      '<span class="status-badge status-closed">Closed</span>',
+    reopened:    '<span class="status-badge status-reopened">Reopened</span>',
+  };
+  return map[status] || `<span class="status-badge status-not-sent">${status}</span>`;
+}
+
+let clients = [];
+
+async function loadClients() {
+  try {
+    const res = await fetch('/api/tax-season/clients', {
+      headers: { 'Authorization': 'Bearer ' + TOKEN }
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    clients = data.clients || [];
+    renderTable();
+  } catch (err) {
+    document.getElementById('ts-loading').style.display = 'none';
+    toast('Failed to load clients: ' + err.message, true);
+  }
+}
+
+function renderTable() {
+  document.getElementById('ts-loading').style.display = 'none';
+  const tbody = document.getElementById('ts-tbody');
+  if (!clients.length) {
+    document.getElementById('ts-empty').style.display = 'block';
+    return;
+  }
+  document.getElementById('ts-table').style.display = '';
+  tbody.innerHTML = clients.map(c => `
+    <tr>
+      <td>
+        <a class="ts-name-link" href="/crm/person/${c.id}">
+          ${escHtml(c.first_name)} ${escHtml(c.last_name)}
+        </a>
+      </td>
+      <td>${statusLabel(c.organizer_status)}</td>
+      <td>
+        <button
+          class="btn btn-sm ${c.organizer_visible ? 'btn-danger' : 'btn-gold'}"
+          data-id="${c.id}"
+          data-visible="${c.organizer_visible ? 'true' : 'false'}"
+          onclick="togglePerson(this)">
+          ${c.organizer_visible ? 'Hide' : 'Show'}
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function togglePerson(btn) {
+  const personId = btn.dataset.id;
+  const currentVisible = btn.dataset.visible === 'true';
+  const newVisible = !currentVisible;
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/tax-season/person/${personId}`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visible: newVisible })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    // update local state
+    const client = clients.find(c => String(c.id) === String(personId));
+    if (client) client.organizer_visible = newVisible;
+    renderTable();
+    toast(newVisible ? 'Organizer shown in portal.' : 'Organizer hidden from portal.');
+  } catch (err) {
+    btn.disabled = false;
+    toast('Failed to update: ' + err.message, true);
+  }
+}
+
+async function bulkSet(visible) {
+  try {
+    const res = await fetch('/api/tax-season/bulk', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visible })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    clients.forEach(c => { c.organizer_visible = visible; });
+    renderTable();
+    toast(visible ? 'Organizer shown for all clients.' : 'Organizer hidden for all clients.');
+  } catch (err) {
+    toast('Failed to update: ' + err.message, true);
+  }
+}
+
+document.getElementById('show-all-btn').addEventListener('click', () => bulkSet(true));
+document.getElementById('hide-all-btn').addEventListener('click', () => bulkSet(false));
+
+loadClients();
+</script>
+
+<%- include('partials/shell-close') %>

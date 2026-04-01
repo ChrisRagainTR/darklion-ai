@@ -51,7 +51,7 @@ router.get('/me', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT id, firm_id, relationship_id, first_name, last_name, email, phone,
               filing_status, portal_enabled, portal_last_login_at, created_at,
-              spouse_name, spouse_email
+              spouse_name, spouse_email, organizer_visible
        FROM people
        WHERE id = $1`,
       [req.portal.personId]
@@ -87,6 +87,7 @@ router.get('/me', async (req, res) => {
       createdAt: person.created_at,
       signerRole: req.portal.signerRole || 'taxpayer',
       activeTaxYear,
+      organizerVisible: person.organizer_visible || false,
     });
   } catch (err) {
     console.error('Portal /me error:', err);
