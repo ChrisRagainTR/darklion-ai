@@ -336,6 +336,13 @@ function startStatementReminders() {
         const portalBase = process.env.PORTAL_URL || process.env.APP_URL || 'https://darklion.ai';
         const portalUrl = `${portalBase}/portal?tab=co-${sched.company_id}&subtab=statements`;
 
+        // Fetch firm logo once per schedule
+        let logoUrl = null;
+        try {
+          const { getFirmLogoUrl } = require('./services/email');
+          logoUrl = await getFirmLogoUrl(sched.firm_id);
+        } catch(e) { /* non-fatal */ }
+
         for (const person of people) {
           try {
             await sendStatementReminder({
@@ -343,6 +350,7 @@ function startStatementReminders() {
               name: [person.first_name, person.last_name].filter(Boolean).join(' '),
               firmName: sched.firm_name,
               firmId: sched.firm_id,
+              logoUrl,
               companyName: sched.company_name,
               accountName: sched.account_name,
               month: remindMonth,
