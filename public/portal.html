@@ -1526,6 +1526,7 @@
     window._loadPortalInvestments = loadPortalInvestments;
 
     function renderPortalInvestments(wrap, snapshot) {
+      function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
       const perf = snapshot.performance || {};
       // Sort largest to smallest
       const accounts = (snapshot.accounts || []).slice().sort((a, b) => {
