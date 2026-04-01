@@ -1500,31 +1500,26 @@
 
     function loadPortalInvestments() {
       if (_invPortalLoaded) return;
-      _invPortalLoaded = true;
       const wrap = document.getElementById('investments-portal-wrap');
       if (!wrap) return;
 
-      const data = window._portalInvestmentsCache;
-      if (!data) {
-        // Cache not ready — fetch now
-        const token = localStorage.getItem('portalToken');
-        fetch('/portal/investments', { headers: { 'Authorization': `Bearer ${token}` } })
-          .then(r => r.ok ? r.json() : null)
-          .then(d => {
-            if (d && d.enabled && d.snapshot) {
-              renderPortalInvestments(wrap, d.snapshot);
-            } else {
-              wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">No investment data available.</div>';
-            }
-          })
-          .catch(() => { wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">Unable to load investment data.</div>'; });
-        return;
-      }
-      if (!data.enabled || !data.snapshot) {
-        wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">No investment data available.</div>';
-        return;
-      }
-      renderPortalInvestments(wrap, data.snapshot);
+      const token = localStorage.getItem('portalToken');
+      wrap.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0;">Loading…</div>';
+
+      fetch('/portal/investments', { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : Promise.reject('fetch-failed'))
+        .then(d => {
+          _invPortalLoaded = true;
+          if (d && d.enabled && d.snapshot) {
+            renderPortalInvestments(wrap, d.snapshot);
+          } else {
+            wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">No investment data available.</div>';
+          }
+        })
+        .catch(() => {
+          // Don\'t set loaded — allow retry on next tab click
+          wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">Unable to load investment data. <a href="#" onclick="_invPortalLoaded=false;loadPortalInvestments();return false;">Retry</a></div>';
+        });
     }
 
     function renderPortalInvestments(wrap, snapshot) {
