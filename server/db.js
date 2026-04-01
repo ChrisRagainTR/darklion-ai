@@ -1050,6 +1050,10 @@ async function initDB() {
       ALTER TABLE people ADD COLUMN IF NOT EXISTS organizer_visible BOOLEAN DEFAULT FALSE;
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
+    DO $$ BEGIN
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS blueleaf_hidden_accounts JSONB DEFAULT '[]';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
 
     -- ===================== BLUELEAF / FINANCIAL PLANNING =====================
     DO $$ BEGIN

@@ -3211,7 +3211,7 @@
       } else if (!data.snapshot) {
         renderInvestmentsEnable(wrap, true);
       } else {
-        renderInvestmentsData(wrap, data.snapshot);
+        renderInvestmentsData(wrap, data.snapshot, data.hiddenAccounts || []);
       }
     } catch(e) {
       wrap.innerHTML = `<div style="color:var(--red);font-size:0.88rem;">${esc(e.message)}</div>`;
@@ -3349,7 +3349,7 @@
     return val >= 0 ? 'var(--green)' : 'var(--red)';
   }
 
-  function renderInvestmentsData(wrap, snapshot) {
+  function renderInvestmentsData(wrap, snapshot, initialHidden) {
     const perf = snapshot.performance || {};
     // Sort accounts largest to smallest by value
     const accounts = (snapshot.accounts || []).slice().sort((a, b) => {
@@ -3358,11 +3358,17 @@
       return vb - va;
     });
     const syncedAt = snapshot.synced_at ? new Date(snapshot.synced_at).toLocaleString() : '';
-    // Hidden accounts stored in localStorage per person
-    const hiddenKey = 'inv_hidden_' + personId;
-    let hiddenAccounts = JSON.parse(localStorage.getItem(hiddenKey) || '[]');
+    // Hidden accounts — loaded from DB, saved back to DB
+    let hiddenAccounts = Array.isArray(initialHidden) ? [...initialHidden] : [];
 
-    function saveHidden() { localStorage.setItem(hiddenKey, JSON.stringify(hiddenAccounts)); }
+    async function saveHidden() {
+      try {
+        await apiFetch(`/api/people/${personId}/investments/hidden`, {
+          method: 'PATCH',
+          body: JSON.stringify({ hidden_accounts: hiddenAccounts }),
+        });
+      } catch(e) { console.warn('Failed to save hidden accounts', e); }
+    }
 
     const perfCards = [
       { label: 'Month to Date', key: 'mtd', siblingLabel: 'Last Month', siblingKey: 'lastMonth' },
@@ -3476,7 +3482,6 @@
     `;
 
     // Attach hide toggle handler
-    window._invHiddenKey = hiddenKey;
     window._invHiddenAccounts = hiddenAccounts;
     window._invSaveHidden = saveHidden;
     window._invAllAccounts = accounts;

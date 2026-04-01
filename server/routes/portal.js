@@ -1425,7 +1425,7 @@ router.get('/companies/:companyId/close-packages', async (req, res) => {
 router.get('/investments', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT financial_planning_enabled, blueleaf_household_id
+      `SELECT financial_planning_enabled, blueleaf_household_id, blueleaf_hidden_accounts
        FROM people WHERE id = $1`,
       [req.portal.personId]
     );
@@ -1438,7 +1438,14 @@ router.get('/investments', async (req, res) => {
       [req.portal.personId]
     );
     if (!snapshots[0]) return res.json({ enabled: true, snapshot: null });
-    res.json({ enabled: true, snapshot: snapshots[0] });
+    // Filter out advisor-hidden accounts before sending to client
+    const hidden = person.blueleaf_hidden_accounts || [];
+    const snapshot = snapshots[0];
+    if (hidden.length && snapshot.accounts) {
+      snapshot.accounts = snapshot.accounts.filter(a => !hidden.includes(a.id));
+      snapshot.raw_balance = snapshot.accounts.reduce((s, a) => s + (a.balance || a.currentNetValue || 0), 0);
+    }
+    res.json({ enabled: true, snapshot });
   } catch (err) {
     console.error('Portal /investments error:', err);
     res.status(500).json({ error: 'Failed to fetch investments' });

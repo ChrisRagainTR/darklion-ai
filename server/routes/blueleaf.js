@@ -83,7 +83,7 @@ router.get('/people/:id/investments', async (req, res) => {
   const personId = parseInt(req.params.id);
   try {
     const check = await pool.query(
-      'SELECT id, financial_planning_enabled, blueleaf_household_id FROM people WHERE id = $1 AND firm_id = $2',
+      'SELECT id, financial_planning_enabled, blueleaf_household_id, blueleaf_hidden_accounts FROM people WHERE id = $1 AND firm_id = $2',
       [personId, req.firm.id]
     );
     if (!check.rows[0]) return res.status(404).json({ error: 'Person not found' });
@@ -96,8 +96,9 @@ router.get('/people/:id/investments', async (req, res) => {
       [personId]
     );
 
-    if (!rows[0]) return res.json({ enabled: true, snapshot: null });
-    res.json({ enabled: true, snapshot: rows[0] });
+    const hiddenAccounts = person.blueleaf_hidden_accounts || [];
+    if (!rows[0]) return res.json({ enabled: true, snapshot: null, hiddenAccounts });
+    res.json({ enabled: true, snapshot: rows[0], hiddenAccounts });
   } catch (err) {
     console.error('Get investments error:', err.message);
     res.status(500).json({ error: 'Failed to fetch investments' });
@@ -127,6 +128,22 @@ router.post('/people/:id/investments/sync', async (req, res) => {
   } catch (err) {
     console.error('Manual sync error:', err.message);
     res.status(500).json({ error: 'Sync failed: ' + err.message });
+  }
+});
+
+// PATCH /api/people/:id/investments/hidden — save hidden account IDs
+router.patch('/people/:id/investments/hidden', async (req, res) => {
+  const personId = parseInt(req.params.id);
+  const { hidden_accounts } = req.body; // array of account ID strings
+  if (!Array.isArray(hidden_accounts)) return res.status(400).json({ error: 'hidden_accounts must be an array' });
+  try {
+    await pool.query(
+      'UPDATE people SET blueleaf_hidden_accounts = $1 WHERE id = $2 AND firm_id = $3',
+      [JSON.stringify(hidden_accounts), personId, req.firm.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save hidden accounts' });
   }
 });
 
