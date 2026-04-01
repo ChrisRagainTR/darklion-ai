@@ -1518,9 +1518,11 @@
         })
         .catch(() => {
           // Don\'t set loaded — allow retry on next tab click
-          wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">Unable to load investment data. <a href="#" onclick="_invPortalLoaded=false;loadPortalInvestments();return false;">Retry</a></div>';
+          wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">Unable to load investment data. <a href="#" onclick="_invPortalLoaded=false;window._loadPortalInvestments&&window._loadPortalInvestments();return false;">Retry</a></div>';
         });
     }
+
+    window._loadPortalInvestments = loadPortalInvestments;
 
     function renderPortalInvestments(wrap, snapshot) {
       const perf = snapshot.performance || {};
