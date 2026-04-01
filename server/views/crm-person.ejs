@@ -3334,6 +3334,7 @@
 
   function fmtPct(val) {
     if (val === null || val === undefined) return '—';
+    if (Math.abs(val) < 0.00001) return '—'; // effectively zero — no data
     const pct = (val * 100).toFixed(2);
     return (val >= 0 ? '+' : '') + pct + '%';
   }
