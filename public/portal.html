@@ -1538,7 +1538,6 @@
 
       function fmtPct(val) {
         if (val === null || val === undefined) return '—';
-        if (Math.abs(val) < 0.00001) return '—'; // effectively zero — no data
         const p = (val * 100).toFixed(2);
         return (val >= 0 ? '+' : '') + p + '%';
       }
@@ -1647,7 +1646,7 @@
       const container = document.getElementById("portal-market-ticker");
       if (!container) return;
       try {
-        const token = localStorage.getItem("portal_token") || "";
+        const token = localStorage.getItem("portalToken") || "";
         const res = await fetch("/portal/market/ticker", { headers: { "Authorization": "Bearer " + token } });
         const data = await res.json();
         if (!data.available || !data.items?.length) {

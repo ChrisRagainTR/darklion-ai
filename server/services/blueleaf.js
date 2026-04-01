@@ -157,7 +157,11 @@ async function calculatePerformance(token, householdId) {
   function pct(start, end) {
     const e = end !== undefined ? end : currentBalance;
     if (!start || start === 0) return null;
-    return (e - start) / start;
+    const result = (e - start) / start;
+    // If result is suspiciously near zero (same balance returned for different dates),
+    // Blueleaf likely has no historical data for that date — return null
+    if (Math.abs(result) < 0.000001 && e !== start) return null;
+    return result;
   }
 
   return {
