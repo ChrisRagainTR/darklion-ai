@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: DarkLionPrintAgent-installer
-          path: darklion-print-agent/dist/DarkLionPrintAgent_Setup_*.exe
+          path: darklion-print-agent/app/dist/DarkLionPrintAgent_Setup_*.exe
           retention-days: 30
 
       - name: Create GitHub Release (on tag)
