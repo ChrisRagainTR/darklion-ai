@@ -1816,13 +1816,18 @@
         if (!res.ok) return;
         const data = await res.json();
         if (!data.accounts || !data.accounts.length) return;
-        // Show the Statements tab
+        // Always show the Statements tab when there are client_upload accounts
         const tab = document.getElementById(`co-stmts-tab-${coId}`);
         if (tab) tab.style.display = '';
-        // Show badge if pending
-        if (data.total_pending > 0) {
-          const badge = document.getElementById(`co-stmts-badge-${coId}`);
-          if (badge) { badge.textContent = data.total_pending; badge.style.display = ''; }
+        // Only show red badge when there are pending uploads
+        const badge = document.getElementById(`co-stmts-badge-${coId}`);
+        if (badge) {
+          if (data.total_pending > 0) {
+            badge.textContent = data.total_pending;
+            badge.style.display = '';
+          } else {
+            badge.style.display = 'none';
+          }
         }
       } catch(e) { /* non-fatal */ }
     }
@@ -2011,7 +2016,7 @@
           }
 
           if (!acct.months.length) {
-            html += '<div style="color:var(--muted);font-size:0.85rem;">No months in range yet.</div>';
+            html += '<div style="color:var(--muted);font-size:0.85rem;padding:0.5rem 0;">✅ No statements currently needed for this account.</div>';
           }
 
           html += '</div></div>';

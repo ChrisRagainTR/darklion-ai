@@ -1492,14 +1492,12 @@ router.get('/companies/:id/statements', async (req, res) => {
 
     const realmId = company.realm_id;
 
-    // Load client_upload schedules with start_month set
+    // Load all client_upload schedules for this company
     const { rows: schedules } = await pool.query(
       `SELECT ss.id, ss.account_name, ss.institution, ss.statement_day, ss.start_month
        FROM statement_schedules ss
        WHERE ss.realm_id = $1
          AND ss.access_method = 'client_upload'
-         AND ss.start_month IS NOT NULL
-         AND ss.start_month <> ''
        ORDER BY ss.account_name ASC`,
       [realmId]
     );
