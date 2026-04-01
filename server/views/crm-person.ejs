@@ -3364,15 +3364,22 @@
     function saveHidden() { localStorage.setItem(hiddenKey, JSON.stringify(hiddenAccounts)); }
 
     const perfCards = [
-      { label: 'Month to Date', key: 'mtd' },
-      { label: 'Quarter to Date', key: 'qtd' },
+      { label: 'Month to Date', key: 'mtd', siblingLabel: 'Last Month', siblingKey: 'lastMonth' },
+      { label: 'Quarter to Date', key: 'qtd', siblingLabel: 'Last Quarter', siblingKey: 'lastQuarter' },
       { label: 'Year to Date', key: 'ytd' },
     ].map(p => {
       const val = perf[p.key];
+      const sibVal = p.siblingKey ? perf[p.siblingKey] : undefined;
+      const sibHtml = sibVal !== undefined ? `
+        <div style="margin-top:0.75rem;padding-top:0.65rem;border-top:1px solid var(--border);">
+          <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.2rem;">${p.siblingLabel}</div>
+          <div style="font-size:1.25rem;font-weight:700;color:${invPctColor(sibVal)};">${fmtPct(sibVal)}</div>
+        </div>` : '';
       return `
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;flex:1;min-width:140px;">
-          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.5rem;">${p.label}</div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.25rem;flex:1;min-width:140px;">
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.4rem;">${p.label}</div>
           <div style="font-size:2rem;font-weight:800;color:${invPctColor(val)};line-height:1;">${fmtPct(val)}</div>
+          ${sibHtml}
         </div>
       `;
     }).join('');

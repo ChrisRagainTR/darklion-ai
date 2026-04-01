@@ -1549,15 +1549,22 @@
       }
 
       const perfCards = [
-        { label: 'Month to Date', key: 'mtd' },
-        { label: 'Quarter to Date', key: 'qtd' },
+        { label: 'Month to Date', key: 'mtd', siblingLabel: 'Last Month', siblingKey: 'lastMonth' },
+        { label: 'Quarter to Date', key: 'qtd', siblingLabel: 'Last Quarter', siblingKey: 'lastQuarter' },
         { label: 'Year to Date', key: 'ytd' },
       ].map(p => {
         const val = perf[p.key];
+        const sibVal = p.siblingKey ? perf[p.siblingKey] : undefined;
+        const sibHtml = sibVal !== undefined ? `
+          <div style="margin-top:0.65rem;padding-top:0.6rem;border-top:1px solid var(--border,rgba(255,255,255,0.08));">
+            <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted,#8fa3b8);margin-bottom:0.2rem;">${p.siblingLabel}</div>
+            <div style="font-size:1.1rem;font-weight:700;color:${pctColor(sibVal)};">${fmtPct(sibVal)}</div>
+          </div>` : '';
         return `
           <div style="background:var(--card,#1a2535);border:1px solid var(--border,rgba(255,255,255,0.08));border-radius:10px;padding:1.1rem 1.25rem;flex:1;min-width:120px;">
             <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted,#8fa3b8);margin-bottom:0.4rem;">${p.label}</div>
             <div style="font-size:1.8rem;font-weight:800;color:${pctColor(val)};line-height:1;">${fmtPct(val)}</div>
+            ${sibHtml}
           </div>`;
       }).join('');
 

@@ -130,22 +130,38 @@ async function calculatePerformance(token, householdId) {
   const startOfYear = new Date(now.getFullYear(), 0, 1);
   const startOfQtr = startOfQuarter(now);
 
-  const [currentBalance, mtdStart, qtdStart, ytdStart] = await Promise.all([
+  // Last month: first day of previous month → first day of current month
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const endOfLastMonth = startOfMonth; // same as start of current month
+
+  // Last quarter: start of previous quarter → start of current quarter
+  const startOfLastQtr = new Date(startOfQtr);
+  startOfLastQtr.setMonth(startOfLastQtr.getMonth() - 3);
+  const endOfLastQtr = startOfQtr;
+
+  const [currentBalance, mtdStart, qtdStart, ytdStart, lastMonthStart, lastMonthEnd, lastQtrStart, lastQtrEnd] = await Promise.all([
     fetchHouseholdBalance(token, householdId, toDateStr(now)),
     fetchHouseholdBalance(token, householdId, toDateStr(startOfMonth)),
     fetchHouseholdBalance(token, householdId, toDateStr(startOfQtr)),
     fetchHouseholdBalance(token, householdId, toDateStr(startOfYear)),
+    fetchHouseholdBalance(token, householdId, toDateStr(startOfLastMonth)),
+    fetchHouseholdBalance(token, householdId, toDateStr(endOfLastMonth)),
+    fetchHouseholdBalance(token, householdId, toDateStr(startOfLastQtr)),
+    fetchHouseholdBalance(token, householdId, toDateStr(endOfLastQtr)),
   ]);
 
-  function pct(start) {
-    if (!start || start === 0) return 0;
-    return (currentBalance - start) / start;
+  function pct(start, end) {
+    const e = end !== undefined ? end : currentBalance;
+    if (!start || start === 0) return null;
+    return (e - start) / start;
   }
 
   return {
     mtd: pct(mtdStart),
     qtd: pct(qtdStart),
     ytd: pct(ytdStart),
+    lastMonth: pct(lastMonthStart, lastMonthEnd),
+    lastQuarter: pct(lastQtrStart, lastQtrEnd),
   };
 }
 
