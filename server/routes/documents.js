@@ -55,7 +55,7 @@ const upload = multer({
 const SAFE_COLUMNS = `
   id, firm_id, owner_type, owner_id, year, doc_type, display_name,
   mime_type, size_bytes, uploaded_by_type, uploaded_by_id,
-  folder_section, folder_category,
+  folder_section, folder_category, folder_subcategory,
   is_delivered, delivered_at, viewed_at, created_at
 `;
 
