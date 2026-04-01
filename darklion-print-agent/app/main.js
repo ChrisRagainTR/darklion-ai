@@ -208,13 +208,19 @@ function cleanJobName(raw) {
 
 ipcMain.handle('search', async (event, query) => {
   const token = await getToken();
-  if (!token) throw new Error('Not authenticated');
+  if (!token || isTokenExpired(token)) {
+    showLoginWindow();
+    throw new Error('Session expired — please sign in again');
+  }
   return require('./api').search(query, token);
 });
 
 ipcMain.handle('upload', async (event, params) => {
   const token = await getToken();
-  if (!token) throw new Error('Not authenticated');
+  if (!token || isTokenExpired(token)) {
+    showLoginWindow();
+    throw new Error('Session expired — please sign in again');
+  }
   return require('./api').uploadDocument({ ...params, token });
 });
 
