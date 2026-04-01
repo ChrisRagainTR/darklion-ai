@@ -428,7 +428,7 @@
       border-top: 1px solid var(--border);
     }
 
-    .year-folder.open .year-body { display: block; }
+    .year-folder.open > .year-body { display: block; }
 
     /* Section heading inside year */
     .section-heading {
@@ -2381,8 +2381,8 @@
         document.getElementById('companiesCard').style.display = 'block';
       }
 
-      // Outstanding statements card — fetch async for all client_prepared companies
-      const bkCompanies = _companies.filter(c => c.bookkeeping_service === 'client_prepared');
+      // Outstanding statements card — fetch async for all companies (any may have client_upload schedules)
+      const bkCompanies = _companies;
       if (bkCompanies.length > 0) {
         const token = localStorage.getItem('portalToken');
         Promise.all(bkCompanies.map(c => {

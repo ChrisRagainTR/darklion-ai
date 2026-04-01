@@ -211,7 +211,7 @@
   .yr-chevron { color: var(--muted); font-size: 0.8rem; transition: transform 0.2s; }
   .year-folder.open .yr-chevron { transform: rotate(180deg); }
   .year-body { display: none; border-top: 1px solid var(--border); }
-  .year-folder.open .year-body { display: block; }
+  .year-folder.open > .year-body { display: block; }
   .cat-folder { margin-bottom: 0.35rem; border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; }
   .cat-folder-header { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.7rem; cursor: pointer; user-select: none; background: rgba(201,168,76,0.04); border-left: 3px solid var(--gold); }
   .cat-folder-header:hover { background: rgba(201,168,76,0.08); }
