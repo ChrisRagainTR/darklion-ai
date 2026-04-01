@@ -3409,18 +3409,22 @@
       ` : '<div style="padding:0.5rem 0;color:var(--muted);font-size:0.82rem;">No holdings data</div>';
 
       const acctValue = acct.balance || acct.currentNetValue || 0;
-      const acctTypeLabel = acct.accountType || '';
       const custodianLabel = acct.institutionName || '';
-      // Pills: custodian name + account type (if available and non-empty)
-      const pills = [custodianLabel, acctTypeLabel].filter(Boolean).map(label =>
-        `<span style="background:rgba(201,168,76,0.12);color:var(--gold);border:1px solid rgba(201,168,76,0.25);border-radius:20px;padding:0.1rem 0.6rem;font-size:0.7rem;font-weight:600;">${esc(label)}</span>`
-      ).join(' ');
+      // Strip custodian name from end of account name if Blueleaf appended it (e.g. "Acct - Altruist")
+      let displayName = acct.name || acct.institutionName || 'Account';
+      if (custodianLabel && displayName.toLowerCase().endsWith(' - ' + custodianLabel.toLowerCase())) {
+        displayName = displayName.slice(0, displayName.length - custodianLabel.length - 3).trim();
+      }
+      // Only show custodian pill — skip account type (jtwros, individual, etc.)
+      const pills = custodianLabel
+        ? `<span style="background:rgba(201,168,76,0.12);color:var(--gold);border:1px solid rgba(201,168,76,0.25);border-radius:20px;padding:0.1rem 0.6rem;font-size:0.7rem;font-weight:600;">${esc(custodianLabel)}</span>`
+        : '';
 
       return `
         <div class="inv-account-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:0.75rem;overflow:hidden;${hidden ? 'opacity:0.45;' : ''}" id="inv-panel-${i}">
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.1rem;" id="inv-acct-hdr-${i}">
             <div onclick="invToggleAccount(${i})" style="flex:1;min-width:0;cursor:pointer;user-select:none;">
-              <div style="font-size:0.88rem;font-weight:700;color:var(--text);margin-bottom:${pills ? '0.25rem' : '0'}">${esc(acct.name || acct.institutionName || 'Account')}</div>
+              <div style="font-size:0.88rem;font-weight:700;color:var(--text);margin-bottom:${pills ? '0.25rem' : '0'}">${esc(displayName)}</div>
               ${pills ? `<div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.2rem;">${pills}</div>` : ''}
               ${acct.accountNumber ? `<div style="font-size:0.75rem;color:var(--muted);">···${acct.accountNumber.slice(-4)}</div>` : ''}
             </div>

@@ -1583,16 +1583,22 @@
           </table>` : '<div style="padding:0.5rem 0;color:var(--muted,#8fa3b8);font-size:0.82rem;">No holdings data</div>';
 
         const acctValue = acct.balance || acct.currentNetValue;
-        const acctType = acct.accountType ? `<span style="background:rgba(201,168,76,0.12);color:var(--gold,#c9a84c);border:1px solid rgba(201,168,76,0.25);border-radius:20px;padding:0.1rem 0.5rem;font-size:0.7rem;font-weight:600;margin-left:0.5rem;">${esc(acct.accountType)}</span>` : '';
+        const custodianLabel = acct.institutionName || '';
+        let displayName = acct.name || acct.institutionName || 'Account';
+        if (custodianLabel && displayName.toLowerCase().endsWith(' - ' + custodianLabel.toLowerCase())) {
+          displayName = displayName.slice(0, displayName.length - custodianLabel.length - 3).trim();
+        }
+        const custPill = custodianLabel
+          ? `<span style="background:rgba(201,168,76,0.12);color:var(--gold,#c9a84c);border:1px solid rgba(201,168,76,0.25);border-radius:20px;padding:0.1rem 0.5rem;font-size:0.7rem;font-weight:600;">${esc(custodianLabel)}</span>`
+          : '';
 
         return `
           <div style="background:var(--card,#1a2535);border:1px solid var(--border,rgba(255,255,255,0.08));border-radius:10px;margin-bottom:0.75rem;overflow:hidden;">
             <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none';this.querySelector('.inv-chev').textContent=this.nextElementSibling.style.display===''?'▲':'▼';" style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.1rem;cursor:pointer;user-select:none;">
               <div style="flex:1;min-width:0;">
-                <div style="font-size:0.88rem;">
-                  <span style="font-weight:700;">${esc(acct.name || acct.institutionName || 'Account')}</span>${acctType}
-                </div>
-                <div style="font-size:0.78rem;color:var(--muted,#8fa3b8);margin-top:0.1rem;">${esc(acct.institutionName || '')}${acct.accountNumber ? ' ···' + acct.accountNumber.slice(-4) : ''}</div>
+                <div style="font-size:0.88rem;font-weight:700;margin-bottom:${custPill ? '0.2rem' : '0'}">${esc(displayName)}</div>
+                ${custPill ? `<div style="margin-bottom:0.2rem;">${custPill}</div>` : ''}
+                ${acct.accountNumber ? `<div style="font-size:0.75rem;color:var(--muted,#8fa3b8)">···${acct.accountNumber.slice(-4)}</div>` : ''}
               </div>
               <div style="text-align:right;flex-shrink:0;margin-left:1rem;">
                 <div style="font-size:0.95rem;font-weight:700;">${fmtMoney(acctValue)}</div>
