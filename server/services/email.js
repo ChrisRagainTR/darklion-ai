@@ -14,8 +14,16 @@ const FROM_ADDR = process.env.RESEND_FROM || 'messages@darklion.ai';
  */
 async function getFirmLogoUrl(firmId) {
   if (!firmId) return null;
-  // Use the stable redirect endpoint — no presigned URL encoding issues in emails
+  // Use the stable redirect endpoint — clean URL, no presigned signature issues in emails
   const appUrl = process.env.APP_URL || process.env.PORTAL_URL || 'https://darklion.ai';
+  try {
+    // Verify the firm actually has a logo before returning the URL
+    const { rows } = await pool.query('SELECT logo_url FROM firms WHERE id = $1', [firmId]);
+    const logoKey = rows[0]?.logo_url;
+    if (!logoKey) return null;
+  } catch(err) {
+    // If DB check fails, still return the URL and let the endpoint handle it
+  }
   return `${appUrl}/portal-auth/firm-logo/${firmId}`;
 }
 
