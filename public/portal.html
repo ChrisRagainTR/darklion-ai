@@ -1012,6 +1012,12 @@
         <!-- Quick links -->
         <div class="quick-links" id="quickLinks"></div>
 
+        <!-- Statements outstanding -->
+        <div class="card" id="statementsCard" style="display:none;">
+          <div class="card-title">📬 Statements Needed</div>
+          <div id="statementsCardBody"></div>
+        </div>
+
         <!-- Companies -->
         <div class="card" id="companiesCard" style="display:none;">
           <div class="card-title">Your Companies</div>
@@ -2369,6 +2375,51 @@
           });
         });
         document.getElementById('companiesCard').style.display = 'block';
+      }
+
+      // Outstanding statements card — fetch async for all client_prepared companies
+      const bkCompanies = _companies.filter(c => c.bookkeeping_service === 'client_prepared');
+      if (bkCompanies.length > 0) {
+        const token = localStorage.getItem('portalToken');
+        Promise.all(bkCompanies.map(c => {
+          const coId = c.id || c.company_id;
+          return fetch(`/portal/companies/${coId}/statements`, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => ({ coId, coName: c.company_name, data }))
+            .catch(() => null);
+        })).then(results => {
+          const pending = results.filter(r => r && r.data && r.data.total_pending > 0);
+          if (pending.length === 0) return;
+          const body = document.getElementById('statementsCardBody');
+          body.innerHTML = pending.map(r => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.65rem 0;border-bottom:1px solid var(--border);">
+              <div>
+                <div style="font-weight:600;font-size:0.9rem;">${escHtml(r.coName)}</div>
+                <div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem;">
+                  🔴 <strong>${r.data.total_pending}</strong> statement${r.data.total_pending !== 1 ? 's' : ''} outstanding
+                </div>
+              </div>
+              <button class="btn-goto-stmts" data-co-id="${r.coId}"
+                style="background:var(--gold);color:#0f1117;border:none;border-radius:6px;padding:0.4rem 0.9rem;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+                Upload Now →
+              </button>
+            </div>
+          `).join('');
+          body.querySelectorAll('.btn-goto-stmts').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const coId = parseInt(btn.dataset.coId);
+              const coTabBtn = document.querySelector(`#company-tabs .tab-btn[data-tab="co-${coId}"]`);
+              if (coTabBtn) {
+                coTabBtn.click();
+                setTimeout(() => {
+                  const stmtSubBtn = document.querySelector(`.co-subtab-btn[data-co="${coId}"][data-subtab="statements"]`);
+                  if (stmtSubBtn) stmtSubBtn.click();
+                }, 200);
+              }
+            });
+          });
+          document.getElementById('statementsCard').style.display = 'block';
+        });
       }
     }
 
