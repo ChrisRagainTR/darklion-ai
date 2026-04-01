@@ -1942,9 +1942,13 @@
         html += `</div>`;
         container.innerHTML = html;
 
-        // Wire year toggles and download
-        container.querySelectorAll('.year-header').forEach(h => {
-          h.addEventListener('click', () => h.closest('.year-folder').classList.toggle('open'));
+        // Wire year toggles and download — use delegation so nested BK sub-folders work too
+        container.addEventListener('click', e => {
+          const hdr = e.target.closest('.year-header');
+          if (hdr && container.contains(hdr)) {
+            e.stopPropagation();
+            hdr.closest('.year-folder').classList.toggle('open');
+          }
         });
         container.querySelectorAll('.doc-name-link').forEach(el => {
           el.addEventListener('click', e => { e.stopPropagation(); const btn = el.closest('.doc-row').querySelector('.btn-dl'); downloadDoc(parseInt(el.dataset.docid), btn || {}); });
@@ -2636,11 +2640,13 @@
 
       container.innerHTML = html;
 
-      // Year toggle
-      container.querySelectorAll('.year-header').forEach(h => {
-        h.addEventListener('click', () => {
-          h.closest('.year-folder').classList.toggle('open');
-        });
+      // Year toggle — event delegation so BK account sub-folders work
+      container.addEventListener('click', e => {
+        const hdr = e.target.closest('.year-header');
+        if (hdr && container.contains(hdr)) {
+          e.stopPropagation();
+          hdr.closest('.year-folder').classList.toggle('open');
+        }
       });
 
       // Clicking doc name opens it
