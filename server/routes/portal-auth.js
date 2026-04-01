@@ -580,4 +580,27 @@ router.post('/send-invite', requireFirm, async (req, res) => {
   }
 });
 
+// --- GET /portal-auth/firm-logo/:firmId --- (public, no auth — stable URL for emails)
+router.get('/firm-logo/:firmId', async (req, res) => {
+  try {
+    const { pool } = require('../db');
+    const { getSignedDownloadUrl } = require('../services/s3');
+    const { rows } = await pool.query('SELECT logo_url FROM firms WHERE id = $1', [req.params.firmId]);
+    const logoKey = rows[0]?.logo_url;
+    if (!logoKey) return res.status(404).send('No logo');
+    // If already a full URL, redirect directly
+    if (logoKey.startsWith('http')) return res.redirect(logoKey);
+    const url = await getSignedDownloadUrl({
+      key: logoKey,
+      bucket: process.env.AWS_S3_BUCKET || 'darklion-documents',
+      expiresIn: 3600,
+    });
+    // Redirect with short cache — email clients follow the redirect and cache the image
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.redirect(url);
+  } catch(err) {
+    res.status(500).send('Error');
+  }
+});
+
 module.exports = router;

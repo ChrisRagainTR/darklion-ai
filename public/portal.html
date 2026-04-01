@@ -1939,7 +1939,7 @@
     // submitClientFinancials replaced by openFinancialsModal / submitFinancials below
 
     // ── BOOKKEEPING / CLOSE PACKAGE ──────────────────────
-    async function loadCompanyStatements(coId) {
+    window.loadCompanyStatements = async function loadCompanyStatements(coId) {
       const container = document.getElementById(`co-stmts-${coId}`);
       if (!container) return;
       container.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading statements…</div></div>';
@@ -2035,7 +2035,7 @@
       }
     }
 
-    async function portalUploadStatement(coId, scheduleId, month, inputEl) {
+    window.portalUploadStatement = async function portalUploadStatement(coId, scheduleId, month, inputEl) {
       const file = inputEl.files[0];
       if (!file) return;
       const statusEl = document.getElementById(`co-stmt-status-${coId}-${scheduleId}-${month}`);

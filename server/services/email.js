@@ -13,19 +13,10 @@ const FROM_ADDR = process.env.RESEND_FROM || 'messages@darklion.ai';
  * @returns {Promise<string|null>}
  */
 async function getFirmLogoUrl(firmId) {
-  try {
-    const { rows } = await pool.query('SELECT logo_url FROM firms WHERE id = $1', [firmId]);
-    const logoKey = rows[0]?.logo_url;
-    if (!logoKey || logoKey.startsWith('http')) return logoKey || null;
-    return await getSignedDownloadUrl({
-      key: logoKey,
-      bucket: process.env.AWS_S3_BUCKET || 'darklion-s3',
-      expiresIn: 604800, // 7 days — long enough for email recipients
-    });
-  } catch (err) {
-    console.warn('[email] Could not resolve firm logo URL:', err.message);
-    return null;
-  }
+  if (!firmId) return null;
+  // Use the stable redirect endpoint — no presigned URL encoding issues in emails
+  const appUrl = process.env.APP_URL || process.env.PORTAL_URL || 'https://darklion.ai';
+  return `${appUrl}/portal-auth/firm-logo/${firmId}`;
 }
 
 /**
