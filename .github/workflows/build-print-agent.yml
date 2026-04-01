@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - 'darklion-print-agent/**'
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:   # allow manual trigger from GitHub UI
 
 jobs:
