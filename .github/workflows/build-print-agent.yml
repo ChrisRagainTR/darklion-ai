@@ -19,38 +19,12 @@ jobs:
         shell: powershell
         run: node --version; npm --version
 
-      - name: Prepare Redmon64.dll
+      - name: Verify Redmon64.dll placeholder
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Continue'
-          # Ensure installer directory exists
-          $dir = "darklion-print-agent\installer"
-          if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
-          $dest = "$dir\redmon64.dll"
-
-          # Always write placeholder first so build never fails on this step
-          [byte[]]$placeholder = [byte[]]::new(64)
-          [System.IO.File]::WriteAllBytes($dest, $placeholder)
-          Write-Host "Placeholder Redmon64.dll created."
-
-          # Optionally try to download real DLL (non-fatal if fails)
-          $urls = @(
-            "https://github.com/nicholasess/redmon/raw/master/redmon64.dll",
-            "https://github.com/dtjohnson/redmon/raw/master/redmon64.dll"
-          )
-          foreach ($url in $urls) {
-            try {
-              Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing -TimeoutSec 30
-              if ((Test-Path $dest) -and (Get-Item $dest).Length -gt 1000) {
-                Write-Host "Redmon64.dll downloaded from $url"
-                break
-              }
-            } catch {
-              Write-Host "Download failed from $url (non-fatal)"
-            }
-          }
-          Write-Host "Redmon step complete. File size: $((Get-Item $dest).Length) bytes"
-          exit 0
+          # redmon64.dll is committed to the repo as a placeholder
+          # Real Redmon install is handled post-install by printer-setup.ps1
+          Write-Host "Redmon64.dll present: $((Test-Path 'darklion-print-agent\installer\redmon64.dll'))"
 
       - name: Create placeholder icon (if not present)
         shell: powershell
