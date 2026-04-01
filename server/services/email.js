@@ -169,4 +169,31 @@ function esc(str) {
     .replace(/"/g, '&quot;');
 }
 
-module.exports = { sendEmail, sendPortalInvite, sendPortalNotification, sendPasswordReset, getFirmLogoUrl };
+/**
+ * Send a bank statement upload reminder email to a portal client.
+ */
+async function sendStatementReminder({ to, name, firmName, firmId, logoUrl, companyName, accountName, month, portalUrl }) {
+  const firstName = (name || '').split(' ')[0] || 'there';
+  const resolvedLogo = logoUrl || (firmId ? await getFirmLogoUrl(firmId) : null);
+  // Format month nicely: 2025-03 -> March 2025
+  let monthLabel = month;
+  try {
+    const [y, m] = month.split('-');
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    monthLabel = `${months[parseInt(m) - 1]} ${y}`;
+  } catch(e) { /* keep raw */ }
+
+  const html = baseTemplate(`
+    <h1>Bank Statement Reminder</h1>
+    <p>Hi ${esc(firstName)},</p>
+    <p>We need your <strong>${esc(accountName)}</strong> statement for <strong>${esc(monthLabel)}</strong> for <strong>${esc(companyName)}</strong>.</p>
+    <p>Please log in to your portal and upload it at your earliest convenience so our team can keep your books current.</p>
+    <a class="btn" href="${esc(portalUrl)}">Upload Statement →</a>
+    <div class="divider"></div>
+    <p style="font-size:0.83rem;">Once uploaded, our bookkeeping team will handle the rest. If you have any questions, reply in the portal message center.</p>
+  `, { firmName, logoUrl: resolvedLogo });
+
+  return sendEmail({ to, subject: `Action needed: ${esc(accountName)} statement for ${esc(monthLabel)}`, html, fromName: firmName });
+}
+
+module.exports = { sendEmail, sendPortalInvite, sendPortalNotification, sendPasswordReset, getFirmLogoUrl, sendStatementReminder };

@@ -888,6 +888,41 @@ router.get('/companies/:realmId/statements/accounts', async (req, res) => {
       }
     }
 
+    // For client_upload accounts with start_month, compute pending_count
+    function monthRange(startMonth) {
+      const months = [];
+      if (!startMonth || !/^\d{4}-\d{2}$/.test(startMonth)) return months;
+      const now = new Date();
+      const endDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      let cur = new Date(parseInt(startMonth.split('-')[0]), parseInt(startMonth.split('-')[1]) - 1, 1);
+      while (cur <= endDate) {
+        months.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
+        cur.setMonth(cur.getMonth() + 1);
+      }
+      return months;
+    }
+
+    const clientUploadIds = merged.filter(a => a.id && a.access_method === 'client_upload' && a.start_month).map(a => a.id);
+    if (clientUploadIds.length) {
+      const { rows: uploadStatuses } = await pool.query(
+        `SELECT schedule_id, month, status FROM statement_monthly_status
+         WHERE schedule_id = ANY($1)`,
+        [clientUploadIds]
+      );
+      const uploadedBySchedule = {};
+      for (const us of uploadStatuses) {
+        if (!uploadedBySchedule[us.schedule_id]) uploadedBySchedule[us.schedule_id] = new Set();
+        if (['uploaded','received'].includes(us.status)) uploadedBySchedule[us.schedule_id].add(us.month);
+      }
+      for (const acct of merged) {
+        if (acct.id && acct.access_method === 'client_upload' && acct.start_month) {
+          const allMonths = monthRange(acct.start_month);
+          const uploaded = uploadedBySchedule[acct.id] || new Set();
+          acct.pending_count = allMonths.filter(m => !uploaded.has(m)).length;
+        }
+      }
+    }
+
     res.json({ month, accounts: merged });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -928,21 +963,22 @@ router.post('/companies/:realmId/statements', async (req, res) => {
     const firmId = req.firm?.id;
     if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
 
-    const { account_name, institution, access_method, statement_day, notes, client_name, contact_email, qb_account_id } = req.body;
+    const { account_name, institution, access_method, statement_day, start_month, notes, client_name, contact_email, qb_account_id } = req.body;
     if (!account_name) return res.status(400).json({ error: 'account_name is required' });
 
     const { rows } = await pool.query(
-      `INSERT INTO statement_schedules (realm_id, client_name, account_name, institution, access_method, statement_day, notes, contact_email, qb_account_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO statement_schedules (realm_id, client_name, account_name, institution, access_method, statement_day, start_month, notes, contact_email, qb_account_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (realm_id, account_name) DO UPDATE SET
          institution = COALESCE(NULLIF(EXCLUDED.institution,''), statement_schedules.institution),
          access_method = EXCLUDED.access_method,
          statement_day = EXCLUDED.statement_day,
+         start_month = COALESCE(NULLIF(EXCLUDED.start_month,''), statement_schedules.start_month),
          notes = COALESCE(NULLIF(EXCLUDED.notes,''), statement_schedules.notes),
          contact_email = COALESCE(NULLIF(EXCLUDED.contact_email,''), statement_schedules.contact_email),
          qb_account_id = COALESCE(NULLIF(EXCLUDED.qb_account_id,''), statement_schedules.qb_account_id)
        RETURNING *`,
-      [realmId, client_name || '', account_name, institution || '', access_method || 'qbo_pull', statement_day || 1, notes || '', contact_email || '', qb_account_id || '']
+      [realmId, client_name || '', account_name, institution || '', access_method || 'qbo_pull', statement_day || 1, start_month || '', notes || '', contact_email || '', qb_account_id || '']
     );
     res.json(rows[0]);
   } catch (err) {
@@ -957,23 +993,73 @@ router.put('/companies/:realmId/statements/:id', async (req, res) => {
     const firmId = req.firm?.id;
     if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
 
-    const { account_name, institution, access_method, statement_day, notes, status, client_name, contact_email, qb_account_id } = req.body;
+    const { account_name, institution, access_method, statement_day, start_month, notes, status, client_name, contact_email, qb_account_id } = req.body;
     const { rows } = await pool.query(
       `UPDATE statement_schedules SET
          account_name = COALESCE($1, account_name),
          institution = COALESCE($2, institution),
          access_method = COALESCE($3, access_method),
          statement_day = COALESCE($4, statement_day),
-         notes = COALESCE($5, notes),
-         client_name = COALESCE($6, client_name),
-         contact_email = COALESCE($7, contact_email),
-         qb_account_id = COALESCE($8, qb_account_id)
-       WHERE id = $9 AND realm_id = $10
+         start_month = CASE WHEN $5 IS NOT NULL THEN $5 ELSE start_month END,
+         notes = COALESCE($6, notes),
+         client_name = COALESCE($7, client_name),
+         contact_email = COALESCE($8, contact_email),
+         qb_account_id = COALESCE($9, qb_account_id)
+       WHERE id = $10 AND realm_id = $11
        RETURNING *`,
-      [account_name, institution, access_method, statement_day, notes, client_name, contact_email, qb_account_id, id, realmId]
+      [account_name, institution, access_method, statement_day, start_month !== undefined ? (start_month || '') : null, notes, client_name, contact_email, qb_account_id, id, realmId]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/companies/:realmId/statements/:id/uploads — month-by-month upload status for a client_upload account
+router.get('/companies/:realmId/statements/:id/uploads', async (req, res) => {
+  try {
+    const { realmId, id } = req.params;
+    const firmId = req.firm?.id;
+    if (firmId && !(await assertRealmOwner(firmId, realmId, res, req.firm?.userId))) return;
+
+    const { rows: schedRows } = await pool.query(
+      'SELECT id, account_name, start_month FROM statement_schedules WHERE id = $1 AND realm_id = $2',
+      [id, realmId]
+    );
+    if (!schedRows.length) return res.status(404).json({ error: 'Not found' });
+    const sched = schedRows[0];
+
+    // Generate month range
+    function monthRange(startMonth) {
+      const months = [];
+      if (!startMonth || !/^\d{4}-\d{2}$/.test(startMonth)) return months;
+      const now = new Date();
+      const endDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      let cur = new Date(parseInt(startMonth.split('-')[0]), parseInt(startMonth.split('-')[1]) - 1, 1);
+      while (cur <= endDate) {
+        months.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
+        cur.setMonth(cur.getMonth() + 1);
+      }
+      return months;
+    }
+
+    const months = monthRange(sched.start_month);
+    const { rows: statuses } = await pool.query(
+      `SELECT month, status, received_at, document_id FROM statement_monthly_status
+       WHERE schedule_id = $1 ORDER BY month ASC`,
+      [id]
+    );
+    const statusMap = {};
+    for (const s of statuses) statusMap[s.month] = s;
+
+    const result = months.map(m => {
+      const st = statusMap[m];
+      return { month: m, status: st ? st.status : 'pending', received_at: st ? st.received_at : null, document_id: st ? st.document_id : null };
+    });
+
+    const pendingCount = result.filter(m => !['uploaded','received'].includes(m.status)).length;
+    res.json({ account_name: sched.account_name, start_month: sched.start_month, months: result, pending_count: pendingCount });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

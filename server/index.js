@@ -702,9 +702,10 @@ async function start() {
   startNightlyCron();
   startViktorBriefingCron();
 
-  const { scheduleAt10PM, startBlueleafSync } = require('./scheduler');
+  const { scheduleAt10PM, startBlueleafSync, startStatementReminders } = require('./scheduler');
   scheduleAt10PM();
   startBlueleafSync();
+  startStatementReminders();
 }
 
 start().catch(err => {
