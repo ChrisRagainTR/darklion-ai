@@ -716,6 +716,19 @@ The tax organizer is a 4-step client-facing flow for collecting tax documents. S
 - Staff side: `server/routes/organizer.js`
 - Drake PDF parser: `server/services/organizerParser.js`
 
+### Staff Workflow — How to Set Up Organizers Each Year
+
+1. **Go to CRM → Person record → Organizers tab**
+2. Click **"⬆ Upload Drake Organizer"** — upload the Drake PDF for that client/year
+3. DarkLion parses the PDF (`organizerParser.js`) and creates checklist items automatically
+4. Once created, the client sees it in their portal immediately — there is NO separate "send" button
+5. To add custom questions: edit the organizer record (custom_questions JSON on tax_organizers table)
+6. To set the active tax year for all clients: **Settings → Tax Year** — updates instantly, no deploy
+
+**To reopen after submitted:** CRM → Person → Organizers tab → "🔄 Request More Docs" button
+
+**Year note:** The upload button is currently hardcoded to `'2025'`. Update this each January for the new tax year.
+
 ### Known Issues / Decisions
 - `documents` table has NO `updated_at` column — never add it to UPDATE queries on that table
 - Use `AWS_S3_BUCKET` (not `S3_BUCKET`) for all S3 operations
