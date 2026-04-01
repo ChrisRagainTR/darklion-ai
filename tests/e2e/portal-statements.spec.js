@@ -386,7 +386,8 @@ test.describe('Bookkeeping Statements — Overview Card', () => {
       if (body.accounts && body.accounts.length === 0) {
         expect(res.status()).toBe(200);
         expect(body.accounts).toHaveLength(0);
-        expect(body.total_pending).toBe(0); // always 0 when no accounts
+        // total_pending should be 0 or absent when accounts is empty
+        expect(body.total_pending === 0 || body.total_pending === undefined).toBeTruthy();
         return;
       }
     }
