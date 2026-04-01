@@ -69,7 +69,7 @@ async function sendEmail({ to, subject, html, fromName }) {
  */
 function baseTemplate(content, { firmName = 'DarkLion', logoUrl = null } = {}) {
   const logoHtml = logoUrl
-    ? `<img src="${esc(logoUrl)}" alt="${esc(firmName)}" style="max-height:48px; max-width:200px; object-fit:contain; margin-bottom:28px; display:block;" />`
+    ? `<img src="${logoUrl}" alt="${esc(firmName)}" style="max-height:48px; max-width:200px; object-fit:contain; margin-bottom:28px; display:block;" />`
     : `<div class="logo-text">${esc(firmName)}</div>`;
 
   return `<!DOCTYPE html>
