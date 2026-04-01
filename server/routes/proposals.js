@@ -331,6 +331,12 @@ router.post('/:id([0-9]+)/save-to-crm', async (req, res) => {
       [eng.engagement_id_val]
     );
 
+    // Fire engagement triggers (non-blocking)
+    const engagementContext = { proposal_id: eng.proposal_id_val, engagement_type: eng.engagement_type };
+    fireProposalTrigger(firmId, 'engagement_letter_signed', eng.proposal_id_val, engagementContext);
+    const specificTrigger = eng.engagement_type === 'wealth' ? 'wealth_loe_signed' : 'tax_loe_signed';
+    fireProposalTrigger(firmId, specificTrigger, eng.proposal_id_val, engagementContext);
+
     res.json({ ok: true, engagement_letter_id: letter[0].id });
   } catch (err) {
     console.error('POST /proposals/:id/save-to-crm error:', err);

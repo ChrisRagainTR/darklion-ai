@@ -202,7 +202,7 @@ router.post('/:token/sign', async (req, res) => {
 
   try {
     const { rows: prop } = await pool.query(
-      'SELECT id FROM proposals WHERE public_token = $1',
+      'SELECT id, engagement_type FROM proposals WHERE public_token = $1',
       [token]
     );
     if (!prop.length) return res.status(404).json({ error: 'Proposal not found' });
@@ -268,7 +268,7 @@ router.post('/:token/sign', async (req, res) => {
           [prop[0].id]
         );
         for (const row of relPeople) {
-          fireTrigger(row.firm_id, 'proposal_signed', row.person_id, { proposal_id: prop[0].id })
+          fireTrigger(row.firm_id, 'proposal_signed', row.person_id, { proposal_id: prop[0].id, engagement_type: prop[0].engagement_type })
             .catch(e => console.error('[proposals-public] fireTrigger proposal_signed non-fatal:', e));
         }
       } catch (e) {

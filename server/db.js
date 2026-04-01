@@ -859,6 +859,8 @@ async function initDB() {
       ('client_requested_changes',    'Client Requested Changes',      'tax'),
       ('engagement_letter_sent',      'Engagement Letter Sent',        'engagement'),
       ('engagement_letter_signed',    'Client Signed Engagement Letter','engagement'),
+      ('tax_loe_signed',              'Tax LOE Signed',                'engagement'),
+      ('wealth_loe_signed',           'Wealth LOE Signed',             'engagement'),
       ('proposal_sent',               'Proposal Sent',                 'proposals'),
       ('proposal_accepted',           'Proposal Accepted',             'proposals'),
       ('proposal_signed',             'Proposal Signed',               'proposals'),
