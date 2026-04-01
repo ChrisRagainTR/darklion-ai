@@ -2101,7 +2101,7 @@ const articles = [
 <div class="article-meta">Section: Other</div>
 <div class="article-body">
 
-<p>Go to <strong>Settings (⚙️)</strong> in the left sidebar to manage your firm's branding and custom domain. Settings has two tabs.</p>
+<p>Go to <strong>Settings (⚙️)</strong> in the left sidebar to manage your firm's branding, custom domain, and tax season controls. Settings has five tabs.</p>
 
 <h2>Firm Branding Tab</h2>
 <p>Everything here controls how your firm appears to clients in the portal, in emails, and on PDF reports.</p>
@@ -2131,12 +2131,25 @@ const articles = [
 <p>A color picker that sets the accent color used throughout the client portal and on PDF report covers. Choose your firm's primary brand color.</p>
 <p><strong>Auto-lightening:</strong> If you choose a very dark color (e.g., near-black navy), DarkLion automatically adjusts it to a lighter shade that works against dark backgrounds. This ensures your branding is always legible regardless of how dark your chosen color is.</p>
 
-<h3>Active Tax Year</h3>
-<p>The default tax year used throughout the app — when uploading documents, creating organizers, building pipelines. <strong>Update this at the start of each tax season</strong> (e.g., change from 2024 to 2025 in January when you start taking on 2025 prep work).</p>
-<p>This setting affects the default year in document upload modals, organizer creation, and pipeline year selectors.</p>
-
 <h3>Save Branding</h3>
 <p>Click <strong>Save Branding</strong> to apply all changes. Changes take effect immediately for all new client sessions.</p>
+
+<h2>Tax Season Tab</h2>
+<p>The Tax Season tab has two controls for managing your organizer rollout each year.</p>
+
+<h3>Active Tax Year</h3>
+<p>The default tax year used throughout the app — when uploading documents, creating organizers, and building pipelines. <strong>Update this at the start of each tax season</strong> (e.g., change from 2024 to 2025 in January when you start taking on 2025 prep work).</p>
+
+<h3>Manage Client Organizer Visibility</h3>
+<p>Click <strong>📋 Manage Client Organizer Visibility</strong> to open the Tax Season management page. This is where you control which clients see the Organizers tab in their portal.</p>
+<ul>
+  <li><strong>By default, the Organizers tab is hidden</strong> for all clients. Clients can't see or access their organizer until you enable visibility for them.</li>
+  <li>Use <strong>Show All</strong> to flip all clients on at once — useful at the start of tax season when you want to open organizers firm-wide.</li>
+  <li>Use <strong>Hide All</strong> to close access for everyone — useful at the end of season.</li>
+  <li>Toggle individual clients on or off as needed — for example, if a client isn't ready yet or you're rolling out in batches.</li>
+</ul>
+
+<div class="callout tip"><span class="callout-icon">💡</span><div>The visibility toggle is independent of whether you've actually sent the client an organizer. Best practice: send organizers first, then flip visibility when you're ready for clients to start filling them in.</div></div>
 
 <h2>Custom Domains Tab</h2>
 <p>By default, clients access the portal at <strong>darklion.ai/client-login</strong>. With a custom domain, they can access it at your own URL — for example, <strong>portal.sentinelwealth.co</strong>.</p>
