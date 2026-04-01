@@ -1505,7 +1505,22 @@
       if (!wrap) return;
 
       const data = window._portalInvestmentsCache;
-      if (!data || !data.enabled || !data.snapshot) {
+      if (!data) {
+        // Cache not ready — fetch now
+        const token = localStorage.getItem('portalToken');
+        fetch('/portal/investments', { headers: { 'Authorization': `Bearer ${token}` } })
+          .then(r => r.ok ? r.json() : null)
+          .then(d => {
+            if (d && d.enabled && d.snapshot) {
+              renderPortalInvestments(wrap, d.snapshot);
+            } else {
+              wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">No investment data available.</div>';
+            }
+          })
+          .catch(() => { wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">Unable to load investment data.</div>'; });
+        return;
+      }
+      if (!data.enabled || !data.snapshot) {
         wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">No investment data available.</div>';
         return;
       }
@@ -1514,7 +1529,12 @@
 
     function renderPortalInvestments(wrap, snapshot) {
       const perf = snapshot.performance || {};
-      const accounts = snapshot.accounts || [];
+      // Sort largest to smallest
+      const accounts = (snapshot.accounts || []).slice().sort((a, b) => {
+        const va = a.balance || a.currentNetValue || 0;
+        const vb = b.balance || b.currentNetValue || 0;
+        return vb - va;
+      });
       const syncedAt = snapshot.synced_at ? new Date(snapshot.synced_at).toLocaleDateString() : '';
 
       function fmtPct(val) {
@@ -1574,8 +1594,10 @@
           <div style="background:var(--card,#1a2535);border:1px solid var(--border,rgba(255,255,255,0.08));border-radius:10px;margin-bottom:0.75rem;overflow:hidden;">
             <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none';this.querySelector('.inv-chev').textContent=this.nextElementSibling.style.display===''?'▲':'▼';" style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.1rem;cursor:pointer;user-select:none;">
               <div style="flex:1;min-width:0;">
-                <div style="font-size:0.88rem;font-weight:700;">${esc(acct.institutionName || 'Unknown Institution')}${acctType}</div>
-                <div style="font-size:0.78rem;color:var(--muted,#8fa3b8);margin-top:0.1rem;">${esc(acct.name || '')}${acct.accountNumber ? ' ···' + acct.accountNumber.slice(-4) : ''}</div>
+                <div style="font-size:0.88rem;">
+                  <span style="font-weight:700;">${esc(acct.name || acct.institutionName || 'Account')}</span>${acctType}
+                </div>
+                <div style="font-size:0.78rem;color:var(--muted,#8fa3b8);margin-top:0.1rem;">${esc(acct.institutionName || '')}${acct.accountNumber ? ' ···' + acct.accountNumber.slice(-4) : ''}</div>
               </div>
               <div style="text-align:right;flex-shrink:0;margin-left:1rem;">
                 <div style="font-size:0.95rem;font-weight:700;">${fmtMoney(acctValue)}</div>
