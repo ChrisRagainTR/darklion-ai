@@ -1611,9 +1611,9 @@ router.post('/companies/:id/statements/:scheduleId/:month', upload.single('file'
     const displayName = `${schedule.account_name} — ${month} Statement`;
     const { rows: docRows } = await pool.query(
       `INSERT INTO documents
-         (firm_id, owner_type, owner_id, year, file_name, s3_key, bucket, mime_type, file_size,
-          uploaded_by_person_id, s3_path, is_downloaded, created_at, folder_section, folder_category)
-       VALUES ($1, 'company', $2, $3, $4, $5, $6, $7, $8, $9, $5, false, NOW(), 'client_uploaded', 'bookkeeping')
+         (firm_id, owner_type, owner_id, year, display_name, s3_key, s3_bucket, mime_type, size_bytes,
+          uploaded_by_type, uploaded_by_id, created_at, folder_section, folder_category)
+       VALUES ($1, 'company', $2, $3, $4, $5, $6, $7, $8, 'client', $9, NOW(), 'client_uploaded', 'bookkeeping')
        RETURNING id`,
       [firmId, companyId, year, displayName, s3Key, bucket,
        req.file.mimetype || 'application/pdf', req.file.size || req.file.buffer.length, personId]
