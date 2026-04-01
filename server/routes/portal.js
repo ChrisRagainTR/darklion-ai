@@ -1508,7 +1508,7 @@ router.get('/companies/:id/statements', async (req, res) => {
     const scheduleIds = schedules.map(s => s.id);
     const { rows: statuses } = await pool.query(
       `SELECT sms.schedule_id, sms.month, sms.status, sms.received_at, sms.document_id,
-              d.file_name AS doc_file_name
+              d.display_name AS doc_file_name
        FROM statement_monthly_status sms
        LEFT JOIN documents d ON d.id = sms.document_id
        WHERE sms.schedule_id = ANY($1)
