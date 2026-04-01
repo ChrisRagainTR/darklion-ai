@@ -597,10 +597,8 @@
             <input class="stmt-input" id="bk-stmt-new-name" placeholder="Account name *" style="width:180px;">
             <input class="stmt-input" id="bk-stmt-new-inst" placeholder="Institution" style="width:150px;">
             <select class="stmt-select" id="bk-stmt-new-method">
-              <option value="qbo_pull">QBO Pull</option>
-              <option value="portal" selected>Portal Download</option>
-              <option value="manual">Manual Download</option>
-              <option value="email">Email</option>
+              <option value="qbo_pull">QBO Download</option>
+              <option value="sentinel_download" selected>Sentinel Download</option>
               <option value="client_upload">Client Upload</option>
             </select>
             <input class="stmt-input stmt-day-input" type="number" id="bk-stmt-new-day" placeholder="Day" value="1" min="1" max="31" style="width:70px;">
@@ -3237,9 +3235,10 @@
   // STATEMENTS
   // ================================================================
   const BK_METHOD_LABELS = {
-    qbo_pull: 'QBO Pull', portal: 'Portal Download', manual: 'Manual Download',
-    email: 'Email', client_upload: 'Client Upload',
-    qbo: 'QBO Pull', client: 'Client Upload'
+    qbo_pull: 'QBO Download', sentinel_download: 'Sentinel Download', client_upload: 'Client Upload',
+    // Legacy aliases (existing data)
+    portal: 'Sentinel Download', manual: 'Sentinel Download', email: 'Sentinel Download',
+    qbo: 'QBO Download', client: 'Client Upload'
   };
 
   function bk_stmtCurrentMonth() {
@@ -3328,7 +3327,7 @@
         const label = monthsBehind >= 3 ? `Clear ${monthsBehind}-Month Backlog` : 'Mark Current';
         markCurrentBtn = `<button class="btn btn-gold btn-sm" onclick="bk_markStmtCurrent('${realmId}',${a.id},this)">${label}</button>`;
       }
-      const methodSel = Object.entries(BK_METHOD_LABELS).filter(([k]) => !['qbo','client'].includes(k)).map(([k,v]) =>
+      const methodSel = Object.entries(BK_METHOD_LABELS).filter(([k]) => ['qbo_pull','sentinel_download','client_upload'].includes(k)).map(([k,v]) =>
         `<option value="${k}"${(a.access_method||'qbo_pull')===k?' selected':''}>${v}</option>`
       ).join('');
       html += `<tr id="bk-stmtrow-${a.id || 'new'}">
