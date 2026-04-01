@@ -1488,7 +1488,7 @@ router.get('/companies/:id/statements', async (req, res) => {
       [companyId]
     );
     const company = cos[0];
-    if (!company || !company.realm_id) return res.json({ accounts: [] });
+    if (!company || !company.realm_id) return res.json({ accounts: [], total_pending: 0 });
 
     const realmId = company.realm_id;
 
@@ -1502,7 +1502,7 @@ router.get('/companies/:id/statements', async (req, res) => {
       [realmId]
     );
 
-    if (!schedules.length) return res.json({ accounts: [] });
+    if (!schedules.length) return res.json({ accounts: [], total_pending: 0 });
 
     // For each schedule, load all monthly statuses
     const scheduleIds = schedules.map(s => s.id);
