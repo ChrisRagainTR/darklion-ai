@@ -179,6 +179,12 @@ async function initDB() {
     EXCEPTION WHEN duplicate_column THEN NULL;
     END $$;
 
+    -- Add start_month column (client_upload accounts only: first month client needs to upload)
+    DO $$ BEGIN
+      ALTER TABLE statement_schedules ADD COLUMN start_month TEXT DEFAULT '';
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$;
+
     CREATE TABLE IF NOT EXISTS statement_monthly_status (
       id SERIAL PRIMARY KEY,
       schedule_id INTEGER NOT NULL REFERENCES statement_schedules(id) ON DELETE CASCADE,
@@ -190,6 +196,12 @@ async function initDB() {
       updated_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(schedule_id, month)
     );
+
+    -- Add document_id to statement_monthly_status (links uploaded document)
+    DO $$ BEGIN
+      ALTER TABLE statement_monthly_status ADD COLUMN document_id INTEGER REFERENCES documents(id) ON DELETE SET NULL;
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$;
 
     CREATE TABLE IF NOT EXISTS employee_metadata (
       id SERIAL PRIMARY KEY,
@@ -852,7 +864,8 @@ async function initDB() {
       ('proposal_signed',             'Proposal Signed',               'proposals'),
       ('portal_first_login',          'Client First Portal Login',     'portal'),
       ('portal_message_received',     'Client Sent a Portal Message',  'portal'),
-      ('document_uploaded_by_client', 'Client Uploaded a Document',    'portal')
+      ('document_uploaded_by_client', 'Client Uploaded a Document',    'portal'),
+      ('client_statement_uploaded',   'Client Uploaded a Bank Statement', 'portal')
     ON CONFLICT (key) DO UPDATE SET label = EXCLUDED.label;
 
     -- Maps trigger keys → pipeline stages (max 2 per stage)

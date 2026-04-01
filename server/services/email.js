@@ -13,19 +13,18 @@ const FROM_ADDR = process.env.RESEND_FROM || 'messages@darklion.ai';
  * @returns {Promise<string|null>}
  */
 async function getFirmLogoUrl(firmId) {
+  if (!firmId) return null;
+  // Use the stable redirect endpoint — clean URL, no presigned signature issues in emails
+  const appUrl = process.env.APP_URL || process.env.PORTAL_URL || 'https://darklion.ai';
   try {
+    // Verify the firm actually has a logo before returning the URL
     const { rows } = await pool.query('SELECT logo_url FROM firms WHERE id = $1', [firmId]);
     const logoKey = rows[0]?.logo_url;
-    if (!logoKey || logoKey.startsWith('http')) return logoKey || null;
-    return await getSignedDownloadUrl({
-      key: logoKey,
-      bucket: process.env.AWS_S3_BUCKET || 'darklion-s3',
-      expiresIn: 604800, // 7 days — long enough for email recipients
-    });
-  } catch (err) {
-    console.warn('[email] Could not resolve firm logo URL:', err.message);
-    return null;
+    if (!logoKey) return null;
+  } catch(err) {
+    // If DB check fails, still return the URL and let the endpoint handle it
   }
+  return `${appUrl}/portal-auth/firm-logo/${firmId}`;
 }
 
 /**
@@ -69,7 +68,7 @@ async function sendEmail({ to, subject, html, fromName }) {
  */
 function baseTemplate(content, { firmName = 'DarkLion', logoUrl = null } = {}) {
   const logoHtml = logoUrl
-    ? `<img src="${esc(logoUrl)}" alt="${esc(firmName)}" style="max-height:48px; max-width:200px; object-fit:contain; margin-bottom:28px; display:block;" />`
+    ? `<img src="${logoUrl}" alt="${esc(firmName)}" style="max-height:48px; max-width:200px; object-fit:contain; margin-bottom:28px; display:block;" />`
     : `<div class="logo-text">${esc(firmName)}</div>`;
 
   return `<!DOCTYPE html>
@@ -169,4 +168,31 @@ function esc(str) {
     .replace(/"/g, '&quot;');
 }
 
-module.exports = { sendEmail, sendPortalInvite, sendPortalNotification, sendPasswordReset, getFirmLogoUrl };
+/**
+ * Send a bank statement upload reminder email to a portal client.
+ */
+async function sendStatementReminder({ to, name, firmName, firmId, logoUrl, companyName, accountName, month, portalUrl }) {
+  const firstName = (name || '').split(' ')[0] || 'there';
+  const resolvedLogo = logoUrl || (firmId ? await getFirmLogoUrl(firmId) : null);
+  // Format month nicely: 2025-03 -> March 2025
+  let monthLabel = month;
+  try {
+    const [y, m] = month.split('-');
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    monthLabel = `${months[parseInt(m) - 1]} ${y}`;
+  } catch(e) { /* keep raw */ }
+
+  const html = baseTemplate(`
+    <h1>Bank Statement Reminder</h1>
+    <p>Hi ${esc(firstName)},</p>
+    <p>We need your <strong>${esc(accountName)}</strong> statement for <strong>${esc(monthLabel)}</strong> for <strong>${esc(companyName)}</strong>.</p>
+    <p>Please log in to your portal and upload it at your earliest convenience so our team can keep your books current.</p>
+    <a class="btn" href="${esc(portalUrl)}">Upload Statement →</a>
+    <div class="divider"></div>
+    <p style="font-size:0.83rem;">Once uploaded, our bookkeeping team will handle the rest. If you have any questions, reply in the portal message center.</p>
+  `, { firmName, logoUrl: resolvedLogo });
+
+  return sendEmail({ to, subject: `Action needed: ${esc(accountName)} statement for ${esc(monthLabel)}`, html, fromName: firmName });
+}
+
+module.exports = { sendEmail, sendPortalInvite, sendPortalNotification, sendPasswordReset, getFirmLogoUrl, sendStatementReminder };

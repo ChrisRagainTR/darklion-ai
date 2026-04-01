@@ -293,7 +293,7 @@ router.get('/documents', async (req, res) => {
         query = `
           SELECT id, firm_id, owner_type, owner_id, doc_type,
                  display_name, mime_type, size_bytes, is_delivered,
-                 delivered_at, viewed_at, year, folder_section, folder_category, created_at
+                 delivered_at, viewed_at, year, folder_section, folder_category, folder_subcategory, created_at
           FROM documents
           WHERE folder_section != 'private'
             AND (
@@ -307,7 +307,7 @@ router.get('/documents', async (req, res) => {
         query = `
           SELECT id, firm_id, owner_type, owner_id, doc_type,
                  display_name, mime_type, size_bytes, is_delivered,
-                 delivered_at, viewed_at, year, folder_section, folder_category, created_at
+                 delivered_at, viewed_at, year, folder_section, folder_category, folder_subcategory, created_at
           FROM documents
           WHERE folder_section != 'private'
             AND owner_type = 'person'
@@ -1449,6 +1449,199 @@ router.get('/investments', async (req, res) => {
   } catch (err) {
     console.error('Portal /investments error:', err);
     res.status(500).json({ error: 'Failed to fetch investments' });
+  }
+});
+
+// ── Statement Portal Endpoints ───────────────────────────────────────────────
+
+// Helper: generate list of YYYY-MM months from start_month to current month (inclusive)
+function monthRange(startMonth) {
+  const months = [];
+  if (!startMonth || !/^\d{4}-\d{2}$/.test(startMonth)) return months;
+  const now = new Date();
+  // Previous month is typically the most recent statement needed (current month not closed yet)
+  const endDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  let cur = new Date(parseInt(startMonth.split('-')[0]), parseInt(startMonth.split('-')[1]) - 1, 1);
+  while (cur <= endDate) {
+    months.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`);
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  return months;
+}
+
+// GET /portal/companies/:id/statements — list client_upload accounts + monthly status for this company
+router.get('/companies/:id/statements', async (req, res) => {
+  try {
+    const personId = req.portal.personId;
+    const companyId = parseInt(req.params.id);
+
+    // Verify access
+    const { rows: access } = await pool.query(
+      'SELECT 1 FROM person_company_access WHERE person_id = $1 AND company_id = $2',
+      [personId, companyId]
+    );
+    if (!access.length) return res.status(403).json({ error: 'No access to this company' });
+
+    // Get company realm_id
+    const { rows: cos } = await pool.query(
+      'SELECT realm_id, company_name, firm_id FROM companies WHERE id = $1',
+      [companyId]
+    );
+    const company = cos[0];
+    if (!company || !company.realm_id) return res.json({ accounts: [], total_pending: 0 });
+
+    const realmId = company.realm_id;
+
+    // Load all client_upload schedules for this company
+    const { rows: schedules } = await pool.query(
+      `SELECT ss.id, ss.account_name, ss.institution, ss.statement_day, ss.start_month
+       FROM statement_schedules ss
+       WHERE ss.realm_id = $1
+         AND ss.access_method = 'client_upload'
+       ORDER BY ss.account_name ASC`,
+      [realmId]
+    );
+
+    if (!schedules.length) return res.json({ accounts: [], total_pending: 0 });
+
+    // For each schedule, load all monthly statuses
+    const scheduleIds = schedules.map(s => s.id);
+    const { rows: statuses } = await pool.query(
+      `SELECT sms.schedule_id, sms.month, sms.status, sms.received_at, sms.document_id,
+              d.display_name AS doc_file_name
+       FROM statement_monthly_status sms
+       LEFT JOIN documents d ON d.id = sms.document_id
+       WHERE sms.schedule_id = ANY($1)
+       ORDER BY sms.month ASC`,
+      [scheduleIds]
+    );
+
+    const statusBySchedule = {};
+    for (const s of statuses) {
+      if (!statusBySchedule[s.schedule_id]) statusBySchedule[s.schedule_id] = {};
+      statusBySchedule[s.schedule_id][s.month] = s;
+    }
+
+    const accounts = schedules.map(sched => {
+      const months = monthRange(sched.start_month);
+      const monthlyStatus = months.map(m => {
+        const st = (statusBySchedule[sched.id] || {})[m];
+        return {
+          month: m,
+          status: st ? st.status : 'pending',
+          received_at: st ? st.received_at : null,
+          document_id: st ? st.document_id : null,
+          doc_file_name: st ? st.doc_file_name : null,
+        };
+      });
+      const pendingCount = monthlyStatus.filter(m => !['uploaded','received'].includes(m.status)).length;
+      return {
+        id: sched.id,
+        account_name: sched.account_name,
+        institution: sched.institution,
+        statement_day: sched.statement_day,
+        start_month: sched.start_month,
+        months: monthlyStatus,
+        pending_count: pendingCount,
+      };
+    });
+
+    const totalPending = accounts.reduce((s, a) => s + a.pending_count, 0);
+    res.json({ accounts, total_pending: totalPending });
+  } catch (err) {
+    console.error('Portal /companies/:id/statements error:', err);
+    res.status(500).json({ error: 'Failed to load statements' });
+  }
+});
+
+// POST /portal/companies/:id/statements/:scheduleId/:month — upload a statement for a specific month
+router.post('/companies/:id/statements/:scheduleId/:month', upload.single('file'), async (req, res) => {
+  try {
+    const personId = req.portal.personId;
+    const companyId = parseInt(req.params.id);
+    const scheduleId = parseInt(req.params.scheduleId);
+    const month = req.params.month; // YYYY-MM
+
+    if (!/^\d{4}-\d{2}$/.test(month)) return res.status(400).json({ error: 'Invalid month format' });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    // Verify access
+    const { rows: access } = await pool.query(
+      'SELECT 1 FROM person_company_access WHERE person_id = $1 AND company_id = $2',
+      [personId, companyId]
+    );
+    if (!access.length) return res.status(403).json({ error: 'No access to this company' });
+
+    // Verify schedule belongs to this company
+    const { rows: cos } = await pool.query(
+      'SELECT realm_id, company_name, firm_id FROM companies WHERE id = $1',
+      [companyId]
+    );
+    const company = cos[0];
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const { rows: schedRows } = await pool.query(
+      `SELECT ss.id, ss.account_name, ss.start_month
+       FROM statement_schedules ss
+       WHERE ss.id = $1 AND ss.realm_id = $2 AND ss.access_method = 'client_upload'`,
+      [scheduleId, company.realm_id]
+    );
+    if (!schedRows.length) return res.status(404).json({ error: 'Statement account not found' });
+    const schedule = schedRows[0];
+
+    // Validate month is within range
+    const validMonths = monthRange(schedule.start_month);
+    if (!validMonths.includes(month)) return res.status(400).json({ error: 'Month is not in the required range' });
+
+    const firmId = company.firm_id;
+    const year = month.split('-')[0];
+    const safeName = schedule.account_name.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const safeFile = require('path').basename(req.file.originalname || 'statement.pdf').replace(/[^a-z0-9._-]/gi, '_');
+    const s3Key = `firms/${firmId}/companies/${companyId}/statements/${safeName}/${year}/${month}_${safeFile}`;
+    const bucket = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET || 'darklion-documents';
+
+    await uploadFile({
+      key: s3Key,
+      buffer: req.file.buffer,
+      contentType: req.file.mimetype || 'application/pdf',
+      bucket,
+    });
+
+    // Save to documents table: client_uploaded / bookkeeping, folder = account name, year
+    const displayName = `${schedule.account_name} — ${month} Statement`;
+    const { rows: docRows } = await pool.query(
+      `INSERT INTO documents
+         (firm_id, owner_type, owner_id, year, display_name, s3_key, s3_bucket, mime_type, size_bytes,
+          uploaded_by_type, uploaded_by_id, created_at, folder_section, folder_category, folder_subcategory)
+       VALUES ($1, 'company', $2, $3, $4, $5, $6, $7, $8, 'client', $9, NOW(), 'client_uploaded', 'bookkeeping', $10)
+       RETURNING id`,
+      [firmId, companyId, year, displayName, s3Key, bucket,
+       req.file.mimetype || 'application/pdf', req.file.size || req.file.buffer.length, personId,
+       schedule.account_name || '']
+    );
+    const docId = docRows[0].id;
+
+    // Upsert statement_monthly_status as 'uploaded'
+    await pool.query(
+      `INSERT INTO statement_monthly_status (schedule_id, realm_id, month, status, received_at, document_id, updated_at)
+       VALUES ($1, $2, $3, 'uploaded', NOW(), $4, NOW())
+       ON CONFLICT (schedule_id, month) DO UPDATE SET
+         status = 'uploaded', received_at = NOW(), document_id = $4, updated_at = NOW()`,
+      [scheduleId, company.realm_id, month, docId]
+    );
+
+    // Fire pipeline trigger
+    try {
+      const { fireTrigger } = require('../services/pipelineTriggers');
+      fireTrigger(firmId, 'client_statement_uploaded', companyId, {
+        account_name: schedule.account_name, month, document_id: docId
+      }, 'company').catch(() => {});
+    } catch(e) { /* non-fatal */ }
+
+    res.json({ ok: true, document_id: docId, month });
+  } catch (err) {
+    console.error('Portal statement upload error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 

@@ -281,4 +281,95 @@ function startScheduler() {
   console.log('Scheduler started — runs every 6 hours (sync → research → categorize → auto-post → email)');
 }
 
-module.exports = { startScheduler, runFullPipeline, scheduleAt10PM, startBlueleafSync };
+// ── Nightly statement reminder — runs at 9 AM Eastern ───────────────────────
+// For each client_upload account where today == statement_day,
+// send a reminder email to all portal-enabled people on that company.
+function startStatementReminders() {
+  // Run daily at 9 AM Eastern (14:00 UTC)
+  cron.schedule('0 14 * * *', async () => {
+    try {
+      const { sendStatementReminder } = require('./services/email');
+      const now = new Date();
+      const todayDay = parseInt(now.toLocaleString('en-US', { timeZone: 'America/New_York', day: 'numeric' }));
+      // Current month-to-remind about = previous month (statements due this month are for last month)
+      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const remindMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+      // Find all client_upload accounts where statement_day matches today
+      const { rows: schedules } = await pool.query(
+        `SELECT ss.id, ss.realm_id, ss.account_name, ss.start_month, ss.statement_day,
+                c.id AS company_id, c.company_name, c.firm_id,
+                f.display_name AS firm_name
+         FROM statement_schedules ss
+         JOIN companies c ON c.realm_id = ss.realm_id
+         JOIN firms f ON f.id = c.firm_id
+         WHERE ss.access_method = 'client_upload'
+           AND ss.statement_day = $1
+           AND ss.start_month IS NOT NULL
+           AND ss.start_month <> ''
+           AND ss.start_month <= $2`,
+        [todayDay, remindMonth]
+      );
+
+      let sent = 0;
+      for (const sched of schedules) {
+        // Skip if already uploaded for this month
+        const { rows: existing } = await pool.query(
+          `SELECT 1 FROM statement_monthly_status
+           WHERE schedule_id = $1 AND month = $2 AND status IN ('uploaded','received')`,
+          [sched.id, remindMonth]
+        );
+        if (existing.length) continue;
+
+        // Find portal-enabled people with access to this company
+        const { rows: people } = await pool.query(
+          `SELECT p.id, p.first_name, p.last_name, p.email, p.portal_invite_token
+           FROM people p
+           JOIN person_company_access pca ON pca.person_id = p.id
+           WHERE pca.company_id = $1
+             AND p.portal_enabled = true
+             AND p.email IS NOT NULL
+             AND p.email <> ''`,
+          [sched.company_id]
+        );
+
+        const portalBase = process.env.PORTAL_URL || process.env.APP_URL || 'https://darklion.ai';
+        const portalUrl = `${portalBase}/portal?tab=co-${sched.company_id}&subtab=statements`;
+
+        // Fetch firm logo once per schedule
+        let logoUrl = null;
+        try {
+          const { getFirmLogoUrl } = require('./services/email');
+          logoUrl = await getFirmLogoUrl(sched.firm_id);
+        } catch(e) { /* non-fatal */ }
+
+        for (const person of people) {
+          try {
+            await sendStatementReminder({
+              to: person.email,
+              name: [person.first_name, person.last_name].filter(Boolean).join(' '),
+              firmName: sched.firm_name,
+              firmId: sched.firm_id,
+              logoUrl,
+              companyName: sched.company_name,
+              accountName: sched.account_name,
+              month: remindMonth,
+              portalUrl,
+            });
+            sent++;
+          } catch(e) {
+            console.error(`[statements] Reminder email failed for person ${person.id}:`, e.message);
+          }
+        }
+      }
+
+      if (sent > 0) console.log(`[statements] Sent ${sent} statement reminder email(s) for ${remindMonth}`);
+    } catch(e) {
+      console.error('[statements] Reminder job error:', e.message);
+    }
+  });
+
+  console.log('[statements] Nightly reminder cron scheduled (9 AM Eastern daily)');
+}
+
+module.exports = { startScheduler, runFullPipeline, scheduleAt10PM, startBlueleafSync, startStatementReminders };

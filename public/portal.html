@@ -428,7 +428,7 @@
       border-top: 1px solid var(--border);
     }
 
-    .year-folder.open .year-body { display: block; }
+    .year-folder.open > .year-body { display: block; }
 
     /* Section heading inside year */
     .section-heading {
@@ -1012,6 +1012,12 @@
         <!-- Quick links -->
         <div class="quick-links" id="quickLinks"></div>
 
+        <!-- Statements outstanding -->
+        <div class="card" id="statementsCard" style="display:none;">
+          <div class="card-title">📬 Statements Needed</div>
+          <div id="statementsCardBody"></div>
+        </div>
+
         <!-- Companies -->
         <div class="card" id="companiesCard" style="display:none;">
           <div class="card-title">Your Companies</div>
@@ -1486,6 +1492,28 @@
 
         document.getElementById('overview-loading').style.display = 'none';
         document.getElementById('overview-content').style.display = 'block';
+
+        // Deep-link: ?tab=co-{id}&subtab=statements (from reminder emails)
+        try {
+          const dlParams = new URLSearchParams(window.location.search);
+          const dlTab = dlParams.get('tab');
+          const dlSubtab = dlParams.get('subtab');
+          if (dlTab) {
+            const tabBtn = document.querySelector(`.tab-btn[data-tab="${dlTab}"]`);
+            if (tabBtn) {
+              tabBtn.click();
+              if (dlSubtab) {
+                const coId = dlTab.replace('co-', '');
+                setTimeout(() => {
+                  const subtabBtn = document.querySelector(`.co-subtab-btn[data-co="${coId}"][data-subtab="${dlSubtab}"]`);
+                  if (subtabBtn) subtabBtn.click();
+                }, 300);
+              }
+              window.history.replaceState({}, '', window.location.pathname);
+            }
+          }
+        } catch(e) { /* non-fatal */ }
+
       } catch (err) {
         if (err.message !== 'Unauthorized') {
           console.error('Portal init error:', err);
@@ -1629,8 +1657,9 @@
           <div style="display:flex;flex-wrap:wrap;gap:0.5rem;color:var(--muted,#8fa3b8);font-size:0.78rem;">Loading market data…</div>
         </div>
         <div style="margin-bottom:1.25rem;">
-          <div style="font-size:1rem;font-weight:700;margin-bottom:0.2rem;">Investment Portfolio</div>
-          <div style="font-size:0.78rem;color:var(--muted,#8fa3b8);">Total: ${fmtMoney(snapshot.raw_balance)} · As of ${syncedAt}</div>
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted,#8fa3b8);margin-bottom:0.3rem;">Total Portfolio Value</div>
+          <div style="font-size:2.2rem;font-weight:800;color:var(--text,#e2e8f0);line-height:1;letter-spacing:-0.02em;margin-bottom:0.3rem;">${fmtMoney(snapshot.raw_balance)}</div>
+          <div style="font-size:0.78rem;color:var(--muted,#8fa3b8);">As of ${syncedAt}</div>
         </div>
         <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;">
           ${perfCards}
@@ -1698,7 +1727,7 @@
         btn.title = coName;
         tabBar.appendChild(btn);
 
-        // Tab panel — contains subtabs (Docs / Bookkeeping)
+        // Tab panel — contains subtabs (Docs / Bookkeeping / Statements)
         const panel = document.createElement('div');
         panel.className = 'tab-panel';
         panel.id = `tab-${tabKey}`;
@@ -1712,6 +1741,11 @@
               <button class="co-subtab-btn" data-co="${coId}" data-subtab="bookkeeping"
                 style="padding:0.5rem 1.1rem;font-size:0.82rem;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color 0.15s;">
                 📒 Bookkeeping
+              </button>
+              <button class="co-subtab-btn" data-co="${coId}" data-subtab="statements" id="co-stmts-tab-${coId}"
+                style="padding:0.5rem 1.1rem;font-size:0.82rem;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color 0.15s;display:none;">
+                🏦 Statements
+                <span id="co-stmts-badge-${coId}" style="display:none;background:#e05252;color:#fff;border-radius:10px;padding:0.05rem 0.4rem;font-size:0.65rem;font-weight:700;margin-left:0.3rem;"></span>
               </button>
             </div>
             ${co.bookkeeping_service === 'client_prepared' ? `
@@ -1730,6 +1764,9 @@
             <div id="co-bk-${coId}">
               <div class="loading-state"><div class="loading-spinner"></div><div>Loading close package…</div></div>
             </div>
+          </div>
+          <div id="co-subtab-statements-${coId}" class="co-subtab-panel" style="display:none;margin-top:1.25rem;">
+            <div id="co-stmts-${coId}"><div class="loading-state"><div class="loading-spinner"></div><div>Loading statements…</div></div></div>
           </div>`;
         panelContainer.appendChild(panel);
       });
@@ -1748,7 +1785,7 @@
         });
       });
 
-      // Wire subtab clicks (Docs / Bookkeeping) inside each company panel
+      // Wire subtab clicks (Docs / Bookkeeping / Statements) inside each company panel
       panelContainer.querySelectorAll('.co-subtab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const coId = btn.dataset.co;
@@ -1765,10 +1802,47 @@
           });
           // Wide mode for bookkeeping (lots of columns), normal for docs
           document.querySelector('main').classList.toggle('wide-mode', subtab === 'bookkeeping');
-          // Lazy-load bookkeeping on first open
+          // Lazy-load on first open
           if (subtab === 'bookkeeping') loadCompanyBookkeeping(parseInt(coId));
+          if (subtab === 'statements') loadCompanyStatements(parseInt(coId));
         });
       });
+
+      // Check each company for client_upload statements (show/hide Statements tab)
+      // Deferred slightly to ensure DOM is fully ready
+      setTimeout(() => {
+        _companies.forEach(co => {
+          const coId = co.id || co.company_id;
+          checkCompanyStatements(coId);
+        });
+      }, 100);
+    }
+
+    async function checkCompanyStatements(coId) {
+      try {
+        const token = localStorage.getItem('portalToken');
+        const res = await fetch(`/portal/companies/${coId}/statements`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!res.ok) {
+          console.warn(`[statements] fetch failed for co ${coId}: ${res.status}`);
+          return;
+        }
+        const data = await res.json();
+        console.log(`[statements] co ${coId}:`, data.accounts?.length, 'accounts, pending:', data.total_pending);
+        if (!data.accounts || !data.accounts.length) return;
+        // Always show the Statements tab when there are client_upload accounts
+        const tab = document.getElementById(`co-stmts-tab-${coId}`);
+        if (tab) { tab.style.display = ''; tab.style.removeProperty('display'); tab.removeAttribute('hidden'); }
+        // Only show red badge when there are pending uploads
+        const badge = document.getElementById(`co-stmts-badge-${coId}`);
+        if (badge) {
+          if (data.total_pending > 0) {
+            badge.textContent = data.total_pending;
+            badge.style.display = '';
+          } else {
+            badge.style.display = 'none';
+          }
+        }
+      } catch(e) { console.warn('[statements] checkCompanyStatements error:', e); }
     }
 
     async function loadCompanyDocs(coId) {
@@ -1817,6 +1891,27 @@
               y += `<div style="margin-bottom:0.5rem;"><div style="font-size:0.82rem;font-weight:700;color:var(--text);padding:0.4rem 0.5rem;margin-bottom:0.25rem;border-left:3px solid var(--gold);background:rgba(201,168,76,0.06);">${cat.icon} ${cat.label} <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${catDocs.length})</span></div><div style="padding-left:0.5rem;">`;
               if (!catDocs.length) {
                 y += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;">Empty</div>`;
+              } else if (cat.key === 'bookkeeping') {
+                // Group by account name sub-folder
+                const acctMap = {};
+                catDocs.forEach(doc => {
+                  const acct = doc.folder_subcategory || 'Uncategorized';
+                  if (!acctMap[acct]) acctMap[acct] = [];
+                  acctMap[acct].push(doc);
+                });
+                Object.keys(acctMap).sort().forEach(acctName => {
+                  const acctDocs = acctMap[acctName];
+                  y += `<div class="year-folder open" style="margin-bottom:0.35rem;"><div class="year-header" style="padding:0.3rem 0.5rem;font-size:0.8rem;"><span class="yr-label">🏦 ${escHtml(acctName)} <span class="yr-count">${acctDocs.length}</span></span><span class="yr-chevron">▼</span></div><div class="year-body" style="padding-left:1rem;">`;
+                  acctDocs.forEach(doc => {
+                    const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
+                    const isNew = isDocNew(doc);
+                    const moveBtn = isClientSection
+                      ? `<button class="btn-move" data-docid="${doc.id}" data-docname="${escHtml(doc.display_name||'Document')}" data-year="${doc.year||''}" data-cat="${doc.folder_category||'other'}" style="font-size:0.65rem;padding:0.15rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;margin-left:0.25rem;" title="Move to different year/category">✎ Move</button>`
+                      : '';
+                    y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button>${moveBtn}</div>`;
+                  });
+                  y += `</div></div>`;
+                });
               } else {
                 catDocs.forEach(doc => {
                   const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
@@ -1847,9 +1942,13 @@
         html += `</div>`;
         container.innerHTML = html;
 
-        // Wire year toggles and download
-        container.querySelectorAll('.year-header').forEach(h => {
-          h.addEventListener('click', () => h.closest('.year-folder').classList.toggle('open'));
+        // Wire year toggles and download — use delegation so nested BK sub-folders work too
+        container.addEventListener('click', e => {
+          const hdr = e.target.closest('.year-header');
+          if (hdr && container.contains(hdr)) {
+            e.stopPropagation();
+            hdr.closest('.year-folder').classList.toggle('open');
+          }
         });
         container.querySelectorAll('.doc-name-link').forEach(el => {
           el.addEventListener('click', e => { e.stopPropagation(); const btn = el.closest('.doc-row').querySelector('.btn-dl'); downloadDoc(parseInt(el.dataset.docid), btn || {}); });
@@ -1871,6 +1970,133 @@
     // submitClientFinancials replaced by openFinancialsModal / submitFinancials below
 
     // ── BOOKKEEPING / CLOSE PACKAGE ──────────────────────
+    window.loadCompanyStatements = async function loadCompanyStatements(coId) {
+      const container = document.getElementById(`co-stmts-${coId}`);
+      if (!container) return;
+      container.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div>Loading statements…</div></div>';
+
+      try {
+        const token = localStorage.getItem('portalToken');
+        const res = await fetch(`/portal/companies/${coId}/statements`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+
+        if (!data.accounts || !data.accounts.length) {
+          container.innerHTML = '<div style="color:var(--muted);padding:2rem;text-align:center;">No bank statements requested at this time.</div>';
+          return;
+        }
+
+        const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        function fmtMonth(m) {
+          const [y, mo] = m.split('-');
+          return `${MONTH_NAMES[parseInt(mo)-1]} ${y}`;
+        }
+
+        let html = '';
+        // Summary header
+        if (data.total_pending > 0) {
+          html += `<div style="background:rgba(224,82,82,0.1);border:1px solid rgba(224,82,82,0.3);border-radius:8px;padding:0.85rem 1rem;margin-bottom:1.25rem;font-size:0.88rem;">
+            🔴 <strong>${data.total_pending}</strong> statement${data.total_pending !== 1 ? 's' : ''} still needed. Upload them below.
+          </div>`;
+        } else {
+          html += `<div style="background:rgba(62,207,142,0.1);border:1px solid rgba(62,207,142,0.3);border-radius:8px;padding:0.85rem 1rem;margin-bottom:1.25rem;font-size:0.88rem;">
+            ✅ All statements are up to date. Thank you!
+          </div>`;
+        }
+
+        for (const acct of data.accounts) {
+          const pendingMonths = acct.months.filter(m => !['uploaded','received'].includes(m.status));
+          const doneMonths = acct.months.filter(m => ['uploaded','received'].includes(m.status));
+          html += `<div style="background:var(--card,#1a2535);border:1px solid var(--border,rgba(255,255,255,0.08));border-radius:10px;margin-bottom:1rem;overflow:hidden;">
+            <div style="padding:0.9rem 1.1rem;border-bottom:1px solid var(--border,rgba(255,255,255,0.08));display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-weight:700;font-size:0.95rem;">${escHtml(acct.account_name)}</div>
+                ${acct.institution ? `<div style="font-size:0.75rem;color:var(--muted,#8fa3b8);margin-top:0.15rem;">${escHtml(acct.institution)}</div>` : ''}
+              </div>
+              <div style="font-size:0.78rem;text-align:right;">
+                ${pendingMonths.length > 0
+                  ? `<span style="color:#e05252;font-weight:600;">${pendingMonths.length} pending</span>`
+                  : `<span style="color:#3ecf8e;font-weight:600;">✅ All uploaded</span>`
+                }
+              </div>
+            </div>
+            <div style="padding:0.75rem 1.1rem;">`;
+
+          // Pending months first
+          if (pendingMonths.length) {
+            html += `<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted,#8fa3b8);margin-bottom:0.5rem;">Needed</div>`;
+            for (const m of pendingMonths) {
+              html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                <span style="font-size:0.88rem;">${fmtMonth(m.month)}</span>
+                <label style="cursor:pointer;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.35);border-radius:6px;padding:0.3rem 0.75rem;font-size:0.78rem;font-weight:600;color:var(--gold,#c9a84c);transition:background 0.15s;"
+                  onmouseover="this.style.background='rgba(201,168,76,0.22)'" onmouseout="this.style.background='rgba(201,168,76,0.12)'">
+                  ⬆️ Upload
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none;"
+                    onchange="portalUploadStatement(${coId}, ${acct.id}, '${m.month}', this)">
+                </label>
+              </div>
+              <div id="co-stmt-status-${coId}-${acct.id}-${m.month}" style="font-size:0.75rem;margin-top:0.2rem;"></div>`;
+            }
+          }
+
+          // Done months (collapsed)
+          if (doneMonths.length) {
+            html += `<div style="margin-top:${pendingMonths.length ? '0.75rem' : '0'};">`;
+            html += `<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted,#8fa3b8);margin-bottom:0.4rem;">Received</div>`;
+            for (const m of doneMonths) {
+              const dateStr = m.received_at ? new Date(m.received_at).toLocaleDateString() : '';
+              html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.03);">
+                <span style="font-size:0.85rem;color:var(--muted,#8fa3b8);">✅ ${fmtMonth(m.month)}</span>
+                <span style="font-size:0.72rem;color:var(--muted,#8fa3b8);">${dateStr}</span>
+              </div>`;
+            }
+            html += '</div>';
+          }
+
+          if (!acct.months.length) {
+            html += '<div style="color:var(--muted);font-size:0.85rem;padding:0.5rem 0;">✅ No statements currently needed for this account.</div>';
+          }
+
+          html += '</div></div>';
+        }
+
+        container.innerHTML = html;
+      } catch(e) {
+        container.innerHTML = `<div style="color:var(--muted);padding:2rem;text-align:center;">Failed to load statements: ${escHtml(e.message)}</div>`;
+      }
+    }
+
+    window.portalUploadStatement = async function portalUploadStatement(coId, scheduleId, month, inputEl) {
+      const file = inputEl.files[0];
+      if (!file) return;
+      const statusEl = document.getElementById(`co-stmt-status-${coId}-${scheduleId}-${month}`);
+      const label = inputEl.closest('label');
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--muted);">Uploading…</span>';
+      if (label) label.style.opacity = '0.5';
+      try {
+        const token = localStorage.getItem('portalToken');
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch(`/portal/companies/${coId}/statements/${scheduleId}/${month}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: fd,
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Upload failed');
+        }
+        // Reload statements panel
+        if (statusEl) statusEl.innerHTML = '<span style="color:#3ecf8e;">✅ Uploaded!</span>';
+        setTimeout(() => loadCompanyStatements(coId), 800);
+        // Refresh badge
+        checkCompanyStatements(coId);
+      } catch(e) {
+        if (statusEl) statusEl.innerHTML = `<span style="color:#e05252;">❌ ${escHtml(e.message)}</span>`;
+        if (label) label.style.opacity = '1';
+      }
+    }
+
     async function loadCompanyBookkeeping(coId) {
       const container = document.getElementById(`co-bk-${coId}`);
       if (!container || container.dataset.loaded) return;
@@ -2154,6 +2380,51 @@
         });
         document.getElementById('companiesCard').style.display = 'block';
       }
+
+      // Outstanding statements card — fetch async for all companies (any may have client_upload schedules)
+      const bkCompanies = _companies;
+      if (bkCompanies.length > 0) {
+        const token = localStorage.getItem('portalToken');
+        Promise.all(bkCompanies.map(c => {
+          const coId = c.id || c.company_id;
+          return fetch(`/portal/companies/${coId}/statements`, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => ({ coId, coName: c.company_name, data }))
+            .catch(() => null);
+        })).then(results => {
+          const pending = results.filter(r => r && r.data && r.data.total_pending > 0);
+          if (pending.length === 0) return;
+          const body = document.getElementById('statementsCardBody');
+          body.innerHTML = pending.map(r => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.65rem 0;border-bottom:1px solid var(--border);">
+              <div>
+                <div style="font-weight:600;font-size:0.9rem;">${escHtml(r.coName)}</div>
+                <div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem;">
+                  🔴 <strong>${r.data.total_pending}</strong> statement${r.data.total_pending !== 1 ? 's' : ''} outstanding
+                </div>
+              </div>
+              <button class="btn-goto-stmts" data-co-id="${r.coId}"
+                style="background:var(--gold);color:#0f1117;border:none;border-radius:6px;padding:0.4rem 0.9rem;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+                Upload Now →
+              </button>
+            </div>
+          `).join('');
+          body.querySelectorAll('.btn-goto-stmts').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const coId = parseInt(btn.dataset.coId);
+              const coTabBtn = document.querySelector(`#company-tabs .tab-btn[data-tab="co-${coId}"]`);
+              if (coTabBtn) {
+                coTabBtn.click();
+                setTimeout(() => {
+                  const stmtSubBtn = document.querySelector(`.co-subtab-btn[data-co="${coId}"][data-subtab="statements"]`);
+                  if (stmtSubBtn) stmtSubBtn.click();
+                }, 200);
+              }
+            });
+          });
+          document.getElementById('statementsCard').style.display = 'block';
+        });
+      }
     }
 
     // ── DOCUMENTS ────────────────────────────────────────
@@ -2308,6 +2579,30 @@
             y += `<div style="margin-bottom:0.5rem;"><div style="font-size:0.82rem;font-weight:700;color:var(--text);padding:0.4rem 0.5rem;margin-bottom:0.25rem;border-left:3px solid var(--gold);background:rgba(201,168,76,0.06);">${cat.icon} ${cat.label} <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${catDocs.length})</span></div><div style="padding-left:0.5rem;">`;
             if (catDocs.length === 0) {
               y += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`;
+            } else if (cat.key === 'bookkeeping') {
+              // Group bookkeeping docs by account name (folder_subcategory) — each account is its own sub-folder
+              const acctMap = {};
+              catDocs.forEach(doc => {
+                const acct = doc.folder_subcategory || 'Uncategorized';
+                if (!acctMap[acct]) acctMap[acct] = [];
+                acctMap[acct].push(doc);
+              });
+              Object.keys(acctMap).sort().forEach(acctName => {
+                const acctDocs = acctMap[acctName];
+                const acctHasNew = acctDocs.some(d => isDocNew(d));
+                y += `<div class="year-folder open" style="margin-bottom:0.35rem;">`;
+                y += `<div class="year-header" style="padding:0.3rem 0.5rem;font-size:0.8rem;"><span class="yr-label">🏦 ${escHtml(acctName)} <span class="yr-count">${acctDocs.length}</span>${acctHasNew ? ' <span style="color:var(--gold);font-size:0.65rem;">NEW</span>' : ''}</span><span class="yr-chevron">▼</span></div>`;
+                y += `<div class="year-body" style="padding-left:1rem;">`;
+                acctDocs.forEach(doc => {
+                  const isNew = isDocNew(doc);
+                  const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
+                  const moveBtn = isClientSection
+                    ? `<button class="btn-move" data-docid="${doc.id}" data-docname="${escHtml(doc.display_name||'Document')}" data-year="${doc.year||''}" data-cat="${doc.folder_category||'other'}" style="font-size:0.65rem;padding:0.15rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;margin-left:0.25rem;" title="Move to different year/category">✎ Move</button>`
+                    : '';
+                  y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button>${moveBtn}</div>`;
+                });
+                y += `</div></div>`;
+              });
             } else {
               catDocs.forEach(doc => {
                 const isNew = isDocNew(doc);
@@ -2345,11 +2640,13 @@
 
       container.innerHTML = html;
 
-      // Year toggle
-      container.querySelectorAll('.year-header').forEach(h => {
-        h.addEventListener('click', () => {
-          h.closest('.year-folder').classList.toggle('open');
-        });
+      // Year toggle — event delegation so BK account sub-folders work
+      container.addEventListener('click', e => {
+        const hdr = e.target.closest('.year-header');
+        if (hdr && container.contains(hdr)) {
+          e.stopPropagation();
+          hdr.closest('.year-folder').classList.toggle('open');
+        }
       });
 
       // Clicking doc name opens it

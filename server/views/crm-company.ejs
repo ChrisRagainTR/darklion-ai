@@ -211,7 +211,7 @@
   .yr-chevron { color: var(--muted); font-size: 0.8rem; transition: transform 0.2s; }
   .year-folder.open .yr-chevron { transform: rotate(180deg); }
   .year-body { display: none; border-top: 1px solid var(--border); }
-  .year-folder.open .year-body { display: block; }
+  .year-folder.open > .year-body { display: block; }
   .cat-folder { margin-bottom: 0.35rem; border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; }
   .cat-folder-header { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.7rem; cursor: pointer; user-select: none; background: rgba(201,168,76,0.04); border-left: 3px solid var(--gold); }
   .cat-folder-header:hover { background: rgba(201,168,76,0.08); }
@@ -597,10 +597,8 @@
             <input class="stmt-input" id="bk-stmt-new-name" placeholder="Account name *" style="width:180px;">
             <input class="stmt-input" id="bk-stmt-new-inst" placeholder="Institution" style="width:150px;">
             <select class="stmt-select" id="bk-stmt-new-method">
-              <option value="qbo_pull">QBO Pull</option>
-              <option value="portal" selected>Portal Download</option>
-              <option value="manual">Manual Download</option>
-              <option value="email">Email</option>
+              <option value="qbo_pull">QBO Download</option>
+              <option value="sentinel_download" selected>Sentinel Download</option>
               <option value="client_upload">Client Upload</option>
             </select>
             <input class="stmt-input stmt-day-input" type="number" id="bk-stmt-new-day" placeholder="Day" value="1" min="1" max="31" style="width:70px;">
@@ -1652,7 +1650,55 @@
               <div class="cat-folder-body">
                 ${files.length === 0
                   ? `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`
-                  : files.map(f => `<div class="doc-row" data-docid="${f.id}">
+                  : cat.key === 'bookkeeping'
+                    ? (() => {
+                        // Group by account name (folder_subcategory) — each account is its own sub-folder
+                        const acctMap = {};
+                        files.forEach(f => {
+                          const acct = f.folder_subcategory || 'Uncategorized';
+                          if (!acctMap[acct]) acctMap[acct] = [];
+                          acctMap[acct].push(f);
+                        });
+                        return Object.keys(acctMap).sort().map(acctName => {
+                          const acctFiles = acctMap[acctName];
+                          return `<div class="year-folder open" style="margin-bottom:0.35rem;">
+                            <div class="year-header" style="padding:0.3rem 0.5rem;font-size:0.8rem;"><span class="yr-label">🏦 ${esc(acctName)} <span class="yr-count">${acctFiles.length}</span></span><span class="yr-chevron">▼</span></div>
+                            <div class="year-body" style="padding-left:1rem;">${acctFiles.map(f => `<div class="doc-row" data-docid="${f.id}">
+                      ${docTypeBadge(f.mime_type, f.display_name)}
+                      <div class="doc-info">
+                        <div class="doc-name doc-name-link" data-docid="${f.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc((f.display_name||'Untitled').replace(/_/g,' ').trim())}</div>
+                        <div class="doc-badges">
+                          ${statusBadge}
+                          ${f.size_bytes ? `<span class="doc-badge doc-badge-type">${formatBytes(f.size_bytes)}</span>` : ''}
+                          ${f.created_at ? `<span style="font-size:0.67rem;color:var(--muted);opacity:0.7;">${new Date(f.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'})}</span>` : ''}
+                        </div>
+                        <div id="move-panel-${f.id}" style="display:none;margin-top:0.4rem;padding:0.4rem;background:rgba(201,168,76,0.06);border-radius:5px;">
+                          <span style="font-size:0.72rem;color:var(--muted);margin-right:0.3rem;">Move to:</span>
+                          <select id="mv-year-${f.id}" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.2rem 0.4rem;border-radius:4px;font-size:0.75rem;margin-right:0.3rem;">
+                            ${(() => { const yr = new Date().getFullYear(); let opts = ''; for(let y2=yr;y2>=2018;y2--) opts+=`<option value="${y2}"${String(f.year||'')==String(y2)?' selected':''}>${y2}</option>`; return opts; })()}
+                          </select>
+                          <select id="mv-sec-${f.id}" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.2rem 0.4rem;border-radius:4px;font-size:0.75rem;margin-right:0.3rem;">
+                            <option value="firm_uploaded"${(f.folder_section||'firm_uploaded')==='firm_uploaded'?' selected':''}>Advisor</option>
+                            <option value="client_uploaded"${f.folder_section==='client_uploaded'?' selected':''}>Client</option>
+                          </select>
+                          <select id="mv-cat-${f.id}" style="background:var(--charcoal);border:1px solid var(--border);color:var(--text);padding:0.2rem 0.4rem;border-radius:4px;font-size:0.75rem;margin-right:0.3rem;">
+                            <option value="tax"${(f.folder_category||'tax')==='tax'?' selected':''}>Tax</option>
+                            <option value="other"${(f.folder_category||'tax')==='other'?' selected':''}>Other</option>
+                          </select>
+                          <button onclick="saveDocMove(${f.id})" style="background:var(--gold);color:var(--navy);border:none;border-radius:4px;padding:0.2rem 0.55rem;font-size:0.75rem;font-weight:700;cursor:pointer;">Save</button>
+                          <button onclick="document.getElementById('move-panel-${f.id}').style.display='none'" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:0.2rem 0.45rem;font-size:0.75rem;cursor:pointer;margin-left:0.2rem;">✕</button>
+                        </div>
+                      </div>
+                      <div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;">
+                        <button class="btn-dl" data-docid="${f.id}">⬇</button>
+                        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();var p=document.getElementById('move-panel-${f.id}');p.style.display=p.style.display==='none'?'block':'none'" title="Move">↕</button>
+                        <button class="btn btn-ghost btn-xs" style="color:var(--red)" onclick="deleteDoc(${f.id},event)" title="Delete">🗑</button>
+                      </div>
+                    </div>`).join('')}</div>
+                          </div>`;
+                        }).join('');
+                      })()
+                    : files.map(f => `<div class="doc-row" data-docid="${f.id}">
                       ${docTypeBadge(f.mime_type, f.display_name)}
                       <div class="doc-info">
                         <div class="doc-name doc-name-link" data-docid="${f.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${esc((f.display_name||'Untitled').replace(/_/g,' ').trim())}</div>
@@ -1731,9 +1777,13 @@
       <div>${buildDocsColumn(firmDocs, 'Delivered by Advisor', '📁', DOC_CATS_FIRM)}</div>
       <div>${buildDocsColumn(clientDocs, 'Uploaded by Client', '📤', DOC_CATS_CLIENT)}</div>
     </div>`;
-    // Wire year folder toggles
-    el.querySelectorAll('.year-header').forEach(h => {
-      h.addEventListener('click', () => h.closest('.year-folder').classList.toggle('open'));
+    // Wire year folder toggles — event delegation so BK account sub-folders work
+    el.addEventListener('click', e => {
+      const hdr = e.target.closest('.year-header');
+      if (hdr && el.contains(hdr)) {
+        e.stopPropagation();
+        hdr.closest('.year-folder').classList.toggle('open');
+      }
     });
     // Wire doc name click to open
     el.querySelectorAll('.doc-name-link').forEach(nameEl => {
@@ -3237,9 +3287,10 @@
   // STATEMENTS
   // ================================================================
   const BK_METHOD_LABELS = {
-    qbo_pull: 'QBO Pull', portal: 'Portal Download', manual: 'Manual Download',
-    email: 'Email', client_upload: 'Client Upload',
-    qbo: 'QBO Pull', client: 'Client Upload'
+    qbo_pull: 'QBO Download', sentinel_download: 'Sentinel Download', client_upload: 'Client Upload',
+    // Legacy aliases (existing data)
+    portal: 'Sentinel Download', manual: 'Sentinel Download', email: 'Sentinel Download',
+    qbo: 'QBO Download', client: 'Client Upload'
   };
 
   function bk_stmtCurrentMonth() {
@@ -3306,14 +3357,23 @@
     }
     let html = `<div class="table-wrap"><table class="stmt-table">
       <thead><tr>
-        <th>Account</th><th>Type</th><th>Method</th><th>Statement Day</th><th>Status</th><th>Actions</th>
+        <th>Account</th><th>Type</th><th>Method</th><th>Statement Day</th><th>Start Month</th><th>Status</th><th>Actions</th>
       </tr></thead><tbody>`;
     for (const a of accounts) {
       const typeLabel = [a.accountType, a.accountSubType].filter(Boolean).join(' / ') || (a._manual ? 'Manual' : '—');
+      const isClientUpload = (a.access_method || 'qbo_pull') === 'client_upload';
       const monthsBehind = a.months_behind || 0;
       let statusCell;
       if (!a.id) {
         statusCell = `<span style="color:var(--muted);font-size:0.75rem;">Not saved</span>`;
+      } else if (isClientUpload) {
+        // For client_upload: show pending count from monthly statuses
+        const pending = typeof a.pending_count === 'number' ? a.pending_count : null;
+        if (pending === null || pending === 0) {
+          statusCell = `<span style="color:var(--green);font-size:0.8rem;">✅ All received</span>`;
+        } else {
+          statusCell = `<span style="color:var(--orange);font-size:0.8rem;">🟠 ${pending} pending</span>`;
+        }
       } else if (!a.last_retrieved_month) {
         statusCell = `<span style="color:var(--muted);font-size:0.75rem;">No history</span>`;
       } else if (monthsBehind === 0) {
@@ -3324,27 +3384,94 @@
         statusCell = `<span style="color:var(--red);font-size:0.8rem;">🔴 ${monthsBehind} months behind</span>`;
       }
       let markCurrentBtn = '';
-      if (a.id && monthsBehind > 0) {
+      if (a.id && !isClientUpload && monthsBehind > 0) {
         const label = monthsBehind >= 3 ? `Clear ${monthsBehind}-Month Backlog` : 'Mark Current';
         markCurrentBtn = `<button class="btn btn-gold btn-sm" onclick="bk_markStmtCurrent('${realmId}',${a.id},this)">${label}</button>`;
       }
-      const methodSel = Object.entries(BK_METHOD_LABELS).filter(([k]) => !['qbo','client'].includes(k)).map(([k,v]) =>
+      let viewUploadBtn = '';
+      if (a.id && isClientUpload) {
+        viewUploadBtn = `<button class="btn btn-outline btn-sm" onclick="bk_viewClientUploads('${realmId}',${a.id},'${esc(a.account_name)}')">📂 View Uploads</button>`;
+      }
+      const methodSel = Object.entries(BK_METHOD_LABELS).filter(([k]) => ['qbo_pull','sentinel_download','client_upload'].includes(k)).map(([k,v]) =>
         `<option value="${k}"${(a.access_method||'qbo_pull')===k?' selected':''}>${v}</option>`
       ).join('');
+      // Start month: only shown/editable for client_upload
+      const startMonthCell = a.id && isClientUpload
+        ? `<input class="stmt-input" type="month" value="${esc(a.start_month || '')}" style="width:130px;" onblur="bk_updateStartMonth('${realmId}',${a.id},this)" title="First month client needs to upload">`
+        : `<span style="color:var(--muted);font-size:0.75rem;">—</span>`;
       html += `<tr id="bk-stmtrow-${a.id || 'new'}">
         <td style="font-weight:500;">${esc(a.account_name)}</td>
         <td style="font-size:0.78rem;color:var(--muted);">${esc(typeLabel)}</td>
         <td>${a.id ? `<select class="stmt-select" onchange="bk_updateStmtMethod('${realmId}',${a.id},this)">${methodSel}</select>` : `<span style="color:var(--muted);font-size:0.78rem;">${esc(BK_METHOD_LABELS[a.access_method] || a.access_method || '—')}</span>`}</td>
         <td>${a.id ? `<input class="stmt-input stmt-day-input" type="number" min="1" max="31" value="${a.statement_day || 1}" style="width:60px;" onblur="bk_updateStmtDay('${realmId}',${a.id},this)">` : `<span style="color:var(--muted);">${a.statement_day || 1}</span>`}</td>
+        <td>${startMonthCell}</td>
         <td>${statusCell}</td>
         <td style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
-          ${markCurrentBtn}
+          ${markCurrentBtn}${viewUploadBtn}
           ${a._manual && a.id ? `<button class="btn-icon" onclick="bk_deleteStmtAccount('${realmId}',${a.id})" title="Delete">🗑</button>` : ''}
         </td>
       </tr>`;
     }
     html += `</tbody></table></div>`;
     return html;
+  }
+
+  async function bk_updateStartMonth(realmId, id, inputEl) {
+    const val = inputEl.value || '';
+    try {
+      const res = await apiFetch('/api/companies/' + realmId + '/statements/' + id, { method: 'PUT', body: JSON.stringify({ start_month: val }) });
+      if (!res.ok) throw new Error((await res.json()).error);
+      window._shellToast('Start month saved', 'success');
+    } catch(e) { window._shellToast('Save failed: ' + e.message, 'error'); }
+  }
+
+  // Show a modal with month-by-month upload status for a client_upload account
+  async function bk_viewClientUploads(realmId, scheduleId, accountName) {
+    // Simple inline modal
+    let modal = document.getElementById('bk-upload-status-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'bk-upload-status-modal';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+      modal.innerHTML = `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;max-width:520px;width:100%;max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <div style="font-weight:700;font-size:1rem;" id="bk-usm-title">Upload Status</div>
+          <button onclick="document.getElementById('bk-upload-status-modal').remove()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;">×</button>
+        </div>
+        <div id="bk-usm-body"><div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div></div>
+      </div>`;
+      document.body.appendChild(modal);
+    } else {
+      modal.style.display = 'flex';
+      document.getElementById('bk-usm-body').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div>';
+    }
+    document.getElementById('bk-usm-title').textContent = `📂 ${accountName} — Upload History`;
+
+    try {
+      const res = await apiFetch(`/api/companies/${realmId}/statements/${scheduleId}/uploads`);
+      const data = await res.json();
+      const months = data.months || [];
+      if (!months.length) {
+        document.getElementById('bk-usm-body').innerHTML = '<div style="color:var(--muted);padding:1rem;">No months in range yet. Set a Start Month first.</div>';
+        return;
+      }
+      const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      let html = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+      html += '<thead><tr><th style="text-align:left;padding:0.4rem 0.5rem;color:var(--muted);font-weight:700;">Month</th><th style="text-align:left;padding:0.4rem 0.5rem;color:var(--muted);font-weight:700;">Status</th><th style="text-align:left;padding:0.4rem 0.5rem;color:var(--muted);font-weight:700;">Received</th></tr></thead><tbody>';
+      for (const m of months) {
+        const [y, mo] = m.month.split('-');
+        const label = `${MONTH_NAMES[parseInt(mo)-1]} ${y}`;
+        const uploaded = ['uploaded','received'].includes(m.status);
+        const statusIcon = uploaded ? '✅' : '🔴';
+        const statusText = uploaded ? '<span style="color:var(--green);">Uploaded</span>' : '<span style="color:var(--muted);">Pending</span>';
+        const received = m.received_at ? new Date(m.received_at).toLocaleDateString() : '—';
+        html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:0.4rem 0.5rem;">${statusIcon} ${label}</td><td style="padding:0.4rem 0.5rem;">${statusText}</td><td style="padding:0.4rem 0.5rem;color:var(--muted);font-size:0.78rem;">${received}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      document.getElementById('bk-usm-body').innerHTML = html;
+    } catch(e) {
+      document.getElementById('bk-usm-body').innerHTML = `<div style="color:var(--red);padding:1rem;">Failed to load: ${e.message}</div>`;
+    }
   }
 
   async function bk_updateStmtMethod(realmId, id, selectEl) {
