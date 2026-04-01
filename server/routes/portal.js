@@ -293,7 +293,7 @@ router.get('/documents', async (req, res) => {
         query = `
           SELECT id, firm_id, owner_type, owner_id, doc_type,
                  display_name, mime_type, size_bytes, is_delivered,
-                 delivered_at, viewed_at, year, folder_section, folder_category, created_at
+                 delivered_at, viewed_at, year, folder_section, folder_category, folder_subcategory, created_at
           FROM documents
           WHERE folder_section != 'private'
             AND (
@@ -307,7 +307,7 @@ router.get('/documents', async (req, res) => {
         query = `
           SELECT id, firm_id, owner_type, owner_id, doc_type,
                  display_name, mime_type, size_bytes, is_delivered,
-                 delivered_at, viewed_at, year, folder_section, folder_category, created_at
+                 delivered_at, viewed_at, year, folder_section, folder_category, folder_subcategory, created_at
           FROM documents
           WHERE folder_section != 'private'
             AND owner_type = 'person'
@@ -1612,11 +1612,12 @@ router.post('/companies/:id/statements/:scheduleId/:month', upload.single('file'
     const { rows: docRows } = await pool.query(
       `INSERT INTO documents
          (firm_id, owner_type, owner_id, year, display_name, s3_key, s3_bucket, mime_type, size_bytes,
-          uploaded_by_type, uploaded_by_id, created_at, folder_section, folder_category)
-       VALUES ($1, 'company', $2, $3, $4, $5, $6, $7, $8, 'client', $9, NOW(), 'client_uploaded', 'bookkeeping')
+          uploaded_by_type, uploaded_by_id, created_at, folder_section, folder_category, folder_subcategory)
+       VALUES ($1, 'company', $2, $3, $4, $5, $6, $7, $8, 'client', $9, NOW(), 'client_uploaded', 'bookkeeping', $10)
        RETURNING id`,
       [firmId, companyId, year, displayName, s3Key, bucket,
-       req.file.mimetype || 'application/pdf', req.file.size || req.file.buffer.length, personId]
+       req.file.mimetype || 'application/pdf', req.file.size || req.file.buffer.length, personId,
+       schedule.account_name || '']
     );
     const docId = docRows[0].id;
 

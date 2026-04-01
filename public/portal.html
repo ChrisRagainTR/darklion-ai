@@ -2503,6 +2503,30 @@
             y += `<div style="margin-bottom:0.5rem;"><div style="font-size:0.82rem;font-weight:700;color:var(--text);padding:0.4rem 0.5rem;margin-bottom:0.25rem;border-left:3px solid var(--gold);background:rgba(201,168,76,0.06);">${cat.icon} ${cat.label} <span style="font-size:0.72rem;font-weight:400;color:var(--muted);">(${catDocs.length})</span></div><div style="padding-left:0.5rem;">`;
             if (catDocs.length === 0) {
               y += `<div style="color:var(--muted);font-size:0.78rem;font-style:italic;padding:0.2rem 0;">Empty</div>`;
+            } else if (cat.key === 'bookkeeping') {
+              // Group bookkeeping docs by account name (folder_subcategory) — each account is its own sub-folder
+              const acctMap = {};
+              catDocs.forEach(doc => {
+                const acct = doc.folder_subcategory || 'Uncategorized';
+                if (!acctMap[acct]) acctMap[acct] = [];
+                acctMap[acct].push(doc);
+              });
+              Object.keys(acctMap).sort().forEach(acctName => {
+                const acctDocs = acctMap[acctName];
+                const acctHasNew = acctDocs.some(d => isDocNew(d));
+                y += `<div class="year-folder open" style="margin-bottom:0.35rem;">`;
+                y += `<div class="year-header" style="padding:0.3rem 0.5rem;font-size:0.8rem;"><span class="yr-label">🏦 ${escHtml(acctName)} <span class="yr-count">${acctDocs.length}</span>${acctHasNew ? ' <span style="color:var(--gold);font-size:0.65rem;">NEW</span>' : ''}</span><span class="yr-chevron">▼</span></div>`;
+                y += `<div class="year-body" style="padding-left:1rem;">`;
+                acctDocs.forEach(doc => {
+                  const isNew = isDocNew(doc);
+                  const ftb = fileTypeBadge(doc.mime_type, doc.display_name);
+                  const moveBtn = isClientSection
+                    ? `<button class="btn-move" data-docid="${doc.id}" data-docname="${escHtml(doc.display_name||'Document')}" data-year="${doc.year||''}" data-cat="${doc.folder_category||'other'}" style="font-size:0.65rem;padding:0.15rem 0.4rem;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;margin-left:0.25rem;" title="Move to different year/category">✎ Move</button>`
+                    : '';
+                  y += `<div class="doc-row" data-docid="${doc.id}"><span style="flex-shrink:0;padding:0.15rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700;color:#fff;background:${ftb.color};letter-spacing:0.03em;">${ftb.label}</span><div class="doc-info"><div class="doc-name doc-name-link" data-docid="${doc.id}" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px;">${escHtml(doc.display_name||'Document')}</div><div class="doc-badges">${isNew?'<span class="doc-badge doc-badge-new">✦ NEW</span>':'<span class="doc-badge doc-badge-viewed">✓ Viewed</span>'}${doc.size_bytes?`<span class="doc-badge doc-badge-type">${fmtBytes(doc.size_bytes)}</span>`:''}</div></div><button class="btn-dl" data-docid="${doc.id}">⬇ Download</button>${moveBtn}</div>`;
+                });
+                y += `</div></div>`;
+              });
             } else {
               catDocs.forEach(doc => {
                 const isNew = isDocNew(doc);
