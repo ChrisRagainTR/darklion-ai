@@ -640,7 +640,7 @@ async function saveTaxYear() {
 
 // ==================== INTEGRATIONS ====================
 async function loadIntegrations() {
-  const res = await apiFetch('/firms/integrations');
+  const res = await apiFetch('/integrations');
   if (!res || !res.ok) return;
   const data = await res.json();
   const current = document.getElementById('blueleaf-token-current');
@@ -658,7 +658,7 @@ async function saveBlueleafToken() {
   saveMsg.style.display = 'none';
   errMsg.style.display = 'none';
 
-  const res = await apiFetch('/firms/integrations', {
+  const res = await apiFetch('/integrations', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ blueleaf_api_token: input.value.trim() }),
@@ -681,7 +681,7 @@ async function clearBlueleafToken() {
   saveMsg.style.display = 'none';
   errMsg.style.display = 'none';
 
-  const res = await apiFetch('/firms/integrations', {
+  const res = await apiFetch('/integrations', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ blueleaf_api_token: '' }),
