@@ -417,6 +417,10 @@ app.get('/portal-login', serveClientLogin); // alias — don't break existing li
 // Portal organizer routes (organizerRouter already required above)
 app.use('/portal/organizer', requirePortal, apiLimiter, organizerRouter);
 
+const marketRouter = require('./routes/market');
+app.use('/api/market', requireFirm, apiLimiter, marketRouter);
+app.use('/portal/market', requirePortal, apiLimiter, marketRouter);
+
 // Protected portal API routes (sub-paths like /portal/me, /portal/documents, etc.)
 app.use('/portal', requirePortal, apiLimiter, portalRouter);
 

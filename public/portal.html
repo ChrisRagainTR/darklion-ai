@@ -1626,6 +1626,10 @@
       }).join('');
 
       wrap.innerHTML = `
+        <div id="portal-market-ticker" style="margin-bottom:1.25rem;">
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted,#8fa3b8);margin-bottom:0.5rem;">Market</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.5rem;color:var(--muted,#8fa3b8);font-size:0.78rem;">Loading market data…</div>
+        </div>
         <div style="margin-bottom:1.25rem;">
           <div style="font-size:1rem;font-weight:700;margin-bottom:0.2rem;">Investment Portfolio</div>
           <div style="font-size:0.78rem;color:var(--muted,#8fa3b8);">Total: ${fmtMoney(snapshot.raw_balance)} · As of ${syncedAt}</div>
@@ -1636,6 +1640,41 @@
         <div style="font-size:0.8rem;font-weight:700;color:var(--muted,#8fa3b8);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.75rem;">Accounts</div>
         ${accounts.length ? accountsHtml : '<div style="color:var(--muted,#8fa3b8);font-size:0.88rem;">No accounts found</div>'}
       `;
+      loadPortalMarketTicker();
+    }
+
+    async function loadPortalMarketTicker() {
+      const container = document.getElementById("portal-market-ticker");
+      if (!container) return;
+      try {
+        const token = localStorage.getItem("portal_token") || "";
+        const res = await fetch("/portal/market/ticker", { headers: { "Authorization": "Bearer " + token } });
+        const data = await res.json();
+        if (!data.available || !data.items?.length) {
+          container.style.display = "none";
+          return;
+        }
+        const chips = data.items.map(item => {
+          const pct = item.changePct;
+          const color = pct > 0 ? "var(--green,#3ecf8e)" : pct < 0 ? "var(--red,#e05252)" : "var(--muted,#8fa3b8)";
+          const pctStr = pct !== null ? (pct >= 0 ? "+" : "") + pct.toFixed(2) + "%" : "—";
+          const priceStr = item.price ? "$" + Number(item.price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
+          return `<div style="background:var(--card,#1a2535);border:1px solid var(--border,rgba(255,255,255,0.08));border-radius:8px;padding:0.35rem 0.7rem;display:flex;align-items:center;gap:0.45rem;white-space:nowrap;">
+            <span style="font-size:0.72rem;font-weight:700;color:var(--muted,#8fa3b8);">${item.label}</span>
+            <span style="font-size:0.8rem;font-weight:700;">${priceStr}</span>
+            <span style="font-size:0.75rem;font-weight:600;color:${color};">${pctStr}</span>
+          </div>`;
+        }).join("");
+        const age = Math.round((Date.now() - data.cachedAt) / 60000);
+        const ageStr = age < 1 ? "just now" : age + "m ago";
+        container.innerHTML = `
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted,#8fa3b8);margin-bottom:0.5rem;">Market <span style="font-weight:400;text-transform:none;letter-spacing:0;">${ageStr}</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">${chips}</div>
+        `;
+      } catch(e) {
+        const c = document.getElementById("portal-market-ticker");
+        if (c) c.style.display = "none";
+      }
     }
 
     // ── OVERVIEW ─────────────────────────────────────────
