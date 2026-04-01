@@ -380,6 +380,9 @@ app.use('/api/viktor', requireFirm, apiLimiter, viktorRouter);
 const viktorChatRouter = require('./routes/viktor-chat');
 app.use('/api/viktor-chat', requireFirm, apiLimiter, viktorChatRouter);
 
+const blueleafRouter = require('./routes/blueleaf');
+app.use('/api', requireFirm, apiLimiter, blueleafRouter);
+
 // Proposal pages (staff)
 app.get('/proposals', (req, res) => res.render('proposals', { title: 'Proposals', activeNav: 'proposals' }));
 app.get('/proposals/new', (req, res) => res.render('proposal-create', { title: 'New Proposal', activeNav: 'proposals' }));
@@ -695,8 +698,9 @@ async function start() {
   startNightlyCron();
   startViktorBriefingCron();
 
-  const { scheduleAt10PM } = require('./scheduler');
+  const { scheduleAt10PM, startBlueleafSync } = require('./scheduler');
   scheduleAt10PM();
+  startBlueleafSync();
 }
 
 start().catch(err => {

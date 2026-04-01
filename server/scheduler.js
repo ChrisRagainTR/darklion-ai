@@ -226,6 +226,33 @@ function scheduleAt10PM() {
   console.log(`[scheduler] Daily summary scheduled in ${Math.round(msUntil/1000/60)} minutes (10 PM Eastern)`);
 }
 
+// ── Blueleaf nightly sync — midnight UTC (8 PM ET) ───────────────────────────
+function startBlueleafSync() {
+  const blueleafService = require('./services/blueleaf');
+
+  cron.schedule('0 0 * * *', async () => {
+    const token = process.env.BLUELEAF_API_TOKEN;
+    if (!token) return;
+    try {
+      const { rows: people } = await pool.query(
+        'SELECT id, firm_id, blueleaf_household_id FROM people WHERE financial_planning_enabled = true AND blueleaf_household_id IS NOT NULL'
+      );
+      for (const person of people) {
+        try {
+          await blueleafService.syncPerson(token, person.id, person.blueleaf_household_id, person.firm_id, pool);
+        } catch (e) {
+          console.error(`[blueleaf] Sync failed for person ${person.id}:`, e.message);
+        }
+      }
+      console.log(`[blueleaf] Nightly sync complete: ${people.length} people synced`);
+    } catch (e) {
+      console.error('[blueleaf] Nightly sync error:', e.message);
+    }
+  });
+
+  console.log('[blueleaf] Nightly sync scheduled (0 0 * * * UTC)');
+}
+
 function startScheduler() {
   // Run every 6 hours: full automated pipeline
   cron.schedule('0 */6 * * *', async () => {
@@ -250,4 +277,4 @@ function startScheduler() {
   console.log('Scheduler started — runs every 6 hours (sync → research → categorize → auto-post → email)');
 }
 
-module.exports = { startScheduler, runFullPipeline, scheduleAt10PM };
+module.exports = { startScheduler, runFullPipeline, scheduleAt10PM, startBlueleafSync };

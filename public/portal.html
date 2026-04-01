@@ -971,6 +971,7 @@
       ✍️ Review &amp; Sign
       <span class="unread-badge-tab" id="review-sign-badge" style="display:none;"></span>
     </button>
+    <button class="tab-btn" data-tab="investments" id="investments-tab" style="display:none;">📈 Investments</button>
     <!-- Company doc tabs injected here by JS after init -->
     <div id="company-tabs" style="display:contents;"></div>
   </div>
@@ -1080,6 +1081,11 @@
 
     <!-- Company doc tab panels injected by JS -->
     <div id="company-tab-panels"></div>
+
+    <!-- ── INVESTMENTS TAB ─────────────────────────────────── -->
+    <div class="tab-panel" id="tab-investments">
+      <div id="investments-portal-wrap" style="padding:1.25rem 0;max-width:900px;"></div>
+    </div>
 
   </main>
 
@@ -1352,6 +1358,7 @@
         if (tab === 'organizers') loadOrganizers();
         if (tab === 'messages') initChat();
         if (tab === 'review-sign') loadTaxDeliveries();
+        if (tab === 'investments') loadPortalInvestments();
         // Leave wide-mode only when on a company bookkeeping subtab
         document.querySelector('main').classList.remove('wide-mode');
       });
@@ -1462,6 +1469,21 @@
           if (orgTab) orgTab.style.display = '';
         }
 
+        // Show Investments tab if financial planning is enabled and has snapshot
+        try {
+          const invRes = await fetch('/portal/investments', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (invRes.ok) {
+            const invData = await invRes.json();
+            window._portalInvestmentsCache = invData;
+            if (invData.enabled && invData.snapshot) {
+              const invTab = document.getElementById('investments-tab');
+              if (invTab) invTab.style.display = '';
+            }
+          }
+        } catch(e) { /* non-fatal */ }
+
         document.getElementById('overview-loading').style.display = 'none';
         document.getElementById('overview-content').style.display = 'block';
       } catch (err) {
@@ -1471,6 +1493,113 @@
             '<div class="empty-state"><div class="ei">⚠️</div><div>Unable to load portal. Please refresh.</div></div>';
         }
       }
+    }
+
+    // ── INVESTMENTS ──────────────────────────────────────
+    let _invPortalLoaded = false;
+
+    function loadPortalInvestments() {
+      if (_invPortalLoaded) return;
+      _invPortalLoaded = true;
+      const wrap = document.getElementById('investments-portal-wrap');
+      if (!wrap) return;
+
+      const data = window._portalInvestmentsCache;
+      if (!data || !data.enabled || !data.snapshot) {
+        wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">No investment data available.</div>';
+        return;
+      }
+      renderPortalInvestments(wrap, data.snapshot);
+    }
+
+    function renderPortalInvestments(wrap, snapshot) {
+      const perf = snapshot.performance || {};
+      const accounts = snapshot.accounts || [];
+      const syncedAt = snapshot.synced_at ? new Date(snapshot.synced_at).toLocaleDateString() : '';
+
+      function fmtPct(val) {
+        if (val === null || val === undefined) return '—';
+        const p = (val * 100).toFixed(2);
+        return (val >= 0 ? '+' : '') + p + '%';
+      }
+      function fmtMoney(val) {
+        if (!val && val !== 0) return '—';
+        return '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+      function pctColor(val) {
+        if (!val && val !== 0) return 'var(--muted, #8fa3b8)';
+        return val >= 0 ? 'var(--green, #3ecf8e)' : 'var(--red, #e05252)';
+      }
+
+      const perfCards = [
+        { label: 'Month to Date', key: 'mtd' },
+        { label: 'Quarter to Date', key: 'qtd' },
+        { label: 'Year to Date', key: 'ytd' },
+      ].map(p => {
+        const val = perf[p.key];
+        return `
+          <div style="background:var(--card,#1a2535);border:1px solid var(--border,rgba(255,255,255,0.08));border-radius:10px;padding:1.1rem 1.25rem;flex:1;min-width:120px;">
+            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted,#8fa3b8);margin-bottom:0.4rem;">${p.label}</div>
+            <div style="font-size:1.8rem;font-weight:800;color:${pctColor(val)};line-height:1;">${fmtPct(val)}</div>
+          </div>`;
+      }).join('');
+
+      const accountsHtml = accounts.map((acct, i) => {
+        const holdings = acct.holdings || [];
+        const holdingsHtml = holdings.length ? `
+          <table style="width:100%;border-collapse:collapse;font-size:0.82rem;margin-top:0.5rem;">
+            <thead>
+              <tr style="color:var(--muted,#8fa3b8);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">
+                <th style="text-align:left;padding:0.3rem 0.5rem;border-bottom:1px solid var(--border,rgba(255,255,255,0.08));">Ticker</th>
+                <th style="text-align:left;padding:0.3rem 0.5rem;border-bottom:1px solid var(--border,rgba(255,255,255,0.08));">Description</th>
+                <th style="text-align:right;padding:0.3rem 0.5rem;border-bottom:1px solid var(--border,rgba(255,255,255,0.08));">Qty</th>
+                <th style="text-align:right;padding:0.3rem 0.5rem;border-bottom:1px solid var(--border,rgba(255,255,255,0.08));">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${holdings.map((h, hi) => `
+                <tr style="${hi % 2 === 1 ? 'background:rgba(255,255,255,0.02);' : ''}">
+                  <td style="padding:0.35rem 0.5rem;color:var(--gold,#c9a84c);font-weight:600;">${esc(h.ticker || '—')}</td>
+                  <td style="padding:0.35rem 0.5rem;">${esc(h.description || h.companyName || '')}</td>
+                  <td style="padding:0.35rem 0.5rem;text-align:right;color:var(--muted,#8fa3b8);">${h.quantity ? Number(h.quantity).toLocaleString() : '—'}</td>
+                  <td style="padding:0.35rem 0.5rem;text-align:right;font-weight:600;">${fmtMoney(h.value)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>` : '<div style="padding:0.5rem 0;color:var(--muted,#8fa3b8);font-size:0.82rem;">No holdings data</div>';
+
+        const acctValue = acct.balance || acct.currentNetValue;
+        const acctType = acct.accountType ? `<span style="background:rgba(201,168,76,0.12);color:var(--gold,#c9a84c);border:1px solid rgba(201,168,76,0.25);border-radius:20px;padding:0.1rem 0.5rem;font-size:0.7rem;font-weight:600;margin-left:0.5rem;">${esc(acct.accountType)}</span>` : '';
+
+        return `
+          <div style="background:var(--card,#1a2535);border:1px solid var(--border,rgba(255,255,255,0.08));border-radius:10px;margin-bottom:0.75rem;overflow:hidden;">
+            <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none';this.querySelector('.inv-chev').textContent=this.nextElementSibling.style.display===''?'▲':'▼';" style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.1rem;cursor:pointer;user-select:none;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:0.88rem;font-weight:700;">${esc(acct.institutionName || 'Unknown Institution')}${acctType}</div>
+                <div style="font-size:0.78rem;color:var(--muted,#8fa3b8);margin-top:0.1rem;">${esc(acct.name || '')}${acct.accountNumber ? ' ···' + acct.accountNumber.slice(-4) : ''}</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0;margin-left:1rem;">
+                <div style="font-size:0.95rem;font-weight:700;">${fmtMoney(acctValue)}</div>
+                <div style="font-size:0.72rem;color:var(--muted,#8fa3b8);">${holdings.length} holding${holdings.length !== 1 ? 's' : ''}</div>
+              </div>
+              <div class="inv-chev" style="margin-left:0.75rem;color:var(--muted,#8fa3b8);font-size:0.8rem;">▼</div>
+            </div>
+            <div style="display:none;border-top:1px solid var(--border,rgba(255,255,255,0.08));padding:0.75rem 1.1rem;">
+              ${holdingsHtml}
+            </div>
+          </div>`;
+      }).join('');
+
+      wrap.innerHTML = `
+        <div style="margin-bottom:1.25rem;">
+          <div style="font-size:1rem;font-weight:700;margin-bottom:0.2rem;">Investment Portfolio</div>
+          <div style="font-size:0.78rem;color:var(--muted,#8fa3b8);">Total: ${fmtMoney(snapshot.raw_balance)} · As of ${syncedAt}</div>
+        </div>
+        <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+          ${perfCards}
+        </div>
+        <div style="font-size:0.8rem;font-weight:700;color:var(--muted,#8fa3b8);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.75rem;">Accounts</div>
+        ${accounts.length ? accountsHtml : '<div style="color:var(--muted,#8fa3b8);font-size:0.88rem;">No accounts found</div>'}
+      `;
     }
 
     // ── OVERVIEW ─────────────────────────────────────────

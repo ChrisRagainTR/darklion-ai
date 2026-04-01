@@ -1,0 +1,134 @@
+'use strict';
+
+const { Router } = require('express');
+const { pool } = require('../db');
+const blueleafService = require('../services/blueleaf');
+
+const router = Router();
+
+function getToken() {
+  return process.env.BLUELEAF_API_TOKEN || '';
+}
+
+// GET /api/blueleaf/households — list all Blueleaf households
+router.get('/blueleaf/households', async (req, res) => {
+  const token = getToken();
+  if (!token) return res.status(503).json({ error: 'Blueleaf not configured' });
+  try {
+    const households = await blueleafService.fetchHouseholds(token);
+    res.json(households);
+  } catch (err) {
+    console.error('Blueleaf households error:', err.message);
+    res.status(502).json({ error: 'Failed to fetch Blueleaf households: ' + err.message });
+  }
+});
+
+// POST /api/people/:id/financial-planning/enable — enable FP + set household
+router.post('/people/:id/financial-planning/enable', async (req, res) => {
+  const personId = parseInt(req.params.id);
+  const { blueleaf_household_id } = req.body;
+  if (!blueleaf_household_id) return res.status(400).json({ error: 'blueleaf_household_id required' });
+
+  try {
+    // Verify person belongs to this firm
+    const check = await pool.query(
+      'SELECT id FROM people WHERE id = $1 AND firm_id = $2',
+      [personId, req.firm.id]
+    );
+    if (!check.rows[0]) return res.status(404).json({ error: 'Person not found' });
+
+    await pool.query(
+      `UPDATE people SET financial_planning_enabled = TRUE, blueleaf_household_id = $1 WHERE id = $2`,
+      [blueleaf_household_id, personId]
+    );
+
+    // Trigger an immediate sync
+    const token = getToken();
+    if (token) {
+      try {
+        await blueleafService.syncPerson(token, personId, blueleaf_household_id, req.firm.id, pool);
+      } catch (e) {
+        console.error('Initial Blueleaf sync failed:', e.message);
+      }
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Enable financial planning error:', err.message);
+    res.status(500).json({ error: 'Failed to enable financial planning' });
+  }
+});
+
+// DELETE /api/people/:id/financial-planning — disable FP
+router.delete('/people/:id/financial-planning', async (req, res) => {
+  const personId = parseInt(req.params.id);
+  try {
+    const check = await pool.query(
+      'SELECT id FROM people WHERE id = $1 AND firm_id = $2',
+      [personId, req.firm.id]
+    );
+    if (!check.rows[0]) return res.status(404).json({ error: 'Person not found' });
+
+    await pool.query(
+      `UPDATE people SET financial_planning_enabled = FALSE, blueleaf_household_id = NULL WHERE id = $1`,
+      [personId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Disable financial planning error:', err.message);
+    res.status(500).json({ error: 'Failed to disable financial planning' });
+  }
+});
+
+// GET /api/people/:id/investments — latest snapshot
+router.get('/people/:id/investments', async (req, res) => {
+  const personId = parseInt(req.params.id);
+  try {
+    const check = await pool.query(
+      'SELECT id, financial_planning_enabled, blueleaf_household_id FROM people WHERE id = $1 AND firm_id = $2',
+      [personId, req.firm.id]
+    );
+    if (!check.rows[0]) return res.status(404).json({ error: 'Person not found' });
+
+    const person = check.rows[0];
+    if (!person.financial_planning_enabled) return res.json({ enabled: false });
+
+    const { rows } = await pool.query(
+      `SELECT * FROM blueleaf_snapshots WHERE person_id = $1 ORDER BY snapshot_date DESC LIMIT 1`,
+      [personId]
+    );
+
+    if (!rows[0]) return res.json({ enabled: true, snapshot: null });
+    res.json({ enabled: true, snapshot: rows[0] });
+  } catch (err) {
+    console.error('Get investments error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch investments' });
+  }
+});
+
+// POST /api/people/:id/investments/sync — manual sync
+router.post('/people/:id/investments/sync', async (req, res) => {
+  const personId = parseInt(req.params.id);
+  const token = getToken();
+  if (!token) return res.status(503).json({ error: 'Blueleaf not configured' });
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, financial_planning_enabled, blueleaf_household_id FROM people WHERE id = $1 AND firm_id = $2',
+      [personId, req.firm.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Person not found' });
+    const person = rows[0];
+    if (!person.financial_planning_enabled || !person.blueleaf_household_id) {
+      return res.status(400).json({ error: 'Financial planning not enabled for this person' });
+    }
+
+    const snapshot = await blueleafService.syncPerson(token, personId, person.blueleaf_household_id, req.firm.id, pool);
+    res.json({ ok: true, snapshot });
+  } catch (err) {
+    console.error('Manual sync error:', err.message);
+    res.status(500).json({ error: 'Sync failed: ' + err.message });
+  }
+});
+
+module.exports = router;
