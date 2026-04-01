@@ -6,13 +6,10 @@ const blueleafService = require('../services/blueleaf');
 
 const router = Router();
 
-function getToken() {
-  return process.env.BLUELEAF_API_TOKEN || '';
-}
-
 // GET /api/blueleaf/households — list all Blueleaf households
 router.get('/blueleaf/households', async (req, res) => {
-  const token = getToken();
+  const { rows: firmRows } = await pool.query('SELECT blueleaf_api_token FROM firms WHERE id = $1', [req.firm.id]);
+  const token = firmRows[0]?.blueleaf_api_token || '';
   if (!token) return res.status(503).json({ error: 'Blueleaf not configured' });
   try {
     const households = await blueleafService.fetchHouseholds(token);
@@ -43,7 +40,8 @@ router.post('/people/:id/financial-planning/enable', async (req, res) => {
     );
 
     // Trigger an immediate sync
-    const token = getToken();
+    const { rows: firmRows } = await pool.query('SELECT blueleaf_api_token FROM firms WHERE id = $1', [req.firm.id]);
+    const token = firmRows[0]?.blueleaf_api_token || '';
     if (token) {
       try {
         await blueleafService.syncPerson(token, personId, blueleaf_household_id, req.firm.id, pool);
@@ -109,7 +107,8 @@ router.get('/people/:id/investments', async (req, res) => {
 // POST /api/people/:id/investments/sync — manual sync
 router.post('/people/:id/investments/sync', async (req, res) => {
   const personId = parseInt(req.params.id);
-  const token = getToken();
+  const { rows: firmRows } = await pool.query('SELECT blueleaf_api_token FROM firms WHERE id = $1', [req.firm.id]);
+  const token = firmRows[0]?.blueleaf_api_token || '';
   if (!token) return res.status(503).json({ error: 'Blueleaf not configured' });
 
   try {

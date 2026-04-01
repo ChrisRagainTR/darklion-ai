@@ -1058,6 +1058,11 @@ async function initDB() {
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
 
+    DO $$ BEGIN
+      ALTER TABLE firms ADD COLUMN IF NOT EXISTS blueleaf_api_token TEXT DEFAULT NULL;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
     CREATE TABLE IF NOT EXISTS blueleaf_snapshots (
       id SERIAL PRIMARY KEY,
       firm_id INTEGER NOT NULL REFERENCES firms(id),

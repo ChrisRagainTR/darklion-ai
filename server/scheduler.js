@@ -231,15 +231,19 @@ function startBlueleafSync() {
   const blueleafService = require('./services/blueleaf');
 
   cron.schedule('0 0 * * *', async () => {
-    const token = process.env.BLUELEAF_API_TOKEN;
-    if (!token) return;
     try {
       const { rows: people } = await pool.query(
-        'SELECT id, firm_id, blueleaf_household_id FROM people WHERE financial_planning_enabled = true AND blueleaf_household_id IS NOT NULL'
+        `SELECT p.id, p.firm_id, p.blueleaf_household_id, f.blueleaf_api_token
+         FROM people p
+         JOIN firms f ON f.id = p.firm_id
+         WHERE p.financial_planning_enabled = true
+           AND p.blueleaf_household_id IS NOT NULL
+           AND f.blueleaf_api_token IS NOT NULL
+           AND f.blueleaf_api_token != ''`
       );
       for (const person of people) {
         try {
-          await blueleafService.syncPerson(token, person.id, person.blueleaf_household_id, person.firm_id, pool);
+          await blueleafService.syncPerson(person.blueleaf_api_token, person.id, person.blueleaf_household_id, person.firm_id, pool);
         } catch (e) {
           console.error(`[blueleaf] Sync failed for person ${person.id}:`, e.message);
         }

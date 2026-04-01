@@ -941,5 +941,31 @@ router.put('/tax-season', requireFirm, async (req, res) => {
   }
 });
 
+// ── GET /firms/integrations — get integration settings ───────────────────────
+router.get('/integrations', requireFirm, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT blueleaf_api_token FROM firms WHERE id = $1', [req.firm.id]);
+    const token = rows[0]?.blueleaf_api_token || '';
+    res.json({ blueleaf_api_token: token ? token.slice(0, 8) + '...' : '' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch integration settings' });
+  }
+});
+
+// ── PUT /firms/integrations — update integration settings ────────────────────
+router.put('/integrations', requireFirm, async (req, res) => {
+  try {
+    const { blueleaf_api_token } = req.body;
+    if (blueleaf_api_token === undefined) return res.status(400).json({ error: 'Nothing to update' });
+    await pool.query(
+      'UPDATE firms SET blueleaf_api_token = $1 WHERE id = $2',
+      [blueleaf_api_token || null, req.firm.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update integration settings' });
+  }
+});
+
 module.exports = router;
 module.exports.auditLog = auditLog;
