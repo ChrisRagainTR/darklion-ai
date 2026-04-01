@@ -1044,6 +1044,12 @@ async function initDB() {
       ALTER TABLE tax_organizers ADD COLUMN IF NOT EXISTS bulk_document_id INTEGER REFERENCES documents(id);
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
+
+    -- ===================== TAX SEASON VISIBILITY =====================
+    DO $$ BEGIN
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS organizer_visible BOOLEAN DEFAULT FALSE;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
   `);
 }
 

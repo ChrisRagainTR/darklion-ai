@@ -365,6 +365,10 @@ app.use('/api/tax-deliveries', requireFirm, apiLimiter, taxDeliveryRouter);
 const organizerRouter = require('./routes/organizer');
 app.use('/api/organizers', requireFirm, apiLimiter, organizerRouter);
 
+const taxSeasonRouter = require('./routes/tax-season');
+app.use('/api/tax-season', apiLimiter, taxSeasonRouter);
+app.get('/tax-season', (req, res) => res.render('tax-season', { title: 'Tax Season', activeNav: 'tax-season' }));
+
 // Proposals — staff (auth required)
 const proposalsRouter = require('./routes/proposals');
 app.use('/api/proposals', requireFirm, apiLimiter, proposalsRouter);

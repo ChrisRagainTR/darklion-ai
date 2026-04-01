@@ -223,6 +223,15 @@ router.get('/client/:year', requirePortal, async (req, res) => {
   const personId = req.portal.personId;
 
   try {
+    // Check visibility gate
+    const visCheck = await pool.query(
+      'SELECT organizer_visible FROM people WHERE id = $1',
+      [personId]
+    );
+    if (!visCheck.rows[0]?.organizer_visible) {
+      return res.status(403).json({ error: 'Organizer not available' });
+    }
+
     const orgRes = await pool.query(
       'SELECT * FROM tax_organizers WHERE person_id = $1 AND tax_year = $2',
       [personId, year]
