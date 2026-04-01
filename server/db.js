@@ -1050,6 +1050,35 @@ async function initDB() {
       ALTER TABLE people ADD COLUMN IF NOT EXISTS organizer_visible BOOLEAN DEFAULT FALSE;
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
+    DO $$ BEGIN
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS blueleaf_hidden_accounts JSONB DEFAULT '[]';
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    -- ===================== BLUELEAF / FINANCIAL PLANNING =====================
+    DO $$ BEGIN
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS financial_planning_enabled BOOLEAN DEFAULT FALSE;
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS blueleaf_household_id TEXT DEFAULT NULL;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    DO $$ BEGIN
+      ALTER TABLE firms ADD COLUMN IF NOT EXISTS blueleaf_api_token TEXT DEFAULT NULL;
+    EXCEPTION WHEN undefined_table THEN NULL;
+    END $$;
+
+    CREATE TABLE IF NOT EXISTS blueleaf_snapshots (
+      id SERIAL PRIMARY KEY,
+      firm_id INTEGER NOT NULL REFERENCES firms(id),
+      person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+      blueleaf_household_id TEXT NOT NULL,
+      snapshot_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      performance JSONB NOT NULL DEFAULT '{}',
+      accounts JSONB NOT NULL DEFAULT '[]',
+      raw_balance NUMERIC,
+      synced_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(person_id, snapshot_date)
+    );
   `);
 }
 

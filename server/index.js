@@ -380,6 +380,9 @@ app.use('/api/viktor', requireFirm, apiLimiter, viktorRouter);
 const viktorChatRouter = require('./routes/viktor-chat');
 app.use('/api/viktor-chat', requireFirm, apiLimiter, viktorChatRouter);
 
+const blueleafRouter = require('./routes/blueleaf');
+app.use('/api', requireFirm, apiLimiter, blueleafRouter);
+
 // Proposal pages (staff)
 app.get('/proposals', (req, res) => res.render('proposals', { title: 'Proposals', activeNav: 'proposals' }));
 app.get('/proposals/new', (req, res) => res.render('proposal-create', { title: 'New Proposal', activeNav: 'proposals' }));
@@ -413,6 +416,10 @@ app.get('/portal-login', serveClientLogin); // alias — don't break existing li
 
 // Portal organizer routes (organizerRouter already required above)
 app.use('/portal/organizer', requirePortal, apiLimiter, organizerRouter);
+
+const marketRouter = require('./routes/market');
+app.use('/api/market', requireFirm, apiLimiter, marketRouter);
+app.use('/portal/market', requirePortal, apiLimiter, marketRouter);
 
 // Protected portal API routes (sub-paths like /portal/me, /portal/documents, etc.)
 app.use('/portal', requirePortal, apiLimiter, portalRouter);
@@ -695,8 +702,9 @@ async function start() {
   startNightlyCron();
   startViktorBriefingCron();
 
-  const { scheduleAt10PM } = require('./scheduler');
+  const { scheduleAt10PM, startBlueleafSync } = require('./scheduler');
   scheduleAt10PM();
+  startBlueleafSync();
 }
 
 start().catch(err => {

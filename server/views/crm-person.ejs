@@ -111,6 +111,7 @@
   <div class="tab-item" onclick="switchTab('organizers', this)">Organizers</div>
   <div class="tab-item" onclick="switchTab('workflow', this)">Workflow</div>
   <div class="tab-item" onclick="switchTab('notes', this)">Notes</div>
+  <div class="tab-item" onclick="switchTab('investments', this)">Investments</div>
 </div>
 
 <div id="tab-overview" class="tab-content active">
@@ -565,6 +566,10 @@
   </div>
 </div>
 
+<div id="tab-investments" class="tab-content">
+  <div id="investments-wrap" style="padding:1.5rem;max-width:1100px;"></div>
+</div>
+
 <!-- Edit Modal -->
 <div class="modal-overlay hidden" id="edit-modal">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:720px;width:100%;display:flex;flex-direction:column;max-height:90vh;">
@@ -718,6 +723,7 @@
       if (notesEl) notesEl.value = (personData && personData.notes) || '';
     }
     if (name === 'workflow') loadWorkflow();
+    if (name === 'investments') loadInvestmentsTab();
     } catch(e) { console.error('switchTab error:', e); }
   }
   window.switchTab = switchTab;
@@ -3184,6 +3190,370 @@
       });
     }
   });
+
+  // ── Investments / Blueleaf ─────────────────────────────────────────────────
+
+  let _invLoaded = false;
+  let _invHouseholds = null;
+
+  async function loadInvestmentsTab() {
+    if (_invLoaded) return;
+    _invLoaded = true;
+    const wrap = document.getElementById('investments-wrap');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">Loading…</div>';
+    try {
+      const res = await apiFetch(`/api/people/${personId}/investments`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      if (!data.enabled) {
+        renderInvestmentsEnable(wrap);
+      } else if (!data.snapshot) {
+        renderInvestmentsEnable(wrap, true);
+      } else {
+        renderInvestmentsData(wrap, data.snapshot, data.hiddenAccounts || []);
+      }
+    } catch(e) {
+      wrap.innerHTML = `<div style="color:var(--red);font-size:0.88rem;">${esc(e.message)}</div>`;
+    }
+  }
+
+  function renderInvestmentsEnable(wrap, alreadyLinked) {
+    const personName = personData ? `${personData.first_name || ''} ${personData.last_name || ''}`.trim() : 'this client';
+    wrap.innerHTML = `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:2rem;max-width:600px;">
+        <div style="font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;">📈 Enable Financial Planning</div>
+        <div style="font-size:0.88rem;color:var(--muted);margin-bottom:1.5rem;">
+          ${alreadyLinked ? 'Financial planning is enabled — trigger a sync to pull the latest data.' : `Link ${esc(personName)} to their Blueleaf household to see investment portfolio data, performance, and holdings.`}
+        </div>
+        ${alreadyLinked ? `
+          <button class="btn btn-gold" onclick="invManualSync()">🔄 Sync Now</button>
+        ` : `
+          <button class="btn btn-gold" onclick="invShowSearch()">🔗 Link Blueleaf Household</button>
+        `}
+        <div id="inv-search-box" style="display:none;margin-top:1.25rem;">
+          <input type="text" id="inv-search-input" class="form-control" placeholder="Search Blueleaf clients by name or email…" oninput="invFilterHouseholds(this.value)" style="margin-bottom:0.75rem;">
+          <div id="inv-search-results" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--charcoal);"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function invShowSearch() {
+    const box = document.getElementById('inv-search-box');
+    if (!box) return;
+    box.style.display = '';
+    document.getElementById('inv-search-input').focus();
+    if (!_invHouseholds) {
+      document.getElementById('inv-search-results').innerHTML = '<div style="padding:0.75rem;color:var(--muted);font-size:0.85rem;">Loading households…</div>';
+      try {
+        const res = await apiFetch('/api/blueleaf/households');
+        _invHouseholds = await res.json();
+        if (!res.ok) throw new Error(_invHouseholds.error || 'Failed');
+      } catch(e) {
+        document.getElementById('inv-search-results').innerHTML = `<div style="padding:0.75rem;color:var(--red);font-size:0.85rem;">${esc(e.message)}</div>`;
+        return;
+      }
+    }
+    invFilterHouseholds('');
+  }
+
+  function invFilterHouseholds(query) {
+    const results = document.getElementById('inv-search-results');
+    if (!results || !_invHouseholds) return;
+    const q = query.toLowerCase();
+    const filtered = q ? _invHouseholds.filter(h =>
+      (h.fullName || '').toLowerCase().includes(q) ||
+      (h.email || '').toLowerCase().includes(q)
+    ) : _invHouseholds;
+
+    if (!filtered.length) {
+      results.innerHTML = '<div style="padding:0.75rem;color:var(--muted);font-size:0.85rem;">No matching households</div>';
+      return;
+    }
+    results.innerHTML = filtered.slice(0, 50).map(h => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.65rem 0.85rem;border-bottom:1px solid rgba(255,255,255,0.04);">
+        <div>
+          <div style="font-size:0.88rem;font-weight:600;color:var(--text);">${esc(h.fullName || '(no name)')}</div>
+          <div style="font-size:0.77rem;color:var(--muted);">${esc(h.email || '')}</div>
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="invLink('${esc(h.id)}', '${esc(h.fullName || '')}')">Link</button>
+      </div>
+    `).join('');
+  }
+
+  async function invLink(householdId, householdName) {
+    const wrap = document.getElementById('investments-wrap');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">Linking and syncing… this may take a moment.</div>';
+    _invLoaded = false;
+    try {
+      const res = await apiFetch(`/api/people/${personId}/financial-planning/enable`, {
+        method: 'POST',
+        body: JSON.stringify({ blueleaf_household_id: householdId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      window._shellToast(`Linked to ${householdName} ✓`, 'success');
+      await loadInvestmentsTab();
+    } catch(e) {
+      window._shellToast(e.message, 'error');
+      _invLoaded = false;
+      await loadInvestmentsTab();
+    }
+  }
+
+  async function invManualSync() {
+    const wrap = document.getElementById('investments-wrap');
+    _invLoaded = false;
+    if (wrap) wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">Syncing…</div>';
+    try {
+      const res = await apiFetch(`/api/people/${personId}/investments/sync`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sync failed');
+      window._shellToast('Investment data synced ✓', 'success');
+      await loadInvestmentsTab();
+    } catch(e) {
+      window._shellToast(e.message, 'error');
+      await loadInvestmentsTab();
+    }
+  }
+
+  async function invUnlink() {
+    if (!confirm('Unlink this client from Blueleaf? Their investment history will remain in the database.')) return;
+    try {
+      const res = await apiFetch(`/api/people/${personId}/financial-planning`, { method: 'DELETE' });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      _invLoaded = false;
+      window._shellToast('Financial planning unlinked', 'success');
+      await loadInvestmentsTab();
+    } catch(e) {
+      window._shellToast(e.message, 'error');
+    }
+  }
+
+  function fmtPct(val) {
+    if (val === null || val === undefined) return '—';
+    const pct = (val * 100).toFixed(2);
+    return (val >= 0 ? '+' : '') + pct + '%';
+  }
+
+  function fmtMoney(val) {
+    if (!val && val !== 0) return '—';
+    return '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function invPctColor(val) {
+    if (!val && val !== 0) return 'var(--muted)';
+    return val >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  function renderInvestmentsData(wrap, snapshot, initialHidden) {
+    const perf = snapshot.performance || {};
+    // Sort accounts largest to smallest by value
+    const accounts = (snapshot.accounts || []).slice().sort((a, b) => {
+      const va = a.balance || a.currentNetValue || 0;
+      const vb = b.balance || b.currentNetValue || 0;
+      return vb - va;
+    });
+    const syncedAt = snapshot.synced_at ? new Date(snapshot.synced_at).toLocaleString() : '';
+    // Hidden accounts — loaded from DB, saved back to DB
+    let hiddenAccounts = Array.isArray(initialHidden) ? [...initialHidden] : [];
+
+    async function saveHidden() {
+      try {
+        await apiFetch(`/api/people/${personId}/investments/hidden`, {
+          method: 'PATCH',
+          body: JSON.stringify({ hidden_accounts: hiddenAccounts }),
+        });
+      } catch(e) { console.warn('Failed to save hidden accounts', e); }
+    }
+
+    const perfCards = [
+      { label: 'Month to Date', key: 'mtd', siblingLabel: 'Last Month', siblingKey: 'lastMonth' },
+      { label: 'Quarter to Date', key: 'qtd', siblingLabel: 'Last Quarter', siblingKey: 'lastQuarter' },
+      { label: 'Year to Date', key: 'ytd' },
+    ].map(p => {
+      const val = perf[p.key];
+      const sibVal = p.siblingKey ? perf[p.siblingKey] : undefined;
+      const sibHtml = sibVal !== undefined ? `
+        <div style="margin-top:0.75rem;padding-top:0.65rem;border-top:1px solid var(--border);">
+          <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.2rem;">${p.siblingLabel}</div>
+          <div style="font-size:1.25rem;font-weight:700;color:${invPctColor(sibVal)};">${fmtPct(sibVal)}</div>
+        </div>` : '';
+      return `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.25rem;flex:1;min-width:140px;">
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.4rem;">${p.label}</div>
+          <div style="font-size:2rem;font-weight:800;color:${invPctColor(val)};line-height:1;">${fmtPct(val)}</div>
+          ${sibHtml}
+        </div>
+      `;
+    }).join('');
+
+    // Count hidden accounts
+    const hiddenCount = accounts.filter(a => hiddenAccounts.includes(a.id)).length;
+
+    const accountsHtml = accounts.map((acct, i) => {
+      const hidden = hiddenAccounts.includes(acct.id);
+      const holdings = (acct.holdings || []);
+      const holdingsHtml = holdings.length ? `
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;margin-top:0.5rem;">
+          <thead>
+            <tr style="color:var(--muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;">
+              <th style="text-align:left;padding:0.3rem 0.5rem;border-bottom:1px solid var(--border);">Ticker</th>
+              <th style="text-align:left;padding:0.3rem 0.5rem;border-bottom:1px solid var(--border);">Description</th>
+              <th style="text-align:right;padding:0.3rem 0.5rem;border-bottom:1px solid var(--border);">Qty</th>
+              <th style="text-align:right;padding:0.3rem 0.5rem;border-bottom:1px solid var(--border);">Price</th>
+              <th style="text-align:right;padding:0.3rem 0.5rem;border-bottom:1px solid var(--border);">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${holdings.map((h, hi) => `
+              <tr style="${hi % 2 === 1 ? 'background:rgba(255,255,255,0.02);' : ''}">
+                <td style="padding:0.35rem 0.5rem;color:var(--gold);font-weight:600;">${esc(h.ticker || '—')}</td>
+                <td style="padding:0.35rem 0.5rem;color:var(--text);">${esc(h.description || h.companyName || '')}</td>
+                <td style="padding:0.35rem 0.5rem;text-align:right;color:var(--muted);">${h.quantity ? Number(h.quantity).toLocaleString() : '—'}</td>
+                <td style="padding:0.35rem 0.5rem;text-align:right;color:var(--muted);">${fmtMoney(h.price)}</td>
+                <td style="padding:0.35rem 0.5rem;text-align:right;font-weight:600;color:var(--text);">${fmtMoney(h.value)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : '<div style="padding:0.5rem 0;color:var(--muted);font-size:0.82rem;">No holdings data</div>';
+
+      const acctValue = acct.balance || acct.currentNetValue || 0;
+      const custodianLabel = acct.institutionName || '';
+      // Strip custodian name from end of account name if Blueleaf appended it (e.g. "Acct - Altruist")
+      let displayName = acct.name || acct.institutionName || 'Account';
+      if (custodianLabel && displayName.toLowerCase().endsWith(' - ' + custodianLabel.toLowerCase())) {
+        displayName = displayName.slice(0, displayName.length - custodianLabel.length - 3).trim();
+      }
+      // Only show custodian pill — skip account type (jtwros, individual, etc.)
+      const pills = custodianLabel
+        ? `<span style="background:rgba(201,168,76,0.12);color:var(--gold);border:1px solid rgba(201,168,76,0.25);border-radius:20px;padding:0.1rem 0.6rem;font-size:0.7rem;font-weight:600;">${esc(custodianLabel)}</span>`
+        : '';
+
+      return `
+        <div class="inv-account-panel" style="background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:0.75rem;overflow:hidden;${hidden ? 'opacity:0.45;' : ''}" id="inv-panel-${i}">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.1rem;" id="inv-acct-hdr-${i}">
+            <div onclick="invToggleAccount(${i})" style="flex:1;min-width:0;cursor:pointer;user-select:none;">
+              <div style="font-size:0.88rem;font-weight:700;color:var(--text);margin-bottom:${pills ? '0.25rem' : '0'}">${esc(displayName)}</div>
+              ${pills ? `<div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.2rem;">${pills}</div>` : ''}
+              ${acct.accountNumber ? `<div style="font-size:0.75rem;color:var(--muted);">···${acct.accountNumber.slice(-4)}</div>` : ''}
+            </div>
+            <div style="text-align:right;flex-shrink:0;margin-left:1rem;">
+              <div style="font-size:1rem;font-weight:700;color:var(--text);">${fmtMoney(acctValue)}</div>
+              <div style="font-size:0.72rem;color:var(--muted);">${holdings.length} holding${holdings.length !== 1 ? 's' : ''}</div>
+            </div>
+            <div onclick="invToggleAccount(${i})" style="margin-left:0.75rem;color:var(--muted);font-size:0.8rem;cursor:pointer;" id="inv-acct-chevron-${i}">▼</div>
+            <button onclick="invToggleHide('${esc(acct.id)}', ${i})" title="${hidden ? 'Show' : 'Hide'} this account" style="margin-left:0.5rem;background:none;border:none;cursor:pointer;color:var(--muted);font-size:0.78rem;padding:0.2rem 0.4rem;border-radius:4px;" id="inv-hide-btn-${i}">${hidden ? '👁 Show' : '✕ Hide'}</button>
+          </div>
+          <div id="inv-acct-body-${i}" style="display:none;border-top:1px solid var(--border);padding:0.75rem 1.1rem;">
+            ${holdingsHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Compute visible total (exclude hidden accounts)
+    const visibleTotal = accounts
+      .filter(a => !hiddenAccounts.includes(a.id))
+      .reduce((sum, a) => sum + (a.balance || a.currentNetValue || 0), 0);
+
+    wrap.innerHTML = `
+      <div id="inv-market-ticker" style="margin-bottom:1.25rem;">
+        <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.5rem;">Market</div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;color:var(--muted);font-size:0.78rem;">Loading market data…</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:0.75rem;">
+        <div>
+          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.3rem;">Total Portfolio Value</div>
+          <div style="font-size:2.2rem;font-weight:800;color:var(--text);line-height:1;letter-spacing:-0.02em;" id="inv-visible-total">${fmtMoney(visibleTotal)}</div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:0.35rem;">Synced ${syncedAt}${hiddenCount ? ' · ' + hiddenCount + ' account' + (hiddenCount > 1 ? 's' : '') + ' hidden' : ''}</div>
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:flex-start;padding-top:0.25rem;">
+          <button class="btn btn-outline btn-sm" onclick="invManualSync()">🔄 Sync Now</button>
+          <button class="btn btn-outline btn-sm" style="color:var(--muted);" onclick="invUnlink()">Unlink</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+        ${perfCards}
+      </div>
+      <div style="font-size:0.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.75rem;">Accounts</div>
+      ${accounts.length ? accountsHtml : '<div style="color:var(--muted);font-size:0.88rem;">No accounts found</div>'}
+    `;
+
+    // Attach hide toggle handler
+    window._invHiddenAccounts = hiddenAccounts;
+    window._invSaveHidden = saveHidden;
+    window._invAllAccounts = accounts;
+
+    loadMarketTicker();
+  }
+
+  async function loadMarketTicker() {
+    const container = document.getElementById("inv-market-ticker");
+    if (!container) return;
+    try {
+      const res = await apiFetch("/api/market/ticker");
+      const data = await res.json();
+      if (!data.available || !data.items?.length) {
+        container.style.display = "none";
+        return;
+      }
+      const chips = data.items.map(item => {
+        const pct = item.changePct;
+        const color = pct > 0 ? "var(--green)" : pct < 0 ? "var(--red)" : "var(--muted)";
+        const pctStr = pct !== null ? (pct >= 0 ? "+" : "") + pct.toFixed(2) + "%" : "—";
+        const priceStr = item.price ? "$" + Number(item.price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
+        return `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:0.35rem 0.7rem;display:flex;align-items:center;gap:0.45rem;white-space:nowrap;">
+          <span style="font-size:0.72rem;font-weight:700;color:var(--muted);">${item.label}</span>
+          <span style="font-size:0.8rem;font-weight:700;color:var(--text);">${priceStr}</span>
+          <span style="font-size:0.75rem;font-weight:600;color:${color};">${pctStr}</span>
+        </div>`;
+      }).join("");
+      const age = Math.round((Date.now() - data.cachedAt) / 60000);
+      const ageStr = age < 1 ? "just now" : age + "m ago";
+      container.innerHTML = `
+        <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.5rem;">Market <span style="font-weight:400;text-transform:none;letter-spacing:0;">${ageStr}</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">${chips}</div>
+      `;
+    } catch(e) {
+      const c = document.getElementById("inv-market-ticker");
+      if (c) c.style.display = "none";
+    }
+  }
+
+  function invToggleHide(acctId, i) {
+    const hidden = window._invHiddenAccounts || [];
+    const idx = hidden.indexOf(acctId);
+    if (idx === -1) hidden.push(acctId); else hidden.splice(idx, 1);
+    window._invHiddenAccounts = hidden;
+    if (window._invSaveHidden) window._invSaveHidden();
+    // Update panel opacity + button label without full re-render
+    const panel = document.getElementById('inv-panel-' + i);
+    const btn = document.getElementById('inv-hide-btn-' + i);
+    const isNowHidden = hidden.indexOf(acctId) !== -1;
+    if (panel) panel.style.opacity = isNowHidden ? '0.45' : '1';
+    if (btn) btn.textContent = isNowHidden ? '👁 Show' : '✕ Hide';
+    // Recalculate visible total
+    if (window._invAllAccounts) {
+      const visibleTotal = window._invAllAccounts
+        .filter(a => !hidden.includes(a.id))
+        .reduce((sum, a) => sum + (a.balance || a.currentNetValue || 0), 0);
+      const totalEl = document.getElementById('inv-visible-total');
+      if (totalEl) totalEl.textContent = fmtMoney(visibleTotal);
+    }
+  }
+
+  function invToggleAccount(i) {
+    const body = document.getElementById('inv-acct-body-' + i);
+    const chevron = document.getElementById('inv-acct-chevron-' + i);
+    if (!body) return;
+    const open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : '';
+    if (chevron) chevron.textContent = open ? '▼' : '▲';
+  }
 </script>
 
 <!-- Tax Summary Modal -->

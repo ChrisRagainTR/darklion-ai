@@ -41,6 +41,7 @@
     <button class="settings-tab-btn" onclick="switchTab('api-keys')">🔑 API Keys</button>
     <button class="settings-tab-btn" onclick="switchTab('downloads')">⬇️ Downloads</button>
     <button class="settings-tab-btn" onclick="switchTab('tax-season')">🗓 Tax Season</button>
+    <button class="settings-tab-btn" onclick="switchTab('integrations')">🔗 Integrations</button>
   </div>
 
   <!-- ============ FIRM BRANDING ============ -->
@@ -101,7 +102,7 @@
 
       <div style="margin-bottom:1.5rem;">
         <label class="form-label">Address</label>
-        <textarea class="form-control" id="b-address" rows="2" placeholder="1234 Tamiami Trail N, Suite 200&#10;Naples, FL 34102"></textarea>
+        <textarea class="form-control" id="b-address" rows="5" style="resize:vertical;min-height:100px;" placeholder="1234 Tamiami Trail N, Suite 200&#10;Naples, FL 34102"></textarea>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem;">Shown on proposals and tax letters.</div>
       </div>
 
@@ -225,6 +226,27 @@
       </div>
     </div>
   </div><!-- end tab-tax-season -->
+
+  <!-- ============ INTEGRATIONS ============ -->
+  <div class="settings-tab-panel" id="tab-integrations">
+    <div class="settings-section" style="max-width:560px;">
+      <h2>🔗 Integrations</h2>
+      <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.5rem;">Connect third-party services to this firm.</p>
+
+      <div style="margin-bottom:1.5rem;">
+        <label class="form-label" style="display:block;margin-bottom:0.5rem;font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);">Blueleaf API Token</label>
+        <p style="color:var(--muted);font-size:0.82rem;margin-bottom:0.75rem;">Used for financial planning data sync. Leave blank to disable Blueleaf integration.</p>
+        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+          <input type="password" id="blueleaf-token-input" class="form-control" style="width:280px;" placeholder="Paste token to update…">
+          <button class="btn btn-gold btn-sm" onclick="saveBlueleafToken()">Save</button>
+          <button class="btn btn-sm" style="background:var(--charcoal);border:1px solid var(--border);color:var(--muted);" onclick="clearBlueleafToken()">Clear</button>
+        </div>
+        <div id="blueleaf-token-current" style="margin-top:0.5rem;font-size:0.8rem;color:var(--muted);"></div>
+        <span id="blueleaf-token-save-msg" style="font-size:0.82rem;color:var(--green);display:none;">✓ Saved</span>
+        <span id="blueleaf-token-err-msg" style="font-size:0.82rem;color:var(--red);display:none;"></span>
+      </div>
+    </div>
+  </div><!-- end tab-integrations -->
 
 </div><!-- end settings-wrap -->
 
@@ -420,6 +442,7 @@ function switchTab(tab) {
   if (tab === 'api-keys') loadApiTokens();
   if (tab === 'branding') loadBranding();
   if (tab === 'tax-season') loadTaxSeason();
+  if (tab === 'integrations') loadIntegrations();
 }
 
 // WebDAV token functions removed — replaced by DarkLion Drive desktop app
@@ -612,6 +635,64 @@ async function saveTaxYear() {
     const d = await res.json();
     errMsg.textContent = d.error || 'Failed to save';
     errMsg.style.display = '';
+  }
+}
+
+// ==================== INTEGRATIONS ====================
+async function loadIntegrations() {
+  const res = await apiFetch('/integrations');
+  if (!res || !res.ok) return;
+  const data = await res.json();
+  const current = document.getElementById('blueleaf-token-current');
+  if (current) {
+    current.textContent = data.blueleaf_api_token
+      ? `Current token: ${data.blueleaf_api_token}`
+      : 'No token set';
+  }
+}
+
+async function saveBlueleafToken() {
+  const input = document.getElementById('blueleaf-token-input');
+  const saveMsg = document.getElementById('blueleaf-token-save-msg');
+  const errMsg = document.getElementById('blueleaf-token-err-msg');
+  saveMsg.style.display = 'none';
+  errMsg.style.display = 'none';
+
+  const res = await apiFetch('/integrations', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blueleaf_api_token: input.value.trim() }),
+  });
+  if (!res) return;
+  if (res.ok) {
+    input.value = '';
+    window._shellToast('Blueleaf token saved ✓', 'success');
+    loadIntegrations();
+  } else {
+    const d = await res.json().catch(() => ({}));
+    window._shellToast(d.error || 'Failed to save token', 'error');
+  }
+}
+
+async function clearBlueleafToken() {
+  if (!confirm('Remove the Blueleaf API token? Blueleaf sync will be disabled for this firm.')) return;
+  const saveMsg = document.getElementById('blueleaf-token-save-msg');
+  const errMsg = document.getElementById('blueleaf-token-err-msg');
+  saveMsg.style.display = 'none';
+  errMsg.style.display = 'none';
+
+  const res = await apiFetch('/integrations', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blueleaf_api_token: '' }),
+  });
+  if (!res) return;
+  if (res.ok) {
+    window._shellToast('Blueleaf token removed', 'success');
+    loadIntegrations();
+  } else {
+    const d = await res.json().catch(() => ({}));
+    window._shellToast(d.error || 'Failed to clear token', 'error');
   }
 }
 
