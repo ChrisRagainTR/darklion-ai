@@ -19,12 +19,15 @@ jobs:
         shell: powershell
         run: node --version; npm --version
 
-      - name: Download Redmon64.dll
+      - name: Prepare Redmon64.dll
         shell: powershell
         run: |
-          # Redmon is a free open-source Windows port monitor
-          # Try primary source, fall back to GitHub mirror
-          $dest = "darklion-print-agent\installer\redmon64.dll"
+          # Ensure installer directory exists
+          $dir = "darklion-print-agent\installer"
+          if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
+          $dest = "$dir\redmon64.dll"
+
+          # Try to download Redmon (open-source Windows port monitor)
           $urls = @(
             "https://github.com/nicholasess/redmon/raw/master/redmon64.dll",
             "https://github.com/dtjohnson/redmon/raw/master/redmon64.dll"
@@ -43,11 +46,12 @@ jobs:
             }
           }
           if (-not $downloaded) {
-            # Create a placeholder so the build doesn't fail — printer setup will skip if DLL missing
-            Write-Host "WARNING: Could not download Redmon — using placeholder. Printer install will require manual Redmon setup."
-            [byte[]]$placeholder = 0..63 | ForEach-Object { 0 }
+            # Use placeholder — printer virtual port setup will be skipped at install time
+            Write-Host "WARNING: Could not download Redmon — using placeholder. Manual Redmon setup required for virtual printer."
+            [byte[]]$placeholder = [byte[]]::new(64)
             [System.IO.File]::WriteAllBytes($dest, $placeholder)
           }
+          Write-Host "Redmon step complete."
 
       - name: Create placeholder icon (if not present)
         shell: powershell
