@@ -1507,7 +1507,7 @@
       wrap.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem 0;">Loading…</div>';
 
       fetch('/portal/investments', { headers: { 'Authorization': `Bearer ${token}` } })
-        .then(r => r.ok ? r.json() : Promise.reject('fetch-failed'))
+        .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.error || 'HTTP ' + r.status)))
         .then(d => {
           _invPortalLoaded = true;
           if (d && d.enabled && d.snapshot) {
@@ -1516,9 +1516,10 @@
             wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">No investment data available.</div>';
           }
         })
-        .catch(() => {
+        .catch(err => {
           // Don\'t set loaded — allow retry on next tab click
-          wrap.innerHTML = '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">Unable to load investment data. <a href="#" onclick="_invPortalLoaded=false;window._loadPortalInvestments&&window._loadPortalInvestments();return false;">Retry</a></div>';
+          console.error('[investments] fetch error:', err);
+          wrap.innerHTML = `<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0;">Unable to load investment data (${err}). <a href="#" onclick="_invPortalLoaded=false;window._loadPortalInvestments&&window._loadPortalInvestments();return false;">Retry</a></div>`;
         });
     }
 
