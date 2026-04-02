@@ -954,6 +954,87 @@ server/views/partials/shell-close.ejs — closes the page: </body>, </html>, glo
 **Fix:** Store answers in a JS object (`_answers{}`) keyed by question ID as the user clicks, not at submit time.
 **Rule:** For multi-step forms, write state to JS objects as the user interacts. Don't rely on reading DOM values at the end — selectors can be wrong silently.
 
+### 13. Comm Tab: `position:absolute` Empty State Covering Reply Box (2026-04-02)
+**What happened:** The empty state overlay (`position:absolute;inset:0;z-index:1`) was inside the same flex container as the reply box. It covered the entire panel including the reply box, making Send Message invisible/unreachable.
+**Fix:** Move the reply box **outside** the scrollable message container so it sits as a direct sibling in `crm-detail-panel`. The overlay can then only cover the message scroll area, not the reply box.
+**Rule:** Never put always-visible UI (like a reply box) inside a container that has a `position:absolute;inset:0` overlay sibling. It will get covered.
+
+### 14. Comm Tab: CI Not Deploying Dev Branch (2026-04-02)
+**What happened:** `.github/workflows/deploy-railway.yml` only had `branches: [main, master, 'claude/**']`. Pushes to `dev` never triggered Railway deploy. Changes appeared to push but never appeared on dev site.
+**Fix:** Added `dev` to the branch list.
+**Rule:** After adding a new working branch, verify it's in the Railway deploy workflow.
+
+### 15. Comm Tab: `commSendReply` Deleted But Still Referenced (2026-04-02)
+**What happened:** Refactored `commSendReply` into unified `commSendMessage`, but `commSendAsSms` still called the deleted function. SMS send button silently failed.
+**Rule:** When renaming/replacing a function, grep for all callers before deleting the old one.
+
+### 16. Comm Tab: Thread 403 — Wrong `staff_user_id` (2026-04-02)
+**What happened:** Reply route blocks external replies if `staff_user_id` doesn't match logged-in user. A test thread (ID 44) was created by test user (ID 1402), so Chris (ID 1) got a 403 trying to reply.
+**Fix:** Updated thread 44 to `staff_user_id = 1`. Added auto-assign logic: if thread has no `staff_user_id`, assign to the replying user on first reply.
+**Rule:** Threads created by automated processes (tests, Viktor, SMS) may have wrong or null `staff_user_id`. Always set it explicitly on creation.
+
+---
+
+## Communication Tab — Architecture & Rules
+
+The comm tab appears on both `crm-person.ejs` and `crm-company.ejs`. **These two must always stay in sync.** Any change to one goes in both.
+
+### Layout (as of 2026-04-02)
+```
+┌─────────────────────────────────┬──────────────────┐
+│  Messages header                │  🤖 30-Day Summary│
+│  ─────────────────────────────  │  ─────────────── │
+│  [message bubbles scroll here]  │  [summary text]  │
+│  [empty state overlay if none]  │                  │
+│  ─────────────────────────────  │                  │
+│  [textarea: Write a message…]   │                  │
+│  [Send Message] [📎 Attach]     │  [↺ Refresh btn] │
+└─────────────────────────────────┴──────────────────┘
+```
+
+### Key Design Decisions
+- **No thread list sidebar** — single conversation view per person/company
+- **Reply box always visible** — pinned outside the scrollable/overlay area
+- **AI Summary always open** on the right (320px), auto-generates on tab open
+- **Shift+Enter** sends the message (same as team inbox)
+- **No `+ New` button** — sending always auto-creates a thread if none exists
+
+### Thread Ownership Model
+- Each thread is **owned by one staff member** (`staff_user_id` on `message_threads`)
+- Only the owning staff member can send **external replies**
+- Any staff member can post **internal notes** on any thread
+- `@mention` in a message = automatically treated as internal note
+- When a new thread is created from the comm tab, `staff_user_id` defaults to the logged-in user
+- If a thread has no `staff_user_id`, the first person to reply gets auto-assigned
+
+### SMS
+- SMS sends via Twilio through `POST /api/messages/sms`
+- Every SMS is automatically prefixed with the firm's `display_name` and appended with opt-out footer:
+  `Sentinel Wealth & Tax: [message]\n\nReply STOP to opt out.`
+- Firm name is pulled dynamically from `firms.display_name` — not hardcoded
+- SMS creates/reuses a thread and logs the message as a staff message
+
+### Files
+| File | Purpose |
+|---|---|
+| `server/views/crm-person.ejs` | Person comm tab UI + JS |
+| `server/views/crm-company.ejs` | Company comm tab UI + JS (must match person) |
+| `server/routes/messages.js` | All messaging API routes including SMS + AI summary |
+| `server/services/twilio.js` | Twilio SMS sending |
+
+### API Endpoints Used
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/messages/person/:id` | Load threads for a person |
+| `GET /api/messages/company/:id` | Load threads for a company |
+| `GET /api/messages/:threadId` | Load messages in a thread |
+| `POST /api/messages` | Create new thread + first message |
+| `POST /api/messages/:threadId/reply` | Reply to existing thread |
+| `POST /api/messages/sms` | Send SMS via Twilio |
+| `POST /api/messages/person/:id/summary` | Generate AI 30-day summary (person) |
+| `POST /api/messages/company/:id/summary` | Generate AI 30-day summary (company) |
+| `PUT /api/messages/:threadId/archive` | Archive a thread |
+
 ---
 
 ## Tax Organizer — How It Works
