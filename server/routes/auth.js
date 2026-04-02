@@ -125,6 +125,12 @@ router.get('/callback', async (req, res) => {
       await auditLog(firmId, 'company_connect', `Connected: ${companyName || realmId} (realm: ${realmId})`, req.ip);
     } catch (e) { /* non-fatal */ }
 
+    // Sync revenue in background on first connect
+    try {
+      const { syncCompanyRevenue } = require('../services/revenueSync');
+      syncCompanyRevenue(realmId).catch(() => {});
+    } catch (e) { /* non-fatal */ }
+
     const appBase = returnOrigin || (process.env.APP_URL ? process.env.APP_URL.replace(/\/$/, '') : '');
     const isXHR = req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers['accept'] || '').includes('application/json') || req.headers['authorization'];
 
