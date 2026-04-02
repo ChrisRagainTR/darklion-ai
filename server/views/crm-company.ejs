@@ -649,6 +649,7 @@
   body:has(#tab-communication.active) .main { overflow-y: hidden !important; }
   #tab-communication .crm-inbox-wrap { display:flex; flex:1; min-height:0; overflow:hidden; }
   #tab-communication .crm-thread-list { display:none; }
+  #tab-communication .crm-detail-panel { flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; }
   #tab-communication .comm-summary-panel { width:320px; flex-shrink:0; border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; background:var(--card); }
   #tab-communication .comm-summary-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
   #tab-communication .comm-summary-header h3 { font-size:0.85rem; font-weight:700; color:var(--text); margin:0; }
@@ -756,37 +757,36 @@
       <div class="crm-thread-list-inner" id="comm-co-threads"></div>
     </div>
     <div class="crm-detail-panel">
-      <div id="comm-co-thread-view" style="flex:1;flex-direction:column;min-height:0;overflow:hidden;display:flex;">
-        <!-- Header bar -->
-        <div class="detail-header" id="comm-co-detail-header" style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-weight:700;font-size:0.95rem;">Messages</span>
-          <div style="display:flex;align-items:center;gap:0.5rem;" id="comm-co-header-actions"></div>
-        </div>
-        <!-- Empty state -->
+      <!-- Header bar -->
+      <div class="detail-header" id="comm-co-detail-header" style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <span style="font-weight:700;font-size:0.95rem;">Messages</span>
+      </div>
+      <!-- Scrollable messages area with empty state overlay -->
+      <div id="comm-co-thread-view" style="flex:1;position:relative;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
         <div class="no-thread-selected" id="comm-co-no-thread" style="position:absolute;inset:0;z-index:1;background:var(--navy);">
           <div class="nts-icon">💬</div>
           <div>No messages yet — send the first one below</div>
         </div>
         <div class="detail-messages" id="comm-co-detail-messages"></div>
-        <!-- Reply box — always visible -->
-        <div class="reply-box" id="comm-co-reply-box">
-          <div class="reply-box-controls">
-            <input type="checkbox" id="comm-co-internal-toggle" style="display:none;">
-            <input type="checkbox" id="comm-co-sms-toggle" style="display:none;">
-            <div id="comm-co-sms-toggle-wrap" style="display:none;"><label><input type="checkbox" id="comm-co-sms-check" onchange="document.getElementById('comm-co-sms-toggle').checked=this.checked"> 📱 Send as text</label></div>
-            <div style="flex:1;"></div>
-            <button class="btn btn-outline btn-sm" onclick="coCommOpenTemplatePicker()" title="Load template" style="font-size:0.75rem;">📋 Template</button>
-          </div>
-          <div style="position:relative;">
-            <textarea id="comm-co-reply-body" placeholder="Write a message…" rows="4"></textarea>
-            <div id="comm-co-mention-picker" style="display:none;position:absolute;bottom:100%;left:0;z-index:500;background:var(--charcoal);border:1px solid var(--gold);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);min-width:200px;max-height:200px;overflow-y:auto;"></div>
-          </div>
-          <div class="attach-chips" id="comm-co-attach-chips"></div>
-          <input type="file" id="comm-co-attach-input" multiple style="display:none;" onchange="handleCoCommAttach(this.files)">
-          <div class="reply-box-actions">
-            <button class="btn btn-gold btn-sm" id="comm-co-send-btn" onclick="coCommSendMessage()">Send Message</button>
-            <button class="btn-attach" onclick="document.getElementById('comm-co-attach-input').click()">📎 Attach</button>
-          </div>
+      </div>
+      <!-- Reply box — always visible, outside the overlay container -->
+      <div class="reply-box" id="comm-co-reply-box" style="flex-shrink:0;">
+        <div class="reply-box-controls">
+          <input type="checkbox" id="comm-co-internal-toggle" style="display:none;">
+          <input type="checkbox" id="comm-co-sms-toggle" style="display:none;">
+          <div id="comm-co-sms-toggle-wrap" style="display:none;"><label><input type="checkbox" id="comm-co-sms-check" onchange="document.getElementById('comm-co-sms-toggle').checked=this.checked"> 📱 Send as text</label></div>
+          <div style="flex:1;"></div>
+          <button class="btn btn-outline btn-sm" onclick="coCommOpenTemplatePicker()" title="Load template" style="font-size:0.75rem;">📋 Template</button>
+        </div>
+        <div style="position:relative;">
+          <textarea id="comm-co-reply-body" placeholder="Write a message…" rows="4"></textarea>
+          <div id="comm-co-mention-picker" style="display:none;position:absolute;bottom:100%;left:0;z-index:500;background:var(--charcoal);border:1px solid var(--gold);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);min-width:200px;max-height:200px;overflow-y:auto;"></div>
+        </div>
+        <div class="attach-chips" id="comm-co-attach-chips"></div>
+        <input type="file" id="comm-co-attach-input" multiple style="display:none;" onchange="handleCoCommAttach(this.files)">
+        <div class="reply-box-actions">
+          <button class="btn btn-gold btn-sm" id="comm-co-send-btn" onclick="coCommSendMessage()">Send Message</button>
+          <button class="btn-attach" onclick="document.getElementById('comm-co-attach-input').click()">📎 Attach</button>
         </div>
       </div>
 
