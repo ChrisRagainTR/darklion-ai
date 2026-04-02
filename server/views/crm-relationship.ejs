@@ -1301,7 +1301,7 @@
 
   function addBillingEmail() {
     const inp = document.getElementById('billing-email-input');
-    const val = inp.value.trim().toLowerCase();
+    const val = inp.value.trim();
     if (!val || !val.includes('@')) { toast('Enter a valid email', 'error'); return; }
     if (!billingConfig.billing_emails) billingConfig.billing_emails = [];
     if (billingConfig.billing_emails.includes(val)) { toast('Already added', 'error'); return; }
