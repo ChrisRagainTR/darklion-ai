@@ -1236,7 +1236,9 @@ async function deletePerson(id) {
 // =====================================================================
 //  COMPANIES
 // =====================================================================
-async function deleteCompany(id, name) {
+async function deleteCompany(id) {
+  const co = allCompanies.find(c => (c.id||c.company_id) === id);
+  const name = co ? (co.display_name||co.company_name||co.name||'this company') : 'this company';
   if (!await dlConfirm(`Delete ${name}? This cannot be undone.`, { danger: true, confirmLabel: 'Delete' })) return;
   try {
     const res = await apiFetch(`/api/companies/id/${id}`, { method: 'DELETE' });
@@ -1275,7 +1277,7 @@ function renderCompanies(list) {
         <td>${co.relationship_name ? `<span style="color:var(--gold);">${esc(co.relationship_name)}</span>` : '—'}</td>
         <td>${co.status === 'inactive' ? '<span class="badge badge-muted">Inactive</span>' : '<span class="badge badge-green">Active</span>'}</td>
         <td onclick="event.stopPropagation()">
-          <button class="btn btn-danger btn-xs" onclick="deleteCompany(${co.id||co.company_id||0}, '${esc(co.display_name||co.company_name||co.name||'Unknown').replace(/'/g,\"\\\'\")}')">Delete</button>
+          <button class="btn btn-danger btn-xs" onclick="deleteCompany(${co.id||co.company_id||0})">Delete</button>
         </td>
       </tr>`).join('')}
     </tbody></table></div>
