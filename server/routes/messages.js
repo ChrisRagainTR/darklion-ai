@@ -960,8 +960,18 @@ router.post('/sms', async (req, res) => {
     if (phone.length === 10) phone = '1' + phone;
     if (!phone.startsWith('+')) phone = '+' + phone;
 
+    // Fetch firm display name for SMS header
+    const { rows: firmRows } = await pool.query(
+      'SELECT display_name FROM firms WHERE id = $1',
+      [firmId]
+    );
+    const firmName = firmRows[0]?.display_name || 'Your Advisory Firm';
+
+    // Prepend firm name header and append opt-out footer
+    const smsBody = `${firmName}: ${body.trim()}\n\nReply STOP to opt out.`;
+
     const { sendSMS } = require('../services/twilio');
-    const result = await sendSMS(phone, body.trim());
+    const result = await sendSMS(phone, smsBody);
 
     let useThreadId = thread_id ? parseInt(thread_id) : null;
 

@@ -2992,9 +2992,12 @@
   });
 
   async function commSendAsSms() {
+    const check = document.getElementById('comm-sms-check');
+    if (check) check.checked = true;
     const toggle = document.getElementById('comm-sms-toggle');
     if (toggle) toggle.checked = true;
-    await commSendReply();
+    await commSendMessage();
+    if (check) check.checked = false;
     if (toggle) toggle.checked = false;
   }
 
