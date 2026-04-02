@@ -499,15 +499,15 @@
         const email = p.email ? `<a href="mailto:${esc(p.email)}" style="color:var(--muted);text-decoration:none;">${esc(p.email)}</a>` : '';
         const rawEmail = p.email || '';
         const rawPhone = fmtPhone(p.phone) || p.phone || '';
-        peopleHtml += `<div style="display:flex;flex-direction:column;gap:0.3rem;padding:0.65rem 0.75rem;border-radius:8px;background:rgba(255,255,255,0.04);box-shadow:0 1px 4px rgba(0,0,0,0.25);min-width:0;overflow:hidden;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(201,168,76,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'" onclick="window.location='/crm/person/${p.id}'">
+        peopleHtml += `<a href="/crm/person/${p.id}" style="display:flex;flex-direction:column;gap:0.3rem;padding:0.65rem 0.75rem;border-radius:8px;background:rgba(255,255,255,0.04);box-shadow:0 1px 4px rgba(0,0,0,0.25);min-width:0;overflow:hidden;cursor:pointer;transition:background 0.15s;text-decoration:none;" onmouseover="this.style.background='rgba(201,168,76,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
           <div style="display:flex;align-items:center;gap:0.5rem;min-width:0;">
             <div style="width:28px;height:28px;border-radius:50%;background:rgba(201,168,76,0.15);display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;color:var(--gold);flex-shrink:0;">${initials}</div>
             <div style="font-size:0.85rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.first_name||'')} ${esc(p.last_name||'')}</div>
           </div>
-          ${rawEmail ? `<div style="font-size:0.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="event.stopPropagation()"><a href="mailto:${esc(rawEmail)}" style="color:var(--muted);text-decoration:none;">${esc(rawEmail)}</a></div>` : ''}
-          ${rawPhone ? `<div style="font-size:0.72rem;color:var(--muted);" onclick="event.stopPropagation()"><a href="tel:${esc(p.phone)}" style="color:var(--muted);text-decoration:none;">${esc(rawPhone)}</a></div>` : ''}
+          ${rawEmail ? `<div style="font-size:0.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(rawEmail)}</div>` : ''}
+          ${rawPhone ? `<div style="font-size:0.72rem;color:var(--muted);">${esc(rawPhone)}</div>` : ''}
           ${(filingBadge||portalBadge) ? `<div style="display:flex;gap:0.25rem;margin-top:0.1rem;">${filingBadge}${portalBadge}</div>` : ''}
-        </div>`;
+        </a>`;
       });
       peopleHtml += `</div>`;
     }
