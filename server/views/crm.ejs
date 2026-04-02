@@ -1236,22 +1236,10 @@ async function deletePerson(id) {
 // =====================================================================
 async function loadCompanies() {
   try {
-    const relRes = await apiFetch('/api/relationships');
-    const rels = await relRes.json();
-    let companies = [];
-    for (const rel of rels) {
-      try {
-        const r = await apiFetch(`/api/relationships/${rel.id}/companies`);
-        const cos = await r.json();
-        cos.forEach(c => {
-          if (!companies.find(x => x.id === c.id)) {
-            companies.push({ ...c, relationship_name: rel.name });
-          }
-        });
-      } catch(e) {}
-    }
-    allCompanies = companies;
-    renderCompanies(companies);
+    const res = await apiFetch('/api/relationships/all-companies');
+    const companies = await res.json();
+    allCompanies = Array.isArray(companies) ? companies : [];
+    renderCompanies(allCompanies);
   } catch(e) {
     document.getElementById('companies-list-container').innerHTML = `<div class="error-msg">Failed to load companies.</div>`;
   }
