@@ -400,6 +400,16 @@
 
 <div id="tab-communication" class="tab-content" style="padding:0;overflow:hidden;">
   <div class="crm-inbox-wrap">
+    <!-- Left: thread list sidebar -->
+    <div class="crm-thread-list">
+      <div class="crm-thread-list-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <h3>Messages</h3>
+        <button class="btn btn-gold btn-sm" onclick="commOpenNew()" style="font-size:0.75rem;padding:0.25rem 0.65rem;">+ New</button>
+      </div>
+      <div class="crm-thread-list-inner" id="comm-threads-list">
+        <div class="loading-state"><div class="loading-spinner"></div></div>
+      </div>
+    </div>
     <!-- Center: chat panel -->
     <div class="crm-detail-panel">
       <!-- Empty state -->
@@ -2869,13 +2879,29 @@
       const res = await apiFetch(`/api/messages/person/${commPersonId}`);
       if (!res.ok) return;
       const threads = await res.json();
-      if (threads.length && !commActiveThreadId) {
-        // Auto-open the most recent thread (no list panel — always single thread view)
-        await loadThread(threads[0].id);
-      } else if (!threads.length) {
+      const listEl = document.getElementById('comm-threads-list');
+      if (!threads.length) {
+        listEl.innerHTML = '<div style="padding:1.5rem 1rem;text-align:center;color:var(--muted);font-size:0.83rem;">No messages yet.</div>';
         commShowEmpty();
-        document.getElementById('comm-no-thread').innerHTML = '<div class="nts-icon">💬</div><div style="color:var(--muted);">No messages yet.</div>';
+        return;
       }
+      // Render thread list
+      listEl.innerHTML = threads.map(t => {
+        const isActive = t.id === commActiveThreadId;
+        const preview = esc((t.lastMessage || t.subject || '').substring(0, 60));
+        const subj = esc(t.subject || '(no subject)');
+        const timeStr = t.lastMessageAt ? relTime(t.lastMessageAt) : '';
+        const unread = t.unreadCount > 0 ? `<span style="background:var(--gold);color:#000;border-radius:999px;font-size:0.65rem;font-weight:700;padding:0.1rem 0.45rem;margin-left:0.35rem;">${t.unreadCount}</span>` : '';
+        return `<div class="thread-card${isActive ? ' active' : ''}" id="comm-item-${t.id}" onclick="loadThread(${t.id})" style="padding:0.75rem 1rem;border-bottom:1px solid var(--border);cursor:pointer;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.2rem;">
+            <span style="font-size:0.83rem;font-weight:600;color:var(--text);">${subj}${unread}</span>
+            <span style="font-size:0.7rem;color:var(--muted);white-space:nowrap;margin-left:0.5rem;">${timeStr}</span>
+          </div>
+          <div style="font-size:0.75rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${preview}</div>
+        </div>`;
+      }).join('');
+      // Auto-open most recent if none active
+      if (!commActiveThreadId) await loadThread(threads[0].id);
     } catch(e) {
       console.error('[comm] loadThreads error:', e);
     }
