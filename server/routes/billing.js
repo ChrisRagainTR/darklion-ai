@@ -64,7 +64,7 @@ router.put('/:relId/config', async (req, res) => {
     const validAccounts = ['sentinel_tax', 'sentinel_pcs'];
     const accounts = billing_accounts.filter(a => validAccounts.includes(a));
     // Normalize emails
-    const emails = billing_emails.map(e => e.trim().toLowerCase()).filter(Boolean);
+    const emails = billing_emails.map(e => e.trim()).filter(Boolean);
 
     await pool.query(
       'UPDATE relationships SET billing_accounts = $1, billing_emails = $2 WHERE id = $3',
