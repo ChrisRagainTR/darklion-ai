@@ -1,6 +1,6 @@
 # DARKLION.md — Master Context Document
 > Read this at the start of every session before touching any code.
-> Last updated: 2026-03-31
+> Last updated: 2026-04-02
 > This is the single source of context for new sessions. BUILD_LOG.md and SCHEMA_PLAN.md have more detail but this doc covers everything you need to work safely.
 
 ---
@@ -83,18 +83,19 @@ server/
   routes/
     api.js              — General API (companies CRUD, search, scan results)
     auth.js             — Staff login/register/invite
-    firms.js            — Firm settings, branding, login
+    firms.js            — Firm settings, branding, login, integrations (Blueleaf)
     relationships.js    — Relationships CRUD
-    people.js           — People CRUD + company access
+    people.js           — People CRUD + company access + portal preview
     documents.js        — Document upload/download/metadata (S3)
     messages.js         — Staff messaging inbox API
     portal.js           — Protected portal API (client-facing)
     portal-auth.js      — Portal login/invite/reset
-    organizer.js        — Tax organizer flow
+    organizer.js        — Tax organizer flow (staff + portal routes)
     pipelines.js        — Pipeline CRUD + kanban
     pipeline-triggers.js — Trigger definitions + fire endpoint
     pipeline-actions.js  — Stage actions (portal message, staff task)
     tax-delivery.js     — Tax return delivery + e-signatures
+    tax-season.js       — Tax season visibility API (organizer_visible per person)
     engagement.js       — Engagement letter upload/AI extraction
     templates.js        — Message templates
     bulk-send.js        — Bulk portal messaging
@@ -102,14 +103,16 @@ server/
     dashboard.js        — Dashboard intel API
     forecast.js         — Revenue forecast
     billing.js          — Billing API
-    proposals.js        — Proposals (internal)
-    proposals-public.js — Proposals (public view/sign)
+    proposals.js        — Proposals (internal staff)
+    proposals-public.js — Proposals (public view/sign page)
     viktor.js           — Viktor firm context + getFirmContext()
-    viktor-chat.js      — Viktor AI chat (streaming, tools)
+    viktor-chat.js      — Viktor AI chat (streaming, tools, briefings)
     webdav.js           — WebDAV drive server
+    blueleaf.js         — Blueleaf integration (households, enable FP, snapshots)
+    market.js           — Finnhub market ticker (S&P 500, Dow, Nasdaq, BTC, Gold, Oil, VIX)
   services/
     s3.js               — uploadFile, getSignedDownloadUrl, deleteFile, buildKey
-    email.js            — Resend email (invite, reset, notifications)
+    email.js            — Resend email (invite, reset, notifications, statement reminders)
     claude.js           — Anthropic API wrapper
     quickbooks.js       — QBO OAuth + API fetch
     pdf.js              — PDF generation (puppeteer)
@@ -127,6 +130,7 @@ server/
     pipelineActions.js  — Execute stage actions service
     pipelineTriggers.js — Fire triggers service
     twilio.js           — SMS sending
+    blueleaf.js         — Blueleaf API client (fetchHouseholds, fetchPortfolio, XML parsing)
   views/                — ALL staff pages (EJS shell — source of truth)
     layout.ejs          — (unused — shell uses partials instead)
     partials/
@@ -136,13 +140,13 @@ server/
     crm-person.ejs      — /crm/person/:id
     crm-company.ejs     — /crm/company/:id
     crm-relationship.ejs — /crm/relationship/:id
-    dashboard.ejs       — /dashboard
+    dashboard.ejs       — /dashboard (overview + Viktor chat panel + QBO scanner sections)
     messages.ejs        — /messages
     pipelines.ejs       — /pipelines
     pipeline-settings.ejs — /pipelines/:instanceId/settings
     bulk-send.ejs       — /bulk-send
     documents.ejs       — /documents
-    settings.ejs        — /settings
+    settings.ejs        — /settings (6 tabs: Branding, Domains, API Keys, Downloads, Tax Season, Integrations)
     team.ejs            — /team
     templates.ejs       — /templates
     statements-calendar.ejs — /statements-calendar
@@ -150,15 +154,22 @@ server/
     api-docs.ejs        — /api-docs
     forecast.ejs        — /forecast
     proposals.ejs       — /proposals
-    proposal-create.ejs — /proposals/new
+    proposal-create.ejs — /proposals/new (also /proposals/:id/edit)
     proposal-detail.ejs — /proposals/:id
-    people.ejs          — (unused — /crm/people redirects to /crm?tab=people)
-    companies.ejs       — (unused — /crm/companies redirects to /crm?tab=companies)
-    relationships.ejs   — (unused — redirects to /crm?tab=relationships)
+    tax-season.ejs      — /tax-season (per-client organizer visibility controls)
+    help-layout.ejs     — /help + /help/article/:slug (public, no auth, own layout)
+    people.ejs          — (redirect stub — /crm/people redirects to /crm?tab=people)
+    companies.ejs       — (redirect stub — /crm/companies redirects to /crm?tab=companies)
+    relationships.ejs   — (redirect stub — redirects to /crm?tab=relationships)
     404.ejs             — error page
-    login-branded.ejs   — custom domain login
+    login-branded.ejs   — custom domain login (no logo glow/filter)
     webdav-help.ejs     — WebDAV setup guide (staff)
     webdav-help-public.ejs — WebDAV setup guide (public)
+    partials/
+      shell-top.ejs     — Opens every page: <html>, <head>, CSS vars, sidebar nav, top header
+      shell-close.ejs   — Closes every page: </body>, </html>, global JS
+      shell-globals.ejs — Global JS helpers shared across shell pages
+      shell-bottom.ejs  — Bottom-of-page scripts (Pusher init, etc.)
 public/               — Static files (no EJS equivalents — these are ACTIVE)
   portal.html           — /portal — client portal (full app)
   portal-login.html     — /client-login — client login/invite/reset
@@ -221,7 +232,7 @@ All tables have `firm_id` for multi-tenant isolation. Every query must scope to 
 | `pipeline_instances` | A specific run (e.g. "2025 Business Tax Returns"). tax_year, status |
 | `pipeline_jobs` | One card per entity. job_status='active'/'completed'/'archived' |
 | `pipeline_job_updates` | Activity log per job |
-| `pipeline_triggers` | 12 trigger types (underscore convention) |
+| `pipeline_triggers` | 18 trigger types (underscore convention) |
 | `pipeline_stage_triggers` | Maps trigger → stage (max 2 per stage) |
 | `pipeline_trigger_log` | History of fired triggers |
 | `pipeline_stage_actions` | Automated actions on stage entry (portal_message, staff_task) |
@@ -245,6 +256,16 @@ All tables have `firm_id` for multi-tenant isolation. Every query must scope to 
 | `statement_monthly_status` | Per-month status per schedule |
 | `conversation_summaries` | Claude-generated 30-day message summaries |
 | `audit_log` | Every action — actor, action, entity, IP, timestamp |
+| `blueleaf_snapshots` | Cached Blueleaf portfolio snapshots per person (timestamp + raw data) |
+| `viktor_context` | Per-firm Viktor context blob (free-text, updated by staff) |
+| `viktor_sessions` | Per-staff Viktor chat sessions — messages array, briefing_generated flag |
+| `proposals` | Proposal records. Has: relationship_id, status (draft/sent/accepted/signed), engagement_type (tax/wealth), tiers, add_ons |
+| `proposal_acceptances` | When a proposal is accepted (public sign page) |
+| `proposal_engagements` | Engagement letter records linked to signed proposals. AI-extracted fields. |
+| `message_templates` | Staff message templates for quick-insert in compose |
+| `conversation_summaries` | Claude-generated 30-day message summaries per thread/person |
+| `api_tokens` | Firm-scoped API keys for external access (Viktor, integrations) |
+| `firm_domains` | Custom domains mapped to firm_id (e.g. my.sentineltax.co) |
 
 ---
 
@@ -297,6 +318,7 @@ These are bugs that have been hit before. Do not repeat them.
 | **2 AM UTC** | `refreshAllTokens()` — refresh all QBO tokens |
 | **2 AM UTC** | Nightly QBO scans (uncategorized, P&L variance, liability health, payroll) |
 | **4 AM UTC** | Pre-generate Viktor briefings for all active staff (Claude Haiku) |
+| **Scheduled** | Blueleaf portfolio snapshot refresh (per firm, when Blueleaf token set) |
 
 ---
 
@@ -326,54 +348,222 @@ APP_URL, PORTAL_URL
 DASH_USER, DASH_PASS
 NODE_ENV
 PUSHER_APP_ID, PUSHER_KEY, PUSHER_SECRET, PUSHER_CLUSTER
+FINNHUB_API_KEY
 ```
+
+> **Note:** `FINNHUB_API_KEY` is optional — if missing, the market ticker simply returns `{ available: false }` and the Investments tab hides the ticker.
 
 ---
 
 ## Features Built (Complete)
 
+### Core Platform
 | Feature | Where |
 |---|---|
-| Multi-tenant firm auth (JWT) | `server/routes/firms.js`, `server/middleware/requireFirm.js` |
-| 3-entity CRM (Relationships/Companies/People) | `server/routes/relationships.js`, `api.js`, `people.js` |
-| CRM UI (full-page detail views) | `server/views/crm*.ejs` |
-| Document management (S3 upload/download) | `server/routes/documents.js`, `server/services/s3.js` |
-| Client portal (full SPA) | `public/portal.html`, `server/routes/portal.js`, `portal-auth.js` |
-| Portal: invite/reset email | `server/services/email.js` (Resend) |
-| Portal: secure messaging | `server/routes/messages.js`, `portal.js` |
-| Portal: document delivery + NEW badge | `documents.js`, `portal.js` |
-| Portal: connect QBO + send financials | `portal.js` — POST /portal/companies/:id/tax-financials |
-| Portal: upload P&L + BS (PDF/Excel) | `portal.js` — multipart upload mode |
-| Portal: switch to Docs tab on upload success | `public/portal.html` |
-| Tax organizer (4-step client flow) | `server/routes/organizer.js`, `public/organizer.html` |
-| Tax organizer: Drake PDF parser | `server/services/organizerParser.js` |
-| Tax return delivery + e-signatures | `server/routes/tax-delivery.js` |
-| Pipelines (kanban, drag-drop, instances) | `server/routes/pipelines.js`, `server/views/pipelines.ejs` |
-| Pipeline smart triggers (12 types) | `server/routes/pipeline-triggers.js`, `server/services/pipelineTriggers.js` |
-| Pipeline stage actions | `server/routes/pipeline-actions.js`, `server/services/pipelineActions.js` |
-| Pipeline settings page | `server/views/pipeline-settings.ejs` |
-| Pipeline completion + nightly archive | `scheduler.js`, `pipeline_completions` table |
-| Secure messaging (staff inbox) | `server/routes/messages.js`, `server/views/messages.ejs` |
-| Bulk send | `server/routes/bulk-send.js`, `server/views/bulk-send.ejs` |
-| Message templates | `server/routes/templates.js` |
-| Viktor AI chat (streaming) | `server/routes/viktor-chat.js`, `server/routes/viktor.js` |
-| Viktor dashboard briefings | `server/routes/dashboard.js`, scheduler 4 AM |
-| Firm branding (logo, colors, settings) | `server/routes/firms.js`, `server/views/settings.ejs` |
-| Engagement letters + AI extraction | `server/routes/engagement.js` |
-| Proposals + e-sign | `server/routes/proposals.js`, `proposals-public.js` |
-| Revenue forecast | `server/routes/forecast.js` |
-| WebDAV drive server | `server/routes/webdav.js` |
-| QBO token keep-alive + reconnect UI | `scheduler.js`, `server/services/quickbooks.js` |
-| Send to Tax Prep (QBO → PDF) | `server/routes/api.js`, `server/services/taxFinancialsPdf.js` |
-| New Company modal (+New Company button in CRM) | `crm.ejs` |
-| Person modal 2-column layout | `crm-person.ejs` |
-| Company workflow tab (full parity) | `crm-company.ejs` |
-| Auto-grant portal access on relationship add | `server/routes/api.js` |
-| Help Center (`/help`) — public, no auth, 32 articles | `server/help-articles.js`, `server/views/help-layout.ejs`, `server/index.js` |
-| Advisor Portal Ghost Preview ("View Portal as Client") | `server/routes/people.js` POST `/:id/portal-preview`, `public/portal.html` ghost banner |
-| E2E test suite (237 tests — 7 spec files added) | `tests/e2e/`, `tests/global-setup.cjs` |
-| DarkLion Drive (Windows desktop app) | `darklion-drive/` — Electron + rclone + WinFsp |
-| DarkLion Print Agent (Windows desktop app) | `darklion-print-agent/` — Electron + Ghostscript |
+| Multi-tenant firm auth (JWT, staff + portal tokens) | `server/routes/firms.js`, `server/middleware/requireFirm.js`, `requirePortal.js` |
+| 3-entity CRM (Relationships / Companies / People) | `server/routes/relationships.js`, `api.js`, `people.js` |
+| CRM list view (3-tab: Relationships, People, Companies) | `server/views/crm.ejs` |
+| CRM detail views (person, company, relationship) | `server/views/crm-person.ejs`, `crm-company.ejs`, `crm-relationship.ejs` |
+| Address fields on people and companies | `crm-person.ejs`, `crm-company.ejs`, DB migrations |
+| Recently visited clients (search bar shows last 5) | `server/views/partials/shell-top.ejs` |
+| Team page — invite, edit name/email, copy invite link | `server/views/team.ejs`, `server/routes/auth.js` |
+| Firm branding (logo, colors, address for proposals/tax letters) | `server/routes/firms.js`, `server/views/settings.ejs` |
+| Custom domains (e.g. my.sentineltax.co) | `server/routes/firms.js`, `firm_domains` table, `domainFirm.js` middleware |
+| API key management (generate, list, revoke) | `server/views/settings.ejs`, `api_tokens` table |
+| Settings page (6 tabs: Branding, Domains, API Keys, Downloads, Tax Season, Integrations) | `server/views/settings.ejs` |
+| Audit log (every action logged with actor, entity, IP, timestamp) | `audit_log` table, throughout routes |
+| PWA support (Add to Home Screen, mobile nav) | `public/manifest.json`, `server/views/partials/shell-top.ejs` |
+
+### Document Management
+| Feature | Where |
+|---|---|
+| Document upload/download (S3, signed URLs) | `server/routes/documents.js`, `server/services/s3.js` |
+| Two-column folder UI (Advisor/Client, year folders, category subfolders) | `crm-person.ejs`, `crm-company.ejs` |
+| Page-wide drag-and-drop upload | `crm-person.ejs`, `crm-company.ejs` |
+| Bookkeeping sub-folders by account name | `crm-company.ejs`, `portal.js` (folder_subcategory column) |
+| Send to Tax Prep (QBO → branded PDF, fires trigger) | `server/routes/api.js`, `server/services/taxFinancialsPdf.js` |
+| Documents page (firm-level view) | `server/views/documents.ejs` |
+
+### Client Portal
+| Feature | Where |
+|---|---|
+| Full portal SPA (overview, docs, messages, tax, investments) | `public/portal.html`, `server/routes/portal.js` |
+| Portal auth (invite, reset, login) | `public/portal-login.html`, `server/routes/portal-auth.js` |
+| Portal: document delivery + NEW badge | `portal.js`, `documents.js` |
+| Portal: secure messaging (iMessage-style bubbles) | `portal.js`, `messages.js` |
+| Portal: typing indicators (Pusher private channels) | `portal.js`, Pusher auth endpoint in `index.js` |
+| Portal: connect QBO + send financials (client_prepared companies) | `portal.js` POST `/portal/companies/:id/tax-financials` |
+| Portal: upload P&L + BS PDFs (drag & drop) | `portal.js` multipart upload |
+| Portal: Statements tab (client_upload accounts) — upload monthly bank statements, see status | `portal.js` POST `/portal/companies/:id/statements/:scheduleId/:month` |
+| Portal: Statements outstanding card on overview with Upload Now | `portal.html`, `portal.js` |
+| Portal: Tax delivery (review copy, e-sign, download signed PDF) | `portal.js`, `public/portal.html` |
+| Portal: Investments tab (Blueleaf portfolio, hide/show accounts, performance cards) | `portal.js` GET `/portal/investments`, `portal.html` |
+| Portal: Market ticker on Investments tab (S&P 500, Dow, Nasdaq, BTC, Gold, Oil, VIX) | `portal.js` GET `/portal/market/ticker`, `server/routes/market.js` |
+| Advisor ghost preview (“View Portal as Client”) | `server/routes/people.js` POST `/:id/portal-preview`, `public/portal.html` ghost banner |
+| Custom domain portal login (my.sentineltax.co etc.) | `server/views/login-branded.ejs`, `domainFirm.js` |
+
+### Pipelines
+| Feature | Where |
+|---|---|
+| Kanban board (drag-drop, instances, year selector) | `server/routes/pipelines.js`, `server/views/pipelines.ejs` |
+| Pipeline job cards (notes, activity log, stage nav) | `pipelines.ejs`, `pipeline_job_updates` table |
+| Pipeline clone + archive | `pipelines.ejs` |
+| Pipeline settings page (stage editor, triggers, actions) | `server/views/pipeline-settings.ejs` |
+| Pipeline smart triggers — 18 types | `server/routes/pipeline-triggers.js`, `server/services/pipelineTriggers.js` |
+| Pipeline stage actions (auto portal message, auto staff task) | `server/routes/pipeline-actions.js`, `server/services/pipelineActions.js` |
+| Pipeline completion + nightly archive (10 PM) | `scheduler.js`, `pipeline_completions` table |
+| Workflow tab on person + company CRM pages | `crm-person.ejs`, `crm-company.ejs` |
+
+**Pipeline trigger keys (all 18):**
+```
+tax_return_deployed         — Tax Return Sent to Client
+tax_return_signed           — Tax Return Signed by Client
+tax_return_approved         — Tax Return Approved by Staff
+engagement_letter_sent      — Engagement Letter Sent
+engagement_letter_signed    — Client Signed Engagement Letter
+tax_loe_signed              — Tax LOE Signed
+wealth_loe_signed           — Wealth LOE Signed
+client_requested_changes    — Client Requested Changes
+proposal_sent               — Proposal Sent
+proposal_signed             — Proposal Signed
+proposal_accepted           — Proposal Accepted
+portal_message_received     — Client Sent a Portal Message
+portal_first_login          — Client First Portal Login
+document_uploaded_by_client — Client Uploaded a Document
+organizer_submitted         — Client Submitted Tax Organizer
+tax_financials_generated    — Tax Financials Sent to Tax Prep
+client_financials_submitted — Client Submitted Financials to Tax Prep
+client_statement_uploaded   — Client Uploaded a Bank Statement
+```
+
+### Messaging
+| Feature | Where |
+|---|---|
+| Staff inbox (TaxDome-style thread list, card messages) | `server/routes/messages.js`, `server/views/messages.ejs` |
+| iMessage-style bubbles in CRM comm tab | `crm-person.ejs`, `crm-company.ejs` |
+| Thread sharing (@mentions, thread_participants) | `messages.js` |
+| AI company tagging on threads | `messages.js` |
+| Typing indicators (Pusher) | `messages.js`, Pusher auth in `index.js` |
+| Message templates (quick-insert) | `server/routes/templates.js`, `server/views/templates.ejs` |
+| Bulk send with audience builder | `server/routes/bulk-send.js`, `server/views/bulk-send.ejs` |
+| Conversation summaries (Claude, 30-day) | `server/routes/summaries.js`, `server/services/summaryGenerator.js` |
+| Changes requested — creates staff message thread | `tax-delivery.js` |
+
+### Tax Organizer
+| Feature | Where |
+|---|---|
+| 4-step client organizer flow (Confirm Info, Questions, Docs, Submit) | `public/organizer.html`, `server/routes/organizer.js` |
+| Drake PDF parser — auto-creates checklist from Drake organizer | `server/services/organizerParser.js` |
+| Advisor organizer tab (full read-only view, stats, workpaper download) | `crm-person.ejs` |
+| Custom questions per client (advisor-added) | `tax_organizers.custom_questions` JSON column |
+| Custom doc items per client (advisor-added) | `tax_organizer_items.advisor_added` flag |
+| Bulk PDF upload (one PDF covers entire organizer) | `organizer.js` POST `/portal/organizer/client/:year/bulk-upload` |
+| “In Bulk Upload” per-item status | `tax_organizer_items` status `not_applicable` |
+| “Not This Year” per-item button | `tax_organizer_items` status `not_this_year` |
+| Auto-submit closes organizer, reclassifies docs to tax | `organizer.js` |
+| Pipeline trigger on submit (`organizer_submitted`) | `organizer.js` → `pipelineTriggers.js` |
+| Reopen organizer (Request More Docs) | `organizer.js` PUT `/:personId/:year/reopen` |
+| Tax Season page — per-client organizer visibility toggle | `server/views/tax-season.ejs`, `server/routes/tax-season.js` |
+| Active tax year setting (Settings → Tax Season tab) | `server/views/settings.ejs`, firms.active_tax_year |
+
+### Tax Return Delivery
+| Feature | Where |
+|---|---|
+| Create delivery (year dropdown, doc selector, multi-signer) | `server/routes/tax-delivery.js`, `crm-person.ejs`, `crm-company.ejs` |
+| Review copy + e-signature (embedded PDF with pdf-lib) | `server/services/sign-pdf.js`, `tax-delivery.js` |
+| Signed PDF stored in S3, linked to signer record | `tax_delivery_signers.signed_doc_id` |
+| AI tax return analysis (Claude) | `server/services/taxAnalysis.js` |
+| Edit Docs modal on draft deliveries | `crm-person.ejs` |
+| Changes requested — creates staff message thread | `tax-delivery.js` |
+| Delivery card shows doc links (review copy + signed per signer) | `crm-person.ejs` |
+| Personal (1040) + business (company_id) deliveries | `tax-delivery.js` |
+
+### Proposals & Engagement Letters
+| Feature | Where |
+|---|---|
+| Proposal creation (tax or wealth engagement type, tiers, add-ons) | `server/views/proposal-create.ejs`, `server/routes/proposals.js` |
+| Proposal list + stats | `server/views/proposals.ejs`, `proposals.js` GET `/stats` |
+| Public proposal view + e-sign page | `public/proposal-view.html`, `public/proposal-sign.html`, `proposals-public.js` |
+| Save-to-CRM (creates engagement letter, fires tax_loe_signed or wealth_loe_signed trigger) | `proposals.js` POST `/:id/save-to-crm` |
+| Fires `proposal_sent` trigger on status → sent | `proposals.js` |
+| Fires `proposal_signed` trigger with engagement_type context | `proposals.js` |
+| Engagement letter upload + AI extraction of key terms | `server/routes/engagement.js` |
+| Engagement letters listed on relationship CRM page | `crm-relationship.ejs` |
+
+### Financial Planning & Investments (Blueleaf)
+| Feature | Where |
+|---|---|
+| Blueleaf API integration (per-firm token) | `server/routes/blueleaf.js`, `server/services/blueleaf.js`, `firms.blueleaf_api_token` |
+| Blueleaf settings in Settings → Integrations tab | `server/views/settings.ejs` |
+| Enable financial planning per client (link Blueleaf household) | `blueleaf.js` POST `/api/people/:id/financial-planning/enable` |
+| Portal Investments tab — account list, balances, hide/show | `public/portal.html`, `portal.js` GET `/portal/investments` |
+| Hide accounts persisted to DB (`people.blueleaf_hidden_accounts`) | `portal.js`, DB column |
+| Performance cards (Last Month, Last Quarter) | `portal.html` |
+| Market ticker (S&P 500, Dow, Nasdaq, BTC, Gold, Oil, VIX via Finnhub) | `server/routes/market.js`, `portal.html` |
+| Ticker cached 5 min server-side | `market.js` in-memory cache |
+| Advisor Investments view matches portal | `crm-person.ejs` |
+
+### Bank Statement Collection
+| Feature | Where |
+|---|---|
+| Statement schedules (per-account, per-company) | `statement_schedules` table, `crm-company.ejs` |
+| Bookkeeping method dropdown (QBO Download / Sentinel Download / Client Upload) | `crm-company.ejs` |
+| Client Upload mode — start month, monthly portal upload, reminders | `portal.js`, `organizer.js`, `statement_monthly_status` table |
+| Advisor status view (per-month status grid) | `crm-company.ejs` |
+| Statement reminder emails | `server/services/email.js` (Resend) |
+| Outstanding statements card on portal overview | `portal.html` |
+| Bookkeeping sub-folders by account name (advisor + portal) | `crm-company.ejs`, `portal.js` |
+| Statement calendar (firm-level monthly view) | `server/views/statements-calendar.ejs` |
+| `client_statement_uploaded` pipeline trigger | `portal.js` → `pipelineTriggers.js` |
+
+### Viktor AI
+| Feature | Where |
+|---|---|
+| Viktor AI chat (streaming, Claude Sonnet) | `server/routes/viktor-chat.js` |
+| Daily briefing (pre-generated 4 AM, Claude Haiku) | `scheduler.js`, `viktor-chat.js` POST `/briefing` |
+| Viktor context blob (per-firm, staff-editable) | `server/routes/viktor.js`, `viktor_context` table |
+| Viktor firm context (relationships, engagement letters, messages) | `viktor.js` GET `/context`, `/relationship/:id`, `/engagement-letters`, `/messages/:threadId` |
+| Viktor embedded in dashboard right panel | `server/views/dashboard.ejs` |
+| Viktor tools — CRM lookup, document access, thread reading | `viktor-chat.js` |
+
+### Dashboard
+| Feature | Where |
+|---|---|
+| Overview cards (pipeline, proposals, statements) | `server/views/dashboard.ejs` |
+| Alert engine (uncategorized txns, payroll mismatch, P&L variance, liability issues) | `dashboard.ejs` + scanner APIs |
+| QBO scanner sections (uncategorized, variance, liability, payroll) | `dashboard.ejs`, `server/routes/dashboard.js` |
+| Client connection status cards | `dashboard.ejs` |
+| Viktor AI chat panel (right column) | `dashboard.ejs` |
+| Revenue forecast page | `server/views/forecast.ejs`, `server/routes/forecast.js` |
+
+### Help Center
+| Feature | Where |
+|---|---|
+| Public Help Center at `/help` (no login required) | `server/help-articles.js`, `server/views/help-layout.ejs` |
+| 32+ articles across 8 modules | `server/help-articles.js` |
+| Real-time full-text search | `help-layout.ejs` client-side search |
+| Left sidebar navigation | `help-layout.ejs` |
+| Help Center link in staff sidebar | `server/views/partials/shell-top.ejs` |
+
+### Windows Desktop Apps
+| Feature | Where |
+|---|---|
+| DarkLion Drive (mounts docs as Windows drive letter L:) | `darklion-drive/` — Electron + rclone + WinFsp |
+| DarkLion Print Agent (virtual printer → DarkLion upload) | `darklion-print-agent/` — Electron + Ghostscript |
+| Print Agent CI build (auto on main push) | `.github/workflows/build-print-agent.yml` |
+| Print Agent token expiry check on search/upload | `darklion-print-agent/` |
+| Desktop app download links in Settings → Downloads tab | `server/views/settings.ejs` |
+
+### Misc / Infrastructure
+| Feature | Where |
+|---|---|
+| QBO OAuth (connect, callback, token refresh) | `server/services/quickbooks.js`, `public/connect.html`, `callback.html` |
+| QBO token keep-alive (nightly refresh + reconnect UI) | `scheduler.js`, `crm-company.ejs` |
+| QBO OAuth returns to originating domain (subdomain support) | `quickbooks.js`, state param |
+| Gusto payroll integration (payroll verification) | `server/services/payroll.js` |
+| Pusher real-time (typing indicators, message updates) | `server/index.js` Pusher auth endpoints |
+| Styled confirm modal (dlConfirm — replaces browser confirm()) | `server/views/partials/shell-globals.ejs` |
+| E2E test suite (237 tests, 14 spec files, 0 failing) | `tests/e2e/`, `tests/global-setup.cjs` |
 
 ---
 
@@ -392,6 +582,8 @@ Both live in the repo and build separately. Do NOT delete them. Do NOT try to im
 - Print any document → Ghostscript converts to PDF → routing popup → uploads to DarkLion
 - CI: `build-print-agent.yml` builds installer on every push to main affecting `darklion-print-agent/**`
 - Build: `cd darklion-print-agent/app && npm run build:win`
+- Current version: **v1.0.1** (April 2026 build)
+- Token expiry check on search + upload — re-prompts login if JWT expired
 - Confirmed working by Chris
 
 ---
@@ -541,6 +733,78 @@ Added 5 new spec files + fixed 2 existing:
 
 ---
 
+### 2026-04-01 — Proposals + Tax Season + Blueleaf + Investments + Statements + Triggers
+
+This was a massive session covering 5 major features plus a lot of polish.
+
+#### Proposals System (fully built)
+- **Proposal creation wizard:** `server/views/proposal-create.ejs` — create tax or wealth engagement proposals with tiers, add-ons, client info, custom letter text
+- **Engagement type:** `tax` or `wealth` — controls trigger routing and LOE type
+- **Proposal list page:** `server/views/proposals.ejs` — stats (total, sent, accepted, signed), list with status badges
+- **Proposal detail page:** `server/views/proposal-detail.ejs` — view/edit, status progression, save-to-CRM
+- **Public view + sign:** `public/proposal-view.html`, `public/proposal-sign.html` — served at `/p/:token` and `/p/:token/sign`
+- **Save-to-CRM:** Creates engagement letter record, fires `tax_loe_signed` or `wealth_loe_signed` trigger based on engagement_type
+- **Pipeline trigger wiring:**
+  - `proposal_sent` fires when status → sent
+  - `proposal_signed` fires on public sign, includes `engagement_type` context
+  - `engagement_letter_signed` fires on save-to-CRM
+  - `tax_loe_signed` / `wealth_loe_signed` fire on save-to-CRM based on engagement type
+
+#### Tax Season Page
+- **Route:** `GET /tax-season` → `server/views/tax-season.ejs`
+- **API:** `server/routes/tax-season.js`
+  - `GET /api/tax-season/clients` — list all clients with organizer status + visibility state
+  - `POST /api/tax-season/bulk` — show/hide all clients at once
+  - `POST /api/tax-season/person/:id` — show/hide one client
+- **UX:** Table of all clients, each row has toggle, bulk Show All / Hide All buttons
+- **DB:** `people.organizer_visible` boolean column
+- **Linked from Settings → Tax Season tab** via a gold button
+
+#### Blueleaf Financial Planning Integration
+- **Per-firm API token:** stored in `firms.blueleaf_api_token` — set in Settings → Integrations tab
+- **Enable per client:** `POST /api/people/:id/financial-planning/enable` — links a Blueleaf household to a client
+- **Blueleaf service:** `server/services/blueleaf.js` — `fetchHouseholds()`, `fetchPortfolio()`, XML parsing for nested account/balance structure
+- **Portal Investments tab:**
+  - Account list with custodian pill, account number, balance
+  - Large total (excludes hidden accounts)
+  - Hide/show accounts (persisted to `people.blueleaf_hidden_accounts` JSONB column)
+  - Performance cards: Last Month, Last Quarter
+  - Retry button on error
+- **Advisor view:** `crm-person.ejs` Investments section mirrors portal
+- **DB:** `blueleaf_snapshots` table for caching, `people.financial_planning_enabled`, `people.blueleaf_household_id`, `people.blueleaf_hidden_accounts`
+
+#### Finnhub Market Ticker
+- **Route:** `GET /api/market/ticker` (staff) and `GET /portal/market/ticker` (portal) — both served by `server/routes/market.js`
+- **Symbols:** S&P 500 (SPY), Dow (DIA), Nasdaq (QQQ), Bitcoin (BINANCE:BTCUSDT), Gold (GLD), Oil (USO), VIX (UVXY)
+- **Caching:** 5-minute server-side in-memory cache. Returns `{ available: false }` if `FINNHUB_API_KEY` not set.
+- **Portal UX:** Ticker strip at top of Investments tab. Shows price + % change, color-coded green/red.
+
+#### Bank Statement Client Upload Portal
+- **Context:** Companies with `bookkeeping_service='client_upload'` need to provide bank statements monthly
+- **Statement schedule setup:** Advisor sets start_month on a per-account basis in `crm-company.ejs`
+- **Portal Statements tab:** Clients see one row per expected month. Upload button per month. Status: pending / uploaded / retrieved.
+- **Outstanding statements card:** Shows on portal overview tab when any months are pending. "Upload Now" button.
+- **Upload endpoint:** `POST /portal/companies/:id/statements/:scheduleId/:month` — saves file to S3, creates document record, fires `client_statement_uploaded` trigger
+- **Advisor status view:** `crm-company.ejs` shows per-month upload status grid. Marks retrieved.
+- **Reminder emails:** Sent via Resend when statements are past due
+- **Bookkeeping sub-folders:** Both advisor view (`crm-company.ejs`) and portal now group bookkeeping docs by account name as sub-folders (uses `documents.folder_subcategory` column)
+- **DB:** `statement_schedules` table (accounts to track), `statement_monthly_status` table (per-month status + document_id)
+
+#### New Pipeline Triggers (bringing total to 18)
+- `client_statement_uploaded` — fires when client uploads a bank statement via portal
+- `tax_loe_signed` — fires when Tax LOE signed (proposal save-to-CRM)
+- `wealth_loe_signed` — fires when Wealth LOE signed (proposal save-to-CRM)
+- (Previously also added: `tax_financials_generated`, `client_financials_submitted`)
+
+#### Print Agent v1.0.1
+- Updated download URL in Settings → Downloads tab to point to v1.0.1 installer
+- Added token expiry check in search + upload handlers — re-prompts login if token expired
+
+#### Prod deploys on 2026-04-01
+- `f53578d` — merge: bookkeeping statement upload + tests to production
+
+---
+
 ## EJS Shell — The Template That Must Not Break
 
 Every staff page in DarkLion uses the EJS shell. **This is sacred. Do not change it without understanding the full impact.**
@@ -621,7 +885,17 @@ server/views/partials/shell-close.ejs — closes the page: </body>, </html>, glo
 | — | Send to Tax Prep: QBO → branded PDF | 2026-03-29 |
 | — | Client portal: connect QBO + upload P&L/BS PDFs | 2026-03-29 |
 | — | Refactor: remove stale HTML, dead services, Fly.io CI | 2026-03-31 |
-| — | Remove 2nd-gen placeholder screenshots from help center (21 images + figure blocks) | 2026-03-31 |
+| — | Help Center (32 articles, public, search) | 2026-03-31 |
+| — | Advisor portal ghost preview (View Portal as Client) | 2026-03-31 |
+| — | Tax organizer: bulk PDF upload + “In Bulk Upload” per-item button | 2026-03-31 |
+| — | Tax Season page (per-client organizer visibility controls) | 2026-03-31 |
+| — | Proposals system (create, send, public sign, save-to-CRM) | 2026-03-31 |
+| — | Blueleaf financial planning integration + portal Investments tab | 2026-04-01 |
+| — | Finnhub market ticker on Investments tab | 2026-04-01 |
+| — | Bank statement client upload portal (Statements tab, reminders, advisor status view) | 2026-04-01 |
+| — | Bookkeeping sub-folders by account name (advisor + portal) | 2026-04-01 |
+| — | 18 pipeline triggers (added client_statement_uploaded, tax_loe_signed, wealth_loe_signed) | 2026-04-01 |
+| — | Print Agent updated to v1.0.1 + token expiry check | 2026-04-01 |
 
 ---
 
@@ -743,5 +1017,7 @@ The tax organizer is a 4-step client-facing flow for collecting tax documents. S
 | Phase 6b — Pipeline Bulk Add | "📥 Bulk Add" button on board header. Needs more CRM data for meaningful filtering first. |
 | Gmail connector | Design complete in BUILD_LOG.md. Uses Google Workspace service account + domain-wide delegation. |
 | Phase 7 refinement | Tax return delivery e-signatures need testing and polish |
+| Organizer: hide tab when no organizers | `organizer_visible` flag exists; portal Organizers tab should be hidden until client has one assigned |
 | Security checklist | See BUILD_LOG.md — several items flagged before real client data |
 | SOC 2 audit | Design is ready; formal engagement when client volume warrants |
+| Test suite updates | Portal statements spec (13 tests added 2026-04-01). Investments + Blueleaf tests not yet written. |
