@@ -559,6 +559,17 @@
 let allRelationships = [];
 let allPeople = [];
 let allCompanies = [];
+let relPage = 1, peoplePage = 1, companiesPage = 1;
+const PAGE_SIZE = 10;
+
+function paginationBar(current, total, onPrev, onNext) {
+  if (total <= 1) return '';
+  return `<div style="display:flex;align-items:center;justify-content:center;gap:1rem;padding:0.75rem 0;font-size:0.84rem;color:var(--muted);">
+    <button class="btn btn-ghost btn-sm" ${current<=1?'disabled':''} onclick="${onPrev}" style="${current<=1?'opacity:0.4;cursor:default;':''}">← Prev</button>
+    <span>Page ${current} of ${total}</span>
+    <button class="btn btn-ghost btn-sm" ${current>=total?'disabled':''} onclick="${onNext}" style="${current>=total?'opacity:0.4;cursor:default;':''}">Next →</button>
+  </div>`;
+}
 let currentRelId = null;
 let currentPersonId = null;
 let editingRelId = null;
@@ -680,11 +691,14 @@ function renderRelationships(list) {
     c.innerHTML = `<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:0.75rem;opacity:0.5;">👥</div><div>No relationships yet.</div></div>`;
     return;
   }
+  const totalPages = Math.ceil(list.length / PAGE_SIZE);
+  relPage = Math.min(relPage, totalPages);
+  const page = list.slice((relPage-1)*PAGE_SIZE, relPage*PAGE_SIZE);
   c.innerHTML = `<div class="table-wrap"><table class="data-table">
     <thead><tr>
       <th>Name</th><th>Service Tier</th><th>Companies</th><th>People</th><th>Billing</th><th>Actions</th>
     </tr></thead>
-    <tbody>${list.map(r => `
+    <tbody>${page.map(r => `
       <tr onclick="window.location.href='/crm/relationship/${r.id}'">
         <td style="font-weight:600;">${esc(r.name)}${parseInt(r.unread_count||0)>0?` <span style="display:inline-flex;align-items:center;justify-content:center;background:#e74c3c;color:#fff;border-radius:999px;padding:0.1rem 0.45rem;font-size:0.65rem;font-weight:800;margin-left:0.35rem;">${r.unread_count}</span>`:''}</td>
         <td>${tierBadge(r.service_tier)}</td>
@@ -696,16 +710,20 @@ function renderRelationships(list) {
           <button class="btn btn-danger btn-xs" onclick="deleteRelationship(${r.id})">Delete</button>
         </td>
       </tr>`).join('')}
-    </tbody></table></div>`;
+    </tbody></table></div>
+  ${paginationBar(relPage, totalPages, `relPage--;renderRelationships(window._relFilteredList||allRelationships)`, `relPage++;renderRelationships(window._relFilteredList||allRelationships)`)}`;
 }
 
 function filterRelationships(q) {
   const f = q.toLowerCase();
-  renderRelationships(allRelationships.filter(r =>
+  const filtered = allRelationships.filter(r =>
     (r.name||'').toLowerCase().includes(f) ||
     (r.service_tier||'').toLowerCase().includes(f) ||
     (r.billing_status||'').toLowerCase().includes(f)
-  ));
+  );
+  window._relFilteredList = filtered;
+  relPage = 1;
+  renderRelationships(filtered);
 }
 
 async function openRelationship(id) {
@@ -868,11 +886,14 @@ function renderPeople(list) {
     c.innerHTML = `<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:0.75rem;opacity:0.5;">👤</div><div>No people yet.</div></div>`;
     return;
   }
+  const totalPages = Math.ceil(list.length / PAGE_SIZE);
+  peoplePage = Math.min(peoplePage, totalPages);
+  const page = list.slice((peoplePage-1)*PAGE_SIZE, peoplePage*PAGE_SIZE);
   c.innerHTML = `<div class="table-wrap"><table class="data-table">
     <thead><tr>
       <th>Name</th><th>Email</th><th>Relationship</th><th>Filing Status</th><th>Portal</th><th>Actions</th>
     </tr></thead>
-    <tbody>${list.map(p => `
+    <tbody>${page.map(p => `
       <tr onclick="window.location.href='/crm/person/${p.id}'">
         <td style="font-weight:600;">${esc(p.first_name)} ${esc(p.last_name)}${parseInt(p.unread_count||0)>0?` <span style="display:inline-flex;align-items:center;justify-content:center;background:#e74c3c;color:#fff;border-radius:999px;padding:0.1rem 0.45rem;font-size:0.65rem;font-weight:800;margin-left:0.35rem;">${p.unread_count}</span>`:''}${(p.city||p.state)?`<div style="font-size:0.74rem;font-weight:400;color:var(--muted);margin-top:0.15rem;">${[p.city,p.state].filter(Boolean).map(esc).join(', ')}</div>`:''}</td>
         <td style="color:var(--muted);">${p.email ? esc(p.email) : '—'}</td>
@@ -884,16 +905,20 @@ function renderPeople(list) {
           <button class="btn btn-danger btn-xs" onclick="deletePerson(${p.id})">Delete</button>
         </td>
       </tr>`).join('')}
-    </tbody></table></div>`;
+    </tbody></table></div>
+  ${paginationBar(peoplePage, totalPages, `peoplePage--;renderPeople(window._peopleFilteredList||allPeople)`, `peoplePage++;renderPeople(window._peopleFilteredList||allPeople)`)}`;
 }
 
 function filterPeople(q) {
   const f = q.toLowerCase();
-  renderPeople(allPeople.filter(p =>
+  const filtered = allPeople.filter(p =>
     (p.first_name+' '+p.last_name).toLowerCase().includes(f) ||
     (p.email||'').toLowerCase().includes(f) ||
     (p.relationship_name||'').toLowerCase().includes(f)
-  ));
+  );
+  window._peopleFilteredList = filtered;
+  peoplePage = 1;
+  renderPeople(filtered);
 }
 
 async function openPerson(id) {
@@ -1238,25 +1263,32 @@ function renderCompanies(list) {
     c.innerHTML = `<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:0.75rem;opacity:0.5;">🏢</div><div>No companies found.</div></div>`;
     return;
   }
+  const totalPages = Math.ceil(list.length / PAGE_SIZE);
+  companiesPage = Math.min(companiesPage, totalPages);
+  const page = list.slice((companiesPage-1)*PAGE_SIZE, companiesPage*PAGE_SIZE);
   c.innerHTML = `<div class="table-wrap"><table class="data-table">
     <thead><tr><th>Company</th><th>Entity Type</th><th>Relationship</th><th>Status</th></tr></thead>
-    <tbody>${list.map(co => `
+    <tbody>${page.map(co => `
       <tr onclick="window.location.href='/crm/company/${co.id||co.company_id||0}'" style="cursor:pointer;">
         <td style="font-weight:600;">${esc(co.display_name||co.company_name||co.name||'Unknown')}${(co.city||co.state)?`<div style="font-size:0.74rem;font-weight:400;color:var(--muted);margin-top:0.15rem;">${[co.city,co.state].filter(Boolean).map(esc).join(', ')}</div>`:''}</td>
         <td>${co.entity_type ? `<span class="badge badge-muted">${esc(co.entity_type)}</span>` : '—'}</td>
         <td>${co.relationship_name ? `<span style="color:var(--gold);">${esc(co.relationship_name)}</span>` : '—'}</td>
         <td>${co.status === 'inactive' ? '<span class="badge badge-muted">Inactive</span>' : '<span class="badge badge-green">Active</span>'}</td>
       </tr>`).join('')}
-    </tbody></table></div>`;
+    </tbody></table></div>
+  ${paginationBar(companiesPage, totalPages, `companiesPage--;renderCompanies(window._companiesFilteredList||allCompanies)`, `companiesPage++;renderCompanies(window._companiesFilteredList||allCompanies)`)}`;
 }
 
 function filterCompanies(q) {
   const f = q.toLowerCase();
-  renderCompanies(allCompanies.filter(c =>
+  const filtered = allCompanies.filter(c =>
     (c.display_name||c.company_name||c.name||'').toLowerCase().includes(f) ||
     (c.entity_type||'').toLowerCase().includes(f) ||
     (c.relationship_name||'').toLowerCase().includes(f)
-  ));
+  );
+  window._companiesFilteredList = filtered;
+  companiesPage = 1;
+  renderCompanies(filtered);
 }
 
 async function openNewCompanyModal() {
