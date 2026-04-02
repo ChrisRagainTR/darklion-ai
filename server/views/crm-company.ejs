@@ -251,7 +251,8 @@
   </div>
   <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;flex-wrap:wrap;">
     <div class="entity-badges" id="entity-badges"></div>
-    <div class="entity-actions">
+    <div class="entity-actions" style="display:flex;align-items:center;gap:0.5rem;">
+      <button id="entity-rel-btn" class="btn btn-outline btn-sm" style="display:none;"></button>
       <button class="btn btn-outline btn-sm" onclick="openEditModal()">Edit</button>
     </div>
   </div>
@@ -1335,7 +1336,11 @@
     }
     document.getElementById('entity-badges').innerHTML = html;
     const meta = [];
-    if (c.relationship) meta.push(`👥 <a href="/crm/relationship/${c.relationship.id}" style="color:var(--gold);text-decoration:none;">${esc(c.relationship.name)}</a>`);
+    if (c.relationship) {
+      meta.push(`👥 <a href="/crm/relationship/${c.relationship.id}" style="color:var(--gold);text-decoration:none;">${esc(c.relationship.name)}</a>`);
+      const relBtn = document.getElementById('entity-rel-btn');
+      if (relBtn) { relBtn.textContent = `👥 ${c.relationship.name}`; relBtn.style.display = ''; relBtn.onclick = () => window.location.href = `/crm/relationship/${c.relationship.id}`; }
+    }
     if (c.tax_year_end) meta.push(`Tax Year End: ${esc(c.tax_year_end)}`);
     const cityState = [c.city, c.state].filter(x => x && x.trim()).map(esc).join(', ');
     if (cityState) meta.push(`📍 ${cityState}`);
