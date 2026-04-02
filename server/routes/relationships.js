@@ -18,7 +18,12 @@ router.get('/', async (req, res) => {
          FROM message_threads mt
          JOIN people p2 ON p2.id = mt.person_id
          WHERE p2.relationship_id = r.id AND mt.firm_id = r.firm_id AND mt.status != 'archived'
-        ) AS unread_count
+        ) AS unread_count,
+        (SELECT p.first_name || ' ' || p.last_name FROM people p WHERE p.relationship_id = r.id ORDER BY p.id ASC LIMIT 1) AS primary_person_name,
+        (SELECT p.email FROM people p WHERE p.relationship_id = r.id ORDER BY p.id ASC LIMIT 1) AS primary_person_email,
+        (SELECT p.city FROM people p WHERE p.relationship_id = r.id ORDER BY p.id ASC LIMIT 1) AS primary_city,
+        (SELECT p.state FROM people p WHERE p.relationship_id = r.id ORDER BY p.id ASC LIMIT 1) AS primary_state,
+        (SELECT c.company_name FROM companies c WHERE c.relationship_id = r.id ORDER BY c.id ASC LIMIT 1) AS primary_company_name
       FROM relationships r
       WHERE r.firm_id = $1
       ORDER BY r.name ASC

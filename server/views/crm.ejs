@@ -696,14 +696,16 @@ function renderRelationships(list) {
   const page = list.slice((relPage-1)*PAGE_SIZE, relPage*PAGE_SIZE);
   c.innerHTML = `<div class="table-wrap"><table class="data-table">
     <thead><tr>
-      <th>Name</th><th>Service Tier</th><th>Companies</th><th>People</th><th>Billing</th><th>Actions</th>
+      <th>Name</th><th>Primary Email</th><th>Company</th><th>Primary Contact</th><th>Billing</th><th>Actions</th>
     </tr></thead>
     <tbody>${page.map(r => `
       <tr onclick="window.location.href='/crm/relationship/${r.id}'">
-        <td style="font-weight:600;">${esc(r.name)}${parseInt(r.unread_count||0)>0?` <span style="display:inline-flex;align-items:center;justify-content:center;background:#e74c3c;color:#fff;border-radius:999px;padding:0.1rem 0.45rem;font-size:0.65rem;font-weight:800;margin-left:0.35rem;">${r.unread_count}</span>`:''}</td>
-        <td>${tierBadge(r.service_tier)}</td>
-        <td>${r.company_count ?? 0}</td>
-        <td>${r.people_count ?? 0}</td>
+        <td style="font-weight:600;">${esc(r.name)}${parseInt(r.unread_count||0)>0?` <span style="display:inline-flex;align-items:center;justify-content:center;background:#e74c3c;color:#fff;border-radius:999px;padding:0.1rem 0.45rem;font-size:0.65rem;font-weight:800;margin-left:0.35rem;">${r.unread_count}</span>`:''}
+          ${(r.primary_city||r.primary_state)?`<div style="font-size:0.74rem;font-weight:400;color:var(--muted);margin-top:0.15rem;">${[r.primary_city,r.primary_state].filter(Boolean).map(esc).join(', ')}</div>`:''}
+        </td>
+        <td style="color:var(--muted);font-size:0.84rem;">${r.primary_person_email ? esc(r.primary_person_email) : '—'}</td>
+        <td>${r.primary_company_name ? `<span style="color:var(--text);">${esc(r.primary_company_name)}</span>${parseInt(r.company_count||0)>1?`<span style="color:var(--muted);font-size:0.74rem;"> +${r.company_count-1}</span>`:''}` : '—'}</td>
+        <td>${r.primary_person_name ? `<span style="color:var(--text);">${esc(r.primary_person_name)}</span>${parseInt(r.people_count||0)>1?`<span style="color:var(--muted);font-size:0.74rem;"> +${r.people_count-1}</span>`:''}` : '—'}</td>
         <td>${billingBadge(r.billing_status)}</td>
         <td onclick="event.stopPropagation()">
           <button class="btn btn-ghost btn-xs" onclick="openEditRelationship(${r.id})">Edit</button>
