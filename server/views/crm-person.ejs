@@ -2788,11 +2788,13 @@
     document.getElementById('comm-reply-box').style.display = 'none';
     document.getElementById('comm-detail-header').innerHTML = '';
     document.getElementById('comm-detail-messages').innerHTML = '';
+    document.querySelector('#tab-communication .crm-thread-list').style.display = '';
   }
   function commShowDetail() {
     document.getElementById('comm-no-thread').style.display = 'none';
     document.getElementById('comm-compose-view').style.display = 'none';
     document.getElementById('comm-reply-box').style.display = '';
+    document.querySelector('#tab-communication .crm-thread-list').style.display = '';
     // Show SMS toggle if person has a phone number on file
     apiFetch(`/api/people/${personId}`).then(r=>r.json()).then(p => {
       const wrap = document.getElementById('comm-sms-toggle-wrap');
@@ -2803,6 +2805,7 @@
     document.getElementById('comm-no-thread').style.display = 'none';
     document.getElementById('comm-compose-view').style.display = 'flex';
     document.getElementById('comm-reply-box').style.display = 'none';
+    document.querySelector('#tab-communication .crm-thread-list').style.display = 'none';
   }
   function commOpenNew() { commShowCompose(); document.getElementById('comm-new-body').value = ''; commNewAttachFiles = []; renderNewCommAttachChips(); }
   function commCloseNew() { commShowEmpty(); }
