@@ -975,6 +975,8 @@ async function initDB() {
       ALTER TABLE companies ADD COLUMN IF NOT EXISTS city TEXT DEFAULT '';
       ALTER TABLE companies ADD COLUMN IF NOT EXISTS state TEXT DEFAULT '';
       ALTER TABLE companies ADD COLUMN IF NOT EXISTS zip TEXT DEFAULT '';
+    ALTER TABLE companies ADD COLUMN IF NOT EXISTS annual_revenue NUMERIC(14,2) DEFAULT NULL;
+    ALTER TABLE companies ADD COLUMN IF NOT EXISTS annual_revenue_synced_at TIMESTAMPTZ DEFAULT NULL;
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
 

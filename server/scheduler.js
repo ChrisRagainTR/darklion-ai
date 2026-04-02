@@ -372,4 +372,24 @@ function startStatementReminders() {
   console.log('[statements] Nightly reminder cron scheduled (9 AM Eastern daily)');
 }
 
-module.exports = { startScheduler, runFullPipeline, scheduleAt10PM, startBlueleafSync, startStatementReminders };
+// ── Weekly MRR sync — Sunday 3 AM UTC ────────────────────────────────────────
+function startWeeklyMRRSync() {
+  cron.schedule('0 3 * * 0', async () => {
+    console.log('[mrr-sync] Starting weekly MRR sync...');
+    try {
+      const { syncAllMRR } = require('./routes/billing');
+      const { rows: firms } = await pool.query('SELECT id FROM firms');
+      for (const firm of firms) {
+        await syncAllMRR(firm.id).catch(e =>
+          console.error(`[mrr-sync] firm ${firm.id}:`, e.message)
+        );
+      }
+      console.log('[mrr-sync] Weekly MRR sync complete.');
+    } catch(e) {
+      console.error('[mrr-sync] Weekly sync error:', e.message);
+    }
+  });
+  console.log('[mrr-sync] Weekly MRR sync scheduled (Sunday 3 AM UTC)');
+}
+
+module.exports = { startScheduler, runFullPipeline, scheduleAt10PM, startBlueleafSync, startStatementReminders, startWeeklyMRRSync };
