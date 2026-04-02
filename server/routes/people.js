@@ -217,6 +217,7 @@ router.put('/:id', async (req, res) => {
     city,
     state,
     zip,
+    personal_tax_engaged,
   } = req.body;
 
   try {
@@ -283,6 +284,7 @@ router.put('/:id', async (req, res) => {
         city = CASE WHEN $22::TEXT IS NOT NULL THEN $22 ELSE city END,
         state = CASE WHEN $23::TEXT IS NOT NULL THEN $23 ELSE state END,
         zip = CASE WHEN $24::TEXT IS NOT NULL THEN $24 ELSE zip END,
+        personal_tax_engaged = CASE WHEN $25::BOOLEAN IS NOT NULL THEN $25 ELSE personal_tax_engaged END,
         updated_at = NOW()
       WHERE id = $11 AND firm_id = $12
       RETURNING *
@@ -311,6 +313,7 @@ router.put('/:id', async (req, res) => {
       city !== undefined ? (city || '') : null,                   // $22
       state !== undefined ? (state || '') : null,                 // $23
       zip !== undefined ? (zip || '') : null,                     // $24
+      personal_tax_engaged !== undefined ? !!personal_tax_engaged : null, // $25
     ]);
 
     const updated = rows[0];

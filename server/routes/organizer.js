@@ -51,6 +51,15 @@ router.post('/parse-document/:documentId', requireFirm, async (req, res) => {
     const personId = doc.owner_id;
     const taxYear = doc.year || '2025';
 
+    // Block organizer creation for clients not engaged for personal tax
+    const engagedRes = await pool.query(
+      'SELECT personal_tax_engaged FROM people WHERE id = $1 AND firm_id = $2',
+      [personId, firmId]
+    );
+    if (engagedRes.rows.length && engagedRes.rows[0].personal_tax_engaged === false) {
+      return res.status(403).json({ error: 'This client is not engaged for personal tax returns. Enable personal tax engagement on their CRM record first.' });
+    }
+
     // Download PDF from S3
     const pdfBuffer = await downloadFile({ key: doc.s3_key, bucket: doc.s3_bucket });
 

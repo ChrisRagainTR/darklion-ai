@@ -859,6 +859,8 @@ async function initDB() {
       ('client_requested_changes',    'Client Requested Changes',      'tax'),
       ('engagement_letter_sent',      'Engagement Letter Sent',        'engagement'),
       ('engagement_letter_signed',    'Client Signed Engagement Letter','engagement'),
+      ('tax_loe_signed',              'Tax LOE Signed',                'engagement'),
+      ('wealth_loe_signed',           'Wealth LOE Signed',             'engagement'),
       ('proposal_sent',               'Proposal Sent',                 'proposals'),
       ('proposal_accepted',           'Proposal Accepted',             'proposals'),
       ('proposal_signed',             'Proposal Signed',               'proposals'),
@@ -1061,6 +1063,7 @@ async function initDB() {
     -- ===================== TAX SEASON VISIBILITY =====================
     DO $$ BEGIN
       ALTER TABLE people ADD COLUMN IF NOT EXISTS organizer_visible BOOLEAN DEFAULT FALSE;
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS personal_tax_engaged BOOLEAN DEFAULT TRUE;
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
     DO $$ BEGIN
