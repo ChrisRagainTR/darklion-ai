@@ -4034,6 +4034,12 @@
     coCommShowEmpty();
     loadCoConversation();
     loadCoCommSummary(false);
+    // Shift+Enter to send
+    const ta = document.getElementById('comm-co-reply-body');
+    if (ta && !ta._shiftEnterBound) {
+      ta.addEventListener('keydown', e => { if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); coCommSendMessage(); } });
+      ta._shiftEnterBound = true;
+    }
   }
 
   let _coCommSummaryLoaded = false;

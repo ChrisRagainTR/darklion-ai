@@ -2720,6 +2720,12 @@
     loadConversation();
     // Auto-generate summary on first open
     loadCommSummary(false);
+    // Shift+Enter to send
+    const ta = document.getElementById('comm-reply-body');
+    if (ta && !ta._shiftEnterBound) {
+      ta.addEventListener('keydown', e => { if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); commSendMessage(); } });
+      ta._shiftEnterBound = true;
+    }
   }
 
   // ── AI Summary ──────────────────────────────────────────────────────────────
