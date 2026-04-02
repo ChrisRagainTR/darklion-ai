@@ -1063,6 +1063,7 @@ async function initDB() {
     -- ===================== TAX SEASON VISIBILITY =====================
     DO $$ BEGIN
       ALTER TABLE people ADD COLUMN IF NOT EXISTS organizer_visible BOOLEAN DEFAULT FALSE;
+      ALTER TABLE people ADD COLUMN IF NOT EXISTS personal_tax_engaged BOOLEAN DEFAULT TRUE;
     EXCEPTION WHEN undefined_table THEN NULL;
     END $$;
     DO $$ BEGIN

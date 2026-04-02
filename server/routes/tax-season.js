@@ -30,6 +30,7 @@ router.get('/clients', requireFirm, async (req, res) => {
         p.last_name,
         p.email,
         p.organizer_visible,
+        p.personal_tax_engaged,
         o.status AS organizer_status
       FROM people p
       LEFT JOIN tax_organizers o ON o.person_id = p.id AND o.tax_year = $2
@@ -55,7 +56,7 @@ router.post('/bulk', requireFirm, async (req, res) => {
 
   try {
     await pool.query(
-      'UPDATE people SET organizer_visible = $1 WHERE firm_id = $2',
+      'UPDATE people SET organizer_visible = $1 WHERE firm_id = $2 AND personal_tax_engaged = TRUE',
       [visible, firmId]
     );
     res.json({ success: true });

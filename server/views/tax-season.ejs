@@ -43,6 +43,7 @@
     <thead>
       <tr>
         <th>Client</th>
+        <th>Personal Tax</th>
         <th>Organizer Status</th>
         <th>Portal Visibility</th>
       </tr>
@@ -104,25 +105,21 @@ function renderTable() {
     return;
   }
   document.getElementById('ts-table').style.display = '';
-  tbody.innerHTML = clients.map(c => `
-    <tr>
-      <td>
-        <a class="ts-name-link" href="/crm/person/${c.id}">
-          ${escHtml(c.first_name)} ${escHtml(c.last_name)}
-        </a>
-      </td>
-      <td>${statusLabel(c.organizer_status)}</td>
-      <td>
-        <button
-          class="btn btn-sm ${c.organizer_visible ? 'btn-danger' : 'btn-gold'}"
-          data-id="${c.id}"
-          data-visible="${c.organizer_visible ? 'true' : 'false'}"
-          onclick="togglePerson(this)">
-          ${c.organizer_visible ? 'Hide' : 'Show'}
-        </button>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = clients.map(c => {
+    const engaged = c.personal_tax_engaged !== false;
+    const engagedBadge = engaged
+      ? `<span class="status-badge" style="background:rgba(62,207,142,0.12);color:var(--green);">✓ Engaged</span>`
+      : `<span class="status-badge" style="background:rgba(229,62,62,0.1);color:var(--red);">✗ Not Engaged</span>`;
+    const visCell = engaged
+      ? `<button class="btn btn-sm ${c.organizer_visible ? 'btn-danger' : 'btn-gold'}" data-id="${c.id}" data-visible="${c.organizer_visible ? 'true' : 'false'}" onclick="togglePerson(this)">${c.organizer_visible ? 'Hide' : 'Show'}</button>`
+      : `<span style="font-size:0.75rem;color:var(--muted);font-style:italic;">N/A</span>`;
+    return `<tr>
+      <td><a class="ts-name-link" href="/crm/person/${c.id}">${escHtml(c.first_name)} ${escHtml(c.last_name)}</a></td>
+      <td>${engagedBadge}</td>
+      <td>${engaged ? statusLabel(c.organizer_status) : '<span style="color:var(--muted);font-size:0.78rem;">—</span>'}</td>
+      <td>${visCell}</td>
+    </tr>`;
+  }).join('');
 }
 
 function escHtml(s) {
@@ -160,9 +157,10 @@ async function bulkSet(visible) {
       body: JSON.stringify({ visible })
     });
     if (!res.ok) throw new Error(await res.text());
-    clients.forEach(c => { c.organizer_visible = visible; });
+    // Only update engaged clients locally — bulk API already filters server-side
+    clients.forEach(c => { if (c.personal_tax_engaged !== false) c.organizer_visible = visible; });
     renderTable();
-    toast(visible ? 'Organizer shown for all clients.' : 'Organizer hidden for all clients.');
+    toast(visible ? 'Organizer shown for all engaged clients.' : 'Organizer hidden for all clients.');
   } catch (err) {
     toast('Failed to update: ' + err.message, true);
   }

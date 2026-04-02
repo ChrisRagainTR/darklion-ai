@@ -608,6 +608,12 @@
               <option value="widow">Qualifying Widow(er)</option>
             </select>
           </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+              <input type="checkbox" id="ef-personal-tax-engaged" checked>
+              <span>Personal Tax Return <span style="font-size:0.72rem;color:var(--muted);font-weight:400;">(uncheck if we don't do their 1040)</span></span>
+            </label>
+          </div>
         </div>
         <!-- RIGHT: address -->
         <div>
@@ -1085,6 +1091,7 @@
       { label: 'Date of Birth',  val: fmtDOB(p.date_of_birth) || '—' },
       { label: 'Billing Method', val: esc(personBmLabel) },
       { label: 'Filing Status',  val: p.filing_status ? `<span style="background:${fsBg};color:${fsTc};border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">${esc(fsLabel)}</span>` : '—' },
+      { label: 'Personal Tax',    val: p.personal_tax_engaged === false ? '<span style="background:rgba(229,62,62,0.1);color:var(--red);border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">Not Engaged</span>' : '<span style="background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">Engaged</span>' },
       ...(p.relationship_name ? [{ label: 'Relationship', val: `<a href="#" style="color:var(--gold);">${esc(p.relationship_name)}</a>` }] : []),
     ];
     const contactRowsHtml = contactRows.map(r =>
@@ -2020,6 +2027,7 @@
     document.getElementById('ef-phone').value = personData.phone || '';
     document.getElementById('ef-dob').value = personData.date_of_birth || '';
     document.getElementById('ef-billing-method').value = personData.billing_method || '';
+    document.getElementById('ef-personal-tax-engaged').checked = personData.personal_tax_engaged !== false;
     const filingVal = personData.filing_status || '';
     document.getElementById('ef-filing').value = filingVal;
     document.getElementById('ef-spouse-name').value = personData.spouse_name || '';
@@ -2067,6 +2075,7 @@
       city: document.getElementById('ef-city').value.trim() || '',
       state: document.getElementById('ef-state').value.trim().toUpperCase() || '',
       zip: document.getElementById('ef-zip').value.trim() || '',
+      personal_tax_engaged: document.getElementById('ef-personal-tax-engaged').checked,
     };
     try {
       const res = await apiFetch(`/api/people/${personId}`, { method: 'PUT', body: JSON.stringify(body) });
