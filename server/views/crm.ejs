@@ -561,6 +561,38 @@ let allPeople = [];
 let allCompanies = [];
 let relPage = 1, peoplePage = 1, companiesPage = 1;
 const PAGE_SIZE = 10;
+let relSort = { col: null, dir: 1 };
+let companiesSort = { col: null, dir: 1 };
+
+function sortList(list, col, dir) {
+  return [...list].sort((a, b) => {
+    let av = a[col], bv = b[col];
+    if (av == null) av = dir === 1 ? Infinity : -Infinity;
+    if (bv == null) bv = dir === 1 ? Infinity : -Infinity;
+    if (typeof av === 'string') return dir * av.localeCompare(bv);
+    return dir * (av - bv);
+  });
+}
+
+function toggleSort(state, col) {
+  if (state.col === col) state.dir *= -1;
+  else { state.col = col; state.dir = 1; }
+}
+
+function sortArrow(state, col) {
+  if (state.col !== col) return '<span style="opacity:0.3;font-size:0.7rem;"> ⇅</span>';
+  return state.dir === 1 ? '<span style="font-size:0.7rem;"> ↑</span>' : '<span style="font-size:0.7rem;"> ↓</span>';
+}
+
+function exportCSV(headers, rows, filename) {
+  const escape = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const csv = [headers.map(escape).join(','), ...rows.map(r => r.map(escape).join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
 
 function paginationBar(current, total, onPrev, onNext) {
   if (total <= 1) return '';
@@ -691,12 +723,16 @@ function renderRelationships(list) {
     c.innerHTML = `<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:0.75rem;opacity:0.5;">👥</div><div>No relationships yet.</div></div>`;
     return;
   }
-  const totalPages = Math.ceil(list.length / PAGE_SIZE);
+  const sorted = relSort.col ? sortList(list, relSort.col, relSort.dir) : list;
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
   relPage = Math.min(relPage, totalPages);
-  const page = list.slice((relPage-1)*PAGE_SIZE, relPage*PAGE_SIZE);
-  c.innerHTML = `<div class="table-wrap"><table class="data-table">
+  const page = sorted.slice((relPage-1)*PAGE_SIZE, relPage*PAGE_SIZE);
+  c.innerHTML = `<div style="display:flex;justify-content:flex-end;margin-bottom:0.5rem;">
+    <button class="btn btn-outline btn-sm" onclick="exportRelationshipsCSV()" style="font-size:0.78rem;">⇩ Export CSV</button>
+  </div>
+  <div class="table-wrap"><table class="data-table">
     <thead><tr>
-      <th>Name</th><th>Primary Email</th><th>Primary Contact</th><th>Monthly Billing</th><th>Billing</th><th>Actions</th>
+      <th style="cursor:pointer;" onclick="relSort.col='name'===relSort.col?(relSort.dir*=-1,relSort.col):((relSort.col='name'),(relSort.dir=1));renderRelationships(window._relFilteredList||allRelationships)">Name${sortArrow(relSort,'name')}</th><th>Primary Email</th><th>Primary Contact</th><th style="cursor:pointer;" onclick="toggleSort(relSort,'mrr');renderRelationships(window._relFilteredList||allRelationships)">Monthly Billing${sortArrow(relSort,'mrr')}</th><th>Billing</th><th>Actions</th>
     </tr></thead>
     <tbody>${page.map(r => `
       <tr onclick="window.location.href='/crm/relationship/${r.id}'">
@@ -714,6 +750,23 @@ function renderRelationships(list) {
       </tr>`).join('')}
     </tbody></table></div>
   ${paginationBar(relPage, totalPages, `relPage--;renderRelationships(window._relFilteredList||allRelationships)`, `relPage++;renderRelationships(window._relFilteredList||allRelationships)`)}`;
+}
+
+function exportRelationshipsCSV() {
+  const list = window._relFilteredList || allRelationships;
+  const sorted = relSort.col ? sortList(list, relSort.col, relSort.dir) : list;
+  exportCSV(
+    ['Name', 'Primary Email', 'Primary Contact', 'Location', 'Monthly Billing', 'Billing Status'],
+    sorted.map(r => [
+      r.name,
+      r.primary_person_email || '',
+      r.primary_person_name || '',
+      [r.primary_city, r.primary_state].filter(Boolean).join(', '),
+      r.mrr != null ? r.mrr : '',
+      r.billing_status || ''
+    ]),
+    'relationships.csv'
+  );
 }
 
 function filterRelationships(q) {
@@ -1265,11 +1318,20 @@ function renderCompanies(list) {
     c.innerHTML = `<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:0.75rem;opacity:0.5;">🏢</div><div>No companies found.</div></div>`;
     return;
   }
-  const totalPages = Math.ceil(list.length / PAGE_SIZE);
+  const coSorted = companiesSort.col ? sortList(list, companiesSort.col, companiesSort.dir) : list;
+  const totalPages = Math.ceil(coSorted.length / PAGE_SIZE);
   companiesPage = Math.min(companiesPage, totalPages);
-  const page = list.slice((companiesPage-1)*PAGE_SIZE, companiesPage*PAGE_SIZE);
-  c.innerHTML = `<div class="table-wrap"><table class="data-table">
-    <thead><tr><th>Company</th><th>Relationship</th><th>Last 12 Mo Revenue</th><th>Status</th><th>Actions</th></tr></thead>
+  const page = coSorted.slice((companiesPage-1)*PAGE_SIZE, companiesPage*PAGE_SIZE);
+  c.innerHTML = `<div style="display:flex;justify-content:flex-end;margin-bottom:0.5rem;">
+    <button class="btn btn-outline btn-sm" onclick="exportCompaniesCSV()" style="font-size:0.78rem;">⇩ Export CSV</button>
+  </div>
+  <div class="table-wrap"><table class="data-table">
+    <thead><tr>
+      <th style="cursor:pointer;" onclick="toggleSort(companiesSort,'company_name');renderCompanies(window._companiesFilteredList||allCompanies)">Company${sortArrow(companiesSort,'company_name')}</th>
+      <th>Relationship</th>
+      <th style="cursor:pointer;" onclick="toggleSort(companiesSort,'annual_revenue');renderCompanies(window._companiesFilteredList||allCompanies)">Last 12 Mo Revenue${sortArrow(companiesSort,'annual_revenue')}</th>
+      <th>Status</th><th>Actions</th>
+    </tr></thead>
     <tbody>${page.map(co => `
       <tr onclick="window.location.href='/crm/company/${co.id||co.company_id||0}'" style="cursor:pointer;">
         <td style="font-weight:600;">${esc(co.display_name||co.company_name||co.name||'Unknown')}${(co.city||co.state)?`<div style="font-size:0.74rem;font-weight:400;color:var(--muted);margin-top:0.15rem;">${[co.city,co.state].filter(Boolean).map(esc).join(', ')}</div>`:''}</td>
@@ -1294,6 +1356,22 @@ function filterCompanies(q) {
   window._companiesFilteredList = filtered;
   companiesPage = 1;
   renderCompanies(filtered);
+}
+
+function exportCompaniesCSV() {
+  const list = window._companiesFilteredList || allCompanies;
+  const sorted = companiesSort.col ? sortList(list, companiesSort.col, companiesSort.dir) : list;
+  exportCSV(
+    ['Company', 'Relationship', 'Location', 'Last 12 Mo Revenue', 'Status'],
+    sorted.map(co => [
+      co.display_name || co.company_name || co.name || '',
+      co.relationship_name || '',
+      [co.city, co.state].filter(Boolean).join(', '),
+      co.annual_revenue != null ? co.annual_revenue : '',
+      co.status || 'active'
+    ]),
+    'companies.csv'
+  );
 }
 
 async function openNewCompanyModal() {
