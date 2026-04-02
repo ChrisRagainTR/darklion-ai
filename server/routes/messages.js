@@ -676,6 +676,11 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
       return res.status(403).json({ error: 'Only the assigned staff member can send external replies on this thread' });
     }
 
+    // Auto-assign thread to replying user if unassigned
+    if (!thread.staff_user_id && userId) {
+      await pool.query('UPDATE message_threads SET staff_user_id = $1 WHERE id = $2', [userId, threadId]);
+    }
+
     // Any message containing @mentions is always internal — staff coordination never reaches the client
     const hasMentions = body && /@[A-Za-z]/.test(body);
     const effectiveInternal = is_internal || hasMentions;
@@ -984,9 +989,9 @@ router.post('/sms', async (req, res) => {
         useThreadId = threads[0].id;
       } else {
         const { rows: newThread } = await pool.query(
-          `INSERT INTO message_threads (firm_id, person_id, subject, status, category, last_message_at)
-           VALUES ($1, $2, $3, 'open', 'general', NOW()) RETURNING id`,
-          [firmId, person_id, `Messages with ${person.first_name} ${person.last_name}`]
+          `INSERT INTO message_threads (firm_id, person_id, staff_user_id, subject, status, category, last_message_at)
+           VALUES ($1, $2, $3, $4, 'open', 'general', NOW()) RETURNING id`,
+          [firmId, person_id, req.firm.userId || null, `Messages with ${person.first_name} ${person.last_name}`]
         );
         useThreadId = newThread[0].id;
       }
