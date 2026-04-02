@@ -2015,7 +2015,7 @@
     document.getElementById('ef-dob').value = personData.date_of_birth || '';
     document.getElementById('ef-billing-method').value = personData.billing_method || '';
     document.getElementById('ef-personal-tax-engaged').checked = personData.personal_tax_engaged !== false;
-    const filingVal = personData.filing_status || '';
+    const filingVal = (personData.filing_status || '').toLowerCase();
     document.getElementById('ef-filing').value = filingVal;
     document.getElementById('ef-spouse-name').value = personData.spouse_name || '';
     document.getElementById('ef-spouse-email').value = personData.spouse_email || '';
