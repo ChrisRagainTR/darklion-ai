@@ -274,10 +274,8 @@
 
     /* Layout */
     #tab-communication .crm-inbox-wrap { display:flex; flex:1; min-height:0; overflow:hidden; }
-    #tab-communication .crm-thread-list { width:300px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
-    #tab-communication .crm-thread-list-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
-    #tab-communication .crm-thread-list-header h3 { font-size:0.85rem; font-weight:700; color:var(--text); margin:0; }
-    #tab-communication .crm-thread-list-inner { flex:1; overflow-y:auto; }
+    #tab-communication .crm-thread-list { display:none; }
+    #tab-communication .crm-detail-panel { flex:1; }
     /* AI Summary panel */
     #tab-communication .comm-summary-panel { width:400px; flex-shrink:0; border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; background:var(--card); }
     #tab-communication .comm-summary-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
@@ -404,71 +402,47 @@
 
 <div id="tab-communication" class="tab-content" style="padding:0;overflow:hidden;">
   <div class="crm-inbox-wrap">
-    <!-- Left: thread list sidebar -->
-    <div class="crm-thread-list">
-      <div class="crm-thread-list-header">
-        <h3>Messages</h3>
-        <button class="btn btn-gold btn-sm" onclick="commOpenNew()" style="font-size:0.75rem;padding:0.25rem 0.65rem;">+ New</button>
-      </div>
-      <div class="crm-thread-list-inner" id="comm-threads-list">
-        <div class="loading-state"><div class="loading-spinner"></div></div>
-      </div>
+    <!-- Thread list hidden — single conversation view -->
+    <div class="crm-thread-list" id="comm-threads-list-wrap" style="display:none;">
+      <div class="crm-thread-list-inner" id="comm-threads-list"></div>
     </div>
     <!-- Center: chat panel -->
     <div class="crm-detail-panel">
-      <!-- Empty state -->
-      <!-- Thread view — always in DOM so scroll dimensions work -->
       <div id="comm-thread-view" style="flex:1;flex-direction:column;min-height:0;overflow:hidden;display:flex;">
-        <!-- Empty state — shown by default, hidden when thread selected -->
+        <!-- Header bar -->
+        <div class="detail-header" id="comm-detail-header" style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-weight:700;font-size:0.95rem;">Messages</span>
+          <div style="display:flex;align-items:center;gap:0.5rem;" id="comm-header-actions"></div>
+        </div>
+        <!-- Empty / loading state -->
         <div class="no-thread-selected" id="comm-no-thread" style="position:absolute;inset:0;z-index:1;background:var(--navy);">
           <div class="nts-icon">💬</div>
-          <div>Select a thread or start a new one</div>
+          <div>No messages yet — send the first one below</div>
         </div>
-        <div class="detail-header" id="comm-detail-header"></div>
         <div class="detail-messages" id="comm-detail-messages"></div>
         <div id="comm-typing-indicator" style="display:none;padding:0.3rem 1rem;font-size:0.78rem;color:var(--muted);font-style:italic;"></div>
-        <div class="reply-box" id="comm-reply-box" style="display:none;">
+        <!-- Reply box — always visible -->
+        <div class="reply-box" id="comm-reply-box">
           <div class="reply-box-controls">
             <input type="checkbox" id="comm-internal-toggle" style="display:none;">
             <input type="checkbox" id="comm-sms-toggle" style="display:none;">
+            <div id="comm-sms-toggle-wrap" style="display:none;"><label><input type="checkbox" id="comm-sms-check" onchange="document.getElementById('comm-sms-toggle').checked=this.checked"> 📱 Send as text</label></div>
             <div style="flex:1;"></div>
+            <button class="btn btn-outline btn-sm" onclick="commOpenTemplatePicker()" title="Load template" style="font-size:0.75rem;">📋 Template</button>
           </div>
           <div style="position:relative;">
-            <textarea id="comm-reply-body" placeholder="Write a reply… (use @Name to loop in a colleague)" rows="5"></textarea>
+            <textarea id="comm-reply-body" placeholder="Write a message…" rows="4"></textarea>
             <div id="comm-mention-picker" style="display:none;position:absolute;bottom:100%;left:0;z-index:500;background:var(--charcoal);border:1px solid var(--gold);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);min-width:200px;max-height:200px;overflow-y:auto;"></div>
           </div>
           <div class="attach-chips" id="comm-attach-chips"></div>
           <input type="file" id="comm-attach-input" multiple style="display:none;" onchange="handleCommAttach(this.files)">
           <div class="reply-box-actions">
-            <button class="btn btn-gold btn-sm" id="comm-send-reply-btn" onclick="commSendReply()">Send Reply</button>
-            <button class="btn btn-outline btn-sm" id="comm-send-sms-btn" onclick="commSendAsSms()">📱 Send as Text</button>
+            <button class="btn btn-gold btn-sm" id="comm-send-reply-btn" onclick="commSendMessage()">Send Message</button>
+            <button class="btn btn-outline btn-sm" id="comm-send-sms-btn" onclick="commSendAsSms()" style="display:none;">📱 Send as Text</button>
             <button class="btn-attach" onclick="document.getElementById('comm-attach-input').click()">📎 Attach</button>
-            <button class="btn btn-outline btn-sm" onclick="commArchive()">Archive</button>
           </div>
         </div>
       </div>
-      <!-- New thread compose -->
-      <div id="comm-compose-view" style="display:none;position:absolute;inset:0;z-index:2;background:var(--navy);flex-direction:column;overflow:hidden;">
-        <div class="detail-header" style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-weight:700;">New Message</span>
-          <div style="display:flex;align-items:center;gap:0.5rem;">
-            <button class="btn btn-outline btn-sm" onclick="commOpenTemplatePicker()" title="Load a pre-written template">📋 Load Template</button>
-            <button class="btn btn-outline btn-sm" onclick="commCloseNew()">Cancel</button>
-          </div>
-        </div>
-        <div style="flex:1;padding:1rem 1.5rem;display:flex;flex-direction:column;min-height:0;">
-          <textarea id="comm-new-body" placeholder="Write your message…" style="flex:1;resize:none;width:100%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:0.6rem 0.75rem;font-size:0.88rem;font-family:inherit;min-height:0;"></textarea>
-        </div>
-        <div class="reply-box">
-          <div class="attach-chips" id="comm-new-attach-chips"></div>
-          <input type="file" id="comm-new-attach-input" multiple style="display:none;" onchange="handleNewCommAttach(this.files)">
-          <div class="reply-box-actions">
-            <button class="btn btn-gold btn-sm" onclick="commSendNew()">Send Message</button>
-            <button class="btn-attach" onclick="document.getElementById('comm-new-attach-input').click()">📎 Attach</button>
-          </div>
-        </div>
-      </div>
-
       <!-- Template picker modal (person) -->
       <div id="comm-tmpl-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;align-items:center;justify-content:center;">
         <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;width:90%;max-width:520px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
@@ -2744,7 +2718,7 @@
     commActiveThreadId = null;
     _commSummaryLoaded = false;
     commShowEmpty();
-    loadThreads();
+    loadConversation();
     // Auto-generate summary on first open
     loadCommSummary(false);
   }
@@ -2784,31 +2758,18 @@
 
   function commShowEmpty() {
     document.getElementById('comm-no-thread').style.display = 'flex';
-    document.getElementById('comm-compose-view').style.display = 'none';
-    document.getElementById('comm-reply-box').style.display = 'none';
-    document.getElementById('comm-detail-header').innerHTML = '';
     document.getElementById('comm-detail-messages').innerHTML = '';
-    document.querySelector('#tab-communication .crm-thread-list').style.display = '';
   }
   function commShowDetail() {
     document.getElementById('comm-no-thread').style.display = 'none';
-    document.getElementById('comm-compose-view').style.display = 'none';
-    document.getElementById('comm-reply-box').style.display = '';
-    document.querySelector('#tab-communication .crm-thread-list').style.display = '';
     // Show SMS toggle if person has a phone number on file
     apiFetch(`/api/people/${personId}`).then(r=>r.json()).then(p => {
       const wrap = document.getElementById('comm-sms-toggle-wrap');
       if (wrap) wrap.style.display = p.phone ? '' : 'none';
     }).catch(()=>{});
   }
-  function commShowCompose() {
-    document.getElementById('comm-no-thread').style.display = 'none';
-    document.getElementById('comm-compose-view').style.display = 'flex';
-    document.getElementById('comm-reply-box').style.display = 'none';
-    document.querySelector('#tab-communication .crm-thread-list').style.display = 'none';
-  }
-  function commOpenNew() { commShowCompose(); document.getElementById('comm-new-body').value = ''; commNewAttachFiles = []; renderNewCommAttachChips(); }
-  function commCloseNew() { commShowEmpty(); }
+  function commOpenNew() { /* no-op — compose is now the reply box */ }
+  function commCloseNew() { /* no-op */ }
 
   // ── Template picker ──
   let _commTemplates = null;
@@ -2871,48 +2832,33 @@
   function commLoadTemplate(id) {
     const t = _commTemplates && _commTemplates.find(x => x.id === id);
     if (!t) return;
-    document.getElementById('comm-new-body').value = resolveTemplateVars(t.body);
+    document.getElementById('comm-reply-body').value = resolveTemplateVars(t.body);
     commCloseTemplatePicker();
-    document.getElementById('comm-new-body').focus();
+    document.getElementById('comm-reply-body').focus();
   }
 
   function commInitials(name) {
     return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) || '?';
   }
 
-  async function loadThreads() {
+  // Single-convo loader: fetches thread list, picks most recent, loads messages
+  async function loadConversation() {
     if (!commPersonId) return;
     try {
       const res = await apiFetch(`/api/messages/person/${commPersonId}`);
       if (!res.ok) return;
       const threads = await res.json();
-      const listEl = document.getElementById('comm-threads-list');
-      if (!threads.length) {
-        listEl.innerHTML = '';
-        commShowEmpty();
-        return;
-      }
-      // Render thread list
-      listEl.innerHTML = threads.map(t => {
-        const isActive = t.id === commActiveThreadId;
-        const preview = esc((t.lastMessage || t.subject || '').substring(0, 60));
-        const subj = esc(t.subject || '(no subject)');
-        const timeStr = t.lastMessageAt ? relTime(t.lastMessageAt) : '';
-        const unread = t.unreadCount > 0 ? `<span style="background:var(--gold);color:#000;border-radius:999px;font-size:0.65rem;font-weight:700;padding:0.1rem 0.45rem;margin-left:0.35rem;">${t.unreadCount}</span>` : '';
-        return `<div class="thread-card${isActive ? ' active' : ''}" id="comm-item-${t.id}" onclick="loadThread(${t.id})" style="padding:0.75rem 1rem;border-bottom:1px solid var(--border);cursor:pointer;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.2rem;">
-            <span style="font-size:0.83rem;font-weight:600;color:var(--text);">${subj}${unread}</span>
-            <span style="font-size:0.7rem;color:var(--muted);white-space:nowrap;margin-left:0.5rem;">${timeStr}</span>
-          </div>
-          <div style="font-size:0.75rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${preview}</div>
-        </div>`;
-      }).join('');
-      // Auto-open most recent if none active
-      if (!commActiveThreadId) await loadThread(threads[0].id);
+      if (!threads.length) { commShowEmpty(); return; }
+      // Use most recent thread
+      const thread = threads[0];
+      commActiveThreadId = thread.id;
+      await loadThread(thread.id, false);
     } catch(e) {
-      console.error('[comm] loadThreads error:', e);
+      console.error('[comm] loadConversation error:', e);
     }
   }
+  // Keep loadThreads as alias for any remaining callers
+  async function loadThreads() { return loadConversation(); }
 
   async function loadThread(threadId, silent = false) {
     commActiveThreadId = threadId;
@@ -2929,10 +2875,7 @@
       const res = await apiFetch(`/api/messages/${threadId}`);
       const data = await res.json();
 
-      // Header — same as team inbox
-      document.getElementById('comm-detail-header').innerHTML = `
-        <div class="detail-header-person">${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}</div>
-        <div class="detail-header-subject">${esc(data.subject || '(no subject)')} · <span style="color:var(--gold);font-size:0.75rem;">${data.category || ''}</span></div>`;
+      // Keep header as simple static "Messages" title (already rendered in HTML)
 
       // Messages — same render as team inbox
       const msgEl = document.getElementById('comm-detail-messages');
@@ -3056,42 +2999,53 @@
     if (toggle) toggle.checked = false;
   }
 
-  async function commSendReply() {
+  // Unified send — creates thread if needed, replies if thread exists
+  async function commSendMessage() {
     const body = document.getElementById('comm-reply-body').value.trim();
-    if (!commActiveThreadId) { toast('No thread selected', 'error'); return; }
     if (!body && commAttachFiles.length === 0) return;
-    const isInternal = document.getElementById('comm-internal-toggle').checked;
-    const isSms = document.getElementById('comm-sms-toggle')?.checked && !isInternal;
+    const isSms = document.getElementById('comm-sms-check')?.checked;
 
-    if (isSms) {
-      // Send as SMS via Twilio
+    if (isSms && commActiveThreadId) {
       try {
-        const res = await apiFetch('/api/messages/sms', {
-          method: 'POST',
-          body: JSON.stringify({ person_id: personId, body, thread_id: commActiveThreadId })
-        });
+        const res = await apiFetch('/api/messages/sms', { method: 'POST', body: JSON.stringify({ person_id: personId, body, thread_id: commActiveThreadId }) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to send SMS');
         document.getElementById('comm-reply-body').value = '';
-        // Use returned thread_id in case a new thread was created
         const useThreadId = data.thread_id || commActiveThreadId;
-        if (useThreadId !== commActiveThreadId) {
-          commActiveThreadId = useThreadId;
-          await loadThreads();
-          await loadThread(useThreadId, false);
-        } else {
-          await loadThread(useThreadId, true);
-          await loadThreads();
-        }
+        commActiveThreadId = useThreadId;
+        await loadConversation();
         toast('Text message sent ✓');
       } catch(e) { toast(e.message, 'error'); }
       return;
     }
 
+    if (!commActiveThreadId) {
+      // No thread yet — create one
+      try {
+        const res = await apiFetch('/api/messages', { method: 'POST', body: JSON.stringify({ person_id: commPersonId, subject: '', body, is_internal: false }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        commActiveThreadId = data.threadId;
+        if (commAttachFiles.length > 0 && commActiveThreadId) {
+          const fd = new FormData();
+          fd.append('body', '');
+          commAttachFiles.forEach(f => fd.append('files', f));
+          await apiFetch(`/api/messages/${commActiveThreadId}/reply`, { method: 'POST', body: fd });
+        }
+        document.getElementById('comm-reply-body').value = '';
+        commAttachFiles = [];
+        renderCommAttachChips();
+        await loadConversation();
+        toast('Message sent');
+      } catch(e) { toast('Failed to send message', 'error'); }
+      return;
+    }
+
+    // Existing thread — reply
     try {
       const fd = new FormData();
       fd.append('body', body);
-      fd.append('is_internal', isInternal ? 'true' : 'false');
+      fd.append('is_internal', 'false');
       commAttachFiles.forEach(f => fd.append('files', f));
       const replyRes = await apiFetch(`/api/messages/${commActiveThreadId}/reply`, { method: 'POST', body: fd });
       if (!replyRes.ok) {
@@ -3099,12 +3053,10 @@
         throw new Error(errData.error || `Server error ${replyRes.status}`);
       }
       document.getElementById('comm-reply-body').value = '';
-      document.getElementById('comm-internal-toggle').checked = false;
       commAttachFiles = [];
       renderCommAttachChips();
-      await loadThread(commActiveThreadId, false); // full reload so new message is guaranteed visible
-      await loadThreads();
-    } catch(e) { console.error('[comm] sendReply error:', e); toast('Failed to send reply: ' + e.message, 'error'); }
+      await loadConversation();
+    } catch(e) { console.error('[comm] sendMessage error:', e); toast('Failed to send: ' + e.message, 'error'); }
   }
 
   async function commArchive() {
@@ -3112,32 +3064,6 @@
     await apiFetch(`/api/messages/${commActiveThreadId}/archive`, { method: 'PUT' });
     commShowEmpty();
     commActiveThreadId = null;
-    await loadThreads();
-  }
-
-  async function commSendNew() {
-    const body = document.getElementById('comm-new-body').value.trim();
-    if (!body && commNewAttachFiles.length === 0) { toast('Message body is required', 'error'); return; }
-    try {
-      // Create thread first
-      const res = await apiFetch('/api/messages', { method: 'POST', body: JSON.stringify({ person_id: commPersonId, subject: '', body, is_internal: false }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
-      // Send attachments as a reply if any
-      if (commNewAttachFiles.length > 0 && data.threadId) {
-        const fd = new FormData();
-        fd.append('body', '');
-        commNewAttachFiles.forEach(f => fd.append('files', f));
-        await apiFetch(`/api/messages/${data.threadId}/reply`, { method: 'POST', body: fd });
-      }
-      document.getElementById('comm-new-body').value = '';
-      commNewAttachFiles = [];
-      renderNewCommAttachChips();
-      commCloseNew();
-      await loadThreads();
-      if (data.threadId) loadThread(data.threadId);
-      toast('Message sent');
-    } catch(e) { toast('Failed to send message', 'error'); }
   }
 
   function statusColor(s) {
