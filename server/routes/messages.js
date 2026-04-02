@@ -1021,10 +1021,10 @@ router.post('/company/:companyId/summary', async (req, res) => {
   const companyId = parseInt(req.params.companyId);
   try {
     const { rows: coRows } = await pool.query(
-      'SELECT display_name FROM companies WHERE id = $1 AND firm_id = $2', [companyId, firmId]
+      'SELECT company_name FROM companies WHERE id = $1 AND firm_id = $2', [companyId, firmId]
     );
     if (!coRows[0]) return res.status(404).json({ error: 'Company not found' });
-    const companyName = coRows[0].display_name || 'This company';
+    const companyName = coRows[0].company_name || 'This company';
 
     // Pull last 30 days of non-internal messages across all threads for this company
     const { rows: msgs } = await pool.query(`
@@ -1033,9 +1033,10 @@ router.post('/company/:companyId/summary', async (req, res) => {
                   ELSE COALESCE(p.first_name || ' ' || p.last_name, 'Client') END AS sender_name
       FROM messages m
       JOIN message_threads mt ON mt.id = m.thread_id
+      JOIN thread_companies tc ON tc.thread_id = mt.id
       LEFT JOIN firm_users fu ON fu.id = m.sender_id AND m.sender_type = 'staff'
       LEFT JOIN people p ON p.id = mt.person_id
-      WHERE mt.company_id = $1 AND mt.firm_id = $2
+      WHERE tc.company_id = $1 AND mt.firm_id = $2
         AND m.is_internal = false
         AND m.created_at > NOW() - INTERVAL '30 days'
         AND m.body IS NOT NULL AND m.body != ''
