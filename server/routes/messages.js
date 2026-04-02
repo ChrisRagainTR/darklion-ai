@@ -676,6 +676,11 @@ router.post('/:threadId/reply', upload.array('files', 8), async (req, res) => {
       return res.status(403).json({ error: 'Only the assigned staff member can send external replies on this thread' });
     }
 
+    // Auto-assign thread to replying user if unassigned
+    if (!thread.staff_user_id && userId) {
+      await pool.query('UPDATE message_threads SET staff_user_id = $1 WHERE id = $2', [userId, threadId]);
+    }
+
     // Any message containing @mentions is always internal — staff coordination never reaches the client
     const hasMentions = body && /@[A-Za-z]/.test(body);
     const effectiveInternal = is_internal || hasMentions;
@@ -960,8 +965,18 @@ router.post('/sms', async (req, res) => {
     if (phone.length === 10) phone = '1' + phone;
     if (!phone.startsWith('+')) phone = '+' + phone;
 
+    // Fetch firm display name for SMS header
+    const { rows: firmRows } = await pool.query(
+      'SELECT display_name FROM firms WHERE id = $1',
+      [firmId]
+    );
+    const firmName = firmRows[0]?.display_name || 'Your Advisory Firm';
+
+    // Prepend firm name header and append opt-out footer
+    const smsBody = `${firmName}: ${body.trim()}\n\nReply STOP to opt out.`;
+
     const { sendSMS } = require('../services/twilio');
-    const result = await sendSMS(phone, body.trim());
+    const result = await sendSMS(phone, smsBody);
 
     let useThreadId = thread_id ? parseInt(thread_id) : null;
 
@@ -974,9 +989,9 @@ router.post('/sms', async (req, res) => {
         useThreadId = threads[0].id;
       } else {
         const { rows: newThread } = await pool.query(
-          `INSERT INTO message_threads (firm_id, person_id, subject, status, category, last_message_at)
-           VALUES ($1, $2, $3, 'open', 'general', NOW()) RETURNING id`,
-          [firmId, person_id, `Messages with ${person.first_name} ${person.last_name}`]
+          `INSERT INTO message_threads (firm_id, person_id, staff_user_id, subject, status, category, last_message_at)
+           VALUES ($1, $2, $3, $4, 'open', 'general', NOW()) RETURNING id`,
+          [firmId, person_id, req.firm.userId || null, `Messages with ${person.first_name} ${person.last_name}`]
         );
         useThreadId = newThread[0].id;
       }
@@ -997,6 +1012,60 @@ router.post('/sms', async (req, res) => {
   } catch (err) {
     console.error('[POST /api/messages/sms] error:', err);
     res.status(500).json({ error: err.message || 'Failed to send SMS' });
+  }
+});
+
+// ── POST /messages/company/:companyId/summary — AI digest of last 30 days ──────
+router.post('/company/:companyId/summary', async (req, res) => {
+  const firmId = req.firm.id;
+  const companyId = parseInt(req.params.companyId);
+  try {
+    const { rows: coRows } = await pool.query(
+      'SELECT company_name FROM companies WHERE id = $1 AND firm_id = $2', [companyId, firmId]
+    );
+    if (!coRows[0]) return res.status(404).json({ error: 'Company not found' });
+    const companyName = coRows[0].company_name || 'This company';
+
+    // Pull last 30 days of non-internal messages across all threads for this company
+    const { rows: msgs } = await pool.query(`
+      SELECT m.body, m.sender_type, m.created_at,
+             CASE WHEN m.sender_type='staff' THEN COALESCE(fu.display_name, fu.name, 'Staff')
+                  ELSE COALESCE(p.first_name || ' ' || p.last_name, 'Client') END AS sender_name
+      FROM messages m
+      JOIN message_threads mt ON mt.id = m.thread_id
+      JOIN thread_companies tc ON tc.thread_id = mt.id
+      LEFT JOIN firm_users fu ON fu.id = m.sender_id AND m.sender_type = 'staff'
+      LEFT JOIN people p ON p.id = mt.person_id
+      WHERE tc.company_id = $1 AND mt.firm_id = $2
+        AND m.is_internal = false
+        AND m.created_at > NOW() - INTERVAL '30 days'
+        AND m.body IS NOT NULL AND m.body != ''
+      ORDER BY m.created_at ASC
+      LIMIT 100
+    `, [companyId, firmId]);
+
+    if (!msgs.length) return res.json({ summary: null, message: 'No messages in the last 30 days.' });
+
+    const transcript = msgs.map(m =>
+      `[${new Date(m.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric'})} - ${m.sender_name}]: ${m.body.slice(0, 500)}`
+    ).join('\n');
+
+    const Anthropic = require('@anthropic-ai/sdk');
+    const claudeClient = new Anthropic();
+    const response = await claudeClient.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      messages: [{
+        role: 'user',
+        content: `You are summarizing recent client communication for an advisor before a meeting or call.\n\nCompany: ${companyName}\n\nLast 30 days of messages:\n${transcript}\n\nWrite a concise, structured summary with these sections (only include sections that have content):\n**Recent Topics** — key subjects discussed\n**Action Items** — anything promised, requested, or outstanding\n**Documents** — any documents mentioned, sent, or requested\n**Client Mood/Concerns** — any worries, questions, or tone worth noting\n\nBe brief and actionable. No fluff.`
+      }]
+    });
+
+    const summary = response.content[0]?.text || 'Unable to generate summary.';
+    res.json({ summary, messageCount: msgs.length, generatedAt: new Date().toISOString() });
+  } catch (err) {
+    console.error('[POST /messages/company/:companyId/summary] error:', err);
+    res.status(500).json({ error: 'Failed to generate summary' });
   }
 });
 

@@ -648,7 +648,14 @@
   #tab-communication { overflow:hidden; height:calc(100vh - var(--header-h, 58px) - var(--tab-bar-top, 58px) - 42px); }
   body:has(#tab-communication.active) .main { overflow-y: hidden !important; }
   #tab-communication .crm-inbox-wrap { display:flex; flex:1; min-height:0; overflow:hidden; }
-  #tab-communication .crm-thread-list { width:300px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+  #tab-communication .crm-thread-list { display:none; }
+  #tab-communication .crm-detail-panel { flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; }
+  #tab-communication .comm-summary-panel { width:320px; flex-shrink:0; border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; background:var(--card); }
+  #tab-communication .comm-summary-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  #tab-communication .comm-summary-header h3 { font-size:0.85rem; font-weight:700; color:var(--text); margin:0; }
+  #tab-communication .comm-summary-body { flex:1; overflow-y:auto; padding:1rem; font-size:0.82rem; line-height:1.6; color:var(--muted); }
+  #tab-communication .comm-summary-body strong { color:var(--gold); display:block; margin-top:0.75rem; margin-bottom:0.2rem; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; }
+  #tab-communication .comm-summary-body strong:first-child { margin-top:0; }
   #tab-communication .crm-thread-list-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
   #tab-communication .crm-thread-list-header h3 { font-size:0.9rem; font-weight:700; color:var(--text); margin:0; }
   #tab-communication .crm-thread-list-inner { flex:1; overflow-y:auto; }
@@ -745,69 +752,41 @@
 
 <div id="tab-communication" class="tab-content" style="padding:0;overflow:hidden;">
   <div class="crm-inbox-wrap">
-    <div class="crm-thread-list">
-      <div class="crm-thread-list-header">
-        <h3>Messages</h3>
-      </div>
-      <div class="crm-thread-list-inner" id="comm-co-threads">
-        <div class="loading-state"><div class="loading-spinner"></div></div>
-      </div>
+    <!-- Thread list hidden — single conversation view -->
+    <div class="crm-thread-list" style="display:none;">
+      <div class="crm-thread-list-inner" id="comm-co-threads"></div>
     </div>
     <div class="crm-detail-panel">
-      <!-- Thread view — always in DOM -->
-      <div id="comm-co-thread-view" style="flex:1;flex-direction:column;min-height:0;overflow:hidden;display:flex;">
-        <!-- Empty state overlay -->
+      <!-- Header bar -->
+      <div class="detail-header" id="comm-co-detail-header" style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <span style="font-weight:700;font-size:0.95rem;">Messages</span>
+      </div>
+      <!-- Scrollable messages area with empty state overlay -->
+      <div id="comm-co-thread-view" style="flex:1;position:relative;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
         <div class="no-thread-selected" id="comm-co-no-thread" style="position:absolute;inset:0;z-index:1;background:var(--navy);">
           <div class="nts-icon">💬</div>
-          <div>Select a thread or start a new one</div>
+          <div>No messages yet — send the first one below</div>
         </div>
-        <div class="detail-header" id="comm-co-detail-header"></div>
         <div class="detail-messages" id="comm-co-detail-messages"></div>
-        <div class="reply-box" id="comm-co-reply-box" style="display:none;">
-          <div class="reply-box-controls">
-            <input type="checkbox" id="comm-co-internal-toggle" style="display:none;">
-            <div style="flex:1;"></div>
-          </div>
-          <div style="position:relative;">
-            <textarea id="comm-co-reply-body" placeholder="Write a reply… (use @Name to loop in a colleague)" rows="3"></textarea>
-            <div id="comm-co-mention-picker" style="display:none;position:absolute;bottom:100%;left:0;z-index:500;background:var(--charcoal);border:1px solid var(--gold);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);min-width:200px;max-height:200px;overflow-y:auto;"></div>
-          </div>
-          <div class="attach-chips" id="comm-co-attach-chips"></div>
-          <input type="file" id="comm-co-attach-input" multiple style="display:none;" onchange="handleCoCommAttach(this.files)">
-          <input type="checkbox" id="comm-co-sms-toggle" style="display:none;">
-          <div class="reply-box-actions">
-            <button class="btn btn-gold btn-sm" onclick="coCommSendReply()">Send Reply</button>
-            <button class="btn btn-outline btn-sm" onclick="coCommSendAsSms()">📱 Send as Text</button>
-            <button class="btn-attach" onclick="document.getElementById('comm-co-attach-input').click()">📎 Attach</button>
-            <button class="btn btn-outline btn-sm" onclick="coCommArchive()">Archive</button>
-          </div>
-        </div>
       </div>
-      <!-- New thread compose — absolute so it covers the thread view too -->
-      <div id="comm-co-compose-view" style="display:none;position:absolute;inset:0;z-index:2;background:var(--navy);flex-direction:column;overflow:hidden;">
-        <div class="detail-header" style="display:flex;align-items:center;justify-content:space-between;">
-          <div>
-            <span style="font-weight:700;">New Message</span>
-            <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">📢 Sent to all portal-enabled people on this company</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:0.5rem;">
-            <button class="btn btn-outline btn-sm" onclick="coCommOpenTemplatePicker()" title="Load a pre-written template">📋 Load Template</button>
-            <button class="btn btn-outline btn-sm" onclick="coCommCloseNew()">Cancel</button>
-          </div>
+      <!-- Reply box — always visible, outside the overlay container -->
+      <div class="reply-box" id="comm-co-reply-box" style="flex-shrink:0;">
+        <div class="reply-box-controls">
+          <input type="checkbox" id="comm-co-internal-toggle" style="display:none;">
+          <input type="checkbox" id="comm-co-sms-toggle" style="display:none;">
+          <div id="comm-co-sms-toggle-wrap" style="display:none;"><label><input type="checkbox" id="comm-co-sms-check" onchange="document.getElementById('comm-co-sms-toggle').checked=this.checked"> 📱 Send as text</label></div>
+          <div style="flex:1;"></div>
+          <button class="btn btn-outline btn-sm" onclick="coCommOpenTemplatePicker()" title="Load template" style="font-size:0.75rem;">📋 Template</button>
         </div>
-        <div id="comm-co-no-portal-warning" style="display:none;margin:1rem 1.5rem 0;padding:0.75rem 1rem;background:rgba(237,137,54,0.1);border:1px solid rgba(237,137,54,0.3);border-radius:8px;font-size:0.82rem;color:var(--orange,#ed8936);">
-          ⚠️ No portal users on this company. Invite someone to the portal before sending a message.
+        <div style="position:relative;">
+          <textarea id="comm-co-reply-body" placeholder="Write a message…" rows="4"></textarea>
+          <div id="comm-co-mention-picker" style="display:none;position:absolute;bottom:100%;left:0;z-index:500;background:var(--charcoal);border:1px solid var(--gold);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);min-width:200px;max-height:200px;overflow-y:auto;"></div>
         </div>
-        <div style="flex:1;padding:1rem 1.5rem;display:flex;flex-direction:column;min-height:0;">
-          <textarea id="comm-co-new-body" placeholder="Write your message…" style="flex:1;resize:none;width:100%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:0.6rem 0.75rem;font-size:0.88rem;font-family:inherit;min-height:0;"></textarea>
-        </div>
-        <div class="reply-box">
-          <div class="attach-chips" id="comm-co-new-attach-chips"></div>
-          <input type="file" id="comm-co-new-attach-input" multiple style="display:none;" onchange="handleCoNewCommAttach(this.files)">
-          <div class="reply-box-actions">
-            <button class="btn btn-gold btn-sm" id="comm-co-send-btn" onclick="coCommSendNew()">Send Message</button>
-            <button class="btn-attach" onclick="document.getElementById('comm-co-new-attach-input').click()">📎 Attach</button>
-          </div>
+        <div class="attach-chips" id="comm-co-attach-chips"></div>
+        <input type="file" id="comm-co-attach-input" multiple style="display:none;" onchange="handleCoCommAttach(this.files)">
+        <div class="reply-box-actions">
+          <button class="btn btn-gold btn-sm" id="comm-co-send-btn" onclick="coCommSendMessage()">Send Message</button>
+          <button class="btn-attach" onclick="document.getElementById('comm-co-attach-input').click()">📎 Attach</button>
         </div>
       </div>
 
@@ -823,6 +802,16 @@
           </div>
           <div id="comm-co-tmpl-list" style="overflow-y:auto;flex:1;padding:0.5rem 0;"></div>
         </div>
+      </div>
+    </div>
+    <!-- AI Summary panel -->
+    <div class="comm-summary-panel">
+      <div class="comm-summary-header">
+        <h3>🤖 30-Day Summary</h3>
+        <button class="btn btn-ghost btn-xs" id="comm-co-summary-refresh-btn" onclick="loadCoCommSummary(true)">↺ Refresh</button>
+      </div>
+      <div class="comm-summary-body" id="comm-co-summary-body">
+        <div style="color:var(--muted);font-style:italic;font-size:0.8rem;">Loading summary…</div>
       </div>
     </div>
   </div>
@@ -3883,23 +3872,13 @@
 
   function coCommShowEmpty() {
     document.getElementById('comm-co-no-thread').style.display = 'flex';
-    document.getElementById('comm-co-compose-view').style.display = 'none';
-    document.getElementById('comm-co-reply-box').style.display = 'none';
-    document.getElementById('comm-co-detail-header').innerHTML = '';
     document.getElementById('comm-co-detail-messages').innerHTML = '';
-    document.getElementById('comm-co-reply-body').value = '';
     commCoActiveThreadId = null;
   }
   function coCommShowDetail() {
     document.getElementById('comm-co-no-thread').style.display = 'none';
-    document.getElementById('comm-co-compose-view').style.display = 'none';
-    document.getElementById('comm-co-reply-box').style.display = '';
   }
-  function coCommShowCompose() {
-    document.getElementById('comm-co-no-thread').style.display = 'none';
-    document.getElementById('comm-co-compose-view').style.display = 'flex';
-    document.getElementById('comm-co-reply-box').style.display = 'none';
-  }
+  function coCommShowCompose() { /* no-op — reply box is always visible */ }
   async function coCommOpenNew() {
     coCommShowCompose();
     document.getElementById('comm-co-new-body').value = '';
@@ -4053,7 +4032,45 @@
   function initCoComm() {
     commCoId = companyId;
     coCommShowEmpty();
-    loadCoThreads();
+    loadCoConversation();
+    loadCoCommSummary(false);
+    // Shift+Enter to send
+    const ta = document.getElementById('comm-co-reply-body');
+    if (ta && !ta._shiftEnterBound) {
+      ta.addEventListener('keydown', e => { if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); coCommSendMessage(); } });
+      ta._shiftEnterBound = true;
+    }
+  }
+
+  let _coCommSummaryLoaded = false;
+  async function loadCoCommSummary(force = false) {
+    if (!commCoId) return;
+    if (_coCommSummaryLoaded && !force) return;
+    const body = document.getElementById('comm-co-summary-body');
+    const btn = document.getElementById('comm-co-summary-refresh-btn');
+    if (!body) return;
+    body.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;color:var(--muted);"><div class="loading-spinner" style="width:16px;height:16px;border-width:2px;"></div> Generating summary…</div>';
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try {
+      const res = await apiFetch(`/api/messages/company/${commCoId}/summary`, { method: 'POST' });
+      const data = await res.json();
+      _coCommSummaryLoaded = true;
+      if (!data.summary) {
+        body.innerHTML = `<div style="color:var(--muted);font-style:italic;">${data.message || 'No messages in the last 30 days.'}</div>`;
+      } else {
+        const html = data.summary
+          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+          .replace(/\n/g, '<br>');
+        body.innerHTML = `<div>${html}</div>
+          <div style="margin-top:1rem;font-size:0.72rem;color:var(--muted);border-top:1px solid var(--border);padding-top:0.5rem;">
+            Based on ${data.messageCount} message${data.messageCount !== 1 ? 's' : ''} · ${new Date(data.generatedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}
+          </div>`;
+      }
+    } catch(e) {
+      body.innerHTML = '<div style="color:var(--muted);font-style:italic;">Failed to load summary.</div>';
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '↺ Refresh'; }
+    }
   }
 
   function coRelTime(ts) {
@@ -4066,35 +4083,17 @@
     if (!b) return '0 B'; if (b<1024) return b+' B'; if (b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(1)+' MB';
   }
 
-  async function loadCoThreads() {
-    const el = document.getElementById('comm-co-threads');
-    if (!el || !commCoId) return;
-    el.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+  async function loadCoConversation() {
+    if (!commCoId) return;
     try {
       const res = await apiFetch(`/api/messages/company/${commCoId}`);
       const threads = await res.json();
-      if (!threads.length) {
-        el.innerHTML = '<div style="color:var(--muted);font-size:0.84rem;padding:1.5rem 1rem;text-align:center;">No messages yet.</div>';
-        return;
-      }
-      el.innerHTML = threads.map(t => {
-        const personName = t.person ? ((t.person.firstName||'')+' '+(t.person.lastName||'')).trim() : '';
-        const statusColor = t.status === 'resolved' ? '#4caf50' : '#c9a84c';
-        const statusLabel = t.status === 'resolved' ? 'Resolved' : 'Active';
-        return `<div class="thread-card" id="comm-co-item-${t.id}" onclick="loadCoThread(${t.id})">
-          <div class="thread-card-name">${esc(personName || t.subject || '(no subject)')}${t.unreadCount > 0 ? ` <span style="background:var(--gold);color:var(--navy);border-radius:10px;padding:0.05rem 0.35rem;font-size:0.65rem;font-weight:700;margin-left:0.3rem;">${t.unreadCount}</span>` : ''}</div>
-          <div class="thread-card-preview">${esc(t.lastPreview||'')}</div>
-          <div class="thread-card-meta">
-            <span style="background:${statusColor};color:#fff;font-size:0.65rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:3px;text-transform:uppercase;">${statusLabel}</span>
-            <span>${coRelTime(t.lastMessageAt)}</span>
-            ${t.unreadCount > 0 ? '<span class="unread-dot"></span>' : ''}
-          </div>
-        </div>`;
-      }).join('');
-    } catch(e) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem;">Failed to load.</div>';
-    }
+      if (!threads.length) { coCommShowEmpty(); return; }
+      commCoActiveThreadId = threads[0].id;
+      await loadCoThread(threads[0].id, false);
+    } catch(e) { console.error('[co-comm] loadCoConversation error:', e); }
   }
+  async function loadCoThreads() { return loadCoConversation(); }
 
   async function loadCoThread(threadId, silent = false) {
     commCoActiveThreadId = threadId;
@@ -4109,11 +4108,7 @@
     try {
       const res = await apiFetch(`/api/messages/${threadId}`);
       const data = await res.json();
-      if (!silent) {
-        document.getElementById('comm-co-detail-header').innerHTML = `
-          <div class="detail-header-person">${esc((data.person?.firstName||'')+' '+(data.person?.lastName||''))}</div>
-          <div class="detail-header-subject">${esc(data.subject||'(no subject)')} · <span style="color:var(--gold);font-size:0.75rem;">${data.category||''}</span></div>`;
-      }
+      // Header is static "Messages" title rendered in HTML — no update needed
       const msgEl = document.getElementById('comm-co-detail-messages');
       const msgs = data.messages || [];
       function buildCoBubble(m) {
@@ -4151,60 +4146,52 @@
     if (toggle) toggle.checked = false;
   }
 
-  async function coCommSendReply() {
+  // Unified send — creates thread if needed, replies if thread exists
+  async function coCommSendMessage() {
     const body = document.getElementById('comm-co-reply-body').value.trim();
-    if (!commCoActiveThreadId) { toast('No thread selected', 'error'); return; }
     if (!body && coCommAttachFiles.length === 0) return;
-    const isInternal = document.getElementById('comm-co-internal-toggle').checked;
-    const isSms = document.getElementById('comm-co-sms-toggle')?.checked;
+
+    if (!commCoActiveThreadId) {
+      // No thread yet — send to all portal-enabled people on this company
+      try {
+        const coRes = await apiFetch(`/api/companies/${commCoId}`);
+        const co = await coRes.json();
+        const people = (co.people || []).filter(p => p.portal_enabled);
+        if (!people.length) { toast('No portal users on this company — invite someone to the portal first', 'error'); return; }
+        let lastThreadId = null;
+        for (const p of people) {
+          const res = await apiFetch('/api/messages', { method:'POST', body: JSON.stringify({ person_id: p.person_id || p.id, subject: '', body, is_internal: false }) });
+          const data = await res.json();
+          if (data.threadId) lastThreadId = data.threadId;
+        }
+        document.getElementById('comm-co-reply-body').value = '';
+        coCommAttachFiles = [];
+        renderCoCommAttachChips();
+        await loadCoConversation();
+        toast(`Message sent to ${people.length} ${people.length===1?'person':'people'}`);
+      } catch(e) { toast('Failed to send: ' + e.message, 'error'); }
+      return;
+    }
+
+    // Existing thread — reply
     try {
       const fd = new FormData();
       fd.append('body', body);
-      fd.append('is_internal', isInternal ? 'true' : 'false');
-      if (isSms) fd.append('send_sms', 'true');
+      fd.append('is_internal', 'false');
       coCommAttachFiles.forEach(f => fd.append('files', f));
       const replyRes = await apiFetch(`/api/messages/${commCoActiveThreadId}/reply`, { method: 'POST', body: fd });
       if (!replyRes.ok) { const d = await replyRes.json().catch(()=>({})); throw new Error(d.error || `Server error ${replyRes.status}`); }
       document.getElementById('comm-co-reply-body').value = '';
-      document.getElementById('comm-co-internal-toggle').checked = false;
       coCommAttachFiles = [];
       renderCoCommAttachChips();
-      await loadCoThread(commCoActiveThreadId, true); // silent — no spinner
-      await loadCoThreads();
-    } catch(e) { toast('Failed to send reply: ' + e.message, 'error'); }
+      await loadCoThread(commCoActiveThreadId, true);
+    } catch(e) { toast('Failed to send: ' + e.message, 'error'); }
   }
 
   async function coCommArchive() {
     if (!commCoActiveThreadId) return;
     await apiFetch(`/api/messages/${commCoActiveThreadId}/archive`, { method: 'PUT' });
     coCommShowEmpty();
-    commCoActiveThreadId = null;
-    await loadCoThreads();
-  }
-
-  async function coCommSendNew() {
-    const body = document.getElementById('comm-co-new-body').value.trim();
-    if (!body && coCommNewAttachFiles.length === 0) { toast('Message body is required', 'error'); return; }
-    try {
-      // Get portal-enabled people for this company
-      const coRes = await apiFetch(`/api/companies/${commCoId}`);
-      const co = await coRes.json();
-      const people = (co.people || []).filter(p => p.portal_enabled);
-      if (!people.length) { toast('No portal users on this company', 'error'); return; }
-      let lastThreadId = null;
-      for (const p of people) {
-        const res = await apiFetch('/api/messages', { method:'POST', body: JSON.stringify({ person_id: p.person_id || p.id, subject: '', body, is_internal: false }) });
-        const data = await res.json();
-        if (data.threadId) lastThreadId = data.threadId;
-      }
-      document.getElementById('comm-co-new-body').value = '';
-      coCommNewAttachFiles = [];
-      renderCoNewCommAttachChips();
-      coCommCloseNew();
-      await loadCoThreads();
-      if (lastThreadId) loadCoThread(lastThreadId);
-      toast(`Message sent to ${people.length} ${people.length===1?'person':'people'}`);
-    } catch(e) { toast('Failed to send: ' + e.message, 'error'); }
   }
 
   function handleCoCommAttach(fileList) {
