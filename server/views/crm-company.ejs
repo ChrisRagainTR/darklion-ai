@@ -649,6 +649,12 @@
   body:has(#tab-communication.active) .main { overflow-y: hidden !important; }
   #tab-communication .crm-inbox-wrap { display:flex; flex:1; min-height:0; overflow:hidden; }
   #tab-communication .crm-thread-list { display:none; }
+  #tab-communication .comm-summary-panel { width:320px; flex-shrink:0; border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; background:var(--card); }
+  #tab-communication .comm-summary-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  #tab-communication .comm-summary-header h3 { font-size:0.85rem; font-weight:700; color:var(--text); margin:0; }
+  #tab-communication .comm-summary-body { flex:1; overflow-y:auto; padding:1rem; font-size:0.82rem; line-height:1.6; color:var(--muted); }
+  #tab-communication .comm-summary-body strong { color:var(--gold); display:block; margin-top:0.75rem; margin-bottom:0.2rem; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; }
+  #tab-communication .comm-summary-body strong:first-child { margin-top:0; }
   #tab-communication .crm-thread-list-header { padding:0.85rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
   #tab-communication .crm-thread-list-header h3 { font-size:0.9rem; font-weight:700; color:var(--text); margin:0; }
   #tab-communication .crm-thread-list-inner { flex:1; overflow-y:auto; }
@@ -796,6 +802,16 @@
           </div>
           <div id="comm-co-tmpl-list" style="overflow-y:auto;flex:1;padding:0.5rem 0;"></div>
         </div>
+      </div>
+    </div>
+    <!-- AI Summary panel -->
+    <div class="comm-summary-panel">
+      <div class="comm-summary-header">
+        <h3>🤖 30-Day Summary</h3>
+        <button class="btn btn-ghost btn-xs" id="comm-co-summary-refresh-btn" onclick="loadCoCommSummary(true)">↺ Refresh</button>
+      </div>
+      <div class="comm-summary-body" id="comm-co-summary-body">
+        <div style="color:var(--muted);font-style:italic;font-size:0.8rem;">Loading summary…</div>
       </div>
     </div>
   </div>
@@ -4017,6 +4033,38 @@
     commCoId = companyId;
     coCommShowEmpty();
     loadCoConversation();
+    loadCoCommSummary(false);
+  }
+
+  let _coCommSummaryLoaded = false;
+  async function loadCoCommSummary(force = false) {
+    if (!commCoId) return;
+    if (_coCommSummaryLoaded && !force) return;
+    const body = document.getElementById('comm-co-summary-body');
+    const btn = document.getElementById('comm-co-summary-refresh-btn');
+    if (!body) return;
+    body.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;color:var(--muted);"><div class="loading-spinner" style="width:16px;height:16px;border-width:2px;"></div> Generating summary…</div>';
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try {
+      const res = await apiFetch(`/api/messages/company/${commCoId}/summary`, { method: 'POST' });
+      const data = await res.json();
+      _coCommSummaryLoaded = true;
+      if (!data.summary) {
+        body.innerHTML = `<div style="color:var(--muted);font-style:italic;">${data.message || 'No messages in the last 30 days.'}</div>`;
+      } else {
+        const html = data.summary
+          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+          .replace(/\n/g, '<br>');
+        body.innerHTML = `<div>${html}</div>
+          <div style="margin-top:1rem;font-size:0.72rem;color:var(--muted);border-top:1px solid var(--border);padding-top:0.5rem;">
+            Based on ${data.messageCount} message${data.messageCount !== 1 ? 's' : ''} · ${new Date(data.generatedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}
+          </div>`;
+      }
+    } catch(e) {
+      body.innerHTML = '<div style="color:var(--muted);font-style:italic;">Failed to load summary.</div>';
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '↺ Refresh'; }
+    }
   }
 
   function coRelTime(ts) {
