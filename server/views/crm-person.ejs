@@ -1034,7 +1034,7 @@
       const fsColors = { MFJ:'rgba(74,144,217,0.18)', Single:'rgba(143,163,184,0.2)', HOH:'rgba(237,137,54,0.18)', MFS:'rgba(138,99,241,0.18)' };
       const fsTextColors = { MFJ:'#4a90d9', Single:'#8fa3b8', HOH:'#ed8936', MFS:'#a78bfa' };
       const fsKey = p.filing_status.toUpperCase() === 'MFJ' ? 'MFJ' : p.filing_status === 'single' ? 'Single' : p.filing_status === 'hoh' ? 'HOH' : p.filing_status === 'mfs' ? 'MFS' : null;
-      const fsLabel = { mfj:'MFJ', single:'Single', hoh:'HOH', mfs:'MFS' }[p.filing_status] || p.filing_status.replace(/_/g,' ');
+      const fsLabel = { mfj:'MFJ', single:'Single', hoh:'HOH', mfs:'MFS' }[(p.filing_status||'').toLowerCase()] || p.filing_status.replace(/_/g,' ');
       const bg = fsColors[fsKey] || 'rgba(143,163,184,0.2)';
       const tc = fsTextColors[fsKey] || '#8fa3b8';
       html += ` <span class="badge" style="background:${bg};color:${tc};">${esc(fsLabel)}</span>`;
@@ -1062,10 +1062,10 @@
     // ── LEFT COL: Contact Details ──
     const contactEl = document.getElementById('overview-contact-panel');
     const initials = ((p.first_name||'').charAt(0)+(p.last_name||'').charAt(0)).toUpperCase() || '?';
-    const fsLabel = { mfj:'MFJ', single:'Single', hoh:'Head of Household', mfs:'MFS' }[p.filing_status] || (p.filing_status||'').replace(/_/g,' ');
+    const fsLabel = { mfj:'MFJ', single:'Single', hoh:'Head of Household', mfs:'MFS' }[(p.filing_status||'').toLowerCase()] || (p.filing_status||'').replace(/_/g,' ');
     const fsColors = { MFJ:'rgba(74,144,217,0.15)', Single:'rgba(143,163,184,0.15)', HOH:'rgba(237,137,54,0.15)', MFS:'rgba(138,99,241,0.15)' };
     const fsTextColors = { MFJ:'#4a90d9', Single:'#8fa3b8', HOH:'#ed8936', MFS:'#a78bfa' };
-    const fsKey = ['mfj','mfs'].includes(p.filing_status) ? 'MFJ' : p.filing_status === 'single' ? 'Single' : p.filing_status === 'hoh' ? 'HOH' : p.filing_status === 'mfs' ? 'MFS' : null;
+    const fsKey = ['mfj','mfs'].includes((p.filing_status||'').toLowerCase()) ? 'MFJ' : p.filing_status === 'single' ? 'Single' : p.filing_status === 'hoh' ? 'HOH' : p.filing_status === 'mfs' ? 'MFS' : null;
     const fsBg = fsColors[fsKey] || 'rgba(143,163,184,0.15)';
     const fsTc = fsTextColors[fsKey] || '#8fa3b8';
     const personBmLabel = p.billing_method === 'monthly_billing' ? 'Monthly Billing' : p.billing_method === 'client_invoice' ? 'Client Invoice' : (p.billing_method || '—');
@@ -1161,12 +1161,12 @@
       `${esc(p.first_name)} ${esc(p.last_name)}`, 'Taxpayer',
       esc(p.email||'—'),
       p.portal_enabled, p.portal_has_password, p.portal_invite_token, !!p.email, false,
-      ['mfj','mfs'].includes(p.filing_status) && (p.spouse_name || p.spouse_email)
+      ['mfj','mfs'].includes((p.filing_status||'').toLowerCase()) && (p.spouse_name || p.spouse_email)
     );
 
     // Spouse row (MFJ/MFS only)
     let spouseRow = '';
-    if (['mfj','mfs'].includes(p.filing_status)) {
+    if (['mfj','mfs'].includes((p.filing_status||'').toLowerCase())) {
       if (p.spouse_name || p.spouse_email) {
         spouseRow = portalPersonRow(
           (p.spouse_name||'S').charAt(0).toUpperCase(),
@@ -2021,7 +2021,7 @@
     document.getElementById('ef-spouse-email').value = personData.spouse_email || '';
     document.getElementById('ef-spouse-portal-enabled').checked = !!personData.spouse_portal_enabled;
     // Show/hide spouse section based on filing status
-    document.getElementById('ef-spouse-section').style.display = ['mfj','mfs'].includes(filingVal) ? '' : 'none';
+    document.getElementById('ef-spouse-section').style.display = ['mfj','mfs'].includes((filingVal||'').toLowerCase()) ? '' : 'none';
     document.getElementById('ef-addr1').value = personData.address_line1 || '';
     document.getElementById('ef-addr2').value = personData.address_line2 || '';
     document.getElementById('ef-city').value = personData.city || '';
@@ -2033,7 +2033,7 @@
   }
 
   function efFilingChanged(val) {
-    document.getElementById('ef-spouse-section').style.display = ['mfj','mfs'].includes(val) ? '' : 'none';
+    document.getElementById('ef-spouse-section').style.display = ['mfj','mfs'].includes((val||'').toLowerCase()) ? '' : 'none';
   }
   function closeModal() {
     const m = document.getElementById('edit-modal');
@@ -2252,7 +2252,7 @@
         const currentPerson = relPeople.find(p => p.id == personId);
         if (currentPerson) {
           html += makeSignerChip((currentPerson.first_name||'') + ' ' + (currentPerson.last_name||''), '');
-          if (['mfj','mfs'].includes(currentPerson.filing_status) && currentPerson.spouse_name) {
+          if (['mfj','mfs'].includes((currentPerson.filing_status||'').toLowerCase()) && currentPerson.spouse_name) {
             const spouseBadge = '<span style="font-size:0.65rem;color:#a78bfa;background:rgba(138,99,241,0.12);border-radius:3px;padding:0.05rem 0.3rem;">Spouse</span>';
             html += makeSignerChip(currentPerson.spouse_name, spouseBadge);
           }
