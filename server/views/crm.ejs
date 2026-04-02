@@ -1236,6 +1236,16 @@ async function deletePerson(id) {
 // =====================================================================
 //  COMPANIES
 // =====================================================================
+async function deleteCompany(id, name) {
+  if (!await dlConfirm(`Delete ${name}? This cannot be undone.`, { danger: true, confirmLabel: 'Delete' })) return;
+  try {
+    const res = await apiFetch(`/api/companies/id/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+    toast('Company deleted');
+    await loadCompanies();
+  } catch(e) { toast(e.message || 'Failed to delete', 'error'); }
+}
+
 async function loadCompanies() {
   try {
     const res = await apiFetch('/api/relationships/all-companies');
@@ -1257,13 +1267,16 @@ function renderCompanies(list) {
   companiesPage = Math.min(companiesPage, totalPages);
   const page = list.slice((companiesPage-1)*PAGE_SIZE, companiesPage*PAGE_SIZE);
   c.innerHTML = `<div class="table-wrap"><table class="data-table">
-    <thead><tr><th>Company</th><th>Entity Type</th><th>Relationship</th><th>Status</th></tr></thead>
+    <thead><tr><th>Company</th><th>Entity Type</th><th>Relationship</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody>${page.map(co => `
       <tr onclick="window.location.href='/crm/company/${co.id||co.company_id||0}'" style="cursor:pointer;">
         <td style="font-weight:600;">${esc(co.display_name||co.company_name||co.name||'Unknown')}${(co.city||co.state)?`<div style="font-size:0.74rem;font-weight:400;color:var(--muted);margin-top:0.15rem;">${[co.city,co.state].filter(Boolean).map(esc).join(', ')}</div>`:''}</td>
         <td>${co.entity_type ? `<span class="badge badge-muted">${esc(co.entity_type)}</span>` : '—'}</td>
         <td>${co.relationship_name ? `<span style="color:var(--gold);">${esc(co.relationship_name)}</span>` : '—'}</td>
         <td>${co.status === 'inactive' ? '<span class="badge badge-muted">Inactive</span>' : '<span class="badge badge-green">Active</span>'}</td>
+        <td onclick="event.stopPropagation()">
+          <button class="btn btn-danger btn-xs" onclick="deleteCompany(${co.id||co.company_id||0}, '${esc(co.display_name||co.company_name||co.name||'Unknown').replace(/'/g,\"\\\'\")}')">Delete</button>
+        </td>
       </tr>`).join('')}
     </tbody></table></div>
   ${paginationBar(companiesPage, totalPages, `companiesPage--;renderCompanies(window._companiesFilteredList||allCompanies)`, `companiesPage++;renderCompanies(window._companiesFilteredList||allCompanies)`)}`;
