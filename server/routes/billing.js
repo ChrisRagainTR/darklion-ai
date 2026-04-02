@@ -22,9 +22,67 @@ async function ensureBillingCols() {
   await pool.query(`
     ALTER TABLE relationships
     ADD COLUMN IF NOT EXISTS billing_accounts TEXT[] DEFAULT '{}',
-    ADD COLUMN IF NOT EXISTS billing_emails TEXT[] DEFAULT '{}'
+    ADD COLUMN IF NOT EXISTS billing_emails TEXT[] DEFAULT '{}',
+    ADD COLUMN IF NOT EXISTS mrr NUMERIC(10,2) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS mrr_synced_at TIMESTAMPTZ DEFAULT NULL
   `);
 }
+
+// Sync MRR for a single relationship from Stripe
+async function syncRelationshipMRR(relId, firmId) {
+  const { rows } = await pool.query(
+    'SELECT billing_accounts, billing_emails FROM relationships WHERE id=$1 AND firm_id=$2',
+    [relId, firmId]
+  );
+  if (!rows.length) return;
+  const { billing_accounts = [], billing_emails = [] } = rows[0];
+  if (!billing_accounts.length || !billing_emails.length) return;
+
+  let mrr = 0;
+  for (const account of billing_accounts) {
+    const stripe = getStripeClient(account);
+    if (!stripe) continue;
+    for (const email of billing_emails) {
+      try {
+        const custList = await stripe.customers.list({ email, limit: 5 });
+        for (const cust of custList.data) {
+          const subList = await stripe.subscriptions.list({
+            customer: cust.id, status: 'active', limit: 20,
+            expand: ['data.items.data.price'],
+          });
+          for (const sub of subList.data) {
+            for (const item of sub.items.data) {
+              const amt = (item.price?.unit_amount || 0) / 100 * (item.quantity || 1);
+              mrr += item.price?.recurring?.interval === 'year' ? amt / 12 : amt;
+            }
+          }
+        }
+      } catch(e) { /* non-fatal */ }
+    }
+  }
+  await pool.query(
+    'UPDATE relationships SET mrr=$1, mrr_synced_at=NOW() WHERE id=$2',
+    [Math.round(mrr * 100) / 100, relId]
+  );
+  return mrr;
+}
+
+// Sync MRR for ALL relationships in a firm
+async function syncAllMRR(firmId) {
+  const { rows } = await pool.query(
+    `SELECT id FROM relationships WHERE firm_id=$1
+     AND billing_accounts IS NOT NULL AND array_length(billing_accounts,1) > 0
+     AND billing_emails IS NOT NULL AND array_length(billing_emails,1) > 0`,
+    [firmId]
+  );
+  for (const rel of rows) {
+    await syncRelationshipMRR(rel.id, firmId).catch(e =>
+      console.error(`[billing] syncMRR rel ${rel.id}:`, e.message)
+    );
+  }
+}
+
+module.exports.syncAllMRR = syncAllMRR;
 
 // GET /:relId/config — get billing config for this relationship
 router.get('/:relId/config', async (req, res) => {
@@ -70,6 +128,8 @@ router.put('/:relId/config', async (req, res) => {
       'UPDATE relationships SET billing_accounts = $1, billing_emails = $2 WHERE id = $3',
       [accounts, emails, relId]
     );
+    // Sync MRR in background after config save
+    syncRelationshipMRR(relId, firmId).catch(e => console.error('[billing] syncMRR post-save:', e.message));
     res.json({ billing_accounts: accounts, billing_emails: emails });
   } catch (err) {
     console.error('PUT /billing/:relId/config error:', err);
