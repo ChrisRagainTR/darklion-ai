@@ -314,6 +314,38 @@ router.put('/companies/:id([0-9]+)', async (req, res) => {
   }
 });
 
+// DELETE /api/companies/id/:id — delete company by integer ID (firm-scoped)
+router.delete('/companies/id/:id([0-9]+)', async (req, res) => {
+  const firmId = req.firm?.id;
+  const companyId = parseInt(req.params.id);
+  try {
+    const { rows } = await pool.query(
+      'SELECT company_name, realm_id FROM companies WHERE id = $1 AND firm_id = $2',
+      [companyId, firmId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Company not found' });
+    const { company_name, realm_id } = rows[0];
+
+    await pool.query('DELETE FROM person_company_access WHERE company_id = $1', [companyId]);
+    await pool.query('DELETE FROM documents WHERE owner_type = $1 AND owner_id = $2', ['company', companyId]);
+    await pool.query('DELETE FROM pipeline_jobs WHERE entity_type = $1 AND entity_id = $2', ['company', companyId]);
+    await pool.query('DELETE FROM thread_companies WHERE company_id = $1', [companyId]);
+    if (realm_id && !realm_id.startsWith('import-')) {
+      await pool.query('DELETE FROM scan_results WHERE realm_id = $1', [realm_id]);
+      await pool.query('DELETE FROM close_packages WHERE realm_id = $1', [realm_id]);
+      await pool.query('DELETE FROM statement_schedules WHERE realm_id = $1', [realm_id]);
+      await pool.query('DELETE FROM jobs WHERE realm_id = $1', [realm_id]).catch(()=>{});
+      await pool.query('DELETE FROM transactions WHERE realm_id = $1', [realm_id]).catch(()=>{});
+    }
+    await pool.query('DELETE FROM companies WHERE id = $1 AND firm_id = $2', [companyId, firmId]);
+    await auditLog(firmId, 'company_delete', `Deleted: ${company_name}`, req.ip);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('DELETE /companies/id/:id error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Disconnect a company (firm-scoped)
 router.delete('/companies/:realmId', async (req, res) => {
   try {
