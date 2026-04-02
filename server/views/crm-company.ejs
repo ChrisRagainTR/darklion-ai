@@ -1357,7 +1357,7 @@
     const bmLabel = c.billing_method === 'monthly_billing' ? 'Monthly Billing' : c.billing_method === 'client_invoice' ? 'Client Invoice' : (c.billing_method || '—');
     const detailRows = [
       { label: 'Entity Type',    val: esc(etLabel(c.entity_type) || '—') },
-      { label: 'Status',         val: esc(c.status || 'active') },
+      { label: 'Status',         val: c.status === 'inactive' ? '<span style="background:rgba(143,163,184,0.15);color:var(--muted);border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">Inactive</span>' : c.status === 'dissolved' ? '<span style="background:rgba(229,62,62,0.12);color:var(--red);border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">Dissolved</span>' : '<span style="background:rgba(62,207,142,0.12);color:var(--green);border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:700;">Active</span>' },
       { label: 'Tax Year End',   val: esc(c.tax_year_end || '—') },
       { label: 'Billing Method', val: esc(bmLabel) },
     ];
